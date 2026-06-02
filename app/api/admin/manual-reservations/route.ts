@@ -1,0 +1,82 @@
+import { NextResponse } from "next/server";
+
+import { authorizeAdminCaller } from "@/lib/admin-route-auth";
+import { manualReservationServerRepository } from "@/lib/db/manual-reservation.repository.server";
+
+/* ===============================================================
+   🛡️ /api/admin/manual-reservations — MANUAL RESERVATION LIST (admin-only)
+   ===============================================================
+   GET → admin "Bloklanan tarihler" liste sayfası için.
+
+   ⚠️ NEDEN BU ROUTE VAR?
+     manual_reservations PHASE 3 (migration 040) sonrası admin-only
+     RLS aktif. Eski yol:
+
+       app/(admin)/maki-admin/manual-reservations/page.tsx (RSC)
+         └─→ getManualReservations() (service)
+              └─→ manualReservationRepository.findList()  // db (anon)
+                   └─→ supabase.from("manual_reservations").select(...)
+                        └─→ ❌ RLS DENY (RSC no JWT) → [] silent fail
+
+     RSC içinden anon `db` (module-level @/lib/supabase) session
+     cookie/JWT TAŞIMAZ → RLS reddeder → liste sessizce boş döner;
+     hata UI'a yansımaz.
+
+     Bu route, /api/admin/reservations ile birebir aynı pattern'i
+     uygular: adminFetch (Bearer) → server route → service-role
+     repository. Admin sidebar listesi yine doğru veriyle render
+     edilir; PII anon'a sıfır.
+
+   ⚠️ BYTE-IDENTICAL CONTRACT:
+     - SELECT shape: `id, start_date, end_date, note, created_at,
+       villa:villa_id ( title )` — anon repo `findList()` ile aynen.
+     - Order: `.order("created_at", { ascending: false })` aynen.
+     - Response shape: `{ ok: true, manual_reservations: [...] }`
+       caller eski `initialData` shape'i ile uyumlu (array of rows).
+     - Error path: 500 + `{ ok: false, error }` — caller eski path'te
+       de service `console.error + []` döndürüyordu; UI fallback yine
+       boş liste.
+
+   ⚠️ KAPSAM:
+     Yalnız GET (read list). Manual reservation CRUD (create/edit/
+     delete) client-side admin form'lardan service üzerinden anon
+     `db` (browser session JWT) ile çalışmaya devam eder; o pathler
+     `is_active_admin()` true olduğu için RLS izin verir. Bu route
+     SADECE RSC-only path'i kapatmak için.
+
+   AUTH:
+     `authorizeAdminCaller` — Bearer token doğrulama + admin_users
+     is_active kontrolü. /api/admin/reservations ile aynı pattern.
+   =============================================================== */
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(req: Request): Promise<NextResponse> {
+  const auth = await authorizeAdminCaller(req);
+  if (!auth.ok) {
+    return NextResponse.json(
+      { ok: false, error: auth.error },
+      { status: auth.status }
+    );
+  }
+
+  const { data, error } =
+    await manualReservationServerRepository.findList();
+
+  if (error) {
+    console.error(
+      "[admin.manual-reservations.list] FAILED",
+      error.message
+    );
+    return NextResponse.json(
+      { ok: false, error: error.message || "Liste alınamadı" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    manual_reservations: data || [],
+  });
+}

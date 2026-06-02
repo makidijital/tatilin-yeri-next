@@ -1,0 +1,197 @@
+import { Readable } from "node:stream";
+import archiver from "archiver";
+
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { villaZipRepository } from "@/lib/db/villa-zip.repository.server";
+import { applyRateLimit } from "@/lib/rate-limit";
+
+/* ===============================================================
+   🛡️ GET /api/villa-zip/[token] — STREAMING ZIP DOWNLOAD
+   ===============================================================
+   FİZİKSEL ZIP YOK · disk write YOK · tmp YOK · storage upload YOK ·
+   tüm görselleri RAM'e ALMAZ. ZIP request anında SEQUENTIAL STREAM
+   olarak üretilir; response biter bitmez hiçbir şey kalmaz.
+
+   AKIŞ:
+     1. rate-limit ("zip" — 10/dk/IP; egress koruması)
+     2. consume_villa_zip_token RPC (service_role): token doğrula
+        (revoked/expired hariç) + atomik download_count++ → villa_id.
+        Geçersiz → 404 (sayfa AÇILMAZ; direkt status).
+     3. villa.slug + firma adı (settings) → filename: firma-villa.zip
+     4. villa_images (sort_order) → her görseli fetch().body STREAM
+        olarak archiver'a APPEND (store mode = deflate YOK; görseller
+        zaten webp/jpg). RAM ~bounded (stream backpressure; her görsel
+        sırayla drain edilir, hepsi belleğe alınmaz).
+     5. archiver (Node Readable) → Web ReadableStream → Response;
+        browser direkt download (Content-Disposition: attachment).
+
+   RUNTIME: nodejs ZORUNLU (archiver + Node stream; edge'de çalışmaz).
+   Self-host (Hetzner/Coolify, `next start`) → serverless timeout YOK,
+   uzun stream güvenli.
+
+   ⚠️ DEPENDENCY: `npm install archiver @types/archiver` (Faz 0).
+   ⚠️ SEO: /api/* robots disallow kapsamında; sitemap dışı; sayfa değil.
+   =============================================================== */
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function slugifyForFile(input: string | null | undefined): string {
+  return (input || "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "") // diakritik kaldır
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
+export async function GET(
+  req: Request,
+  ctx: { params: Promise<{ token: string }> }
+): Promise<Response> {
+  /* 1) RATE LIMIT — egress-pahalı endpoint. */
+  const limited = await applyRateLimit(req, "zip");
+  if (limited) return limited;
+
+  const { token } = await ctx.params;
+  if (!token || typeof token !== "string") {
+    return new Response("Not found", { status: 404 });
+  }
+
+  /* 2) TOKEN CONSUME — doğrula + atomik download_count++ → villa_id. */
+  const { data: villaId, error: consumeErr } =
+    await villaZipRepository.consumeToken(token);
+  if (consumeErr) {
+    console.error("[villa-zip.download] consume FAILED", consumeErr.message);
+    return new Response("Hata", { status: 500 });
+  }
+  if (!villaId) {
+    /* Geçersiz / expired / revoked → 404 (sayfa yok, direkt status). */
+    return new Response("Not found", { status: 404 });
+  }
+
+  /* 🛡️ OPPORTUNISTIC GLOBAL CLEANUP (fire-and-forget) — download akışı
+     yüksek trafikli; her geçerli indirme bounded LIMIT 200 batch ile
+     EXPIRED/REVOKED satırları DB'den fiziksel siler. AKTİF satır WHERE'e
+     girmez. Stream başlamadan ÖNCE tetiklenir ama AWAIT EDİLMEZ — DB
+     temizliği response stream'iyle paralel arka planda işler. Hata
+     yutulur (.catch): download akışını ASLA bloklamaz. expires_at
+     indeksli (046) → sub-ms select; PK ile delete. */
+  villaZipRepository.purgeStaleGlobal(200).catch(() => {});
+
+  const admin = getSupabaseAdmin();
+
+  /* 3) FILENAME parçaları — villa.slug + firma adı. */
+  const [{ data: villaRow }, { data: settingsRow }, { data: images }] =
+    await Promise.all([
+      admin
+        .from("villa")
+        .select("slug, title")
+        .eq("id", villaId as string)
+        .maybeSingle(),
+      admin
+        .from("settings")
+        .select("site_name, company_legal_name")
+        .maybeSingle(),
+      admin
+        .from("villa_images")
+        .select("image_url, sort_order")
+        .eq("villa_id", villaId as string)
+        .order("sort_order", { ascending: true }),
+    ]);
+
+  const imageRows = (images as Array<{ image_url: string | null }> | null) || [];
+  if (imageRows.length === 0) {
+    return new Response("Görsel bulunamadı", { status: 404 });
+  }
+
+  const villaSlug =
+    slugifyForFile(
+      (villaRow as { slug?: string; title?: string } | null)?.slug ||
+        (villaRow as { title?: string } | null)?.title
+    ) || "villa";
+  const firmaSlug =
+    slugifyForFile(
+      (settingsRow as { site_name?: string; company_legal_name?: string } | null)
+        ?.site_name ||
+        (settingsRow as { company_legal_name?: string } | null)
+          ?.company_legal_name
+    ) || "villa-kiralama";
+  const zipName = `${firmaSlug}-${villaSlug}.zip`;
+
+  /* 4) ARCHIVER — store mode (deflate YOK). */
+  const archive = archiver("zip", { store: true });
+
+  archive.on("error", (err: unknown) => {
+    /* Stream başladıysa header gönderilmiştir; burada yalnız loglanır,
+       response stream archiver tarafından sonlandırılır. */
+    console.error(
+      "[villa-zip.download] archive error:",
+      err instanceof Error ? err.message : err
+    );
+  });
+  archive.on("warning", (warn: unknown) => {
+    console.warn(
+      "[villa-zip.download] archive warning:",
+      warn instanceof Error ? warn.message : warn
+    );
+  });
+
+  /* SEQUENTIAL APPEND — her görsel fetch().body STREAM olarak eklenir.
+     archiver kuyruğu sırayla drain eder (store mode); okunmayan stream'ler
+     kaynakta backpressure ile DURUR → tüm görseller aynı anda RAM'e
+     ALINMAZ. Buffer array / Promise.all(tüm görseller) YOK. */
+  void (async () => {
+    let index = 0;
+    for (const row of imageRows) {
+      index += 1;
+      const urlStr = (row.image_url || "").trim();
+      if (!urlStr) continue;
+      try {
+        const res = await fetch(urlStr);
+        if (!res.ok || !res.body) {
+          console.warn(
+            "[villa-zip.download] image skip (fetch):",
+            res.status,
+            urlStr
+          );
+          continue;
+        }
+        /* Dosya adı: orijinal uzantıyı koru, sıralı + benzersiz isim. */
+        const extMatch = urlStr.split("?")[0].match(/\.([a-zA-Z0-9]{2,5})$/);
+        const ext = extMatch ? extMatch[1].toLowerCase() : "jpg";
+        const entryName = `${String(index).padStart(3, "0")}-${villaSlug}.${ext}`;
+        /* Web ReadableStream → Node Readable; archiver consume edene
+           kadar kaynakta paused (RAM-safe). */
+        archive.append(Readable.fromWeb(res.body as never), {
+          name: entryName,
+        });
+      } catch (err) {
+        console.warn(
+          "[villa-zip.download] image skip (exception):",
+          err instanceof Error ? err.message : err
+        );
+      }
+    }
+    /* Tüm entry'ler kuyruğa alındı; archiver sırayla yazıp bitirir. */
+    await archive.finalize();
+  })();
+
+  /* 5) Node Readable → Web stream → Response (browser direkt download). */
+  const webStream = Readable.toWeb(archive) as unknown as ReadableStream;
+
+  return new Response(webStream, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="${zipName}"`,
+      "Cache-Control": "no-store",
+      /* Token URL'i SEO'ya/crawler'a girmesin. */
+      "X-Robots-Tag": "noindex, nofollow",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
+}

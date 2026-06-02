@@ -1,0 +1,80 @@
+import { NextResponse } from "next/server";
+
+import { authorizeAdminCaller } from "@/lib/admin-route-auth";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+
+/* ===============================================================
+   🛡️ FAZ 55 — ACTIVITY LOG CLEANUP (admin POST)
+   ===============================================================
+   • mode "90d" → 90 günden eski satırları sil
+   • mode "all" → tüm satırları sil (audit reset)
+   Same pattern: mail-logs cleanup. transaction-safe (tek DELETE).
+=============================================================== */
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const ALLOWED_MODES = ["90d", "all"] as const;
+type Mode = (typeof ALLOWED_MODES)[number];
+
+function isMode(v: unknown): v is Mode {
+  return typeof v === "string" && (ALLOWED_MODES as readonly string[]).includes(v);
+}
+
+export async function POST(req: Request) {
+  const auth = await authorizeAdminCaller(req);
+  if (!auth.ok) {
+    return NextResponse.json(
+      { ok: false, error: auth.error },
+      { status: auth.status }
+    );
+  }
+
+  let body: unknown = null;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "Geçersiz JSON gövdesi" },
+      { status: 400 }
+    );
+  }
+  const mode = (body as { mode?: unknown } | null)?.mode;
+  if (!isMode(mode)) {
+    return NextResponse.json(
+      { ok: false, error: "Geçersiz mode (beklenen: '90d' veya 'all')" },
+      { status: 400 }
+    );
+  }
+
+  const supabase = getSupabaseAdmin();
+  let result;
+  if (mode === "90d") {
+    const cutoff = new Date(
+      Date.now() - 90 * 24 * 60 * 60 * 1000
+    ).toISOString();
+    result = await supabase
+      .from("admin_activity_logs")
+      .delete({ count: "exact" })
+      .lt("created_at", cutoff);
+  } else {
+    result = await supabase
+      .from("admin_activity_logs")
+      .delete({ count: "exact" })
+      .not("id", "is", null);
+  }
+
+  if (result.error) {
+    console.error("[activity-logs.cleanup] FAILED", result.error.message);
+    return NextResponse.json(
+      { ok: false, error: result.error.message },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    mode,
+    deleted: result.count ?? 0,
+  });
+}

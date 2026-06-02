@@ -1,0 +1,481 @@
+"use client";
+
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
+import {
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react";
+
+import { convertPrice, formatCurrency } from "@/lib/currency";
+import { useCurrency } from "@/app/context/CurrencyContext";
+import { getDayStyle } from "@/lib/calendar.engine";
+import { formatLocalDate } from "@/lib/date-format";
+import {
+  fetchAndExpandVillaAvailability,
+  type VillaAvailabilityArrays,
+} from "@/lib/villa-availability.helper";
+import type { PriceRange } from "@/lib/villa-row.types";
+import {
+  externalStringsToDateArrays,
+  EMPTY_EXTERNAL_STRING_ARRAYS,
+  type ExternalCalendarStringArrays,
+} from "@/lib/external-calendar.public.shared";
+
+/* ===============================================================
+   🛡️ AvailabilityInlineCalendar — PUBLIC VILLA DETAY TAKVİMİ
+   ===============================================================
+   FAZ 10: Admin reservation calendar'ın premium UX'ine yaklaştırıldı.
+
+   READ-ONLY: Bu component yalnız görselleştirme. Tarih seçimi
+   BookingSidebar'ın işi; oraya HİÇBİR şekilde dokunulmuyor.
+
+   ─────────────────────────────────────────────────────────────
+   ADMIN'DEN ALINAN UI PATTERN'LERİ (BYTE-IDENTICAL render):
+     - Multi-month grid (1/2/3 col responsive)
+     - Premium nav header (prev / today / next + range label)
+     - Legend (Onaylı / Beklemede / Müsait)
+     - Custom Pzt-Paz 7×6 grid
+     - Today highlight
+     - `getDayStyle` color contract (red half-day, yellow pending)
+
+   ─────────────────────────────────────────────────────────────
+   PUBLIC-SPESİFİK FEATURELAR (KORUNDU):
+     - Cell altında günlük fiyat (currency context aware)
+     - Read-only — click/drag/touch handler YOK
+     - `aria-disabled` semantic; tabindex=-1
+
+   ─────────────────────────────────────────────────────────────
+   KAYNAK SOURCE-OF-TRUTH:
+     - Block / checkin / checkout / pending arrays:
+         lib/villa-availability.helper (shared, pure)
+     - Color rendering:
+         lib/calendar.engine > getDayStyle (BookingSidebar ile aynı)
+     - Status allow-list:
+         pending + confirmed (Faz 2B contract)
+
+   ─────────────────────────────────────────────────────────────
+   BUNDLE ETKİSİ:
+     - DROP: react-day-picker, date-fns/locale/tr (BookingSidebar
+       hala bunları kullandığı için /kiralik-villa/[slug] chunk
+       boyutu identical kalır; standalone kullanımda ~35 KB
+       tasarruf — gelecekteki sayfalar için).
+     - ADD: 4 lucide ikon (~2 KB, tree-shakeable).
+
+   ─────────────────────────────────────────────────────────────
+   COUPLING:
+     BookingSidebar: SIFIR. Hiçbir state/prop paylaşımı yok.
+     ReservationCalendar (admin): SIFIR. Admin component buradan
+     import edilmiyor; yalnız UI pattern'i ilham alındı.
+     calendar.engine: AYNEN reuse (getDayStyle).
+   =============================================================== */
+
+const WEEKDAY_HEADERS = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"] as const;
+
+type GridCell = { date: Date; inMonth: boolean };
+
+/* ---------------------------------------------------------------
+   🔥 buildMonthGrid — Pzt başlangıçlı 7×6 (42 cell) grid
+   ---------------------------------------------------------------
+   Admin'in `buildMonthGrid` ile BYTE-IDENTICAL date math; o tarafa
+   coupling YOK (kendi local helper'ımız).
+*/
+function buildMonthGrid(viewMonth: Date): GridCell[] {
+  const year = viewMonth.getFullYear();
+  const month = viewMonth.getMonth();
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month + 1, 0);
+
+  const firstDow = (first.getDay() + 6) % 7;
+  const lastDow = (last.getDay() + 6) % 7;
+
+  const cells: GridCell[] = [];
+
+  for (let i = firstDow; i > 0; i--) {
+    cells.push({ date: new Date(year, month, 1 - i), inMonth: false });
+  }
+  for (let day = 1; day <= last.getDate(); day++) {
+    cells.push({ date: new Date(year, month, day), inMonth: true });
+  }
+  const trailing = 6 - lastDow;
+  for (let i = 1; i <= trailing; i++) {
+    cells.push({ date: new Date(year, month + 1, i), inMonth: false });
+  }
+  while (cells.length < 42) {
+    const tail = cells[cells.length - 1].date;
+    cells.push({
+      date: new Date(tail.getFullYear(), tail.getMonth(), tail.getDate() + 1),
+      inMonth: false,
+    });
+  }
+  return cells.slice(0, 42);
+}
+
+const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+
+/* Tablet/desktop responsive: 1 / 2 / 3 ay aynı anda. */
+type VisibleMonthsCount = 1 | 2 | 3;
+
+function getVisibleMonths(anchor: Date, count: VisibleMonthsCount): Date[] {
+  const y = anchor.getFullYear();
+  const m = anchor.getMonth();
+  return Array.from({ length: count }, (_, i) => new Date(y, m + i, 1));
+}
+
+/* ===============================================================
+   COMPONENT
+   =============================================================== */
+
+type Props = {
+  villaId: string;
+  /** Price ranges — VillaPriceEmbed shape; villa detail
+   *  `getVillaPrices` çıktısı buraya geçer. Faz 9 hardening:
+   *  `Price[]` → `PriceRange[]`. */
+  prices: PriceRange[];
+  /** 🛡️ FAZ 56H-B — External iCal block date strings (server-fetched).
+   *  Mevcut reservation/manual array'leriyle MERGE edilir; engine
+   *  aynı kırmızı render uygular. Public kullanıcı kaynak ayrımı
+   *  GÖRMEZ — "iCal" badge yok, source_name yok. Default empty
+   *  → backward-compat. */
+  externalBlocks?: ExternalCalendarStringArrays;
+};
+
+export default function AvailabilityInlineCalendar({
+  villaId,
+  prices,
+  externalBlocks = EMPTY_EXTERNAL_STRING_ARRAYS,
+}: Props) {
+  const { currency, rates } = useCurrency();
+
+  /* Availability arrays — shared helper'dan gelir. Boş başlangıç
+     hızlı render; useEffect sonrası real data. */
+  const [availability, setAvailability] = useState<VillaAvailabilityArrays>({
+    blockedDates: [],
+    checkinDates: [],
+    checkoutDates: [],
+    pendingCheckinDates: [],
+    pendingCheckoutDates: [],
+    pendingMiddleDates: [],
+    manualBlockedDates: [],
+    manualCheckinDates: [],
+    manualCheckoutDates: [],
+  });
+
+  const [currentMonth, setCurrentMonth] = useState<Date>(() => {
+    const t = new Date();
+    return new Date(t.getFullYear(), t.getMonth(), 1);
+  });
+
+  /* Fetch on mount / villa change. cancelled flag → component
+     unmount sırasında setState yarış koşulu önler (Faz 2A pattern). */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const next = await fetchAndExpandVillaAvailability(villaId);
+      if (cancelled) return;
+      setAvailability(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [villaId]);
+
+  /* `getDayStyle` admin ile aynı kontratı bekliyor: confirmed +
+     manual hepsi birleşik "blocked/checkin/checkout" arraylerinde.
+     Mevcut public mantığı korunuyor: confirmed + manual merge.
+     🛡️ FAZ 56H-B — external iCal block date'leri de aynı array'lere
+     enjekte edilir (3. source). Public render → kırmızı, kaynak
+     ayrımı görünmez. Memoization: `availability` veya
+     `externalBlocks` referansı değişirse rebuild. */
+  const merged = useMemo(() => {
+    const a = availability;
+    const ext = externalStringsToDateArrays(externalBlocks);
+    return {
+      blockedDates: [
+        ...a.blockedDates,
+        ...a.manualBlockedDates,
+        ...ext.externalMiddleDates,
+      ],
+      checkinDates: [
+        ...a.checkinDates,
+        ...a.manualCheckinDates,
+        ...ext.externalCheckinDates,
+      ],
+      checkoutDates: [
+        ...a.checkoutDates,
+        ...a.manualCheckoutDates,
+        ...ext.externalCheckoutDates,
+      ],
+      pendingCheckinDates: a.pendingCheckinDates,
+      pendingCheckoutDates: a.pendingCheckoutDates,
+      pendingMiddleDates: a.pendingMiddleDates,
+    };
+  }, [availability, externalBlocks]);
+
+  /* ---------------------------------------------------------------
+     🔥 Günlük fiyat — currency context'e göre çevrilmiş + formatted.
+     Davranış byte-identical (eski getPriceForDate inline).
+     `formatLocalDate` → LOCAL gün, UTC drift yok.
+  --------------------------------------------------------------- */
+  const getPriceForDate = (date: Date): string | null => {
+    const target = formatLocalDate(date);
+    const found = prices?.find(
+      (p) => target >= p.start_date && target <= p.end_date
+    );
+    if (!found) return null;
+    const converted = convertPrice(
+      Number(found.price || 0),
+      found.currency || "TRY",
+      currency,
+      rates
+    );
+    return formatCurrency(converted, currency);
+  };
+
+  /* Responsive month count — admin pattern'iyle aynı: 1/2/3 col. */
+  const visibleMonths = useMemo(
+    () => getVisibleMonths(currentMonth, 3),
+    [currentMonth]
+  );
+  const todayKey = new Date().toDateString();
+
+  return (
+    <div className="select-none p-3 md:p-4">
+      {/* ─────────────────────────────────────────────
+          Premium nav header — prev / today / next + range label
+          ───────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              setCurrentMonth(
+                (m) => new Date(m.getFullYear(), m.getMonth() - 1, 1)
+              )
+            }
+            className="w-8 h-8 rounded-full border border-[var(--color-stone-200)] flex items-center justify-center hover:bg-[var(--color-sand-50)] hover:border-[var(--color-stone-300)] transition motion-reduce:transition-none"
+            aria-label="Önceki ay"
+          >
+            <ChevronLeft size={16} className="text-[var(--color-stone-700)]" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const t = new Date();
+              setCurrentMonth(new Date(t.getFullYear(), t.getMonth(), 1));
+            }}
+            className="px-3 py-1.5 rounded-full text-[11px] tracking-[0.14em] uppercase font-medium text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)] transition motion-reduce:transition-none"
+          >
+            Bugün
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setCurrentMonth(
+                (m) => new Date(m.getFullYear(), m.getMonth() + 1, 1)
+              )
+            }
+            className="w-8 h-8 rounded-full border border-[var(--color-stone-200)] flex items-center justify-center hover:bg-[var(--color-sand-50)] hover:border-[var(--color-stone-300)] transition motion-reduce:transition-none"
+            aria-label="Sonraki ay"
+          >
+            <ChevronRight size={16} className="text-[var(--color-stone-700)]" />
+          </button>
+          <h3 className="font-display text-[13px] text-[var(--color-stone-900)] tracking-[-0.015em] ml-2 capitalize">
+            {visibleMonths[0].toLocaleDateString("tr-TR", { month: "short" })}
+            <span className="text-[var(--color-stone-400)] mx-1">→</span>
+            {visibleMonths[visibleMonths.length - 1].toLocaleDateString(
+              "tr-TR",
+              { month: "short", year: "numeric" }
+            )}
+          </h3>
+        </div>
+
+        {/* Legend — public-friendly labels */}
+        <div className="hidden md:flex items-center gap-3 text-[11px] text-[var(--color-stone-500)] flex-wrap">
+          <LegendSwatch
+            label="Onaylı"
+            style={{ background: "rgba(239,68,68,0.4)" }}
+          />
+          <LegendSwatch
+            label="Beklemede"
+            style={{ background: "#facc15" }}
+          />
+          <LegendSwatch
+            label="Müsait"
+            style={{
+              background: "white",
+              border: "1px solid var(--color-stone-200)",
+            }}
+          />
+        </div>
+      </div>
+
+      <p className="text-[11px] text-[var(--color-stone-500)] mb-3 flex items-center gap-1.5">
+        <Sparkles
+          size={11}
+          className="text-[var(--color-champagne-600)]"
+        />
+        Tarihlere göre güncel müsaitlik ve gecelik fiyat. Rezervasyon
+        için sağdaki <Calendar size={11} className="-mt-px" /> bölümünü kullanın.
+      </p>
+
+      {/* ─────────────────────────────────────────────
+          Multi-month grid — admin parity: 1 / 2 / 3 col
+          ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
+        {visibleMonths.map((viewMonth, monthIdx) => {
+          const cells = buildMonthGrid(viewMonth);
+          return (
+            <div
+              key={`${viewMonth.getFullYear()}-${viewMonth.getMonth()}`}
+              className="rounded-xl border border-[var(--color-sand-100)] bg-white/40 px-2 py-2.5"
+            >
+              <div className="px-1 mb-1.5">
+                <span className="font-display text-[12px] font-semibold text-[var(--color-stone-800)] tracking-[-0.01em] capitalize">
+                  {viewMonth.toLocaleDateString("tr-TR", { month: "long" })}
+                  {(monthIdx === visibleMonths.length - 1 ||
+                    monthIdx === 0) && (
+                    <span className="text-[var(--color-stone-400)] font-normal ml-1">
+                      {viewMonth.getFullYear()}
+                    </span>
+                  )}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-7 gap-0.5 px-0.5 mb-1">
+                {WEEKDAY_HEADERS.map((w) => (
+                  <div
+                    key={w}
+                    className="text-center text-[9px] font-bold tracking-[0.14em] uppercase text-[var(--color-stone-400)] py-1"
+                  >
+                    {w[0]}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-0.5 px-0.5">
+                {cells.map((cell, i) => {
+                  const date = cell.date;
+                  const dateKey = formatLocalDate(date);
+
+                  if (!cell.inMonth) {
+                    return (
+                      <div
+                        key={`${i}-${dateKey}`}
+                        className="aspect-square flex items-center justify-center text-[10px] text-[var(--color-stone-300)] select-none"
+                        aria-hidden
+                      >
+                        {date.getDate()}
+                      </div>
+                    );
+                  }
+
+                  /* getDayStyle: BookingSidebar ve admin ile AYNI
+                     color contract (red half-day, yellow pending,
+                     gradient seams). */
+                  const { bg, color } = getDayStyle({
+                    date,
+                    blockedDates: merged.blockedDates,
+                    checkinDates: merged.checkinDates,
+                    checkoutDates: merged.checkoutDates,
+                    pendingCheckinDates: merged.pendingCheckinDates,
+                    pendingCheckoutDates: merged.pendingCheckoutDates,
+                    pendingMiddleDates: merged.pendingMiddleDates,
+                  });
+
+                  const isBlocked = merged.blockedDates.some((d) =>
+                    sameDay(d, date)
+                  );
+                  const isToday = date.toDateString() === todayKey;
+                  const price = !isBlocked ? getPriceForDate(date) : null;
+
+                  const cellStyle: CSSProperties = {
+                    cursor: "default",
+                  };
+                  const gradientStyle: CSSProperties = {
+                    background: bg,
+                  };
+
+                  return (
+                    <div
+                      key={`${i}-${dateKey}`}
+                      className="aspect-square relative rounded-md"
+                      style={cellStyle}
+                      aria-disabled
+                      role="presentation"
+                    >
+                      {/* Layer 1: gradient base — getDayStyle aynen */}
+                      <div
+                        className="absolute inset-0 rounded-md overflow-hidden"
+                        style={gradientStyle}
+                        aria-hidden
+                      />
+
+                      {/* Layer 2: number + price stack */}
+                      <div
+                        className="absolute inset-0 flex flex-col items-center justify-center text-[11px] select-none"
+                        style={{
+                          color,
+                          pointerEvents: "none",
+                          fontWeight: 600,
+                          lineHeight: 1,
+                        }}
+                      >
+                        <span
+                          className={
+                            isToday
+                              ? "ring-1 ring-[var(--color-champagne-500,#c89b3c)] rounded-md px-1 leading-none font-bold"
+                              : ""
+                          }
+                          style={{ fontSize: 11 }}
+                        >
+                          {date.getDate()}
+                        </span>
+                        {price && (
+                          <span
+                            className="mt-0.5 text-[var(--color-stone-700)]"
+                            style={{
+                              fontSize: 8,
+                              opacity: 0.85,
+                              fontWeight: 500,
+                            }}
+                          >
+                            {price}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------
+   LEGEND SWATCH — küçük renkli kare + etiket
+--------------------------------------------------------------- */
+function LegendSwatch({
+  label,
+  style,
+}: {
+  label: string;
+  style: CSSProperties;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="inline-block w-3 h-3 rounded-md" style={style} />
+      {label}
+    </span>
+  );
+}

@@ -1,0 +1,202 @@
+import { NextResponse } from "next/server";
+
+import { authorizeAdminCaller } from "@/lib/admin-route-auth";
+import { dbAdmin } from "@/lib/db/server";
+
+/* ===============================================================
+   🛡️ /api/admin/pages — PAGES CRUD partial (admin-only)
+   ===============================================================
+   DELETE ?id=<uuid>                 → CMS sayfası sil
+   PATCH  ?id=<uuid> { show_in_menu } → menu visibility toggle
+
+   FAZ 2 frontend purge — daha önce `app/(admin)/maki-admin/pages/page.tsx`
+   client component'i `supabase.from("pages").delete()/.update()` ile
+   ANON client + RLS path'ini kullanıyordu. Bu route adminFetch (Bearer)
+   + service_role path'i ile davranış BYTE-IDENTICAL aynen üretir.
+
+   ⚠️ Slug/path/SEO/sitemap logic: page row silinince /p/{slug} ETKİLENİR
+   (mevcut davranış, dokunulmadı). show_in_menu toggle YALNIZ menu
+   görünürlüğünü etkiler; /p/{slug} route, sitemap entry, page content
+   ETKİLENMEZ. Cache invalidation caller tarafında (`revalidateMenu`,
+   server action).
+   =============================================================== */
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+/* GET — admin list. Anon `pagesRepository.findActiveList()` yalnız
+   `is_active=true` filtreliyor; admin'in DRAFT (is_active=false)
+   sayfaları görüp publish toggle yapabilmesi için inactive dahil
+   tüm satırlar gerekli. dbAdmin service-role bypass + Bearer admin
+   gate ile public erişim yok. created_at DESC — mevcut list order
+   ile parity. */
+export async function GET(req: Request): Promise<NextResponse> {
+  const auth = await authorizeAdminCaller(req);
+  if (!auth.ok) {
+    return NextResponse.json(
+      { ok: false, error: auth.error },
+      { status: auth.status }
+    );
+  }
+
+  const { data, error } = await dbAdmin
+    .from("pages")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[admin.pages.list] FAILED", error.message);
+    return NextResponse.json(
+      { ok: false, error: error.message || "Listelenemedi" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, data: data || [] });
+}
+
+/* POST — pages.insert delegate. Eski client davranışı:
+     supabase.from("pages").insert(payload).select().single()
+   BYTE-IDENTICAL: aynı insert + select + single semantic'i; client'a
+   inserted row ve error/status field'ları dönülür (eski caller
+   `response.data/error/status/statusText` shape'ini kullanıyor;
+   route bu shape'i koruyarak `{ ok, data, error }` döner — client
+   minimal adapt). Validasyon ve audit/log/slug constraint check'i
+   DB tarafında (unique slug constraint vs.) AYNEN tetiklenir. */
+export async function POST(req: Request): Promise<NextResponse> {
+  const auth = await authorizeAdminCaller(req);
+  if (!auth.ok) {
+    return NextResponse.json(
+      { ok: false, error: auth.error },
+      { status: auth.status }
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await req.json();
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "Geçersiz istek" },
+      { status: 400 }
+    );
+  }
+
+  const { data, error } = await dbAdmin
+    .from("pages")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .insert(payload as any)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("[admin.pages.insert] FAILED", error.message);
+    return NextResponse.json(
+      { ok: false, error: error.message || "Eklenemedi" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, data });
+}
+
+export async function DELETE(req: Request): Promise<NextResponse> {
+  const auth = await authorizeAdminCaller(req);
+  if (!auth.ok) {
+    return NextResponse.json(
+      { ok: false, error: auth.error },
+      { status: auth.status }
+    );
+  }
+
+  let id = "";
+  try {
+    id = (new URL(req.url).searchParams.get("id") || "").trim();
+  } catch {
+    /* URL parse hata → boş id */
+  }
+  if (!id) {
+    return NextResponse.json(
+      { ok: false, error: "id zorunlu" },
+      { status: 400 }
+    );
+  }
+
+  const { error } = await dbAdmin.from("pages").delete().eq("id", id);
+  if (error) {
+    console.error("[admin.pages.delete] FAILED", error.message);
+    return NextResponse.json(
+      { ok: false, error: error.message || "Silinemedi" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+export async function PATCH(req: Request): Promise<NextResponse> {
+  const auth = await authorizeAdminCaller(req);
+  if (!auth.ok) {
+    return NextResponse.json(
+      { ok: false, error: auth.error },
+      { status: auth.status }
+    );
+  }
+
+  let id = "";
+  try {
+    id = (new URL(req.url).searchParams.get("id") || "").trim();
+  } catch {
+    /* URL parse hata → boş id */
+  }
+  if (!id) {
+    return NextResponse.json(
+      { ok: false, error: "id zorunlu" },
+      { status: 400 }
+    );
+  }
+
+  const body = (await req.json().catch(() => ({}))) as {
+    show_in_menu?: unknown;
+    menu_order?: unknown;
+    menu_parent_id?: unknown;
+  };
+
+  /* Desteklenen alanlar:
+       - show_in_menu (boolean)  → menu visibility toggle
+       - menu_order   (number)   → drag/drop persist (page-auto satırları)
+       - menu_parent_id (string|null) → drag/drop persist
+     Caller alanı geçerse update payload'a girer; davranış BYTE-IDENTICAL
+     (eski client her field için ayrı supabase.update yapardı; route
+     birleştirir ama runtime semantic aynı). */
+  const patch: Record<string, unknown> = {};
+  if (typeof body.show_in_menu === "boolean") {
+    patch.show_in_menu = body.show_in_menu;
+  }
+  if (typeof body.menu_order === "number") {
+    patch.menu_order = body.menu_order;
+  }
+  if (body.menu_parent_id === null || typeof body.menu_parent_id === "string") {
+    patch.menu_parent_id = body.menu_parent_id;
+  }
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "show_in_menu, menu_order veya menu_parent_id gerekli",
+      },
+      { status: 400 }
+    );
+  }
+
+  const { error } = await dbAdmin.from("pages").update(patch).eq("id", id);
+  if (error) {
+    console.error("[admin.pages.patch] FAILED", error.message);
+    return NextResponse.json(
+      { ok: false, error: error.message || "Güncellenemedi" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}

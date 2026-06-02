@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/external-calendar-sync",
+      "schedule": "0 */4 * * *"
+    },
+    {
+      "path": "/api/cron/exchange-rates-refresh",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/mail-logs-cleanup",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/activity-logs-cleanup",
+      "schedule": "30 3 * * *"
+    }
+  ]
+}
