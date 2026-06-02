@@ -9,7 +9,7 @@
     "lint": "eslint",
     "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\"",
     "clean:cache": "node -e \"require('fs').rmSync('.next/cache',{recursive:true,force:true})\"",
-    "prebuild": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\"",
+    "prebuild": "echo prebuild",
     "build:fresh": "npm run clean && next build",
     "rebuild": "npm run clean && next build",
     "prod:start": "npm run build:fresh && next start",
