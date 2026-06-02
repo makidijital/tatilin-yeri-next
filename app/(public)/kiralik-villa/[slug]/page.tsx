@@ -77,6 +77,7 @@ import AvailabilityInlineCalendar from "@/app/components/villa/AvailabilityInlin
 
 import Gallery from "@/app/components/villa/Gallery";
 import BookingSidebar from "@/app/components/villa/BookingSidebar";
+import MobileBookingCta from "@/app/components/villa/MobileBookingCta";
 /* 🛡️ Villa info bar — gallery'nin ÜSTÜNDE ayrı premium başlık şeridi
    (villa adı + lokasyon + bilgi pill'leri + video CTA).
    Fotoğraf üstüne ASLA overlay YAPMAZ; ayrı container.
@@ -835,7 +836,7 @@ export default async function VillaDetail({
         </div>
 
         {/* RIGHT (sidebar) */}
-        <aside className="lg:col-span-1">
+        <aside id="booking-sidebar" className="lg:col-span-1">
           <div className="lg:sticky lg:top-32">
             {/* ════════════════════════════════════════════════════
                 🛡️ SOFT SOCIAL PROOF — "X kişi inceliyor"
@@ -952,6 +953,15 @@ export default async function VillaDetail({
         </aside>
       </div>
       </div>
+
+      {/* 🛡️ MOBILE STICKY CTA — yalnız <lg viewport.
+          Desktop'ta `lg:hidden` ile render edilmez; mevcut
+          `<aside lg:sticky lg:top-32>` sticky sidebar AYNEN. */}
+      <MobileBookingCta
+        priceAmount={minPrice?.price ?? null}
+        priceCurrency={minPrice?.currency ?? null}
+        targetId="booking-sidebar"
+      />
     </div>
   );
 }
