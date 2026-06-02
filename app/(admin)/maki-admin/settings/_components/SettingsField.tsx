@@ -5,7 +5,7 @@ import { ImagePlus, Trash2 } from "lucide-react";
 
 import { storageProvider } from "@/lib/storage";
 import { convertImageToWebP } from "@/lib/image.helpers";
-import { SITE_ASSETS_BUCKET_NAME } from "@/lib/storage.helpers";
+import { SITE_ASSETS_BUCKET_NAME, resolveAssetUrl } from "@/lib/storage.helpers";
 
 /* ===============================================================
    🛡️ SETTINGS FIELDS — reusable form primitives
@@ -326,14 +326,12 @@ export function UploadField({
         setError(upRes.error);
         return;
       }
-      /* Legacy Settings field'ları (site_logo/watermark_logo/
-         hero_background_image) FULL public URL tutuyor; aynı
-         kontratı koruyoruz. */
-      const url = storageProvider.getPublicUrl(
-        SITE_ASSETS_BUCKET_NAME,
-        path
-      );
-      if (url) onChange(url);
+      /* 🛡️ Aşama B — DB'ye RELATIVE PATH yaz (örn. "logo/logo.webp").
+         Aşama A sayesinde read tarafı (Hero/Footer/Header/RootLayout)
+         resolveAssetUrl ile path→URL üretiyor. Eski FULL URL kayıtları
+         AYNEN çalışmaya devam eder (resolveAssetUrl HTTP(S) pass-through).
+         Storage provider değişiminde DB UPDATE gerekmez. */
+      onChange(path);
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -351,9 +349,12 @@ export function UploadField({
           title={currentUrl ? "Görseli değiştir" : "Görsel yükle"}
         >
           {currentUrl ? (
+            /* 🛡️ Aşama B — currentUrl artık FULL URL VEYA relative path
+               olabilir. resolveAssetUrl normalize eder; legacy URL'ler
+               pass-through, yeni path'ler runtime'da URL'e çevrilir. */
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={currentUrl}
+              src={resolveAssetUrl(currentUrl) ?? ""}
               alt=""
               className="absolute inset-0 w-full h-full object-cover"
             />

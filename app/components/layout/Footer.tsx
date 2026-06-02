@@ -15,6 +15,7 @@ import {
 } from "@/app/services/settings.service";
 import { menuRepository } from "@/lib/db/menu.repository";
 import { pagesRepository } from "@/lib/db/pages.repository";
+import { resolveAssetUrl } from "@/lib/storage.helpers";
 
 /* ---------------- INLINE SOCIAL ICONS (stroke=currentColor) ---------------- */
 
@@ -328,10 +329,16 @@ export default async function Footer() {
             >
               {settings?.footer_logo || settings?.site_logo ? (
                 /* 🛡️ mig 048 — footer_logo varsa onu, yoksa site_logo'ya
-                   fallback. Koyu zemin için ayrı negatif logo desteği. */
+                   fallback. Koyu zemin için ayrı negatif logo desteği.
+                   🛡️ Aşama A — resolveAssetUrl normalize: FULL URL ve
+                   relative path için aynı render davranışı. */
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
-                  src={settings.footer_logo || settings.site_logo || ""}
+                  src={
+                    resolveAssetUrl(settings.footer_logo) ||
+                    resolveAssetUrl(settings.site_logo) ||
+                    ""
+                  }
                   alt={`${siteName} logosu`}
                   className="h-10 w-auto object-contain"
                 />

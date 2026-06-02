@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { storageProvider } from "@/lib/storage";
+import { resolveAssetUrl } from "@/lib/storage.helpers";
 
 /* ===============================================================
    🛡️ UPLOAD SIZE GUARD — production hardening
@@ -211,10 +212,12 @@ export default function AdminGallery({
           continue;
         }
 
-        const publicUrl = storageProvider.getPublicUrl(
-          VILLA_IMAGES_BUCKET,
-          fileName
-        );
+        /* 🛡️ Aşama B — DB'ye RELATIVE PATH yaz (örn.
+           "villas/<slug>__<shortId>/gallery-NNNN-XXXX.webp").
+           Read tarafı (VillaCard / Gallery / cache.helpers.ts) Aşama A
+           sayesinde resolveAssetUrl ile path→URL üretir. Legacy FULL URL
+           kayıtları AYNEN çalışır (HTTP(S) pass-through). Storage
+           provider değişiminde DB UPDATE gerekmez. */
 
         /* 🛡️ ORPHAN PREVENTION:
            onUploaded → addVillaImage → DB insert. Eski signature
@@ -223,7 +226,7 @@ export default function AdminGallery({
            bir sonraki dosyaya geçiyoruz.
            FAZ 38: storageProvider.remove delege (retry + idempotent
            provider içinde). */
-        const dbResult = await onUploaded(publicUrl || "");
+        const dbResult = await onUploaded(fileName);
         if (dbResult === false) {
           console.error("❌ DB insert failed; rolling back storage:", fileName);
           try {
@@ -307,8 +310,11 @@ export default function AdminGallery({
             onDrop={() => handleDrop(index)}
             className="relative group border rounded-xl overflow-hidden cursor-move"
           >
+            {/* 🛡️ Aşama B — image_url artık FULL URL VEYA relative path
+                olabilir. resolveAssetUrl normalize eder; legacy URL'ler
+                pass-through, yeni path'ler runtime'da URL'e çevrilir. */}
             <img
-              src={img.image_url}
+              src={resolveAssetUrl(img.image_url) ?? ""}
               className="w-full h-40 object-cover"
             />
 

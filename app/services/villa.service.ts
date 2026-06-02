@@ -24,6 +24,7 @@
 import { villaRepository } from "@/lib/db/villa.repository";
 import { getVillaReviewStatsBatch } from "./villa-review.service";
 import { normalizeYouTubeVideos } from "@/lib/youtube.helper";
+import { resolveAssetUrl } from "@/lib/storage.helpers";
 import {
   normalizeBedroomLayout,
   normalizeBathroomLayout,
@@ -317,10 +318,17 @@ function mapVilla(
       );
 
     images =
-      sorted.map(
-        (img) =>
-          img.image_url
-      );
+      sorted
+        .map(
+          (img) =>
+            /* 🛡️ Aşama A — resolveAssetUrl: image_url HEM FULL URL
+               (legacy) HEM relative path (yeni) olabilir. */
+            resolveAssetUrl(img.image_url)
+        )
+        .filter(
+          (u): u is string =>
+            typeof u === "string" && u.length > 0
+        );
   }
 
   const firstPrice =

@@ -1,4 +1,5 @@
 import type { Settings } from "@/app/services/settings.service";
+import { resolveAssetUrl } from "@/lib/storage.helpers";
 
 /* ===============================================================
    🛡️ HOMEPAGE HERO — RESOLVER + DEFAULTS
@@ -121,8 +122,13 @@ export function resolveHeroContent(
 
   /* Image resolution + cache-busting:
        - Admin custom upload varsa → temiz URL + ?ts=<cacheKey>
-       - Custom upload yoksa → default Unsplash URL (cache-bust YOK) */
-  const customImage = pickStr(settings.hero_background_image, "");
+       - Custom upload yoksa → default Unsplash URL (cache-bust YOK)
+     🛡️ Aşama A — `resolveAssetUrl` normalize: settings.hero_background_image
+        HEM FULL URL (legacy) HEM relative path (yeni) olabilir. HTTP(S)
+        prefix'li değerler pass-through; relative path'ler runtime'da
+        getPublicUrl ile URL'e çevrilir. Mevcut DB içeriği için byte-
+        identical davranış (FULL URL ise aynen geri döner). */
+  const customImage = resolveAssetUrl(settings.hero_background_image) ?? "";
   const hasCustomImage = customImage.length > 0;
   const baseImage = hasCustomImage ? customImage : HERO_DEFAULTS.backgroundImage;
   const backgroundImage =
