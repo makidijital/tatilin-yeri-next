@@ -57,6 +57,7 @@ import AccommodationLayout from "@/app/components/villa/AccommodationLayout";
 
 import { getVillaBySlug } from "@/app/services/villa.service";
 import { getVillaImages } from "@/app/services/villa-image.service";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getVillaPrices } from "@/app/services/villa-price.service";
 import { getVillaDistances } from "@/app/services/villa-distance.service";
 import { getVillaFeaturesByVilla } from "@/app/services/villa-feature.service";
@@ -284,7 +285,13 @@ export default async function VillaDetail({
     size: settings?.watermark_size ?? 25,
   } as const;
 
-  const imageUrls = images.map((img) => img.image_url);
+  /* 🛡️ Bucket-fix — resolveVillaImageUrl: image_url HEM FULL URL (legacy)
+     HEM relative path (Phase B sonrası) olabilir. villa-images bucket'ından
+     doğru URL üretir. Ham path Gallery component'ine veya JSON-LD'ye
+     gitmesin. */
+  const imageUrls = images
+    .map((img) => resolveVillaImageUrl(img.image_url))
+    .filter((u): u is string => typeof u === "string" && u.length > 0);
 
   /* 🛡️ JSON-LD structured data — SEO için fonksiyonel kazanç.
      Fake rating/aggregateRating üretilmez; yalnız var olan villa

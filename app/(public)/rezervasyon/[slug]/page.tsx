@@ -1,6 +1,7 @@
 import { getVillaBySlug } from "@/app/services/villa.service";
 import { getVillaPrices } from "@/app/services/villa-price.service";
 import { getVillaImages } from "@/app/services/villa-image.service";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 
 import ReservationForm from "@/app/components/reservation/ReservationForm";
 import PageHero from "@/app/components/ui/PageHero";
@@ -47,7 +48,9 @@ export default async function ReservationPage({
 
   const prices = await getVillaPrices(villa.id);
   const images = await getVillaImages(villa.id);
-  const coverImage = images?.[0]?.image_url || null;
+  /* 🛡️ Bucket-fix — resolveVillaImageUrl: villa-images bucket'ından URL
+     üretir. Legacy FULL URL pass-through, Phase B path → URL. */
+  const coverImage = resolveVillaImageUrl(images?.[0]?.image_url);
 
   const getParam = (param?: string | string[]) => {
     if (!param) return undefined;

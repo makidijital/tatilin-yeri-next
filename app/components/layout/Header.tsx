@@ -9,6 +9,7 @@ import TopBar from "./TopBar";
    yerine villaRepository.searchByTitle. `db` barrel client-safe;
    aynı anon RLS + birebir aynı SELECT/filter/ilike/limit. */
 import { villaRepository } from "@/lib/db/villa.repository";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 /* 🛡️ FAZ 36 — Favorites shortcut (localStorage badge counter) */
 import HeaderFavoritesLink from "@/app/components/favorites/HeaderFavoritesLink";
 
@@ -92,7 +93,10 @@ export default function Header({
       if (b.is_cover) return 1;
       return a.sort_order - b.sort_order;
     });
-    return sorted[0]?.image_url || "/placeholder.jpg";
+    /* 🛡️ Bucket-fix — resolveVillaImageUrl: villa-images bucket'ından
+       URL üretir; legacy FULL URL pass-through, Phase B path → URL.
+       Hiçbiri yoksa placeholder. */
+    return resolveVillaImageUrl(sorted[0]?.image_url) || "/placeholder.jpg";
   };
 
   /* 🛡️ LIVE SEARCH — debounce + memory-leak guard (FAZ 2A).

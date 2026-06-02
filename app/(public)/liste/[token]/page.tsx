@@ -5,6 +5,7 @@ import { Sparkles, Users, MapPin, CalendarRange } from "lucide-react";
 /* 🛡️ FAZ 4A — SSR-AWARE client. Liste RSC public-readable villa
    tabloları okuyor; runtime davranış AYNEN. */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import VillaCard from "@/app/components/villa/VillaCard";
 import { getStartingPrice } from "@/lib/price.engine";
 import { getSharedVillaListByToken } from "@/app/services/shared-villa-list.service";
@@ -269,8 +270,11 @@ export default async function SharedVillaListPage({
                 if (b?.is_cover) return 1;
                 return (a?.sort_order ?? 0) - (b?.sort_order ?? 0);
               });
+              /* 🛡️ Bucket-fix — resolveVillaImageUrl: image_url HEM FULL
+                 URL (legacy) HEM relative path (Phase B) olabilir;
+                 villa-images bucket'ından doğru URL üretir. */
               const images = sortedImgs
-                .map((i) => i?.image_url)
+                .map((i) => resolveVillaImageUrl(i?.image_url))
                 .filter(
                   (u): u is string =>
                     typeof u === "string" && u.trim().length > 0

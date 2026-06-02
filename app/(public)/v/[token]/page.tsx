@@ -44,6 +44,7 @@ import AvailabilityInlineCalendar from "@/app/components/villa/AvailabilityInlin
 
 import { getVillaByPrivateToken } from "@/app/services/villa.service";
 import { getVillaImages } from "@/app/services/villa-image.service";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getVillaPrices } from "@/app/services/villa-price.service";
 import { getVillaDistances } from "@/app/services/villa-distance.service";
 import { getVillaFeaturesByVilla } from "@/app/services/villa-feature.service";
@@ -242,7 +243,11 @@ export default async function PrivateVillaDetail({
     size: settings?.watermark_size ?? 25,
   } as const;
 
-  const imageUrls = images.map((img) => img.image_url);
+  /* 🛡️ Bucket-fix — resolveVillaImageUrl: villa-images bucket'ından URL
+     üretir. Ham path Gallery'ye gitmesin. */
+  const imageUrls = images
+    .map((img) => resolveVillaImageUrl(img.image_url))
+    .filter((u): u is string => typeof u === "string" && u.length > 0);
 
   const isOffMarket = villa.is_active === false;
 

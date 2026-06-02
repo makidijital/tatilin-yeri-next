@@ -32,6 +32,7 @@ import {
    Villa list /api/admin/villas?activeOnly=1 üzerinden (aynı select +
    filter + order semantic). */
 import { adminFetch } from "@/lib/admin-fetch";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import {
   useNotify,
   useConfirm,
@@ -375,11 +376,15 @@ function SortableRow({
   };
 
   const villaImages = item.villa?.villa_images ?? [];
-  const cover = [...villaImages].sort((a, b) => {
-    if (a?.is_cover) return -1;
-    if (b?.is_cover) return 1;
-    return (a?.sort_order ?? 0) - (b?.sort_order ?? 0);
-  })[0]?.image_url;
+  /* 🛡️ Bucket-fix — resolveVillaImageUrl: villa-images bucket'ından
+     URL üretir; legacy FULL URL pass-through, Phase B path → URL. */
+  const cover = resolveVillaImageUrl(
+    [...villaImages].sort((a, b) => {
+      if (a?.is_cover) return -1;
+      if (b?.is_cover) return 1;
+      return (a?.sort_order ?? 0) - (b?.sort_order ?? 0);
+    })[0]?.image_url
+  );
 
   const [title, setTitle] = useState(
     item.custom_title ?? item.villa?.title ?? ""

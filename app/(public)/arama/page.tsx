@@ -5,6 +5,7 @@
    tablolarda zaten anon allow → runtime farkı yok; gelecekte admin-only
    tabloya yazma/okuma eklenirse session cookies otomatik akar. */
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import VillaCard from "@/app/components/villa/VillaCard";
 import { getStartingPrice } from "@/lib/price.engine";
 import { Search } from "lucide-react";
@@ -510,8 +511,10 @@ export default async function AramaPage({ searchParams }: Props) {
         if (b?.is_cover) return 1;
         return (a?.sort_order ?? 0) - (b?.sort_order ?? 0);
       });
+      /* 🛡️ Bucket-fix — resolveVillaImageUrl: villa-images bucket'ından
+         URL üretir; legacy FULL URL pass-through, Phase B path → URL. */
       images = sorted
-        .map((i) => i?.image_url)
+        .map((i) => resolveVillaImageUrl(i?.image_url))
         .filter(
           (u): u is string =>
             typeof u === "string" && u.trim().length > 0

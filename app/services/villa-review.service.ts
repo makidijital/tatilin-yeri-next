@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 
 /* ===============================================================
    🛡️ FAZ 33 — VILLA REVIEW SERVICE
@@ -409,12 +410,15 @@ export async function getFeaturedHomepageReviews(): Promise<
       if (b?.is_cover) return 1;
       return (a?.sort_order ?? 0) - (b?.sort_order ?? 0);
     });
-    const cover =
+    /* 🛡️ Bucket-fix — resolveVillaImageUrl: villa-images bucket'ından
+       URL üretir; legacy FULL URL pass-through, Phase B path → URL. */
+    const cover = resolveVillaImageUrl(
       sorted.find(
         (i) =>
           typeof i?.image_url === "string" &&
           i.image_url.trim().length > 0
-      )?.image_url ?? null;
+      )?.image_url
+    );
 
     result.push({
       id: String(r.id),
