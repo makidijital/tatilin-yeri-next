@@ -3,6 +3,18 @@ import { getVillasForAdmin } from "@/app/services/villa.service";
 import { Plus, Home, Trash as TrashBin } from "lucide-react";
 import VillaSortableGrid from "./VillaSortableGrid";
 
+/* 🛡️ FORCE-DYNAMIC — production statik cache problemi çözümü.
+   Bu sayfa hiçbir dinamik API kullanmıyor (cookies/headers/searchParams)
+   olduğu için Next.js otomatik static-eligible sayıyor ve Full Route
+   Cache'e yazıyordu. Production'da villa silindikten sonra cached HTML
+   servis edildiği için admin listesinden kayıp olmuyordu. `force-dynamic`
+   her request'te fresh render zorunlu kılar; getVillasForAdmin() taze DB
+   SELECT çalıştırır → silinen villa anında listeden kaybolur.
+   Local dev (`next dev`) zaten her request fresh render yaptığı için
+   etkilenmez; davranış birebir aynı kalır.
+   Pattern referansı: app/(admin)/maki-admin/villa-listesi/page.tsx:33. */
+export const dynamic = "force-dynamic";
+
 export default async function VillasPage() {
   // 🛡️ Admin listing: pasif villalar dahil; soft-deleted hariç.
   const villas = await getVillasForAdmin();
