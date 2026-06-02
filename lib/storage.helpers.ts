@@ -192,5 +192,42 @@ export function resolveAssetUrl(
   return storageProvider.getPublicUrl(SITE_ASSETS_BUCKET, trimmed);
 }
 
+/* ===============================================================
+   🛡️ RESOLVE VILLA IMAGE URL — villa-images bucket için
+   ===============================================================
+   `villa_images.image_url` alanı VILLA_IMAGES bucket'ında dosyaları
+   referanslar. `resolveAssetUrl` SITE_ASSETS bucket'ına sabitlenmiş
+   olduğu için villa galerisi relative path'lerinde yanlış URL
+   üretiyordu (yanlış bucket → 404).
+
+   Davranış `resolveAssetUrl` ile birebir paralel; tek fark hedef
+   bucket:
+     1) FULL URL (legacy DB satırları) → trim sonrası AYNEN pass-through
+     2) Relative path (yeni — Aşama B sonrası) → getPublicUrl(
+        VILLA_IMAGES, path) ile doğru bucket URL'i üretilir
+     3) NULL / boş / non-string → null
+
+   Path-only contract: storage provider değişimi gelecekte olursa
+   tek nokta (STORAGE_BUCKETS.VILLA_IMAGES) güncellenir; DB'deki
+   relative path'ler dokunulmaz.
+
+   Caller'lar: villa.service.ts (mapVilla), cache.helpers.ts
+   (homepage collection + category covers Tier 2 fallback),
+   AdminGallery.tsx (admin thumbnail), villa-listesi/page.tsx
+   (admin curator list).
+=============================================================== */
+export function resolveVillaImageUrl(
+  value: string | null | undefined
+): string | null {
+  if (!value || typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return storageProvider.getPublicUrl(
+    STORAGE_BUCKETS.VILLA_IMAGES,
+    trimmed
+  );
+}
+
 /** Storage bucket adı — admin upload kodu için. */
 export const SITE_ASSETS_BUCKET_NAME = SITE_ASSETS_BUCKET;

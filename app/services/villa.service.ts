@@ -24,7 +24,7 @@
 import { villaRepository } from "@/lib/db/villa.repository";
 import { getVillaReviewStatsBatch } from "./villa-review.service";
 import { normalizeYouTubeVideos } from "@/lib/youtube.helper";
-import { resolveAssetUrl } from "@/lib/storage.helpers";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import {
   normalizeBedroomLayout,
   normalizeBathroomLayout,
@@ -321,9 +321,11 @@ function mapVilla(
       sorted
         .map(
           (img) =>
-            /* 🛡️ Aşama A — resolveAssetUrl: image_url HEM FULL URL
-               (legacy) HEM relative path (yeni) olabilir. */
-            resolveAssetUrl(img.image_url)
+            /* 🛡️ Aşama A + bucket-fix — resolveVillaImageUrl:
+               image_url HEM FULL URL (legacy) HEM relative path (yeni)
+               olabilir; relative path için doğru bucket (villa-images).
+               resolveAssetUrl SITE_ASSETS'a sabit olduğu için kullanılamaz. */
+            resolveVillaImageUrl(img.image_url)
         )
         .filter(
           (u): u is string =>

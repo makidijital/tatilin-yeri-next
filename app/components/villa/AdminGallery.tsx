@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { storageProvider } from "@/lib/storage";
-import { resolveAssetUrl } from "@/lib/storage.helpers";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 
 /* ===============================================================
    🛡️ UPLOAD SIZE GUARD — production hardening
@@ -310,11 +310,12 @@ export default function AdminGallery({
             onDrop={() => handleDrop(index)}
             className="relative group border rounded-xl overflow-hidden cursor-move"
           >
-            {/* 🛡️ Aşama B — image_url artık FULL URL VEYA relative path
-                olabilir. resolveAssetUrl normalize eder; legacy URL'ler
-                pass-through, yeni path'ler runtime'da URL'e çevrilir. */}
+            {/* 🛡️ Aşama B + bucket-fix — image_url HEM FULL URL HEM
+                relative path olabilir. resolveVillaImageUrl villa-images
+                bucket'ından URL üretir; legacy URL'ler pass-through,
+                yeni path'ler runtime'da doğru bucket URL'e çevrilir. */}
             <img
-              src={resolveAssetUrl(img.image_url) ?? ""}
+              src={resolveVillaImageUrl(img.image_url) ?? ""}
               className="w-full h-40 object-cover"
             />
 

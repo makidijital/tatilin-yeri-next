@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { supabase } from "@/lib/supabase";
 
-import { resolveAssetUrl } from "@/lib/storage.helpers";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getPublicSettings } from "@/app/services/settings.service";
 import { getMenu } from "@/app/services/menu.service";
 import { getVillas } from "@/app/services/villa.service";
@@ -307,10 +307,11 @@ export const getCachedHomepageCollectionVillas = unstable_cache(
         if (b?.is_cover) return 1;
         return (a?.sort_order ?? 0) - (b?.sort_order ?? 0);
       });
-      /* 🛡️ Aşama A — resolveAssetUrl: image_url HEM FULL URL (legacy)
-         HEM relative path (yeni) olabilir; tek noktada normalize. */
+      /* 🛡️ Aşama A + bucket-fix — resolveVillaImageUrl: image_url HEM
+         FULL URL (legacy) HEM relative path (yeni) olabilir; relative
+         path için doğru bucket (villa-images). */
       const images = sortedImages
-        .map((i) => resolveAssetUrl(i?.image_url))
+        .map((i) => resolveVillaImageUrl(i?.image_url))
         .filter(
           (u): u is string =>
             typeof u === "string" && u.trim().length > 0
@@ -506,13 +507,14 @@ export const getCachedCategoryCovers = unstable_cache(
         if (b?.is_cover) return 1;
         return (a?.sort_order ?? 0) - (b?.sort_order ?? 0);
       });
-      /* 🛡️ Aşama A — resolveAssetUrl: image_url FULL URL/relative path
-         dual-format desteği. coverImageUrl her zaman render-edilebilir
-         URL string'i veya null. */
+      /* 🛡️ Aşama A + bucket-fix — resolveVillaImageUrl: image_url
+         FULL URL/relative path dual-format desteği; villa-images bucket.
+         coverImageUrl her zaman render-edilebilir URL string'i veya
+         null. */
       const firstRaw = sorted.find(
         (i) => typeof i?.image_url === "string" && i.image_url.trim().length > 0
       )?.image_url as string | undefined;
-      const firstUrl = resolveAssetUrl(firstRaw) ?? undefined;
+      const firstUrl = resolveVillaImageUrl(firstRaw) ?? undefined;
 
       const key = String(typeId);
       const existing = result[key];

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 
 import VillaListesiClient, {
   type VillaListesiRow,
@@ -163,8 +164,11 @@ export default async function VillaListesiPage() {
       if (b?.is_cover) return 1;
       return (a?.sort_order ?? 0) - (b?.sort_order ?? 0);
     });
+    /* 🛡️ Aşama A + bucket-fix — resolveVillaImageUrl: image_url HEM
+       FULL URL (legacy) HEM relative path (yeni — Aşama B sonrası)
+       olabilir. villa-images bucket'ından doğru URL üretir. */
     const images = sortedImgs
-      .map((i) => i?.image_url)
+      .map((i) => resolveVillaImageUrl(i?.image_url))
       .filter(
         (u): u is string => typeof u === "string" && u.trim().length > 0
       );
