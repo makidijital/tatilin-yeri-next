@@ -166,7 +166,7 @@ export default function Header({
                 <img
                   src={siteLogo}
                   alt="Site logosu"
-                  className="h-9 w-auto object-contain"
+                  className="h-14 w-auto object-contain"
                 />
               ) : (
                 <>
