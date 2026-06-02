@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import WatermarkOverlay from "./WatermarkOverlay";
 import type { WatermarkPosition } from "@/app/services/settings.service";
 
@@ -45,6 +45,14 @@ export default function Gallery({
 }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
+  /* 🛡️ MOBILE SWIPE — native touch handler (zero dependency).
+     Lightbox modal içinde parmakla sağa-sola sürükleme ile prev/next.
+     Masaüstü mouse/click davranışı, klavye ← → Esc, lightbox dış-tıkla
+     kapatma, thumbnail tap → AYNEN korunur (touch event'leri yalnız
+     touchscreen cihazlarda tetiklenir; mouse event'leriyle çakışmaz). */
+  const touchStartX = useRef<number | null>(null);
+  const SWIPE_THRESHOLD = 50;
+
   // 🔥 scroll lock
   useEffect(() => {
     if (activeIndex !== null) {
@@ -76,6 +84,31 @@ export default function Gallery({
     setActiveIndex((prev) =>
       prev !== null ? (prev - 1 + images.length) % images.length : 0
     );
+  }
+
+  /* 🛡️ Touch handlers — lightbox swipe gesture.
+     touchStart: ilk parmak teması X koordinatını sakla.
+     touchEnd: bırakılan X ile delta hesapla; SWIPE_THRESHOLD aşılırsa
+     yön bazında next/prev tetikle. Çoklu parmak (pinch) durumunda
+     sessizce bypass. */
+  function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
+    if (e.touches.length !== 1) {
+      touchStartX.current = null;
+      return;
+    }
+    touchStartX.current = e.touches[0].clientX;
+  }
+
+  function handleTouchEnd(e: React.TouchEvent<HTMLDivElement>) {
+    const startX = touchStartX.current;
+    touchStartX.current = null;
+    if (startX === null) return;
+    const endX = e.changedTouches[0]?.clientX;
+    if (typeof endX !== "number") return;
+    const dx = endX - startX;
+    if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+    if (dx < 0) next();
+    else prev();
   }
 
   if (!images || images.length === 0) {
@@ -129,10 +162,14 @@ export default function Gallery({
           className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center"
           onClick={() => setActiveIndex(null)} // 🔥 dışa tıklayınca kapat
         >
-          {/* içerik tıklanınca kapanmasın */}
+          {/* içerik tıklanınca kapanmasın
+              🛡️ onTouchStart/onTouchEnd — mobile swipe gesture; mouse
+              event'leriyle çakışmaz, masaüstü davranışı AYNEN korunur. */}
           <div
             className="relative"
             onClick={(e) => e.stopPropagation()}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
           >
             {/* kapatma */}
             <button
