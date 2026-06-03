@@ -32,6 +32,7 @@ import "react-day-picker/dist/style.css";
 import { tr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+import { useState } from "react";
 import { formatCurrency } from "@/lib/currency";
 import { useCurrency } from "@/app/context/CurrencyContext";
 import { getDayStyle } from "@/lib/calendar.engine";
@@ -56,6 +57,10 @@ export default function BookingCalendar({
 }: Props) {
   const { currency } = useCurrency();
 
+  /* 🛡️ Modern inline error — alert() yerine takvim üstünde geçici
+     uyarı banner'ı; 3 saniye sonra otomatik temizlenir. */
+  const [conflictError, setConflictError] = useState<string | null>(null);
+
   const {
     startDate,
     endDate,
@@ -75,6 +80,21 @@ export default function BookingCalendar({
 
   return (
     <>
+      {/* 🛡️ INLINE CONFLICT BANNER — alert() yerine ufak görsel uyarı.
+          Auto-dismiss 3 saniye. */}
+      {conflictError && (
+        <div
+          role="alert"
+          className="
+            mb-3 rounded-xl border border-red-200 bg-red-50
+            px-3 py-2 text-[12.5px] text-red-700
+            flex items-center gap-2
+          "
+        >
+          <span aria-hidden>⚠️</span>
+          <span className="flex-1">{conflictError}</span>
+        </div>
+      )}
       {/* ───────────────────────────────────────────────────
           🛡️ FAZ 12 — PREMIUM NAV STRIP (refined)
           ───────────────────────────────────────────────────
@@ -199,7 +219,10 @@ export default function BookingCalendar({
             [from, to] = [to, from];
           }
           if (hasConflict(from, to)) {
-            alert("❌ Bu tarih aralığı dolu gün içeriyor");
+            /* 🛡️ alert() yerine inline banner — 3 saniye sonra otomatik
+               kaybolur; kullanıcı flow'unu blok etmez. */
+            setConflictError("Bu tarih aralığı dolu gün içeriyor");
+            setTimeout(() => setConflictError(null), 3000);
             return;
           }
           const safeEnd = getValidEndDate(from, to, mergedBlockedDates);

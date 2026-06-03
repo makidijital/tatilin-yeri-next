@@ -119,6 +119,8 @@ export default function BookingSidebar({
     startingPrice,
     parseLocalDate,
     handleReservation,
+    /* 🛡️ alert() yerine inline banner — null → gizli. */
+    reservationError,
   } = engine;
 
   /* === UI STATE — CONTAINER OWNS === */
@@ -330,9 +332,26 @@ export default function BookingSidebar({
         />
       )}
 
+      {/* 🛡️ INLINE RESERVATION ERROR — alert() yerine modern banner.
+          useBookingEngine'in handleReservation içinde set ettiği
+          reservationError state'i; 3sn sonra otomatik temizlenir. */}
+      {reservationError && (
+        <div
+          role="alert"
+          className="
+            rounded-xl border border-red-200 bg-red-50
+            px-3 py-2 text-[12.5px] text-red-700
+            flex items-center gap-2
+          "
+        >
+          <span aria-hidden>⚠️</span>
+          <span className="flex-1">{reservationError}</span>
+        </div>
+      )}
+
       {/* CTA — FAZ 26B: minimum stay invalid → disabled.
           handleReservation içinde de defansif short-circuit
-          var (alert + return) — UI disable + handler guard double-layer. */}
+          var (state guard + return) — UI disable + handler guard double-layer. */}
       <button
         onClick={handleReservation}
         disabled={!minimumStayValid}

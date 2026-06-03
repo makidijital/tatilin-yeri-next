@@ -140,8 +140,13 @@ export type UseBookingEngineReturn = {
   getPriceForDate: (date: Date) => number | null;
 
   /* Submit — navigation URL inşası + window.location.href.
-     BookingSidebar'daki davranışla birebir aynı: alert'ler dahil. */
+     BookingSidebar'daki davranışla birebir aynı; eski alert()
+     çağrıları yerine `reservationError` state'i set edilir. */
   handleReservation: () => void;
+
+  /* 🛡️ Modern feedback layer — alert() yerine inline banner state.
+     null → gizli; string → banner gösterilir; 3sn sonra auto-clear. */
+  reservationError: string | null;
 };
 
 /* ===============================================================
@@ -242,6 +247,13 @@ export function useBookingEngine(
     d.setHours(0, 0, 0, 0);
     return d;
   });
+
+  /* 🛡️ Modern feedback layer — handleReservation içindeki alert()
+     çağrıları yerine state-driven mesaj. Consumer (BookingSidebar)
+     bu state'i inline banner olarak gösterir; null → gizli. */
+  const [reservationError, setReservationError] = useState<string | null>(
+    null
+  );
 
   const isIntersection = (date: Date) => {
     return (
@@ -567,13 +579,20 @@ export function useBookingEngine(
   ---------------------------------------------- */
   const handleReservation = () => {
     if (!startDate || !endDate) {
-      alert("Tarih seçmedin");
+      /* 🛡️ alert() yerine inline state — consumer banner gösterir.
+         3sn sonra otomatik temizlenir, kullanıcı UX'i blok etmez. */
+      setReservationError("Lütfen tarih seçiniz.");
+      setTimeout(() => setReservationError(null), 3000);
       return;
     }
     if (!minimumStayValid) {
-      alert(`Minimum konaklama süresi ${minStayThreshold} gecedir.`);
+      setReservationError(
+        `Minimum konaklama süresi ${minStayThreshold} gecedir.`
+      );
+      setTimeout(() => setReservationError(null), 3000);
       return;
     }
+    setReservationError(null);
 
     const format = (date: Date) => {
       const y = date.getFullYear();
@@ -632,6 +651,10 @@ export function useBookingEngine(
 
     /* Submit */
     handleReservation,
+
+    /* 🛡️ Modern feedback layer — consumer'a expose. Banner display
+       BookingSidebar tarafında inline gösterilir; alert() kaldırıldı. */
+    reservationError,
   };
 }
 

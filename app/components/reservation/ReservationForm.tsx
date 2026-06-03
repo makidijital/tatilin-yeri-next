@@ -36,6 +36,13 @@ import { validatePublicReservationForm } from "./_helpers/validatePublicReservat
 import { buildPublicReservationPayload } from "./_helpers/buildPublicReservationPayload";
 import { dispatchPublicReservationRequestMail } from "./_helpers/dispatchPublicReservationRequestMail";
 
+/* 🛡️ Başarı sayfası — modal yerine tam sayfa redirect.
+   `/rezervasyon/basarili?ref=<id>&villa=<slug>` rotasına yönlendirir.
+   API/mail/form mantığı AYNEN; yalnız success feedback UX değişti.
+   useRouter client-side navigation için.
+   SuccessModal componenti silinmedi (gelecekte kullanılabilir). */
+import { useRouter } from "next/navigation";
+
 export default function ReservationForm({
   villa,
   prices,
@@ -46,8 +53,14 @@ export default function ReservationForm({
   children,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }: any) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [prepaymentRate, setPrepaymentRate] = useState(20);
+  /* 🛡️ Modern feedback layer — alert() yerine state-driven UI.
+     submitError: form üstünde inline error banner mesajı (null → gizli).
+     Başarı durumu artık tam sayfa redirect ile gösterilir
+     (`/rezervasyon/basarili?ref=...&villa=...`); modal state YOK. */
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<PublicPaymentMethodOption[]>([]);
   const [errors, setErrors] = useState<PublicReservationFormErrors>({});
 
@@ -345,18 +358,37 @@ export default function ReservationForm({
         dispatchPublicReservationRequestMail(reservationId);
       }
 
-      alert("Rezervasyon alındı 🚀");
+      /* 🛡️ Modern success — modal yerine tam sayfa redirect.
+         API/mail/form mantığı AYNEN; sadece feedback UX değişti.
+         Referans + villa slug query param ile success sayfasına geçilir. */
+      setSubmitError(null);
 
       setForm(initialPublicReservationFormData());
 
       setErrors({});
 
+      const villaSlug =
+        typeof villa?.slug === "string" && villa.slug.trim().length > 0
+          ? villa.slug.trim()
+          : "";
+      const refParam = reservationId ? encodeURIComponent(reservationId) : "";
+      const villaParam = villaSlug ? encodeURIComponent(villaSlug) : "";
+      const qs: string[] = [];
+      if (refParam) qs.push(`ref=${refParam}`);
+      if (villaParam) qs.push(`villa=${villaParam}`);
+      const url = `/rezervasyon/basarili${qs.length ? `?${qs.join("&")}` : ""}`;
+      router.push(url);
+
     } catch (err: unknown) {
 
       console.error(err);
 
-      const msg = err instanceof Error ? err.message : "Hata oluştu";
-      alert(msg);
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "İşlem sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.";
+      /* 🛡️ Modern error — alert() yerine inline banner state. */
+      setSubmitError(msg);
 
     } finally {
 
@@ -375,6 +407,29 @@ export default function ReservationForm({
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
       {/* LEFT — FORM */}
       <div className="lg:col-span-2 card-premium p-6 md:p-8 space-y-9">
+        {/* 🛡️ INLINE ERROR BANNER — submitError null değilse görünür.
+           alert() yerine modern inline feedback. */}
+        {submitError && (
+          <div
+            role="alert"
+            className="
+              rounded-2xl border border-red-200 bg-red-50
+              px-4 py-3 text-[13.5px] text-red-700
+              flex items-start gap-3
+            "
+          >
+            <span aria-hidden className="mt-0.5">⚠️</span>
+            <span className="flex-1 leading-relaxed">{submitError}</span>
+            <button
+              type="button"
+              onClick={() => setSubmitError(null)}
+              aria-label="Hata mesajını kapat"
+              className="text-red-500 hover:text-red-700 transition-colors shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         {/* CONTACT SECTION */}
         <Section
           eyebrow="Adım 1"
