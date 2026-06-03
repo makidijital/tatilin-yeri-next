@@ -10,6 +10,7 @@
 
 import type { Settings } from "@/app/services/settings.service";
 import { settingsServerRepository } from "@/lib/db/settings.repository.server";
+import { resolveAssetUrl } from "@/lib/storage.helpers";
 
 export type ResendPayload = {
   from: string;
@@ -49,6 +50,12 @@ export async function getMailConfig(): Promise<{
   apiKey: string | null;
   from: string;
   fromName: string;
+  /* 🔥 Firma logosu — settings.site_logo (Storage URL veya relative
+     path; resolveAssetUrl ile public URL'e çevrilir). NULL → mail
+     header logo bloğunu render ETMEZ, sadece firma adı gösterilir.
+     ESKİ "M" placeholder avatarı KESİNLİKLE KULLANILMAZ. PDF voucher
+     ile AYNI kaynak (data.ts > brandLogoUrl). */
+  brandLogoUrl: string | null;
   source: { apiKey: "db" | "env" | "missing"; from: "db" | "env" | "default"; fromName: "db" | "env" | "default" };
   settings: Settings | null;
 }> {
@@ -104,10 +111,16 @@ export async function getMailConfig(): Promise<{
     fromNameSource,
   });
 
+  /* 🔥 site_logo'yu Storage public URL'e resolve et (FULL URL veya
+     relative path için tek code path; Header/Footer/PDF voucher
+     ile AYNI helper). Yoksa null. */
+  const brandLogoUrl = resolveAssetUrl(settings?.site_logo) || null;
+
   return {
     apiKey,
     from,
     fromName,
+    brandLogoUrl,
     source: {
       apiKey: apiKeySource,
       from: fromSource,

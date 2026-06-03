@@ -19,6 +19,7 @@ import { getCountryLabel } from "@/lib/country.helper";
 
 export type ReservationCancelledProps = {
   brandName?: string;
+  brandLogoUrl?: string | null;
 
   // META
   createdAtDisplay: string;
@@ -164,6 +165,7 @@ export function renderReservationCancelledEmail(
     subject: `${brand} · Rezervasyon iptal bildirimi — ${props.villaTitle}`,
     html: emailLayout({
       brandName: brand,
+      brandLogoUrl: props.brandLogoUrl ?? null,
       preheader: `${props.villaTitle} rezervasyonu iptal edildi (${props.startDate} → ${props.endDate})`,
       body,
     }),

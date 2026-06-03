@@ -153,6 +153,7 @@ export async function POST(req: Request) {
 
     const { subject, html } = renderReservationCancelledEmail({
       brandName: brand,
+      brandLogoUrl: cfg.brandLogoUrl,
 
       createdAtDisplay: formatDateTimeTr(r.created_at),
       status: (r.status || "rejected") as string,

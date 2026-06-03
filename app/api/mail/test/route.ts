@@ -117,6 +117,7 @@ export async function POST(req: Request) {
     const { subject, html } = renderTestEmail({
       recipient: to,
       brandName: brand,
+      brandLogoUrl: cfg.brandLogoUrl,
     });
 
     const result = await sendMail({

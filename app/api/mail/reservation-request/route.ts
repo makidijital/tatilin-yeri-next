@@ -160,6 +160,7 @@ export async function POST(req: Request) {
 
     const { subject, html } = renderReservationRequestEmail({
       brandName: brand,
+      brandLogoUrl: cfg.brandLogoUrl,
 
       createdAtDisplay: formatDateTimeTr(r.created_at),
       status: (r.status || "pending") as string,

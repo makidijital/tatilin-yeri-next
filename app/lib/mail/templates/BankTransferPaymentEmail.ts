@@ -21,6 +21,7 @@ import {
 
 export type BankTransferPaymentEmailProps = {
   brandName?: string;
+  brandLogoUrl?: string | null;
 
   // META
   villaTitle: string;
@@ -147,6 +148,7 @@ export function renderBankTransferPaymentEmail(
     subject: `${brand} · Ödeme Bilgileri — ${props.villaTitle}`,
     html: emailLayout({
       brandName: brand,
+      brandLogoUrl: props.brandLogoUrl ?? null,
       preheader: `${props.villaTitle} için ödeme talimatları (${props.startDate} → ${props.endDate})`,
       body,
     }),

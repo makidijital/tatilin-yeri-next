@@ -188,6 +188,7 @@ export async function POST(req: Request) {
 
     const { subject, html } = renderBankTransferPaymentEmail({
       brandName: brand,
+      brandLogoUrl: cfg.brandLogoUrl,
       villaTitle,
       reservationNo: r.reservation_no || null,
       startDate: formatDateTr(r.start_date),

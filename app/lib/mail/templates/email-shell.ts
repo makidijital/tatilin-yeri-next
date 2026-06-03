@@ -8,6 +8,10 @@
 
 export type LayoutProps = {
   brandName?: string;
+  /* 🔥 Firma logosu — settings.site_logo public URL'i. Yoksa null →
+     header logo bloğunu render ETMEZ; placeholder/M avatarı
+     KESİNLİKLE GÖSTERİLMEZ. PDF voucher ile aynı kaynak. */
+  brandLogoUrl?: string | null;
   preheader?: string; // inbox preview text
   body: string; // ham HTML (component'lerden gelir)
 };
@@ -23,11 +27,25 @@ export function escapeHtml(text: string): string {
 
 export function emailLayout({
   brandName = "Maki Dijital",
+  brandLogoUrl = null,
   preheader = "",
   body,
 }: LayoutProps): string {
   const safePreheader = escapeHtml(preheader);
   const safeBrand = escapeHtml(brandName);
+
+  /* 🔥 LOGO BLOĞU — Outlook + Gmail mobil + Apple Mail safe:
+       - `display:block` → Outlook image gap fix
+       - `border:0; outline:none; text-decoration:none` → MSO/AOL fix
+       - `max-height:60px` → kullanıcı kuralı (tutarlı boyut)
+       - `width:auto; height:auto` → aspect ratio korunur
+       - `max-width:240px` → ultra geniş logoları taşmasın
+       - `alt={brand}` → görsel yüklenmediğinde firma adı görünür
+     brandLogoUrl yoksa BLOK YOK (kullanıcı kuralı: placeholder
+     KULLANMA; sadece firma adı göster). */
+  const logoBlock = brandLogoUrl
+    ? `<img src="${escapeHtml(brandLogoUrl)}" alt="${safeBrand}" style="display:block;border:0;outline:none;text-decoration:none;max-height:60px;height:auto;width:auto;max-width:240px;margin:0 0 12px;" />`
+    : "";
 
   return `<!doctype html>
 <html lang="tr">
@@ -48,28 +66,15 @@ export function emailLayout({
       <tr>
         <td align="center">
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid rgba(15,23,42,0.08);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,0.04);">
-            <!-- HEADER -->
+            <!-- HEADER — dikey düzen: logo (varsa) + firma adı + altyazı.
+                 Eski "M" placeholder avatarı + "Admin · CRM" altyazısı
+                 kaldırıldı (müşteri mailinde uygunsuz). Logo yoksa sadece
+                 firma adı + "Rezervasyon Sistemi" altyazısı render olur. -->
             <tr>
               <td style="padding:24px 28px 20px;border-bottom:1px solid rgba(15,23,42,0.06);">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    <td valign="middle">
-                      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                        <tr>
-                          <td valign="middle" style="vertical-align:middle;">
-                            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#1d4ed8 0%,#06b6d4 55%,#84cc16 100%);color:#ffffff;font-weight:700;font-size:16px;line-height:36px;text-align:center;">
-                              M
-                            </div>
-                          </td>
-                          <td valign="middle" style="padding-left:12px;vertical-align:middle;">
-                            <div style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-0.01em;">${safeBrand}</div>
-                            <div style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#94a3b8;margin-top:2px;">Admin · CRM</div>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
+                ${logoBlock}
+                <div style="font-size:16px;font-weight:700;color:#0f172a;letter-spacing:-0.01em;line-height:1.2;">${safeBrand}</div>
+                <div style="font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#94a3b8;margin-top:4px;">Rezervasyon Sistemi</div>
               </td>
             </tr>
 

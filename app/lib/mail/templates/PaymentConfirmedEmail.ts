@@ -21,6 +21,7 @@ import {
 
 export type PaymentConfirmedEmailProps = {
   brandName?: string;
+  brandLogoUrl?: string | null;
 
   // META
   villaTitle: string;
@@ -113,6 +114,7 @@ export function renderPaymentConfirmedEmail(
     subject: `${brand} · Ödemeniz alındı — ${props.villaTitle}`,
     html: emailLayout({
       brandName: brand,
+      brandLogoUrl: props.brandLogoUrl ?? null,
       preheader: `${props.villaTitle} için ödemeniz alındı (${props.startDate} → ${props.endDate})`,
       body,
     }),

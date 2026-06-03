@@ -11,6 +11,7 @@ import { formatDateTimeTr } from "@/lib/date-format";
 export type TestEmailProps = {
   recipient: string;
   brandName?: string;
+  brandLogoUrl?: string | null;
   sentAt?: Date;
 };
 
@@ -47,6 +48,7 @@ export function renderTestEmail(props: TestEmailProps): {
     subject: `${brand} · Test Mail`,
     html: emailLayout({
       brandName: brand,
+      brandLogoUrl: props.brandLogoUrl ?? null,
       preheader: `${brand} mail altyapısı test mesajı`,
       body,
     }),

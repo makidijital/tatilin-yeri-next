@@ -157,6 +157,7 @@ export async function POST(req: Request) {
 
     const { subject, html } = renderReservationApprovedEmail({
       brandName: brand,
+      brandLogoUrl: cfg.brandLogoUrl,
 
       createdAtDisplay: formatDateTimeTr(r.created_at),
       status: (r.status || "confirmed") as string,

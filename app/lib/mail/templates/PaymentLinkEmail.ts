@@ -24,6 +24,7 @@ import {
 
 export type PaymentLinkEmailProps = {
   brandName?: string;
+  brandLogoUrl?: string | null;
 
   // META
   villaTitle: string;
@@ -117,6 +118,7 @@ export function renderPaymentLinkEmail(
     subject: `${brand} · Ödeme Linki — ${props.villaTitle}`,
     html: emailLayout({
       brandName: brand,
+      brandLogoUrl: props.brandLogoUrl ?? null,
       preheader: `${props.villaTitle} için ödeme linkiniz hazır (${props.startDate} → ${props.endDate})`,
       body,
     }),

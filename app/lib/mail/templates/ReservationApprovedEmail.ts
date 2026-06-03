@@ -19,6 +19,7 @@ import { getCountryLabel } from "@/lib/country.helper";
 
 export type ReservationApprovedProps = {
   brandName?: string;
+  brandLogoUrl?: string | null;
 
   // META
   createdAtDisplay: string;
@@ -195,6 +196,7 @@ export function renderReservationApprovedEmail(
     subject: `${brand} · Rezervasyonunuz onaylandı — ${props.villaTitle}`,
     html: emailLayout({
       brandName: brand,
+      brandLogoUrl: props.brandLogoUrl ?? null,
       preheader: `${props.villaTitle} rezervasyonunuz onaylandı (${props.startDate} → ${props.endDate})`,
       body,
     }),

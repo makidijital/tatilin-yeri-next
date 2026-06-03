@@ -163,6 +163,7 @@ export async function POST(req: Request) {
 
     const { subject, html } = renderPaymentLinkEmail({
       brandName: brand,
+      brandLogoUrl: cfg.brandLogoUrl,
 
       villaTitle,
       reservationNo: r.reservation_no || null,

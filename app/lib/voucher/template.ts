@@ -12,6 +12,15 @@ import { getCountryLabel } from "@/lib/country.helper";
    ReservationApprovedEmail HTML'i HACK'LENMEZ; bu bağımsız
    bir voucher dokümanıdır. Hem PDF (browser print) hem mail
    attachment için aynı render kullanılır.
+
+   ⚠️ LAYOUT NOTU:
+     Label/value satırları HTML `<table>` ile render edilir
+     (display:flex YERİNE). Browser print engine'leri (Chrome,
+     Safari, Firefox; mobil dahil) en garantili biçimde table
+     layout'unu PDF'e döker. Flex bazı engine'lerde print mode'da
+     wrap/align davranışı bozularak değerin label'a yapışmasına
+     yol açıyordu (kullanıcı raporu: "VillaVilla In Love",
+     "Toplam₺38.000"). Table layout bu davranışı kökten çözer.
    =============================================================== */
 
 function escapeHtml(text: string | number | null | undefined): string {
@@ -23,11 +32,13 @@ function escapeHtml(text: string | number | null | undefined): string {
     .replace(/'/g, "&#39;");
 }
 
+/* Tek satır = `<tr>`; iki `<td>` → label / value.
+   Print-safe; flexbox-render farklılıklarından bağımsız. */
 function rowHtml(label: string, value: string, strong = false): string {
-  return `<div class="row">
-    <span class="row-label">${escapeHtml(label)}</span>
-    <span class="row-value${strong ? " strong" : ""}">${escapeHtml(value)}</span>
-  </div>`;
+  return `<tr class="row">
+    <td class="row-label">${escapeHtml(label)}</td>
+    <td class="row-value${strong ? " strong" : ""}">${escapeHtml(value)}</td>
+  </tr>`;
 }
 
 function sectionHtml(title: string, rows: string[]): string {
@@ -35,7 +46,7 @@ function sectionHtml(title: string, rows: string[]): string {
   if (filtered.length === 0) return "";
   return `<section class="section">
     <p class="section-title">${escapeHtml(title)}</p>
-    ${filtered.join("")}
+    <table class="rows"><tbody>${filtered.join("")}</tbody></table>
   </section>`;
 }
 
@@ -45,11 +56,11 @@ export function renderVoucherDocument(
   const stayRows = [
     rowHtml("Villa", props.villaTitle, true),
     rowHtml(
-      "Tarih aralığı",
-      `${props.startDate} → ${props.endDate}`
+      "Tarih Aralığı",
+      `${props.startDate} — ${props.endDate}`
     ),
-    rowHtml("Konaklama süresi", `${props.nights} gece`),
-    rowHtml("Misafir sayısı", `${props.guestsTotal} kişi`),
+    rowHtml("Konaklama Süresi", `${props.nights} gece`),
+    rowHtml("Misafir Sayısı", `${props.guestsTotal} kişi`),
   ];
 
   const customerRows = [
@@ -67,7 +78,7 @@ export function renderVoucherDocument(
     props.address ? rowHtml("Adres", props.address) : "",
     props.otherGuestNames.length > 0
       ? rowHtml(
-          "Diğer misafirler",
+          "Diğer Misafirler",
           props.otherGuestNames
             .filter((n) => (n || "").trim().length)
             .join(", ") || "—"
@@ -86,12 +97,22 @@ export function renderVoucherDocument(
     props.paidDisplay ? rowHtml("Ödenen", props.paidDisplay) : "",
     rowHtml("Kalan", props.remainingDisplay),
     props.paymentMethodName
-      ? rowHtml("Ödeme yöntemi", props.paymentMethodName)
+      ? rowHtml("Ödeme Yöntemi", props.paymentMethodName)
       : "",
   ];
 
   const subject = `${props.brandName} · Rezervasyon Belgesi — ${props.villaTitle}`;
   const subjectEscaped = escapeHtml(subject);
+
+  /* 🔥 LOGO BLOĞU — yalnız brandLogoUrl varsa render. Yoksa hiçbir
+     placeholder / "M" avatarı gösterilmez. img alt = brandName,
+     boyutlar max-height ile sabit; print engine'inde object-fit
+     contain ile aspect ratio korunur. */
+  const logoBlock = props.brandLogoUrl
+    ? `<img class="brand-logo" src="${escapeHtml(
+        props.brandLogoUrl
+      )}" alt="${escapeHtml(props.brandName)}" />`
+    : "";
 
   const html = `<!doctype html>
 <html lang="tr">
@@ -123,40 +144,45 @@ export function renderVoucherDocument(
         border-radius: 18px;
         box-shadow: 0 1px 2px rgba(15,23,42,0.04);
       }
+
+      /* ===== HEADER — 2 kolon: brand (sol) + stamp (sağ) ===== */
       .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-        padding-bottom: 18px;
-        border-bottom: 1px solid rgba(15,23,42,0.08);
+        width: 100%;
+        border-collapse: collapse;
         margin-bottom: 22px;
       }
-      .brand { display: flex; align-items: center; gap: 12px; }
-      .brand-mark {
-        width: 44px; height: 44px;
-        border-radius: 12px;
-        background: linear-gradient(135deg,#1d4ed8 0%,#06b6d4 55%,#84cc16 100%);
-        color: #ffffff;
-        font-weight: 700;
-        font-size: 20px;
-        line-height: 44px;
-        text-align: center;
+      .header td {
+        padding: 0 0 18px;
+        border-bottom: 1px solid rgba(15,23,42,0.08);
+        vertical-align: top;
+      }
+      .header .brand-cell { text-align: left; }
+      .header .stamp-cell { text-align: right; width: 42%; }
+
+      .brand-logo {
+        display: block;
+        max-height: 44px;
+        max-width: 200px;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        margin-bottom: 10px;
       }
       .brand-text-name {
         font-size: 16px;
         font-weight: 700;
         letter-spacing: -0.01em;
         color: #0f172a;
+        line-height: 1.2;
       }
       .brand-text-sub {
         font-size: 10px;
         letter-spacing: 0.22em;
         text-transform: uppercase;
         color: #94a3b8;
-        margin-top: 3px;
+        margin-top: 4px;
       }
-      .stamp { text-align: right; }
+
       .stamp-label {
         font-size: 10px;
         letter-spacing: 0.22em;
@@ -169,12 +195,14 @@ export function renderVoucherDocument(
         color: #0f172a;
         margin-top: 4px;
         font-variant-numeric: tabular-nums;
+        word-break: break-all;
       }
       .stamp-meta {
         font-size: 11px;
         color: #94a3b8;
         margin-top: 6px;
       }
+
       .title-eyebrow {
         font-size: 11px;
         letter-spacing: 0.22em;
@@ -189,6 +217,8 @@ export function renderVoucherDocument(
         color: #0f172a;
         margin: 6px 0 4px;
         line-height: 1.15;
+        word-break: break-word;
+        overflow-wrap: anywhere;
       }
       .lede {
         font-size: 14px;
@@ -196,39 +226,58 @@ export function renderVoucherDocument(
         line-height: 1.6;
         margin: 0 0 26px;
       }
-      .section { margin: 0 0 22px; }
+
+      /* ===== SECTIONS ===== */
+      .section { margin: 0 0 26px; }
       .section-title {
         font-size: 11px;
         letter-spacing: 0.16em;
         text-transform: uppercase;
         font-weight: 700;
-        color: #64748b;
+        color: #475569;
         padding-bottom: 10px;
-        margin: 0 0 6px;
-        border-bottom: 1px solid rgba(15,23,42,0.06);
+        margin: 0 0 8px;
+        border-bottom: 1px solid rgba(15,23,42,0.08);
       }
-      .row {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 16px;
-        padding: 8px 0;
+
+      /* ===== ROWS (print-safe table layout) ===== */
+      .rows {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
       }
-      .row + .row { border-top: 1px dashed rgba(15,23,42,0.05); }
+      .rows .row td {
+        padding: 11px 0;
+        vertical-align: top;
+        border-top: 1px dashed rgba(15,23,42,0.06);
+      }
+      .rows tr:first-child td { border-top: 0; }
       .row-label {
-        font-size: 12px;
-        color: #64748b;
-        flex: 0 0 38%;
+        width: 38%;
+        padding-right: 16px !important;
+        font-size: 11.5px;
+        font-weight: 500;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        line-height: 1.5;
+        word-break: break-word;
       }
       .row-value {
         font-size: 14px;
         color: #0f172a;
-        font-weight: 500;
+        font-weight: 600;
         text-align: right;
-        flex: 1;
         font-variant-numeric: tabular-nums;
+        line-height: 1.5;
+        word-break: break-word;
+        overflow-wrap: anywhere;
       }
-      .row-value.strong { font-weight: 700; font-size: 15px; }
+      .row-value.strong {
+        font-weight: 800;
+        font-size: 15px;
+      }
+
       .footer {
         margin-top: 32px;
         padding-top: 18px;
@@ -247,27 +296,27 @@ export function renderVoucherDocument(
           box-shadow: none;
           max-width: none;
         }
+        .section { page-break-inside: avoid; }
+        .rows .row { page-break-inside: avoid; }
       }
     </style>
   </head>
   <body>
     <article class="doc">
-      <header class="header">
-        <div class="brand">
-          <div class="brand-mark">M</div>
-          <div>
-            <div class="brand-text-name">${escapeHtml(props.brandName)}</div>
-            <div class="brand-text-sub">Rezervasyon Belgesi</div>
-          </div>
-        </div>
-        <div class="stamp">
+      <table class="header"><tbody><tr>
+        <td class="brand-cell">
+          ${logoBlock}
+          <div class="brand-text-name">${escapeHtml(props.brandName)}</div>
+          <div class="brand-text-sub">Rezervasyon Belgesi</div>
+        </td>
+        <td class="stamp-cell">
           <div class="stamp-label">Rezervasyon Kodu</div>
           <div class="stamp-value">${escapeHtml(props.voucherNo)}</div>
           <div class="stamp-meta">Oluşturma: ${escapeHtml(
             props.createdAtDisplay
           )}</div>
-        </div>
-      </header>
+        </td>
+      </tr></tbody></table>
 
       <p class="title-eyebrow">Onaylanmış Rezervasyon</p>
       <h1 class="title">${escapeHtml(props.villaTitle)}</h1>

@@ -174,6 +174,7 @@ export async function POST(req: Request) {
 
     const { subject, html } = renderPaymentConfirmedEmail({
       brandName: brand,
+      brandLogoUrl: cfg.brandLogoUrl,
       villaTitle,
       startDate: formatDateTr(r.start_date),
       endDate: formatDateTr(r.end_date),

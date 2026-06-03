@@ -2,6 +2,8 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getMailConfig } from "@/app/lib/mail/client";
+import { getSettings } from "@/app/services/settings.service";
+import { resolveAssetUrl } from "@/lib/storage.helpers";
 
 /* 🛡️ PHASE 3 (migration 040): voucher reservation snapshot'ı tam PII
    içerir (name/phone/email/identity/address/price). 040 admin-only RLS
@@ -40,6 +42,11 @@ import {
 
 export type VoucherProps = {
   brandName: string;
+  /* 🔥 Firma logosu — settings.site_logo (Storage URL veya relative
+     path; data layer resolveAssetUrl ile public URL'e çevirir).
+     Yoksa null → template logo bloğunu HİÇ render etmez (placeholder
+     avatar KULLANILMAZ; M markası kaldırıldı). */
+  brandLogoUrl: string | null;
 
   voucherNo: string;
   createdAtDisplay: string;
@@ -192,6 +199,18 @@ export async function buildVoucherData(
   const cfg = await getMailConfig();
   const brand = cfg.fromName || "Maki Dijital";
 
+  /* 🔥 Firma logosu — settings.site_logo (Header/Footer ile AYNI
+     kaynak). resolveAssetUrl HEM FULL URL (legacy) HEM relative path
+     (yeni) destekler; yoksa null → template logo render etmez,
+     placeholder/M avatarı GÖSTERİLMEZ. */
+  let brandLogoUrl: string | null = null;
+  try {
+    const settings = await getSettings();
+    brandLogoUrl = resolveAssetUrl(settings?.site_logo) || null;
+  } catch {
+    brandLogoUrl = null;
+  }
+
   const totalTRY =
     Number(r.total_price_try) || Number(r.total_price) || 0;
 
@@ -209,6 +228,7 @@ export async function buildVoucherData(
 
   const props: VoucherProps = {
     brandName: brand,
+    brandLogoUrl,
 
     voucherNo: buildVoucherNo(r.reservation_no, r.id),
     createdAtDisplay: formatDateTimeTr(r.created_at),
