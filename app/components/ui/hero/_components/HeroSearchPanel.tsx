@@ -379,11 +379,6 @@ export default function HeroSearchPanel() {
             popperPlacement="bottom-start"
             popperClassName="!z-[60]"
             portalId="hero-datepicker-portal"
-            /* 🛡️ Mobil klavye supress — readOnly HTML attribute'u
-               iOS Safari + Android Chrome'da virtual keyboard'u açmaz.
-               Click handler hâlâ takvimi tetikler; masaüstü mouse
-               davranışı + react-datepicker selectsRange seçimi AYNEN. */
-            readOnly
           />
         </div>
       </div>

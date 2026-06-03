@@ -437,10 +437,6 @@ export default function OfferRequestForm() {
                 className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none w-full text-[14px] font-medium !text-[var(--color-stone-900)] placeholder:!text-[var(--color-stone-400)] cursor-pointer"
                 portalId="teklif-datepicker-portal"
                 popperClassName="!z-[60]"
-                /* 🛡️ Mobil klavye supress — readOnly HTML attribute.
-                   iOS Safari + Android Chrome virtual keyboard'u açmaz.
-                   Click → takvim açılır, selectsRange seçimi AYNEN. */
-                readOnly
               />
             </div>
           </div>

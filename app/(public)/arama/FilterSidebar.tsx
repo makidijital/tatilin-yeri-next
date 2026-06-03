@@ -619,10 +619,6 @@ export default function FilterSidebar({
                   : ""
               }
               className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none w-full text-[14px] font-medium !text-[var(--color-stone-900)] placeholder-[var(--color-stone-400)] cursor-pointer outline-none"
-              /* 🛡️ Mobil klavye supress — readOnly HTML attribute.
-                 iOS Safari + Android Chrome virtual keyboard'u açmaz.
-                 Click → takvim açılır, selectsRange seçimi AYNEN. */
-              readOnly
             />
             {(startDate || endDate) && (
               <button
