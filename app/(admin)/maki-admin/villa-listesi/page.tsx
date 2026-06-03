@@ -49,8 +49,12 @@ type RawVilla = {
   guests: number | null;
   bedrooms: number | null;
   bathrooms: number | null;
-  price: number | null;
-  currency: string | null;
+  /* 🛡️ villa.price + villa.currency DB'den kaldırıldı (legacy migration —
+     dashboard manuel müdahalesi; commitlenmiş SQL drop YOK). Eşdeğer veri
+     villa_prices relation'ından `getStartingPrice(prices)` ile derive edilir
+     (VillaListesiClient.tsx:459-466 fallback). RawVilla'da bu alanlar
+     tutulmaz; mapping VillaListesiRow.price/currency = null gönderir; client
+     fallback devreye girer — UI/fiyat davranışı birebir korunur. */
   cleaning_fee: number | null;
   cleaning_currency: string | null;
   cleaning_limit: number | null;
@@ -83,7 +87,6 @@ export default async function VillaListesiPage() {
         `
         id, slug, title, location_id, badge,
         guests, bedrooms, bathrooms,
-        price, currency,
         cleaning_fee, cleaning_currency, cleaning_limit,
         location:villa_locations(name),
         villa_images (image_url, is_cover, sort_order),
@@ -205,8 +208,12 @@ export default async function VillaListesiPage() {
       title: v.title || "",
       location_id: v.location_id || "",
       location: locName,
-      price: v.price,
-      currency: v.currency,
+      /* 🛡️ villa.price/currency DB'den kaldırıldı — top-level fiyat alanları
+         null gönderiyoruz. Client (VillaListesiClient.tsx:459-466) bu durumda
+         getStartingPrice(v.prices) ile villa_prices relation'ından starting
+         price hesaplar; VillaCard prop kontratı korunur. */
+      price: null,
+      currency: null,
       images,
       badge: v.badge,
       guests: v.guests,
