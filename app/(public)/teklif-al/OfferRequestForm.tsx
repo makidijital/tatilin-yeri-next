@@ -19,6 +19,8 @@ import {
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { tr } from "date-fns/locale";
+
+import MobileKbSafeInput from "@/app/components/ui/datepicker/MobileKbSafeInput";
 import {
   Heart,
   Home,
@@ -437,6 +439,11 @@ export default function OfferRequestForm() {
                 className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none w-full text-[14px] font-medium !text-[var(--color-stone-900)] placeholder:!text-[var(--color-stone-400)] cursor-pointer"
                 portalId="teklif-datepicker-portal"
                 popperClassName="!z-[60]"
+                /* 🛡️ Mobil klavye baskılama — customInput içinde
+                   inputMode="none". Diğer tüm prop'lar (selectsRange,
+                   onChange, dateFormat, locale, minDate, placeholder,
+                   className, portalId, popperClassName) AYNEN korunur. */
+                customInput={<MobileKbSafeInput />}
               />
             </div>
           </div>

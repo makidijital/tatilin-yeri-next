@@ -11,6 +11,8 @@ import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { tr } from "date-fns/locale";
 
+import MobileKbSafeInput from "@/app/components/ui/datepicker/MobileKbSafeInput";
+
 import {
   Search,
   Tag,
@@ -379,6 +381,12 @@ export default function HeroSearchPanel() {
             popperPlacement="bottom-start"
             popperClassName="!z-[60]"
             portalId="hero-datepicker-portal"
+            /* 🛡️ Mobil sanal klavye baskılama — customInput içinde
+               inputMode="none". Takvim popper'ı, value display,
+               selectsRange, onChange, dateFormat, locale, minDate,
+               placeholderText AYNEN korunur. Desktop davranışı
+               değişmez. Detay: MobileKbSafeInput.tsx başlığı. */
+            customInput={<MobileKbSafeInput />}
           />
         </div>
       </div>
