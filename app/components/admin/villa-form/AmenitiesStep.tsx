@@ -180,6 +180,36 @@ export default function AmenitiesStep({
         title="Villa özellikleri"
         subtitle="Villada bulunan olanakları seç"
       >
+        {/* 🛡️ SELECT-ALL TOOLBAR — Adım 6 (Villa özellikleri).
+           Boş liste durumunda render edilmez. Defansif `every()` ile
+           orphan id (DB'de olmayan eski selectedFeatures kaydı) zarif
+           handle. ChipCheckbox onChange logic'i + setter API'sine
+           dokunulmadı; toolbar additive UI. */}
+        {features.length > 0 && (() => {
+          const allFeaturesSelected = features.every((f) =>
+            selectedFeatures.includes(f.id)
+          );
+          return (
+            <div className="flex items-center justify-between gap-3 mb-3 -mt-3">
+              <p className="text-[12px] text-[var(--color-stone-400)]">
+                {selectedFeatures.length} / {features.length} seçili
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (allFeaturesSelected) {
+                    setSelectedFeatures([]);
+                  } else {
+                    setSelectedFeatures(features.map((f) => f.id));
+                  }
+                }}
+                className="text-[12.5px] font-medium text-[var(--brand-coral)] hover:underline"
+              >
+                {allFeaturesSelected ? "Seçimi Temizle" : "Tümünü Seç"}
+              </button>
+            </div>
+          );
+        })()}
         <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-3">
           {features.map((f) => {
             const isSelected = selectedFeatures.includes(f.id);
