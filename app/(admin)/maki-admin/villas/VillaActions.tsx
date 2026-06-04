@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Power, Trash2 } from "lucide-react";
+import { Power, Trash2, Copy } from "lucide-react";
 
 /* 🛡️ FAZ 2 frontend purge — direct service import KALDIRILDI.
    Eskiden:
@@ -46,6 +46,9 @@ export function VillaActions({
 
   const [active, setActive] = useState(initialActive);
   const [pending, setPending] = useState(false);
+  /* 🛡️ Clone busy state — buton "Kopyalanıyor…" + disabled. Power/
+     delete butonlarını etkilemez (state ayrı tutuldu). */
+  const [cloning, setCloning] = useState(false);
 
   const handleToggle = async () => {
     if (pending) return;
@@ -161,6 +164,79 @@ export function VillaActions({
     router.refresh();
   };
 
+  /* 🛡️ HANDLE CLONE — admin "Kopyala" feature.
+     Akış: useConfirm onay → adminFetch POST /api/admin/villas/[id]/clone
+     → success ise router.push("/maki-admin/villas/{newId}") + toast +
+     revalidateVillas + router.refresh. Service tarafı (clone.service.ts)
+     görsel hariç tüm villa bilgilerini ve relation/prices/distances
+     kayıtlarını yeni villaya replicate eder; yeni villa is_active=false
+     doğar. */
+  const handleClone = async () => {
+    if (cloning) return;
+
+    const ok = await confirm({
+      title: "Villa kopyalansın mı?",
+      description:
+        `"${villaTitle}" villasının bir kopyası oluşturulacak. ` +
+        "Tüm bilgiler taşınacak; galeri boş olacak ve yeni villa " +
+        "pasif (görünmez) olarak başlayacak. Devam etmek istiyor musunuz?",
+      confirmLabel: "Kopyala",
+      variant: "default",
+    });
+    if (!ok) return;
+
+    setCloning(true);
+    let res: { ok: boolean; id?: string; error?: string };
+    try {
+      const apiRes = await adminFetch(
+        `/api/admin/villas/${encodeURIComponent(villaId)}/clone`,
+        { method: "POST" }
+      );
+      const json = (await apiRes.json().catch(() => ({}))) as {
+        ok?: boolean;
+        id?: string;
+        error?: string;
+      };
+      res =
+        apiRes.ok && json.ok
+          ? { ok: true, id: json.id }
+          : { ok: false, error: json.error || `HTTP ${apiRes.status}` };
+    } catch (err) {
+      res = {
+        ok: false,
+        error: err instanceof Error ? err.message : "İstek başarısız",
+      };
+    }
+    setCloning(false);
+
+    if (!res.ok || !res.id) {
+      toast.error("Villa kopyalanamadı", {
+        id: `villa-clone-${villaId}`,
+        description: res.error,
+      });
+      return;
+    }
+
+    toast.success("Villa kopyalandı", {
+      id: `villa-clone-${villaId}`,
+      description: `"${villaTitle} - Kopya" düzenleme ekranına yönlendiriliyorsunuz.`,
+    });
+    /* 🛡️ AUDIT LOG (fail-safe). Yeni villa id'si entity_id. */
+    logActivity({
+      action: "villa.cloned",
+      entity_type: "villa",
+      entity_id: res.id,
+      entity_title: `${villaTitle} - Kopya`,
+      before_data: { source_villa_id: villaId, source_title: villaTitle },
+      after_data: { id: res.id, is_active: false },
+    }).catch(() => {});
+    revalidateVillas().catch(() => {});
+    /* 🛡️ Düzenleme ekranına yönlendir — mevcut admin edit route'u
+       /maki-admin/villas/[id] (page.tsx mevcut). Push (replace değil)
+       ki admin "geri" ile listeye dönebilsin. */
+    router.push(`/maki-admin/villas/${res.id}`);
+  };
+
   return (
     <>
       <button
@@ -182,6 +258,21 @@ export function VillaActions({
       >
         <Power size={13} />
         {active ? "Pasifleştir" : "Aktifleştir"}
+      </button>
+
+      {/* 🛡️ KOPYALA — pasifleştir ile sil arasında. Görsel destructive
+         değil (neutral); silme butonundan ayrı `cloning` state'i kullanır
+         ki diğer aksiyonların disabled durumlarını etkilemesin. */}
+      <button
+        type="button"
+        onClick={handleClone}
+        disabled={cloning}
+        className="admin-btn-ghost shrink-0 disabled:opacity-50"
+        aria-label="Villayı kopyala"
+        title="Bu villanın kopyasını oluştur"
+      >
+        <Copy size={13} />
+        {cloning ? "Kopyalanıyor…" : "Kopyala"}
       </button>
 
       <button
