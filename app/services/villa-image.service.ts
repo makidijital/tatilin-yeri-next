@@ -1,6 +1,9 @@
 import { supabase } from "@/lib/supabase";
 import {
   removeVillaImageByUrl,
+  removeVillaStorageFiles,
+  parseVillaStorageUrl,
+  VILLA_IMAGES_BUCKET,
 } from "@/lib/villa-image.helpers";
 
 export type VillaImage = {
@@ -218,4 +221,114 @@ export async function deleteVillaImage(id: string): Promise<boolean> {
   }
 
   return true;
+}
+
+/* ===============================================================
+   🛡️ DELETE ALL IMAGES (bulk) — production-hardened lifecycle
+   ===============================================================
+   `deleteVillaImage` paterninin **batch** karşılığı.
+   GARANTİLER:
+
+   1) SADECE İLGİLİ VİLLA — `.eq("villa_id", villaId)` predicate ile
+      SQL seviyesinde scope. Yanlış villa silinmesi imkansız.
+
+   2) IDEMPOTENT
+      - villaId'ye karşılık DB row YOKSA: { ok:true, removed:0 }.
+
+   3) DB-FIRST ORDER (defansif)
+      - Önce single batch DELETE → tek query ile tüm satırlar gider.
+      - DB delete başarısız → storage'a HİÇ DOKUNULMAZ (rollback
+        garantisi: orphan storage olmaz, çünkü DB hala kayıt tutar).
+      - DB delete başarılı → storage cleanup arka planda best-effort.
+
+   4) STORAGE BATCH REMOVE
+      - `removeVillaStorageFiles` provider'ın retry'lı batch remove'u.
+      - Path parse fail olan URL'ler (legacy/malformed) atlanır;
+        DB delete zaten gitti → UX intact.
+      - Tüm storage başarısız → orphan log yazılır, return ok=true
+        (DB row gittiği için UX bozulmaz).
+
+   RETURN SEMANTIC:
+     { ok: true,  removed: N, orphans: [] }      — tam başarı
+     { ok: true,  removed: N, orphans: [paths] } — DB OK, bazı storage
+                                                   path'ler orphan
+     { ok: false, removed: 0, orphans: [] }      — DB delete fail
+                                                   (storage'a dokunulmadı)
+   =============================================================== */
+export async function deleteAllVillaImages(villaId: string): Promise<{
+  ok: boolean;
+  removed: number;
+  orphans: string[];
+}> {
+  if (!villaId) return { ok: false, removed: 0, orphans: [] };
+
+  /* 1) Fetch — storage cleanup için image_url'ler lazım. */
+  const { data: imgs, error: fetchError } = await supabase
+    .from("villa_images")
+    .select("image_url")
+    .eq("villa_id", villaId);
+
+  if (fetchError) {
+    console.error("[villa-image.deleteAll] FETCH_FAILED", {
+      villaId,
+      error: fetchError.message,
+    });
+    return { ok: false, removed: 0, orphans: [] };
+  }
+
+  /* IDEMPOTENT: kayıt yoksa zaten boş → success. */
+  if (!imgs || imgs.length === 0) {
+    console.info("[villa-image.deleteAll] EMPTY", { villaId });
+    return { ok: true, removed: 0, orphans: [] };
+  }
+
+  const count = imgs.length;
+
+  /* 2) DB BATCH DELETE — tek query, sadece bu villa. */
+  const { error: dbError } = await supabase
+    .from("villa_images")
+    .delete()
+    .eq("villa_id", villaId);
+
+  if (dbError) {
+    console.error("[villa-image.deleteAll] DB_FAILED", {
+      villaId,
+      error: dbError.message,
+    });
+    /* Storage'a DOKUNULMADI — orphan riski yok. */
+    return { ok: false, removed: 0, orphans: [] };
+  }
+
+  /* 3) STORAGE BULK CLEANUP — best-effort, retry'lı batch remove.
+        DB gitti → UX intact. Storage başarısız olsa bile success
+        döneriz (orphan path'ler caller'a + log'a yansır). */
+  const paths: string[] = [];
+  for (const i of imgs) {
+    const parsed = parseVillaStorageUrl(
+      i?.image_url as string | null | undefined
+    );
+    if (parsed) paths.push(parsed.path);
+  }
+
+  let orphans: string[] = [];
+  if (paths.length > 0) {
+    const result = await removeVillaStorageFiles(
+      VILLA_IMAGES_BUCKET,
+      paths
+    );
+    if (!result.ok) {
+      orphans = result.failed;
+      console.warn("[villa-image.deleteAll] STORAGE_ORPHAN", {
+        villaId,
+        removed: count,
+        orphans,
+        attempts: result.attempts,
+        message:
+          "DB rows removed; some storage files failed to delete after retries. " +
+          "Orphan storage files remain — UX not affected.",
+      });
+    }
+  }
+
+  return { ok: true, removed: count, orphans };
 }

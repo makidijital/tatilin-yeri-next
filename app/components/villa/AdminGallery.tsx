@@ -1,8 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { storageProvider } from "@/lib/storage";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+import {
+  useConfirm,
+  useNotify,
+} from "@/app/components/admin/notifications/NotificationProvider";
 
 /* ===============================================================
    🛡️ UPLOAD SIZE GUARD — production hardening
@@ -68,6 +73,13 @@ type Props = {
    *  `void`/`undefined`/`true` → başarı varsayımı (mevcut davranış). */
   onUploaded: (url: string) => Promise<boolean | void>;
   onDelete: (id: string) => Promise<void>;
+  /** 🛡️ Bulk delete — opsiyonel (backward-compat). Verilmezse
+   *  "Tüm Resimleri Sil" butonu render edilmez; verilirse
+   *  `useConfirm` ile onay alınır, success/error toast ile
+   *  bildirim verilir. Caller boolean ile başarı/başarısızlık
+   *  döner; service tarafı (`deleteAllVillaImages`) zaten
+   *  DB-first + storage best-effort + idempotent. */
+  onDeleteAll?: () => Promise<boolean>;
   onReorder: () => Promise<void>;
 };
 
@@ -77,11 +89,140 @@ export default function AdminGallery({
   villaSlug = null,
   onUploaded,
   onDelete,
+  onDeleteAll,
   onReorder,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  /* 🛡️ Bulk delete loading state — UI yalnız bu state aktifken
+     buton "Siliniyor…" + disabled. */
+  const [deletingAll, setDeletingAll] = useState(false);
+  const confirm = useConfirm();
+  const toast = useNotify();
+
+  /* 🛡️ HANDLE DELETE ALL — confirmation + service call + toast.
+     Akış: useConfirm() → cancel ise return. Onaylanırsa onDeleteAll()
+     callback'i parent'a delege (parent `deleteAllVillaImages(villaId)`
+     çağırır, başarılıysa `loadImages()` ile UI state'i tazeler).
+     Başarı → success toast; başarısızlık → error toast.
+     Mevcut tekli delete, upload, reorder, cover akışlarına
+     dokunulmaz. */
+  async function handleDeleteAllClick() {
+    if (!onDeleteAll) return;
+    if (images.length === 0) return;
+
+    const proceed = await confirm({
+      title: "Tüm fotoğraflar silinsin mi?",
+      description:
+        "Bu villaya ait tüm fotoğraflar kalıcı olarak silinecek. Bu işlem geri alınamaz.",
+      confirmLabel: "Evet, Tümünü Sil",
+      variant: "danger",
+    });
+    if (!proceed) return;
+
+    setDeletingAll(true);
+    const ok = await onDeleteAll();
+    setDeletingAll(false);
+
+    if (ok) {
+      toast.success("Tüm fotoğraflar silindi", { id: "gallery-delete-all" });
+    } else {
+      toast.error("Silme işlemi başarısız oldu", {
+        id: "gallery-delete-all",
+      });
+    }
+  }
+
+  /* ===============================================================
+     🛡️ DRAG AUTO-SCROLL — Trello / Notion / Google Photos paterni
+     ===============================================================
+     SORUN:
+       Çok sayıda fotoğraf olduğunda en alttaki kartı en üste taşımak
+       için ekran kenarına çekildiğinde tarayıcı otomatik scroll
+       etmiyor (native HTML5 drag-drop default davranış). Admin
+       manuel scroll yapmak zorunda kalıyor → kötü UX.
+
+     ÇÖZÜM (mevcut native HTML5 DnD'yi BOZMADAN):
+       Document-level `dragover` listener + requestAnimationFrame
+       loop + window.scrollBy. Viewport'un üst veya alt 80px'ine
+       yaklaşıldığında scroll tetiklenir; mesafe azaldıkça hız
+       artar (ease-in 0→24 px/frame).
+
+     NEDEN KÜTÜPHANE YOK:
+       AdminGallery şu an saf native HTML5 (`draggable`, onDragStart,
+       onDragOver, onDrop) kullanıyor — dnd-kit YOK. Resmi `autoScroll`
+       özelliği yalnız dnd-kit modifier'larında mevcut; bu component'i
+       dnd-kit'e migrate etmek "galeri render yapısını değiştirme"
+       kuralını ihlal ederdi. Bu yüzden minimum invasif helper.
+
+     SADECE drag AKTİFKEN listener register edilir (dragIndex !== null
+     guardı + cleanup). Drop / dragend / unmount → rAF cleanup;
+     fantom scroll loop riski yok. Tablet / pointer events / touch
+     işaretleyici browser drag eventleri ile aynı API'yi paylaşır,
+     mobile için ekstra kod gerekmez.
+  =============================================================== */
+  useEffect(() => {
+    if (dragIndex === null) return;
+
+    const EDGE = 80; // px — viewport edge'inden tetikleme mesafesi
+    const MAX_SPEED = 24; // px/frame — en yakın mesafede maksimum
+    let rafId: number | null = null;
+    let velocity = 0; // px/frame; > 0 → aşağı, < 0 → yukarı
+
+    function tick() {
+      if (velocity !== 0) {
+        window.scrollBy(0, velocity);
+        rafId = requestAnimationFrame(tick);
+      } else {
+        rafId = null;
+      }
+    }
+
+    function startLoop() {
+      if (rafId === null) rafId = requestAnimationFrame(tick);
+    }
+
+    function stopLoop() {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      velocity = 0;
+    }
+
+    function handleDragOver(e: DragEvent) {
+      const y = e.clientY;
+      const h = window.innerHeight;
+
+      if (y < EDGE) {
+        const ratio = Math.min(1, (EDGE - y) / EDGE);
+        velocity = -Math.ceil(ratio * MAX_SPEED);
+        startLoop();
+      } else if (y > h - EDGE) {
+        const ratio = Math.min(1, (y - (h - EDGE)) / EDGE);
+        velocity = Math.ceil(ratio * MAX_SPEED);
+        startLoop();
+      } else {
+        velocity = 0;
+      }
+    }
+
+    function handleDragEnd() {
+      stopLoop();
+    }
+
+    document.addEventListener("dragover", handleDragOver);
+    document.addEventListener("dragend", handleDragEnd);
+    document.addEventListener("drop", handleDragEnd);
+
+    return () => {
+      document.removeEventListener("dragover", handleDragOver);
+      document.removeEventListener("dragend", handleDragEnd);
+      document.removeEventListener("drop", handleDragEnd);
+      stopLoop();
+    };
+  }, [dragIndex]);
 
   // 🔥 DEBUG (çok önemli)
   console.log("🚀 villaId:", villaId);
@@ -299,8 +440,41 @@ export default function AdminGallery({
         multiple
       />
 
-      {/* 🔥 GRID */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {/* 🛡️ BULK DELETE HELPER BAR — yalnız fotoğraf varsa ve
+         onDeleteAll prop'u verildiyse görünür (opsiyonel callback;
+         backward-compat). Kırmızı destructive görünüm; loading
+         state'de "Siliniyor…" + disabled. Sayaç (toplam kart)
+         solda; aksiyon sağda — admin pattern parity. */}
+      {images.length > 0 && onDeleteAll && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-[var(--color-stone-500)]">
+            {images.length} fotoğraf
+          </p>
+          <button
+            type="button"
+            onClick={handleDeleteAllClick}
+            disabled={deletingAll}
+            className="
+              inline-flex items-center gap-1.5
+              text-[13px] font-medium
+              text-red-600 hover:text-red-700
+              px-3 py-2 rounded-lg
+              hover:bg-red-50
+              transition
+              disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent
+            "
+          >
+            <Trash2 size={14} strokeWidth={1.75} />
+            {deletingAll ? "Siliniyor…" : "Tüm Resimleri Sil"}
+          </button>
+        </div>
+      )}
+
+      {/* 🔥 GRID — yoğunluk artırıldı:
+         • xl:grid-cols-5 + 2xl:grid-cols-6 → desktop'ta satır başına
+           daha çok kart (4 → 5 → 6) → uzun listelerde daha az scroll
+         • md:gap-3 → desktop'ta gap 16→12px (mobile gap-4 KORUNDU) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-3">
         {images.map((img, index) => (
           <div
             key={img.id}
@@ -316,7 +490,10 @@ export default function AdminGallery({
                 yeni path'ler runtime'da doğru bucket URL'e çevrilir. */}
             <img
               src={resolveVillaImageUrl(img.image_url) ?? ""}
-              className="w-full h-40 object-cover"
+              /* 🛡️ Yükseklik h-40 (160px) → h-32 (128px) = %20 azalma.
+                 Aspect ratio mevcutta da korunmuyor (sabit yükseklik
+                 + esnek genişlik); object-cover semantic'i aynen. */
+              className="w-full h-32 object-cover"
             />
 
             {/* 🔥 COVER */}

@@ -8,6 +8,7 @@ import {
   getVillaImages,
   addVillaImage,
   deleteVillaImage,
+  deleteAllVillaImages,
   type VillaImage,
 } from "@/app/services/villa-image.service";
 import AdminGallery from "@/app/components/villa/AdminGallery";
@@ -71,6 +72,17 @@ export default function AdminVillaGallery() {
     await loadImages();
   }
 
+  /* 🛡️ BULK DELETE — `deleteAllVillaImages` (villa-image.service.ts)
+     döner: { ok, removed, orphans }. Caller (AdminGallery) yalnız
+     boolean ile ilgilenir; orphan listesi service log'una düşer.
+     Başarı/başarısızlık AdminGallery'deki toast.success/error
+     ile gösterilir. UI state `loadImages()` ile temizlenir. */
+  async function handleDeleteAll(): Promise<boolean> {
+    const result = await deleteAllVillaImages(id);
+    if (result.ok) await loadImages();
+    return result.ok;
+  }
+
   if (!id)
     return (
       <div className="card-premium p-10 text-center text-[var(--color-stone-500)]">
@@ -107,6 +119,7 @@ export default function AdminVillaGallery() {
           villaSlug={villaSlug}
           onUploaded={handleUploaded}
           onDelete={handleDelete}
+          onDeleteAll={handleDeleteAll}
           onReorder={loadImages}
         />
       </div>
