@@ -66,6 +66,7 @@ export default function ManualReservationForm({
   villas,
   mode = "create",
   initialData = null,
+  initialVillaId,
 }: {
   villas:
     | { id: string; title: string; slug?: string | null }[]
@@ -75,14 +76,26 @@ export default function ManualReservationForm({
   /* 🛡️ FAZ 29 — edit mode için DB'den fetch'lenmiş initial data.
      null → create flow (eski davranış aynen). */
   initialData?: InitialData;
+  /* 🛡️ Quick-action — villa listesinden "Takvim" butonuyla gelen
+     query param. Yalnız create mode'da etkili; edit mode'da
+     initialData.villa_id öncelikli. Undefined → eski davranış aynen
+     (boş seçim). Pre-select sonrası `useEffect[selectedVilla]`
+     mount'ta fetchBlockedDates + external fetch tetiklenir;
+     takvim direkt o villanın müsaitlik durumuyla açılır. */
+  initialVillaId?: string;
 }) {
   const toast = useNotify();
   const router = useRouter();
 
   /* 🛡️ FAZ 29 — Lazy initial state hidrate (mount-once).
-     initialData null ise eski create initial state (boş). */
+     Precedence:
+       1. initialData?.villa_id  (edit mode — DB'den hidrate)
+       2. initialVillaId         (quick-action query param)
+       3. ""                     (boş — eski create default)
+     initialData null + initialVillaId undefined → byte-identical
+     eski davranış. */
   const [selectedVilla, setSelectedVilla] = useState(
-    initialData?.villa_id ?? ""
+    initialData?.villa_id ?? initialVillaId ?? ""
   );
   const [note, setNote] = useState(initialData?.note ?? "");
   const [loading, setLoading] = useState(false);

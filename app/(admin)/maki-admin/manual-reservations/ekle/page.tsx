@@ -7,8 +7,30 @@ async function getVillas() {
   return data;
 }
 
-export default async function Page() {
+/* 🛡️ Quick-action: villa listesinden "Takvim" butonuyla gelen
+   pre-select query param. URL örneği:
+     /maki-admin/manual-reservations/ekle?villa=<uuid>
+   Yoksa eski davranış birebir devam eder (initialVillaId undefined →
+   form selectedVilla boş başlar). */
+type SearchParams = Promise<{ villa?: string }>;
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams?: SearchParams;
+}) {
   const villas = await getVillas();
+
+  const sp = (await searchParams) || {};
+  const rawVilla = typeof sp.villa === "string" ? sp.villa.trim() : "";
+  /* 🛡️ Defansif: query param geçerli bir villa.id'yi göstermiyorsa
+     initialVillaId boş bırakılır → form eski davranışa düşer.
+     `villa` tablosu fetch'i zaten yapıldığı için ek round-trip yok. */
+  const initialVillaId =
+    rawVilla.length > 0 &&
+    (villas || []).some((v) => v.id === rawVilla)
+      ? rawVilla
+      : undefined;
 
   return (
     <div className="space-y-8 w-full">
@@ -22,7 +44,10 @@ export default async function Page() {
         </p>
       </div>
 
-      <ManualReservationForm villas={villas || []} />
+      <ManualReservationForm
+        villas={villas || []}
+        initialVillaId={initialVillaId}
+      />
     </div>
   );
 }

@@ -25,6 +25,7 @@ import {
   ArrowUpRight,
   GripVertical,
   Search,
+  Calendar,
 } from "lucide-react";
 
 import { VillaActions } from "./VillaActions";
@@ -381,6 +382,23 @@ function SortableVillaCard({
           >
             <ImageIcon size={13} />
             Galeri
+          </Link>
+
+          {/* 🛡️ TAKVİM — quick-action: manuel rezervasyon / blok ekleme
+             ekranına villa pre-select query param'ı ile yönlendirir.
+             Hedef route: /maki-admin/manual-reservations/ekle?villa={id}
+             Sayfa açıldığında VillaCombobox otomatik seçili, takvim
+             o villanın müsaitlik durumuyla açılır. Query param yoksa
+             ekran eski boş-seçim davranışına döner. */}
+          <Link
+            href={`/maki-admin/manual-reservations/ekle?villa=${encodeURIComponent(
+              String(villa.id)
+            )}`}
+            className="admin-btn-ghost"
+            title="Bu villa için takvimi aç ve yeni blok ekle"
+          >
+            <Calendar size={13} />
+            Takvim
           </Link>
 
           {/* 🛡️ FAZ 31 + 31B — Temporary URL (private/off-market preview link).
