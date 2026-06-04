@@ -345,19 +345,110 @@ export default function Header({
               </Link>
             </div>
 
-            {/* MOBILE TOGGLE */}
-            <button
-              onClick={() => setOpen(!open)}
-              aria-label="Menüyü aç"
-              className="
-                md:hidden p-2 rounded-full
-                text-[var(--color-stone-900)]
-                hover:bg-[var(--color-sand-50)]
-                transition-colors motion-reduce:transition-none
-              "
-            >
-              {open ? <X size={22} /> : <Menu size={22} />}
-            </button>
+            {/* 🛡️ MOBILE ACTIONS — search input + hamburger toggle.
+               Yerleşim: [ Villa ara... ] [ ☰ ]
+               Eski mobil arama drawer içindeydi (kullanıcı hamburger
+               açmadan göremiyordu); kullanılabilirlik için header
+               strip'e taşındı. State (search/openSearch/results/loading)
+               + debounce + outside-click handler değişmedi — input
+               sadece DOM konumu değiştirdi. Desktop branch'e dokunulmadı
+               (`md:hidden` mobil-only). */}
+            <div className="md:hidden flex items-center gap-2">
+              {/* MOBILE SEARCH — inline, header strip içinde.
+                 Dropdown: input'un altında absolute; sağa hizalı
+                 (right-0) — input dar viewport'un sağında olduğu
+                 için sol tarafa açılır. */}
+              <div
+                className="relative flex items-center bg-[var(--color-sand-50)] border border-[var(--color-stone-100)] rounded-full px-3 py-1.5 flex-1 min-w-0 max-w-[200px]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Search
+                  size={14}
+                  className="text-[var(--color-stone-400)] shrink-0"
+                  aria-hidden
+                />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onFocus={() => setOpenSearch(true)}
+                  placeholder="Villa ara..."
+                  className="!bg-transparent !border-0 !shadow-none outline-none text-[13px] pl-2 w-full min-w-0"
+                />
+
+                {/* DROPDOWN — desktop dropdown JSX (L272-321) mirror.
+                   State/effect/repository/debounce/outside-click
+                   handler AYNEN paylaşılıyor; tek farklar:
+                     - Container right-0 + w-[260px] sm:w-[300px]
+                       (dar input'tan sağa hizalı pop-up)
+                     - Link onClick → setOpenSearch + setSearch + setOpen
+                       (sonuç tıklanırsa drawer açıkken kapansın —
+                       drawer kapalıysa no-op; ekstra güvenlik). */}
+                {openSearch && search && (
+                  <div className="absolute top-full mt-2 right-0 w-[260px] sm:w-[300px] bg-white shadow-[0_24px_48px_-16px_rgb(27_26_23/0.22)] rounded-2xl border border-[var(--color-stone-100)] z-50 overflow-hidden">
+                    {loading && (
+                      <div className="p-4 text-sm text-[var(--color-stone-500)] flex items-center gap-2">
+                        <span className="w-3 h-3 border-2 border-[var(--brand-coral)] border-t-transparent rounded-full animate-spin" />
+                        Aranıyor...
+                      </div>
+                    )}
+
+                    {!loading && results.length === 0 && (
+                      <div className="p-5 text-center text-sm text-[var(--color-stone-400)]">
+                        <p className="font-medium text-[var(--color-stone-600)]">
+                          Sonuç bulunamadı
+                        </p>
+                        <p className="text-xs mt-1">
+                          Farklı bir arama denemeye ne dersin?
+                        </p>
+                      </div>
+                    )}
+
+                    {!loading &&
+                      results.map((villa) => (
+                        <Link
+                          key={villa.id}
+                          href={`/kiralik-villa/${villa.slug}`}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-sand-50)] transition border-b border-[var(--color-stone-100)] last:border-b-0"
+                          onClick={() => {
+                            setOpenSearch(false);
+                            setSearch("");
+                            setOpen(false);
+                          }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={getImage(villa)}
+                            alt=""
+                            className="w-14 h-12 object-cover rounded-lg ring-1 ring-[var(--color-stone-100)]"
+                          />
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[13.5px] font-medium text-[var(--color-stone-900)] truncate">
+                              {villa.title}
+                            </span>
+                            <span className="text-[11px] text-[var(--color-stone-400)] tracking-[0.05em] uppercase">
+                              Villayı görüntüle →
+                            </span>
+                          </div>
+                        </Link>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              {/* HAMBURGER — davranış birebir korundu. */}
+              <button
+                onClick={() => setOpen(!open)}
+                aria-label="Menüyü aç"
+                className="
+                  p-2 rounded-full shrink-0
+                  text-[var(--color-stone-900)]
+                  hover:bg-[var(--color-sand-50)]
+                  transition-colors motion-reduce:transition-none
+                "
+              >
+                {open ? <X size={22} /> : <Menu size={22} />}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -372,82 +463,10 @@ export default function Header({
           }
         >
           <div className="flex flex-col p-5 gap-4">
-            {/* MOBILE SEARCH */}
-            {/* 🛡️ FAZ 41 — Mobile autocomplete parity.
-               Desktop dropdown JSX (L272-321) mobile için MIRROR
-               edildi. State/effect/repository/debounce/outside-click
-               handler AYNEN paylaşılıyor; tek farklar:
-                 - w-96 → w-full (mobile container genişliği)
-                 - Link onClick → setOpenSearch(false) + setSearch("")
-                   + setOpen(false) (mobile menüyü de kapat)
-               Container'a onClick stopPropagation (desktop L251 paterni)
-               + input'a onFocus setOpenSearch(true) (desktop L261). */}
-            <div
-              className="relative flex items-center bg-[var(--color-sand-50)] border border-[var(--color-stone-100)] rounded-xl px-3 py-2.5"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Search size={16} className="text-[var(--color-stone-400)]" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onFocus={() => setOpenSearch(true)}
-                placeholder="Villa ara..."
-                className="!bg-transparent !border-0 !shadow-none outline-none text-sm pl-2 w-full"
-              />
-
-              {/* DROPDOWN — mirror of desktop (L272-321) */}
-              {openSearch && search && (
-                <div className="absolute top-full mt-2 left-0 w-full bg-white shadow-[0_24px_48px_-16px_rgb(27_26_23/0.22)] rounded-2xl border border-[var(--color-stone-100)] z-50 overflow-hidden">
-                  {loading && (
-                    <div className="p-4 text-sm text-[var(--color-stone-500)] flex items-center gap-2">
-                      <span className="w-3 h-3 border-2 border-[var(--brand-coral)] border-t-transparent rounded-full animate-spin" />
-                      Aranıyor...
-                    </div>
-                  )}
-
-                  {!loading && results.length === 0 && (
-                    <div className="p-5 text-center text-sm text-[var(--color-stone-400)]">
-                      <p className="font-medium text-[var(--color-stone-600)]">
-                        Sonuç bulunamadı
-                      </p>
-                      <p className="text-xs mt-1">
-                        Farklı bir arama denemeye ne dersin?
-                      </p>
-                    </div>
-                  )}
-
-                  {!loading &&
-                    results.map((villa) => (
-                      <Link
-                        key={villa.id}
-                        href={`/kiralik-villa/${villa.slug}`}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-sand-50)] transition border-b border-[var(--color-stone-100)] last:border-b-0"
-                        onClick={() => {
-                          setOpenSearch(false);
-                          setSearch("");
-                          setOpen(false);
-                        }}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={getImage(villa)}
-                          alt=""
-                          className="w-14 h-12 object-cover rounded-lg ring-1 ring-[var(--color-stone-100)]"
-                        />
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-[13.5px] font-medium text-[var(--color-stone-900)] truncate">
-                            {villa.title}
-                          </span>
-                          <span className="text-[11px] text-[var(--color-stone-400)] tracking-[0.05em] uppercase">
-                            Villayı görüntüle →
-                          </span>
-                        </div>
-                      </Link>
-                    ))}
-                </div>
-              )}
-            </div>
-
+            {/* 🛡️ MOBILE SEARCH header strip'e taşındı (kullanıcı
+               hamburger açmadan görebilsin). Drawer artık yalnızca
+               navigasyon menüsü ve CTA içerir. Aynı state hâlâ
+               geçerli — sadece drawer içindeki render kaldırıldı. */}
             {menu.map((item) => (
               <div
                 key={item.id || item.name}

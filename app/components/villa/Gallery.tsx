@@ -121,8 +121,89 @@ export default function Gallery({
 
   return (
     <>
-      {/* 🔥 GRID */}
-      <div className="grid grid-cols-4 gap-2 h-[400px]">
+      {/* 🛡️ MOBILE GRID (<768px) — yeniden tasarım.
+         Eski 4-sütun 400px masonry mobilde küçük kartları ~80px wide
+         + dar/uzun gösteriyordu (sıkışık + premium hissi kayıp).
+         Yeni hiyerarşi:
+           ┌─────────────────────────────┐
+           │  HERO (aspect 16/10)        │
+           ├──────────────┬──────────────┤
+           │  Foto 2 4/3  │ Foto 3 4/3   │
+           │              │  +X overlay  │
+           └──────────────┴──────────────┘
+         - aspect-ratio CLS önler (img yüklenmeden alan rezerve).
+         - Tüm tıklamalar mevcut lightbox'ı tetikler (setActiveIndex).
+         - WatermarkOverlay her kartta — desktop parity. */}
+      <div className="grid md:hidden gap-2">
+        {/* HERO — 1. fotoğraf full-width, aspect 16/10 */}
+        <div
+          className="relative overflow-hidden rounded-xl cursor-pointer aspect-[16/10]"
+          onClick={() => setActiveIndex(0)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={images[0]}
+            alt={buildImageAlt(villaTitle, 0, images.length)}
+            className="w-full h-full object-cover rounded-xl"
+          />
+          <WatermarkOverlay {...watermark} />
+        </div>
+
+        {/* ALT SATIR — 2 + 3. fotoğraf yan yana aynı yükseklikte.
+           images.length === 1 ise hiç render edilmez. */}
+        {images.length >= 2 && (
+          <div className="grid grid-cols-2 gap-2">
+            {/* 2. foto */}
+            <div
+              className="relative overflow-hidden rounded-xl cursor-pointer aspect-[4/3]"
+              onClick={() => setActiveIndex(1)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={images[1]}
+                alt={buildImageAlt(villaTitle, 1, images.length)}
+                className="w-full h-full object-cover rounded-xl"
+              />
+              <WatermarkOverlay {...watermark} />
+            </div>
+
+            {/* 3. foto + opsiyonel +X overlay.
+               images.length === 2 ise bu kart render edilmez ve
+               2. foto sol sütunda kalır (sağ taraf boş — kullanım
+               nadir, davranış zarif). */}
+            {images.length >= 3 && (
+              <div
+                className="relative overflow-hidden rounded-xl cursor-pointer aspect-[4/3]"
+                onClick={() => setActiveIndex(2)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={images[2]}
+                  alt={buildImageAlt(villaTitle, 2, images.length)}
+                  className="w-full h-full object-cover rounded-xl"
+                />
+                <WatermarkOverlay {...watermark} />
+                {/* +X overlay — yalnız 4+ fotoğraf varsa */}
+                {images.length > 3 && (
+                  <div
+                    aria-hidden="true"
+                    className="absolute inset-0 bg-black/55 flex items-center justify-center rounded-xl"
+                  >
+                    <span className="text-white text-[15px] font-semibold tracking-[0.01em]">
+                      +{images.length - 3} Fotoğraf
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 🔥 DESKTOP GRID (≥768px) — eski 4-sütun masonry AYNEN korundu.
+         hidden md:grid ile mobile'da gizli; desktop davranışı byte-
+         identical. */}
+      <div className="hidden md:grid grid-cols-4 gap-2 h-[400px]">
 
         {/* büyük */}
         <div
