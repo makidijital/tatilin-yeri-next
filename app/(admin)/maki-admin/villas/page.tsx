@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getVillasForAdmin } from "@/app/services/villa.service";
-import { Plus, Home, Trash as TrashBin } from "lucide-react";
-import VillaSortableGrid from "./VillaSortableGrid";
+import { Plus, Home, Trash as TrashBin, ArrowDownUp } from "lucide-react";
+import VillaOperationsList from "./_components/VillaOperationsList";
 
 /* 🛡️ FORCE-DYNAMIC — production statik cache problemi çözümü.
    Bu sayfa hiçbir dinamik API kullanmıyor (cookies/headers/searchParams)
@@ -36,6 +36,17 @@ export default async function VillasPage() {
           </p>
         </div>
         <div className="admin-page-header__actions">
+          {/* 🛡️ Sıralama ayrı ekrana taşındı — drag-drop için
+             /maki-admin/villas/siralama. Bu ekran operasyon
+             (düzenle/galeri/takvim/ZIP/temporary/kopyala/pasif/sil)
+             odaklı. */}
+          <Link
+            href="/maki-admin/villas/siralama"
+            className="admin-btn-ghost"
+          >
+            <ArrowDownUp size={14} />
+            Sıralamayı Düzenle
+          </Link>
           <Link
             href="/maki-admin/villas/trash"
             className="admin-btn-ghost"
@@ -72,12 +83,13 @@ export default async function VillasPage() {
           </Link>
         </div>
       ) : (
-        /* 🛡️ Drag-drop ordering — VillaSortableGrid client island.
-           Card UI birebir aynı; sadece sol üstte drag handle + sortable
-           wrapping eklendi. Persist tek RPC round-trip
-           (set_villa_sort_orders), public listeleri router.refresh
-           ile invalidate eder. */
-        <VillaSortableGrid initialVillas={villas} />
+        /* 🛡️ Operasyon ekranı — VillaOperationsList client island.
+           Drag-drop YOK; sıralama /maki-admin/villas/siralama
+           route'una taşındı. Bu ekran arama + 8 aksiyon (Düzenle /
+           Galeri / Takvim / Temporary URL / ZIP / Detay / Pasifleştir
+           / Kopyala / Sil) odaklı. Service çağrısı (`getVillasForAdmin`)
+           ve repository sözleşmesi DEĞİŞMEDİ. */
+        <VillaOperationsList initialVillas={villas} />
       )}
     </div>
   );
