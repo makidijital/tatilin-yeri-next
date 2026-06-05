@@ -547,6 +547,67 @@ export async function getVillasForAdmin(): Promise<VillaDTO[]> {
 }
 
 /* ===============================================================
+   📦 ADMIN PAGE — pagination + search (opt-in)
+   ===============================================================
+   `/maki-admin/villas` operasyon ekranı için. Sıralama paneli
+   (`/maki-admin/villas/siralama`) bu fonksiyonu KULLANMAZ —
+   `getVillasForAdmin()` (no opts → tam liste) backward-compat
+   path'i kullanır. İki ekran ayrı tüketiciler; sözleşmeler ayrı.
+
+   PAYLOAD:
+     - items: VillaDTO[]   → render edilecek sayfa
+     - total: number       → toplam villa (filtered)
+     - page:  number       → 1-based; clamp (>=1)
+     - pageSize: number    → caller'ın istediği boyut
+
+   PERFORMANCE:
+     listForAdmin + countForAdmin paralel çalışır → net latency
+     max(list, count). 1000-2000 villa scale'inde LIMIT/OFFSET
+     yeterli; cursor pagination ileride (5000+ ölçek).
+
+   SEARCH:
+     q opsiyonel; verilirse repository title/slug ILIKE ile
+     filtreler; total da aynı filtreyi uygular → tutarlı sayfa
+     hesabı. */
+export async function getVillasForAdminPage(opts: {
+  page: number;
+  pageSize: number;
+  q?: string;
+}): Promise<{
+  items: VillaDTO[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
+  const safePage = Math.max(1, Math.floor(opts.page) || 1);
+  const safeSize = Math.max(1, Math.floor(opts.pageSize) || 30);
+  const offset = (safePage - 1) * safeSize;
+  const q = opts.q && opts.q.trim().length > 0 ? opts.q.trim() : undefined;
+
+  /* Paralel: liste + count tek round-trip yerine eşzamanlı.
+     Sıralama (sort_order ASC, created_at DESC) listForAdmin'in
+     mevcut order zincirinden gelir → operasyon ekranı sırası
+     sıralama paneli ile birebir aynı. */
+  const [rows, total] = await Promise.all([
+    villaRepository.listForAdmin({
+      limit: safeSize,
+      offset,
+      q,
+    }),
+    villaRepository.countForAdmin({ q }),
+  ]);
+
+  const items = (rows as unknown as Villa[]).map(mapVilla);
+
+  return {
+    items,
+    total,
+    page: safePage,
+    pageSize: safeSize,
+  };
+}
+
+/* ===============================================================
    📦 TRASHED VILLAS — yalnız soft-deleted (deleted_at IS NOT NULL)
    ===============================================================
    /maki-admin/villas/trash ekranı için. Active listeleme query'leri

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   Image as ImageIcon,
@@ -9,6 +10,8 @@ import {
   ArrowUpRight,
   Search,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { VillaActions } from "../VillaActions";
@@ -16,37 +19,26 @@ import { VillaTemporaryUrlButton } from "../VillaTemporaryUrlButton";
 import { VillaZipShareButton } from "../VillaZipShareButton";
 
 /* ===============================================================
-   🛡️ VillaOperationsList — admin operasyon ekranı (drag-drop YOK)
+   🛡️ VillaOperationsList — admin operasyon ekranı (pagination + search)
    ===============================================================
-   `/maki-admin/villas` route'una bağlı client component. Eski
-   VillaSortableGrid'in OPERASYONEL kısmı (search + kart + 8
-   aksiyon) BURAYA TAŞINDI. Drag-drop kapasitesi
-   `/maki-admin/villas/siralama` route'undaki VillaSortPanel'e
-   ayrıldı.
+   `/maki-admin/villas` route'una bağlı client component.
 
-   KORUNAN DAVRANIŞLAR (operasyon ekranı sözleşmesi):
-     - Client-side search (admin-pill-search): title / location /
-       slug / id üzerinde lowercase includes filter
-     - Aktif/Pasif badge ile durum gösterimi
-     - Cover thumbnail (mapVilla DTO images[0] reuse)
-     - 8 aksiyon: Düzenle / Galeri / Takvim (quick-action query
-       param) / (pasif ise) Temporary URL / ZIP Paylaş / Detay /
-       Pasifleştir / Kopyala / Sil
-     - VillaActions, VillaTemporaryUrlButton, VillaZipShareButton
-       child island'ları AYNEN reuse
-     - AUDIT log akışları (`villa.published / .unpublished /
-       .deleted / .cloned`) VillaActions / clone handler'ında
-       bozulmadan devam eder
+   YENİ DAVRANIŞ (URL-bound):
+     - Search: useSearchParams + router.replace + debounce (350ms)
+     - Pagination: ?page=N, ?pageSize=M
+     - URL state source-of-truth → bookmark / browser refresh /
+       back-forward navigation hepsi tutarlı
+     - Search değişince page=1'e reset
+     - PageSize değişince page=1'e reset
+     - Default değerler URL'e yazılmaz (clean URL)
 
-   KALDIRILAN DAVRANIŞLAR (sıralama ekranına taşındı):
-     - DndContext / SortableContext / useSortable / arrayMove
-     - Drag handle (GripVertical button)
-     - handleDragEnd + adminFetch sort-orders + RPC zincir
-     - "Search aktifken drag NO-OP" guard (sıralama ekranında
-       search yok → bu guard yapısal olarak gereksiz)
-     - persisting state (sıralama side-effect'i)
-
-   YENİ DAVRANIŞ: YOK. Tek değişen şey drag UI'nin kaldırılması.
+   KORUNAN DAVRANIŞLAR:
+     - 8 aksiyon: Düzenle / Galeri / Takvim / Temporary URL / ZIP /
+       Detay / Pasifleştir / Kopyala / Sil (VillaActions reuse)
+     - Drag-drop YOK (sıralama /siralama route'unda — bu ekran etkilenmez)
+     - AUDIT log akışları VillaActions ve clone handler içinde aynen
+     - VillaTemporaryUrlButton + VillaZipShareButton client island'ları
+       aynen reuse
 =============================================================== */
 
 type VillaItem = {
@@ -54,80 +46,316 @@ type VillaItem = {
   title: string;
   location?: string;
   is_active?: boolean;
-  /* mapVilla DTO `images: string[]` (cover-first sorted) — reuse. */
   images?: string[];
-  /* slug field'ı search haystack'inde kullanılır. */
   slug?: string | null;
   [k: string]: unknown;
 };
 
+type Props = {
+  initialVillas: VillaItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  q: string;
+  allowedPageSizes: number[];
+};
+
+const SEARCH_DEBOUNCE_MS = 350;
+
 export default function VillaOperationsList({
   initialVillas,
-}: {
-  initialVillas: VillaItem[];
-}) {
-  /* 🛡️ Client-side UI search — VillaSortableGrid'den AYNEN taşındı.
-     Title / bölge adı / slug / id üzerinde lowercase includes.
-     URL'e dokunmaz; pagination yok (kapsam dışı). */
-  const [search, setSearch] = useState<string>("");
+  total,
+  page,
+  pageSize,
+  q,
+  allowedPageSizes,
+}: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const visibleItems = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return initialVillas;
-    return initialVillas.filter((v) => {
-      const slug = String((v as { slug?: unknown }).slug ?? "");
-      const haystack = (
-        (v.title || "") +
-        " " +
-        (v.location || "") +
-        " " +
-        slug +
-        " " +
-        (v.id || "")
-      ).toLowerCase();
-      return haystack.includes(q);
+  /* Local search state — URL hâlâ source-of-truth, ama input controlled
+     olsun diye local state. Server q değişirse (back/forward) local
+     state sync edilir. */
+  const [searchValue, setSearchValue] = useState<string>(q);
+
+  /* Track son URL'e yazılan q değerini ki, server'dan gelen q (back
+     navigation) ile local state aynı olduğunda gereksiz router.replace
+     yapmasın. */
+  const lastUrlQ = useRef<string>(q);
+
+  /* Server q değişti (örn. user back tuşuna bastı) → local input'u sync et. */
+  useEffect(() => {
+    setSearchValue(q);
+    lastUrlQ.current = q;
+  }, [q]);
+
+  /* URL builder — diğer query parametrelerini korur. Default değerler
+     URL'den temizlenir (page=1, pageSize=30, q="" yazılmaz). */
+  const buildHref = useCallback(
+    (next: { page?: number; pageSize?: number; q?: string }) => {
+      const sp = new URLSearchParams(searchParams?.toString() || "");
+
+      if (next.page !== undefined) {
+        if (next.page <= 1) sp.delete("page");
+        else sp.set("page", String(next.page));
+      }
+      if (next.pageSize !== undefined) {
+        if (next.pageSize === 30) sp.delete("pageSize");
+        else sp.set("pageSize", String(next.pageSize));
+      }
+      if (next.q !== undefined) {
+        if (next.q.trim().length === 0) sp.delete("q");
+        else sp.set("q", next.q.trim());
+      }
+
+      const qs = sp.toString();
+      return qs.length > 0 ? `?${qs}` : "";
+    },
+    [searchParams]
+  );
+
+  /* Debounced search → URL push. q değişince page=1'e reset. */
+  useEffect(() => {
+    if (searchValue === lastUrlQ.current) return;
+
+    const t = setTimeout(() => {
+      lastUrlQ.current = searchValue;
+      router.replace(buildHref({ q: searchValue, page: 1 }), {
+        scroll: false,
+      });
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(t);
+  }, [searchValue, router, buildHref]);
+
+  /* Page size değişimi → page=1 reset. */
+  function handlePageSizeChange(newSize: number) {
+    if (newSize === pageSize) return;
+    router.replace(buildHref({ pageSize: newSize, page: 1 }), {
+      scroll: false,
     });
-  }, [initialVillas, search]);
+  }
+
+  /* Sayfa değişimi (önceki/sonraki/sayfa tıklama). */
+  function gotoPage(newPage: number) {
+    if (newPage === page) return;
+    router.replace(buildHref({ page: newPage }), { scroll: false });
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const rangeStart = total === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(safePage * pageSize, total);
 
   return (
     <div className="space-y-4">
-      {/* ════════ SEARCH BAR ════════
-          VillaSortableGrid paterni AYNEN. URL'e dokunmaz; client-side
-          filter. */}
-      <div className="admin-filter-bar">
-        <div className="admin-pill-search">
+      {/* ════════ TOOLBAR — search + pageSize selector + count ════════ */}
+      <div className="admin-filter-bar flex flex-wrap items-center gap-3">
+        <div className="admin-pill-search flex-1 min-w-[200px]">
           <Search size={14} className="text-[var(--admin-muted-2)]" />
           <input
-            placeholder="Villa adı, bölge, slug veya ID ara…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Villa adı veya slug ara…"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
           />
         </div>
-        <span className="text-[12px] text-[var(--admin-muted-2)] px-2">
-          {visibleItems.length} villa
+
+        {/* PAGE SIZE SELECTOR */}
+        <label className="inline-flex items-center gap-2 text-[12px] text-[var(--admin-muted-2)]">
+          <span>Sayfa başına</span>
+          <select
+            value={pageSize}
+            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+            className="
+              text-[12.5px] rounded-lg border border-[var(--admin-border)]
+              bg-white px-2 py-1
+              text-[var(--admin-text)]
+              focus:outline-none focus:ring-2 focus:ring-[var(--admin-accent-soft,rgba(0,0,0,0.08))]
+            "
+          >
+            {allowedPageSizes.map((sz) => (
+              <option key={sz} value={sz}>
+                {sz}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {/* TOTAL + RANGE */}
+        <span className="text-[12px] text-[var(--admin-muted-2)] px-2 tabular-nums">
+          {total > 0 ? (
+            <>
+              {rangeStart}-{rangeEnd} / {total}
+            </>
+          ) : (
+            <>0 / 0</>
+          )}
         </span>
       </div>
 
       {/* ════════ LIST ════════ */}
-      <div className="flex flex-col gap-3">
-        {visibleItems.map((villa) => (
-          <OperationsVillaCard key={villa.id} villa={villa} />
-        ))}
-      </div>
+      {initialVillas.length === 0 && q.length > 0 ? (
+        <div className="admin-card-flat p-12 text-center text-[var(--admin-muted-2)]">
+          <p className="font-medium text-[var(--admin-text)]">
+            &ldquo;{q}&rdquo; aramasıyla eşleşen villa yok
+          </p>
+          <p className="text-[12.5px] mt-1">
+            Farklı bir arama denemeyi veya filtreyi temizlemeyi deneyin.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {initialVillas.map((villa) => (
+            <OperationsVillaCard key={villa.id} villa={villa} />
+          ))}
+        </div>
+      )}
+
+      {/* ════════ PAGINATION BAR ════════ */}
+      {totalPages > 1 && (
+        <PaginationBar
+          page={safePage}
+          totalPages={totalPages}
+          onGoto={gotoPage}
+        />
+      )}
     </div>
   );
 }
 
 /* ===============================================================
-   OperationsVillaCard — kart: thumbnail + title + status + toolbar
+   PaginationBar — önceki/sonraki + numaralı sayfa pillarları
    ===============================================================
-   Eski VillaSortableGrid > SortableVillaCard'ın drag-handle SİZ
-   versiyonu. Hover/click davranışı + 8 aksiyon byte-identical.
+   Görünüm: ← Önceki  1  2  3 … 42  Sonraki →
+   Aktif sayfa coral pill; +/- 2 komşu + first/last her zaman görünür.
+=============================================================== */
+function PaginationBar({
+  page,
+  totalPages,
+  onGoto,
+}: {
+  page: number;
+  totalPages: number;
+  onGoto: (next: number) => void;
+}) {
+  const pages = computePageWindow(page, totalPages);
+  const prevDisabled = page <= 1;
+  const nextDisabled = page >= totalPages;
+
+  return (
+    <nav
+      role="navigation"
+      aria-label="Sayfa gezinme"
+      className="flex flex-wrap items-center justify-center gap-1.5 pt-2"
+    >
+      <button
+        type="button"
+        onClick={() => onGoto(page - 1)}
+        disabled={prevDisabled}
+        className="
+          inline-flex items-center gap-1
+          px-3 py-1.5 rounded-lg
+          text-[12.5px] font-medium
+          text-[var(--admin-muted)]
+          hover:text-[var(--admin-text)]
+          hover:bg-[var(--admin-bg-soft)]
+          transition-colors motion-reduce:transition-none
+          disabled:opacity-40 disabled:cursor-not-allowed
+          disabled:hover:bg-transparent
+        "
+      >
+        <ChevronLeft size={14} />
+        Önceki
+      </button>
+
+      {pages.map((p, idx) =>
+        p === "…" ? (
+          <span
+            key={`gap-${idx}`}
+            className="px-2 py-1.5 text-[12.5px] text-[var(--admin-muted-2)]"
+            aria-hidden="true"
+          >
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onGoto(p)}
+            aria-current={p === page ? "page" : undefined}
+            className={
+              "inline-flex items-center justify-center min-w-[32px] " +
+              "px-2.5 py-1.5 rounded-lg " +
+              "text-[12.5px] font-medium tabular-nums " +
+              "transition-colors motion-reduce:transition-none " +
+              (p === page
+                ? "bg-[var(--brand-coral)] text-white"
+                : "text-[var(--admin-muted)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-bg-soft)]")
+            }
+          >
+            {p}
+          </button>
+        )
+      )}
+
+      <button
+        type="button"
+        onClick={() => onGoto(page + 1)}
+        disabled={nextDisabled}
+        className="
+          inline-flex items-center gap-1
+          px-3 py-1.5 rounded-lg
+          text-[12.5px] font-medium
+          text-[var(--admin-muted)]
+          hover:text-[var(--admin-text)]
+          hover:bg-[var(--admin-bg-soft)]
+          transition-colors motion-reduce:transition-none
+          disabled:opacity-40 disabled:cursor-not-allowed
+          disabled:hover:bg-transparent
+        "
+      >
+        Sonraki
+        <ChevronRight size={14} />
+      </button>
+    </nav>
+  );
+}
+
+/* Sayfa numarası penceresi — `1 2 3 … 42` paterni.
+   Algoritma:
+     - Her zaman 1 ve last görünür
+     - Aktif sayfa +/- 2 komşu görünür
+     - Aralarda ellipsis. */
+function computePageWindow(page: number, totalPages: number): (number | "…")[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const set = new Set<number>([1, totalPages, page, page - 1, page + 1]);
+  if (page <= 3) {
+    set.add(2);
+    set.add(3);
+  }
+  if (page >= totalPages - 2) {
+    set.add(totalPages - 1);
+    set.add(totalPages - 2);
+  }
+  const sorted = Array.from(set)
+    .filter((p) => p >= 1 && p <= totalPages)
+    .sort((a, b) => a - b);
+
+  const out: (number | "…")[] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) out.push("…");
+    out.push(sorted[i]);
+  }
+  return out;
+}
+
+/* ===============================================================
+   OperationsVillaCard — kart: thumbnail + title + status + toolbar
 =============================================================== */
 function OperationsVillaCard({ villa }: { villa: VillaItem }) {
   const isInactive = villa.is_active === false;
-  /* Cover thumbnail: mapVilla images dizisinin ilki (is_cover öncelikli
-     sort'lu). DTO'da bu shape garantili. */
   const coverImage =
     Array.isArray(villa.images) && villa.images.length > 0
       ? villa.images[0]
@@ -165,9 +393,8 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
         )}
       </div>
 
-      {/* CONTENT (flex-1) */}
+      {/* CONTENT */}
       <div className="flex-1 min-w-0 flex flex-col gap-2">
-        {/* TITLE ROW */}
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -200,9 +427,7 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
           </div>
         </div>
 
-        {/* ACTION TOOLBAR — mobile: wrap; desktop: single row.
-           VillaSortableGrid L369-457 paterni AYNEN; tek fark `persisting`
-           prop'unun olmaması (drag side-effect kaldırıldı, persist YOK). */}
+        {/* ACTION TOOLBAR — 8 aksiyon AYNEN korundu. */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <Link
             href={`/maki-admin/villas/${villa.id}`}
@@ -220,8 +445,6 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
             Galeri
           </Link>
 
-          {/* 🛡️ TAKVİM — quick-action: manuel rezervasyon ekranına
-             villa pre-select query param'ı ile yönlendirir. */}
           <Link
             href={`/maki-admin/manual-reservations/ekle?villa=${encodeURIComponent(
               String(villa.id)
@@ -233,7 +456,6 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
             Takvim
           </Link>
 
-          {/* 🛡️ Temporary URL — SADECE PASİF villalarda. */}
           {isInactive && (
             <VillaTemporaryUrlButton
               villaId={String(villa.id)}
@@ -241,7 +463,6 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
             />
           )}
 
-          {/* 🛡️ ZIP Paylaş — tüm villalarda görünür. */}
           <VillaZipShareButton
             villaId={String(villa.id)}
             villaTitle={String(villa.title || "Villa")}
@@ -263,8 +484,6 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
             <ArrowUpRight size={12} />
           </Link>
 
-          {/* Lifecycle actions (Pasifleştir + Kopyala + Sil) — mevcut
-             VillaActions client island AYNEN reuse. */}
           <div className="flex items-center gap-1.5">
             <VillaActions
               villaId={String(villa.id)}

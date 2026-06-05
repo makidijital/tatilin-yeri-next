@@ -107,6 +107,43 @@ const SELECT_BASIC = `
      - Hata durumunda console.error + null/[] döner (mevcut semantic)
    =============================================================== */
 
+/* ===============================================================
+   🛡️ SEARCH SANITIZE — PostgREST .or() güvenli quoting
+   ===============================================================
+   AMAÇ:
+     `listForAdmin` ve `countForAdmin` aynı q escape mantığını
+     paylaşır → tek helper. Mevcut "yalnız ILIKE wildcard escape"
+     (`%` `_`) yetersiz: `,` `(` `)` `"` `\` karakterleri PostgREST
+     `.or()` parser'ı tarafından syntax olarak yorumlanır → query
+     başarısız → boş liste + FAILED log.
+
+   POSTGREST RESMİ ÇÖZÜM:
+     Value içeriği "double quotes" ile sarılır; içerideki `\` ve `"`
+     backslash ile escape edilir.
+     Örnek: or=(title.ilike."%deniz, kalkan%",slug.ilike."%O'Brien%")
+
+   AKIŞ:
+     1. Backslash önce escape (sıralama kritik — sonra eklenen
+        escape'leri çift escape etmemek için)
+     2. ILIKE wildcard escape (% ve _ → \% \_) — mevcut davranış
+     3. Çift tırnak escape (" → \")
+     4. Değeri çift tırnak içine al
+
+   `'` (tek tırnak) — Supabase JS HTTP query string'inde URL-encode
+     edilir; SQL parametrize binding yok ama PostgREST katmanı tek
+     tırnağı value içinde güvenli işler. Defansif escape gerekmez.
+=============================================================== */
+function buildVillaSearchOrClause(q: string): string {
+  const escaped = q
+    .replace(/\\/g, "\\\\")            // 1) backslash → \\
+    .replace(/[%_]/g, (m) => `\\${m}`) // 2) ILIKE wildcard escape
+    .replace(/"/g, '\\"');             // 3) çift tırnak → \"
+  /* 4) Değeri çift tırnak içine al — virgül/parantez/nokta gibi
+     PostgREST operator karakterlerini izole eder. */
+  const quoted = `"%${escaped}%"`;
+  return `title.ilike.${quoted},slug.ilike.${quoted}`;
+}
+
 export const villaRepository = {
   /* PUBLIC LIST — homepage / homepage collections fallback / kategori
      pages tarafından kullanılır.
@@ -143,12 +180,38 @@ export const villaRepository = {
   },
 
   /* ADMIN LIST — pasif villalar dahil; soft-deleted hariç.
-     Frontend public list ile birebir order; admin drag-drop sırası. */
-  async listForAdmin(): Promise<VillaRawRow[]> {
-    const { data, error } = await db
+     Frontend public list ile birebir order; admin drag-drop sırası.
+
+     🛡️ OPT-IN PAGINATION + SEARCH (backward-compat):
+       opts UNDEFINED → eski davranış: tam liste, LIMIT/OFFSET yok.
+       Sıralama paneli (VillaSortPanel) bu path'i kullanır — global
+       sort_order semantiği gerektirir.
+
+       opts VERILDIYSE:
+         - limit + offset: PostgREST `.range(from, to)` half-open
+         - q (search): title VEYA slug üzerinde ILIKE (case-insensitive).
+           `%` ve `_` user input sanitize edilir (wildcard injection
+           önlemi).
+
+     ⚠️ Sözleşme: opts undefined = byte-identical eski davranış. */
+  async listForAdmin(opts?: {
+    limit?: number;
+    offset?: number;
+    q?: string;
+  }): Promise<VillaRawRow[]> {
+    let query = db
       .from("villa")
       .select(SELECT_WITH_PRICES)
-      .is("deleted_at", null)
+      .is("deleted_at", null);
+
+    /* OPSIYONEL: server-side search (operasyon ekranı pagination yolu).
+       q sanitize: PostgREST .or() güvenli quoting + ILIKE wildcard
+       escape — buildVillaSearchOrClause helper'ı (üstte). */
+    if (opts?.q && opts.q.trim().length > 0) {
+      query = query.or(buildVillaSearchOrClause(opts.q.trim()));
+    }
+
+    query = query
       /* 🛡️ SCALE HARDENING — embed slim (admin VillaCard cover-only). */
       .order("is_cover", {
         referencedTable: "villa_images",
@@ -162,11 +225,48 @@ export const villaRepository = {
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false });
 
+    /* OPSIYONEL: pagination. opts undefined → range çağrılmaz →
+       PostgREST tam liste döner (eski davranış BYTE-IDENTICAL). */
+    if (
+      typeof opts?.limit === "number" &&
+      typeof opts?.offset === "number" &&
+      opts.limit > 0
+    ) {
+      query = query.range(opts.offset, opts.offset + opts.limit - 1);
+    }
+
+    const { data, error } = await query;
+
     if (error) {
       console.error("[villa.repo.listForAdmin] FAILED", error.message);
       return [];
     }
     return (data || []) as VillaRawRow[];
+  },
+
+  /* ADMIN COUNT — pagination toplam sayfa hesabı için.
+     `count: "exact" + head: true` → satır dönmez, yalnız count.
+     `q` filtresi listForAdmin ile birebir aynı semantik (filtered total).
+     Sıralama paneli bu method'u ASLA çağırmaz; yalnız operasyon
+     ekranı pagination için. */
+  async countForAdmin(opts?: { q?: string }): Promise<number> {
+    let query = db
+      .from("villa")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null);
+
+    if (opts?.q && opts.q.trim().length > 0) {
+      /* Aynı helper — listForAdmin ile filter parity garantisi
+         (count ≠ items uyumsuzluğu önlenir). */
+      query = query.or(buildVillaSearchOrClause(opts.q.trim()));
+    }
+
+    const { count, error } = await query;
+    if (error) {
+      console.error("[villa.repo.countForAdmin] FAILED", error.message);
+      return 0;
+    }
+    return count || 0;
   },
 
   /* TRASH — yalnız soft-deleted (deleted_at IS NOT NULL).

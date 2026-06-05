@@ -1,23 +1,75 @@
 import Link from "next/link";
-import { getVillasForAdmin } from "@/app/services/villa.service";
+import { getVillasForAdminPage } from "@/app/services/villa.service";
 import { Plus, Home, Trash as TrashBin, ArrowDownUp } from "lucide-react";
 import VillaOperationsList from "./_components/VillaOperationsList";
 
 /* 🛡️ FORCE-DYNAMIC — production statik cache problemi çözümü.
-   Bu sayfa hiçbir dinamik API kullanmıyor (cookies/headers/searchParams)
-   olduğu için Next.js otomatik static-eligible sayıyor ve Full Route
-   Cache'e yazıyordu. Production'da villa silindikten sonra cached HTML
-   servis edildiği için admin listesinden kayıp olmuyordu. `force-dynamic`
-   her request'te fresh render zorunlu kılar; getVillasForAdmin() taze DB
-   SELECT çalıştırır → silinen villa anında listeden kaybolur.
-   Local dev (`next dev`) zaten her request fresh render yaptığı için
-   etkilenmez; davranış birebir aynı kalır.
-   Pattern referansı: app/(admin)/maki-admin/villa-listesi/page.tsx:33. */
+   `searchParams` dinamik API olduğu için Next.js 16'da bu sayfa
+   zaten dynamic olur; force-dynamic ek garanti (FAZ 30 pattern). */
 export const dynamic = "force-dynamic";
 
-export default async function VillasPage() {
-  // 🛡️ Admin listing: pasif villalar dahil; soft-deleted hariç.
-  const villas = await getVillasForAdmin();
+/* ===============================================================
+   🛡️ PAGINATION SÖZLEŞMESİ
+   ===============================================================
+   URL state source-of-truth:
+     ?page=N         (1-based; default 1)
+     ?pageSize=M     (allowed: 10 | 30 | 50 | 100; default 30)
+     ?q=text         (search; default boş)
+
+   Sıralama paneli (/siralama) bu pagination'dan ETKİLENMEZ —
+   ayrı service (`getVillasForAdmin` no opts) kullanır → tam liste
+   alır. Bu sayfa yalnız operasyon ekranı için.
+=============================================================== */
+const ALLOWED_PAGE_SIZES = [10, 30, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 30;
+
+type SearchParams = Promise<{
+  page?: string;
+  pageSize?: string;
+  q?: string;
+}>;
+
+function parsePage(raw: string | undefined): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.floor(n);
+}
+
+function parsePageSize(raw: string | undefined): number {
+  const n = Number(raw);
+  if (
+    !Number.isFinite(n) ||
+    !ALLOWED_PAGE_SIZES.includes(n as (typeof ALLOWED_PAGE_SIZES)[number])
+  ) {
+    return DEFAULT_PAGE_SIZE;
+  }
+  return n;
+}
+
+function parseQ(raw: string | undefined): string {
+  if (typeof raw !== "string") return "";
+  return raw.trim();
+}
+
+export default async function VillasPage({
+  searchParams,
+}: {
+  searchParams?: SearchParams;
+}) {
+  const sp = (await searchParams) || {};
+  const page = parsePage(sp.page);
+  const pageSize = parsePageSize(sp.pageSize);
+  const q = parseQ(sp.q);
+
+  /* 🛡️ Admin listing: pasif villalar dahil; soft-deleted hariç.
+     YENİ service: pagination + search. Sıralama paneli'nin kullandığı
+     `getVillasForAdmin()` (tam liste) BYTE-IDENTICAL korundu. */
+  const {
+    items: villas,
+    total,
+    page: serverPage,
+    pageSize: serverPageSize,
+  } = await getVillasForAdminPage({ page, pageSize, q });
 
   return (
     <div className="space-y-10">
@@ -29,7 +81,7 @@ export default async function VillasPage() {
           <p className="admin-page-header__sub">
             Toplam{" "}
             <span className="text-[var(--admin-text)] font-semibold">
-              {villas.length}
+              {total}
             </span>{" "}
             villa kayıtlı. Buradan ekleyebilir, düzenleyebilir ve galeri
             yönetimine geçebilirsin.
@@ -37,9 +89,7 @@ export default async function VillasPage() {
         </div>
         <div className="admin-page-header__actions">
           {/* 🛡️ Sıralama ayrı ekrana taşındı — drag-drop için
-             /maki-admin/villas/siralama. Bu ekran operasyon
-             (düzenle/galeri/takvim/ZIP/temporary/kopyala/pasif/sil)
-             odaklı. */}
+             /maki-admin/villas/siralama. */}
           <Link
             href="/maki-admin/villas/siralama"
             className="admin-btn-ghost"
@@ -62,7 +112,7 @@ export default async function VillasPage() {
       </header>
 
       {/* LIST */}
-      {villas.length === 0 ? (
+      {total === 0 && q.length === 0 ? (
         <div className="admin-card-flat p-12 text-center">
           <div className="w-12 h-12 rounded-full bg-[var(--admin-bg-soft)] border border-[var(--admin-border)] flex items-center justify-center mx-auto">
             <Home size={18} className="text-[var(--admin-muted)]" />
@@ -84,12 +134,15 @@ export default async function VillasPage() {
         </div>
       ) : (
         /* 🛡️ Operasyon ekranı — VillaOperationsList client island.
-           Drag-drop YOK; sıralama /maki-admin/villas/siralama
-           route'una taşındı. Bu ekran arama + 8 aksiyon (Düzenle /
-           Galeri / Takvim / Temporary URL / ZIP / Detay / Pasifleştir
-           / Kopyala / Sil) odaklı. Service çağrısı (`getVillasForAdmin`)
-           ve repository sözleşmesi DEĞİŞMEDİ. */
-        <VillaOperationsList initialVillas={villas} />
+           Pagination + search URL bound; sıralama /siralama route'unda. */
+        <VillaOperationsList
+          initialVillas={villas}
+          total={total}
+          page={serverPage}
+          pageSize={serverPageSize}
+          q={q}
+          allowedPageSizes={ALLOWED_PAGE_SIZES as unknown as number[]}
+        />
       )}
     </div>
   );
