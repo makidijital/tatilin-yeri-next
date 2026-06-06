@@ -60,6 +60,22 @@ export function CurrencyProvider({
       currency
     );
 
+    /* 🛡️ COOKIE DUAL-WRITE — server-side price sort için yardımcı.
+       Mevcut localStorage davranışı KORUNUR (ana kaynak). Cookie
+       sadece /arama ve /kiralik-villalar server component'lerinin
+       sıralama anahtarını aktif para birimine göre hesaplayabilmesi
+       için. UX, dropdown, render davranışı hiç değişmedi.
+         path=/          → tüm route'larda erişilebilir
+         max-age=1 yıl   → localStorage ile parity (persist)
+         samesite=lax    → standart, third-party leak yok
+       Server tarafı bunu `cookies().get("currency")` ile okur. */
+    if (typeof document !== "undefined") {
+      document.cookie =
+        "currency=" +
+        encodeURIComponent(currency) +
+        "; path=/; max-age=31536000; samesite=lax";
+    }
+
   }, [currency]);
 
   // 🔥 KURLARI ÇEK

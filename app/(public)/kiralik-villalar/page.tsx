@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+
+import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
 
 import {
   getCachedSettings,
@@ -126,12 +129,17 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
   /* 🛡️ Cached fetches — Promise.all ile paralel:
      - getCachedVillas: tag "villas", TTL 10dk; villa mutations invalidate
      - getCachedVillaLocations / getCachedVillaTypes: tag "taxonomy",
-       TTL 1 saat; mutation invalidation yok (rare changes, TTL OK) */
-  const [villas, regionOptions, categoryOptions] = await Promise.all([
-    getCachedVillas(),
-    getCachedVillaLocations(),
-    getCachedVillaTypes(),
-  ]);
+       TTL 1 saat; mutation invalidation yok (rare changes, TTL OK)
+     - cookies(): currency cookie'sini oku (CurrencyContext dual-write)
+     - getExchangeRatesMap(): server-side rates (DB'den; TCMB cron'la dolar) */
+  const [villas, regionOptions, categoryOptions, cookieStore, ratesMap] =
+    await Promise.all([
+      getCachedVillas(),
+      getCachedVillaLocations(),
+      getCachedVillaTypes(),
+      cookies(),
+      getExchangeRatesMap(),
+    ]);
 
   const totalCount = villas.length;
 
@@ -146,9 +154,24 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
      getCachedVillas'tan AYNEN gelir (no-op shortcut).
      Diğer modlar yeni array döndürür (input mutate edilmez) → cache
      payload'u dokunulmaz; sadece UI render sırası değişir.
-     Repository/service/cache/availability'e SIFIR dokunma. */
+     Repository/service/cache/availability'e SIFIR dokunma.
+
+     🛡️ CURRENCY-AWARE PRICE SORT — VillaCard ile aynı convertPrice
+     formülü → gösterilen ekonomik değer === sıralama anahtarı.
+     Cookie + server rates yukarıda paralel fetch edildi. */
   const sort: PublicSort = parsePublicSort(sp.sort);
-  const sortedVillas = applyPublicSort(villas, sort);
+  const userCurrency =
+    cookieStore.get("currency")?.value || "TRY";
+  const rates: Record<string, number> = {
+    TRY: 1,
+    USD: Number(ratesMap.rates.USD) || 0,
+    EUR: Number(ratesMap.rates.EUR) || 0,
+    GBP: Number(ratesMap.rates.GBP) || 0,
+  };
+  const sortedVillas = applyPublicSort(villas, sort, {
+    userCurrency,
+    rates,
+  });
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const currentPage = Math.min(Math.max(1, pageRaw), totalPages);

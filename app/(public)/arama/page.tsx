@@ -4,8 +4,10 @@
    anon singleton'dan request-scoped helper'a geçti. Public-readable
    tablolarda zaten anon allow → runtime farkı yok; gelecekte admin-only
    tabloya yazma/okuma eklenirse session cookies otomatik akar. */
+import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
 import VillaCard from "@/app/components/villa/VillaCard";
 import { getStartingPrice } from "@/lib/price.engine";
 import { Search } from "lucide-react";
@@ -707,9 +709,34 @@ export default async function AramaPage({ searchParams }: Props) {
      Diğer modlar yeni array döndürür (input mutate edilmez).
      Sıralama AVAILABILITY filtresinden SONRA + SLICE'tan ÖNCE
      uygulanır → pagination ve toplam doğru. Repository/service/
-     cache/availability'e SIFIR dokunma. */
+     cache/availability'e SIFIR dokunma.
+
+     🛡️ CURRENCY-AWARE PRICE SORT — kullanıcının seçtiği para
+     birimine göre normalize:
+       1) cookie'den `currency` oku (CurrencyContext dual-write).
+          Yoksa "TRY" varsayılır (ilk ziyaret graceful fallback).
+       2) DB'den exchange_rates'i oku (server-side `getExchangeRatesMap`).
+       3) applyPublicSort'a {userCurrency, rates} geçir; convertPrice
+          VillaCard'la AYNI formül ve AYNI rates → gösterilen
+          ekonomik değer === sıralama anahtarı.
+     Capacity/smart sıralarda priceOpts kullanılmaz → ek maliyet 0. */
   const sort: PublicSort = parsePublicSort(sp.sort);
-  const sortedVillas = applyPublicSort(visibleVillas, sort);
+  const [cookieStore, ratesMap] = await Promise.all([
+    cookies(),
+    getExchangeRatesMap(),
+  ]);
+  const userCurrency =
+    cookieStore.get("currency")?.value || "TRY";
+  const rates: Record<string, number> = {
+    TRY: 1,
+    USD: Number(ratesMap.rates.USD) || 0,
+    EUR: Number(ratesMap.rates.EUR) || 0,
+    GBP: Number(ratesMap.rates.GBP) || 0,
+  };
+  const sortedVillas = applyPublicSort(visibleVillas, sort, {
+    userCurrency,
+    rates,
+  });
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(Math.max(1, pageRaw), totalPages);

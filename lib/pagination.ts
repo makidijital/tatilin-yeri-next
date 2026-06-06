@@ -1,3 +1,5 @@
+import { convertPrice } from "@/lib/currency";
+
 /* ===============================================================
    🛡️ PAGINATION HELPERS — public + admin paylaşılabilir
    ===============================================================
@@ -144,10 +146,23 @@ export function parsePublicSort(raw: unknown): PublicSort {
 }
 
 /** Sıralanabilir minimum villa shape — VillaDTO ve /arama normalized
- *  villa tipiyle yapısal uyumlu. Kart prop sözleşmesini değiştirmez. */
+ *  villa tipiyle yapısal uyumlu. Kart prop sözleşmesini değiştirmez.
+ *  `currency` opsiyonel: verilirse currency-aware sıralama için
+ *  villa.currency olarak kullanılır; verilmezse "TRY" varsayılır. */
 export type SortableVilla = {
   price: number | null | undefined;
   guests: number | null | undefined;
+  currency?: string | null | undefined;
+};
+
+/** Currency-aware sort opsiyonları. Verilmezse sıralama raw `price`
+ *  ile çalışır (mevcut geriye dönük davranış). Verilirse her villa'nın
+ *  fiyatı `convertPrice(price, villa.currency, userCurrency, rates)`
+ *  ile **kullanıcının seçtiği para birimine** normalize edilir;
+ *  VillaCard'ın gösterdiği değerle birebir aynı sayı olur. */
+export type PublicSortPriceOptions = {
+  userCurrency: string;
+  rates: Record<string, number>;
 };
 
 /**
@@ -159,27 +174,43 @@ export type SortableVilla = {
  *  - Input array MUTATE EDİLMEZ; yeni array döner.
  *  - smart için referans korunur (no allocation) → cache-friendly.
  *  - VillaCard prop'ları hiçbir şekilde değiştirilmez.
+ *  - `priceOpts` verilmezse mevcut raw-price davranışı (geriye uyum).
  */
 export function applyPublicSort<T extends SortableVilla>(
   list: T[],
-  sort: PublicSort
+  sort: PublicSort,
+  priceOpts?: PublicSortPriceOptions
 ): T[] {
   if (sort === "smart") return list;
   const arr = [...list];
 
-  const priceAsc = (v: T): number => {
+  /* 🛡️ CURRENCY-AWARE PRICE KEY — VillaCard convertPrice ile aynı
+     formül + aynı rates → gösterilen sayı === sıralama anahtarı.
+     priceOpts yoksa raw price (eski davranış; admin/diğer caller
+     uyumu). */
+  const priceKey = (v: T): number => {
     const p = v.price;
-    if (typeof p !== "number" || !Number.isFinite(p)) {
-      return Number.POSITIVE_INFINITY;
-    }
-    return p;
+    if (typeof p !== "number" || !Number.isFinite(p)) return NaN;
+    if (!priceOpts) return p;
+    const villaCurrency =
+      typeof v.currency === "string" && v.currency.length > 0
+        ? v.currency
+        : "TRY";
+    return convertPrice(
+      p,
+      villaCurrency,
+      priceOpts.userCurrency,
+      priceOpts.rates
+    );
+  };
+
+  const priceAsc = (v: T): number => {
+    const k = priceKey(v);
+    return Number.isFinite(k) ? k : Number.POSITIVE_INFINITY;
   };
   const priceDesc = (v: T): number => {
-    const p = v.price;
-    if (typeof p !== "number" || !Number.isFinite(p)) {
-      return Number.NEGATIVE_INFINITY;
-    }
-    return p;
+    const k = priceKey(v);
+    return Number.isFinite(k) ? k : Number.NEGATIVE_INFINITY;
   };
   const guestsAsc = (v: T): number => {
     const g = v.guests;
