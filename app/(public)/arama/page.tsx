@@ -52,6 +52,7 @@ import {
   type PublicSort,
 } from "@/lib/pagination";
 import Link from "next/link";
+import Script from "next/script";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /* 🛡️ Next.js 16: searchParams-bağımlı sayfalar zaten dynamic
@@ -1003,14 +1004,27 @@ export default async function AramaPage({ searchParams }: Props) {
                 {/* 🛡️ TOOLBAR — sort + page size selector (grid üstü).
                    Kart boyut/yerleşim/grid sınıfları DEĞİŞMEZ; sadece
                    üst kısımda küçük bir toolbar render edilir.
-                   Mobile: dikey stack (sort üstte, pageSize altta);
-                   Desktop: yan yana sağa yaslı. */}
-                <div className="mb-6 md:mb-8 flex flex-col items-end gap-3 md:flex-row md:items-center md:justify-end md:gap-6">
+                   Mobile: yatay merkez, satır kırılırsa ortalı kalır
+                     (flex-wrap + items-center + justify-center).
+                   Desktop (md+): sağa yaslı, mevcut spacing (gap-6). */}
+                <div className="mb-6 md:mb-8 flex flex-wrap items-center justify-center gap-3 md:justify-end md:gap-6">
                   <SortSelector sp={sp} sort={sort} />
                   <PageSizeSelector sp={sp} pageSize={pageSize} />
                 </div>
-                {/* 🛡️ Sort artık <details>+<Link> — JS-less, race-condition
-                   free. Buraya script render etmeye gerek yok. */}
+                {/* 🛡️ Sort dropdown auto-close — <details> Link tıklandıktan
+                   sonra navigation gerçekleşir ama browser native open
+                   state'i DOM diff'inde korunduğu için açık kalıyordu.
+                   Document-level event delegation ile menuitemradio
+                   Link'ine tıklanan anda parent <details>.open=false.
+                   Mevcut Link mimarisi, URL builder, sort logic ETKİLENMEZ.
+                   id="public-sort-dropdown-close" → Script dedupe key
+                   (her iki sayfada aynı id; ek bind oluşmaz). */}
+                <Script
+                  id="public-sort-dropdown-close"
+                  strategy="afterInteractive"
+                >
+                  {SORT_DROPDOWN_CLOSE_SCRIPT}
+                </Script>
 
                 {/* 🛡️ KART GRID — sidebar-aware breakpoint düzeni.
                    Eski: sm:grid-cols-2 (640+) ile md viewport'ta (768)
@@ -1226,6 +1240,21 @@ function SortSelector({
     </details>
   );
 }
+
+/* ===============================================================
+   🛡️ SORT DROPDOWN AUTO-CLOSE — global click delegation
+   ===============================================================
+   `<details>` native HTML; soft navigation sonrası `open` attribute
+   DOM'da kalır (React reconciliation reset etmez) → kullanıcı sayfa
+   geçişinde açık dropdown görüyordu. Tiny inline script document'a
+   tek event listener bind eder; menuitemradio Link'ine tıklayan anı
+   yakalayıp parent <details>.open = false yapar. Navigation Next.js
+   <Link> tarafından yapılır; script onu engellemez (preventDefault
+   yok), sadece DOM state'i temizler. CSP-friendly; <250 byte.
+   Race-condition kabulü: TTI öncesi seçim yapılırsa script bind
+   olmamış olabilir, dropdown açık kalır ama navigation YİNE çalışır
+   (sort uygulanır) — degradation cosmetic, fonksiyonel etki sıfır. */
+const SORT_DROPDOWN_CLOSE_SCRIPT = `(function(){document.addEventListener('click',function(e){var t=e.target;if(!(t&&t.closest))return;var l=t.closest('details [role="menuitemradio"]');if(!l)return;var d=l.closest('details');if(d)d.open=false;});})();`;
 
 function PageSizeSelector({
   sp,

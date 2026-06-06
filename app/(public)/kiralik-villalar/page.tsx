@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import Script from "next/script";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
@@ -292,13 +293,21 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
                   <>
                     {/* 🛡️ TOOLBAR — sort + page size selector (grid üstü).
                        Kart boyut/yerleşim/grid sınıfları DEĞİŞMEZ.
-                       Mobile: stacked; desktop: yan yana sağa yaslı. */}
-                    <div className="mb-6 md:mb-8 flex flex-col items-end gap-3 md:flex-row md:items-center md:justify-end md:gap-6">
+                       Mobile: yatay merkez, satır kırılırsa ortalı kalır.
+                       Desktop (md+): sağa yaslı, mevcut gap. */}
+                    <div className="mb-6 md:mb-8 flex flex-wrap items-center justify-center gap-3 md:justify-end md:gap-6">
                       <SortSelector pageSize={pageSize} sort={sort} />
                       <PageSizeSelector pageSize={pageSize} sort={sort} />
                     </div>
-                    {/* 🛡️ Sort artık <details>+<Link> — JS-less, race-condition
-                       free. Buraya script render etmeye gerek yok. */}
+                    {/* 🛡️ Sort dropdown auto-close — /arama ile aynı id;
+                       Script dedupe key. <details>.open Link tıklamasında
+                       false'a çekilir. */}
+                    <Script
+                      id="public-sort-dropdown-close"
+                      strategy="afterInteractive"
+                    >
+                      {SORT_DROPDOWN_CLOSE_SCRIPT}
+                    </Script>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
                       {/* 🛡️ Faz 9 hardening: `(villa: any)` → `VillaDTO`.
@@ -462,6 +471,14 @@ function buildArchiveHref(next: {
    🛡️ PAGE SIZE SELECTOR — pill grup; Link-based (server-safe)
    ===============================================================
    pageSize değişiminde page=1'e döner (default URL'e yazılmaz). */
+/* ===============================================================
+   🛡️ SORT DROPDOWN AUTO-CLOSE — global click delegation
+   ===============================================================
+   /arama ile birebir aynı script (id paylaşımı ile dedupe). Detay
+   yorumu için /arama/page.tsx içindeki SORT_DROPDOWN_CLOSE_SCRIPT
+   bloğuna bakınız. */
+const SORT_DROPDOWN_CLOSE_SCRIPT = `(function(){document.addEventListener('click',function(e){var t=e.target;if(!(t&&t.closest))return;var l=t.closest('details [role="menuitemradio"]');if(!l)return;var d=l.closest('details');if(d)d.open=false;});})();`;
+
 function PageSizeSelector({
   pageSize,
   sort,
