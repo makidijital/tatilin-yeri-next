@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import {
   getCachedSettings,
@@ -18,6 +19,16 @@ import {
   buildBreadcrumb,
   buildItemList,
 } from "@/app/components/seo/StructuredData";
+
+/* 🛡️ Public pagination helpers — default 12 (URL'e yazılmaz), allowed
+   [12,30,50,100]. Repository/service/cache katmanı etkilenmez. */
+import {
+  ALLOWED_PUBLIC_PAGE_SIZES,
+  DEFAULT_PUBLIC_PAGE_SIZE,
+  parsePublicPage,
+  parsePublicPageSize,
+  computePageWindow,
+} from "@/lib/pagination";
 
 /* ===============================================================
    🛡️ /kiralik-villalar — PUBLIC ARCHIVE / DISCOVERY PAGE
@@ -83,16 +94,16 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/* 🛡️ SCALE HARDENING — sayfa boyutu. 1500 villa scale'inde tek
-   HTML response'ta 1500 kart render etmek ağır; pagination ile
-   client'a sadece 1 sayfa render edilir (server-side dilim, prop
-   bazlı transfer). getCachedVillas() ISR cache aynen — full liste
-   server'da hazır, sadece slice client'a iniyor. */
-const PAGE_SIZE = 36;
-
+/* 🛡️ Public pagination — URL state source-of-truth.
+     `?page=N`     → 1-based; default 1 (URL'e yazılmaz)
+     `?pageSize=M` → allowed [12,30,50,100]; default 12 (URL'e yazılmaz)
+   getCachedVillas() tam liste cache; server-side slice. */
 type PageProps = {
   /* Next.js 15: searchParams artık Promise. */
-  searchParams: Promise<{ page?: string | string[] }>;
+  searchParams: Promise<{
+    page?: string | string[];
+    pageSize?: string | string[];
+  }>;
 };
 
 /* ===============================================================
@@ -113,17 +124,15 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
 
   const totalCount = villas.length;
 
-  /* 🛡️ PAGINATION — `?page=N` searchParam (1-based). Geçersizse 1.
-     Server-side dilim → client'a yalnız mevcut sayfa kartları iner. */
-  const pageRaw = Array.isArray(sp.page) ? sp.page[0] : sp.page;
-  const pageParsed = Number.parseInt(String(pageRaw ?? "1"), 10);
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const currentPage = Math.min(
-    Math.max(1, Number.isFinite(pageParsed) ? pageParsed : 1),
-    totalPages
-  );
-  const sliceStart = (currentPage - 1) * PAGE_SIZE;
-  const villasOnPage = villas.slice(sliceStart, sliceStart + PAGE_SIZE);
+  /* 🛡️ PAGINATION — `?page=N` + `?pageSize=M` (allowed [12,30,50,100]).
+     Server-side dilim → client'a yalnız mevcut sayfa kartları iner.
+     Helpers: lib/pagination.ts. */
+  const pageSize = parsePublicPageSize(sp.pageSize);
+  const pageRaw = parsePublicPage(sp.page);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const currentPage = Math.min(Math.max(1, pageRaw), totalPages);
+  const sliceStart = (currentPage - 1) * pageSize;
+  const villasOnPage = villas.slice(sliceStart, sliceStart + pageSize);
 
   /* Sidebar initial state — /kiralik-villalar'da filtre yok
      (archive page; URL query'siz). Kullanıcı seçim yapana kadar
@@ -237,6 +246,12 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
                   </div>
                 ) : (
                   <>
+                    {/* 🛡️ TOOLBAR — page size selector (grid üstü).
+                       Kart boyut/yerleşim/grid sınıfları DEĞİŞMEZ. */}
+                    <div className="mb-6 md:mb-8 flex items-center justify-end">
+                      <PageSizeSelector pageSize={pageSize} />
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
                       {/* 🛡️ Faz 9 hardening: `(villa: any)` → `VillaDTO`.
                          🛡️ SCALE HARDENING: `villas` yerine `villasOnPage`
@@ -266,33 +281,16 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
                       ))}
                     </div>
 
-                    {/* 🛡️ SCALE HARDENING — sayfa nav. Sade Prev / N / Next.
-                       URL ?page=N; mevcut grid layout/UX ETKİLENMEZ. */}
+                    {/* 🛡️ Numbered pagination — admin paterni (lib/pagination
+                       computePageWindow). pageSize URL'de korunur; sayfa
+                       linklerinde page güncellenir, default değer (12)
+                       URL'e yazılmaz. */}
                     {totalPages > 1 && (
-                      <nav
-                        aria-label="Sayfalar"
-                        className="mt-16 md:mt-20 flex items-center justify-center gap-2 text-[13px] text-[var(--color-stone-600)]"
-                      >
-                        {currentPage > 1 && (
-                          <Link
-                            href={`${PAGE_PATH}?page=${currentPage - 1}`}
-                            className="px-4 py-2 rounded-full border border-[var(--color-stone-200)] hover:bg-[var(--color-sand-50)] transition-colors motion-reduce:transition-none"
-                          >
-                            ← Önceki
-                          </Link>
-                        )}
-                        <span className="px-4 py-2 text-[var(--color-stone-500)] tabular-nums">
-                          Sayfa {currentPage} / {totalPages}
-                        </span>
-                        {currentPage < totalPages && (
-                          <Link
-                            href={`${PAGE_PATH}?page=${currentPage + 1}`}
-                            className="px-4 py-2 rounded-full border border-[var(--color-stone-200)] hover:bg-[var(--color-sand-50)] transition-colors motion-reduce:transition-none"
-                          >
-                            Sonraki →
-                          </Link>
-                        )}
-                      </nav>
+                      <PaginationNav
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        pageSize={pageSize}
+                      />
                     )}
                   </>
                 )}
@@ -372,5 +370,161 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
         </section>
       </main>
     </>
+  );
+}
+
+/* ===============================================================
+   🛡️ URL BUILDER — archive (/kiralik-villalar) için pagination
+   ===============================================================
+   `/kiralik-villalar` archive page — filter parametresi YOK
+   (sidebar redirect mode → /arama'ya gönderir). Bu yüzden
+   build helper sadece page + pageSize alır. Default değerler
+   URL'e yazılmaz (clean). */
+function buildArchiveHref(next: {
+  page?: number;
+  pageSize?: number;
+}): string {
+  const usp = new URLSearchParams();
+  if (next.page !== undefined && next.page > 1) {
+    usp.set("page", String(next.page));
+  }
+  if (
+    next.pageSize !== undefined &&
+    next.pageSize !== DEFAULT_PUBLIC_PAGE_SIZE
+  ) {
+    usp.set("pageSize", String(next.pageSize));
+  }
+  const qs = usp.toString();
+  return qs ? `${PAGE_PATH}?${qs}` : PAGE_PATH;
+}
+
+/* ===============================================================
+   🛡️ PAGE SIZE SELECTOR — pill grup; Link-based (server-safe)
+   ===============================================================
+   pageSize değişiminde page=1'e döner (default URL'e yazılmaz). */
+function PageSizeSelector({ pageSize }: { pageSize: number }) {
+  return (
+    <div className="flex items-center gap-2 text-[12.5px] text-[var(--color-stone-500)]">
+      <span>Sayfa başına</span>
+      <div
+        role="group"
+        aria-label="Sayfa başına villa sayısı"
+        className="inline-flex items-center gap-1 rounded-full border border-[var(--color-stone-200)] bg-white p-1"
+      >
+        {ALLOWED_PUBLIC_PAGE_SIZES.map((sz) => {
+          const active = sz === pageSize;
+          const href = buildArchiveHref({ pageSize: sz, page: 1 });
+          return (
+            <Link
+              key={sz}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className={
+                "inline-flex items-center justify-center min-w-[36px] " +
+                "px-2.5 py-1 rounded-full " +
+                "text-[12.5px] font-medium tabular-nums " +
+                "transition-colors motion-reduce:transition-none " +
+                (active
+                  ? "bg-[var(--color-stone-900)] text-white"
+                  : "text-[var(--color-stone-600)] hover:bg-[var(--color-sand-50)]")
+              }
+            >
+              {sz}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ===============================================================
+   🛡️ PAGINATION NAV — numbered window (admin paterni)
+   ===============================================================
+   `computePageWindow` (lib/pagination) ile aynı algoritma admin'le.
+   pageSize URL'de korunur; sayfa linklerinde page güncellenir. */
+function PaginationNav({
+  currentPage,
+  totalPages,
+  pageSize,
+}: {
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+}) {
+  const pages = computePageWindow(currentPage, totalPages);
+  const prevDisabled = currentPage <= 1;
+  const nextDisabled = currentPage >= totalPages;
+
+  return (
+    <nav
+      aria-label="Sayfalar"
+      className="mt-16 md:mt-20 flex flex-wrap items-center justify-center gap-1.5 text-[13px] text-[var(--color-stone-600)]"
+    >
+      {prevDisabled ? (
+        <span
+          aria-disabled="true"
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12.5px] font-medium text-[var(--color-stone-300)] cursor-not-allowed"
+        >
+          <ChevronLeft size={14} />
+          Önceki
+        </span>
+      ) : (
+        <Link
+          href={buildArchiveHref({ page: currentPage - 1, pageSize })}
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12.5px] font-medium text-[var(--color-stone-600)] hover:text-[var(--color-stone-900)] hover:bg-[var(--color-sand-50)] transition-colors motion-reduce:transition-none"
+        >
+          <ChevronLeft size={14} />
+          Önceki
+        </Link>
+      )}
+
+      {pages.map((p, idx) =>
+        p === "…" ? (
+          <span
+            key={`gap-${idx}`}
+            className="px-2 py-1.5 text-[12.5px] text-[var(--color-stone-400)]"
+            aria-hidden="true"
+          >
+            …
+          </span>
+        ) : (
+          <Link
+            key={p}
+            href={buildArchiveHref({ page: p, pageSize })}
+            aria-current={p === currentPage ? "page" : undefined}
+            className={
+              "inline-flex items-center justify-center min-w-[32px] " +
+              "px-2.5 py-1.5 rounded-full " +
+              "text-[12.5px] font-medium tabular-nums " +
+              "transition-colors motion-reduce:transition-none " +
+              (p === currentPage
+                ? "bg-[var(--color-stone-900)] text-white"
+                : "text-[var(--color-stone-600)] hover:text-[var(--color-stone-900)] hover:bg-[var(--color-sand-50)]")
+            }
+          >
+            {p}
+          </Link>
+        )
+      )}
+
+      {nextDisabled ? (
+        <span
+          aria-disabled="true"
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12.5px] font-medium text-[var(--color-stone-300)] cursor-not-allowed"
+        >
+          Sonraki
+          <ChevronRight size={14} />
+        </span>
+      ) : (
+        <Link
+          href={buildArchiveHref({ page: currentPage + 1, pageSize })}
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12.5px] font-medium text-[var(--color-stone-600)] hover:text-[var(--color-stone-900)] hover:bg-[var(--color-sand-50)] transition-colors motion-reduce:transition-none"
+        >
+          Sonraki
+          <ChevronRight size={14} />
+        </Link>
+      )}
+    </nav>
   );
 }

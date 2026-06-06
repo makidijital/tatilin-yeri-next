@@ -33,7 +33,7 @@
    =============================================================== */
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -154,6 +154,13 @@ export default function FilterSidebar({
   mode = "search",
 }: Props) {
   const router = useRouter();
+  /* 🛡️ pageSize URL state — filter Uygula sonrası KORUNUR.
+     `buildHref` her seferinde URLSearchParams'ı sıfırdan inşa
+     ettiği için `page` parametresi otomatik düşer (page=1 reset);
+     ancak `pageSize`'ı bilinçli olarak mevcut URL'den okuyup
+     kopyalarız → kullanıcı 50/sayfa seçmişse filter değişince
+     50/sayfa korunur. */
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const isRedirect = mode === "redirect";
 
@@ -288,6 +295,18 @@ export default function FilterSidebar({
     /* URL contract aynen: guests > 1 ise param yazılır
        (1 default → URL'e koymadan minimize ediyoruz). */
     if (guestCount > 1) params.set("guests", String(guestCount));
+    /* 🛡️ pageSize PRESERVE — filter Uygula sonrası kullanıcının
+       seçtiği page size korunur (page=1'e zaten döner çünkü buildHref
+       URL'i sıfırdan kuruyor). Allow-list dışı / default değer ise
+       URL'e yazılmaz (clean URL). */
+    const existingPageSize = searchParams?.get("pageSize");
+    if (existingPageSize) {
+      const n = Number(existingPageSize);
+      if (n === 30 || n === 50 || n === 100) {
+        params.set("pageSize", String(n));
+      }
+      /* n === 12 (default) veya allow-list dışı → URL'e yazma */
+    }
     const qs = params.toString();
     return qs ? `/arama?${qs}` : "/arama";
   };

@@ -34,6 +34,18 @@ import { isUuid } from "@/lib/slug";
    tüm villaları kapsar. JS-side merge sonrası VillaCard'a aktarılır. */
 import { getVillaReviewStatsBatch } from "@/app/services/villa-review.service";
 
+/* 🛡️ Public pagination helpers — pure functions; admin sözleşmesi
+   etkilenmez. Default 12 (URL'e yazılmaz); allowed [12,30,50,100]. */
+import {
+  ALLOWED_PUBLIC_PAGE_SIZES,
+  DEFAULT_PUBLIC_PAGE_SIZE,
+  parsePublicPage,
+  parsePublicPageSize,
+  computePageWindow,
+} from "@/lib/pagination";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
 /* 🛡️ Next.js 16: searchParams-bağımlı sayfalar zaten dynamic
    olmalı, ama bir caching / PPR sürprizi olmadığından emin
    olmak için explicit declaration. Bu, build-time pre-render
@@ -90,11 +102,14 @@ type Props = {
     guests?: string | string[];
     /** 🛡️ SCALE HARDENING — pagination (1-based). */
     page?: string | string[];
+    /** 🛡️ Public page size selector — allow-list [12,30,50,100].
+     *  Default 12 (URL'e yazılmaz, clean URL). */
+    pageSize?: string | string[];
   }>;
 };
 
-/* 🛡️ SCALE HARDENING — sayfa boyutu. /kiralik-villalar ile aynı. */
-const PAGE_SIZE = 36;
+/* 🛡️ Public pagination — helpers `lib/pagination.ts`.
+   Sayfa boyutu artık URL state'inden geliyor; default 12. */
 
 /** URL'de aynı key birden fazla geçerse Next array verir; ilk
  *  string'i alıyoruz — Hero ve FilterSidebar zaten tek-değerli
@@ -216,31 +231,45 @@ export default async function AramaPage({ searchParams }: Props) {
   const regions = resolveTokens(regionTokensRaw, regionOptions);
 
   /* ===============================================================
-     🛡️ CATEGORY (Villa Tipi) PRE-RESOLVE — DB-LEVEL FILTER
+     🛡️ CATEGORY (Villa Tipi) PRE-RESOLVE — DB-LEVEL FILTER (AND)
      ===============================================================
      Villa ↔ villa_types M:N junction üzerinden ilişkili
      (villa_type_relations: { villa_id, type_id }). Kullanıcı 1+
      tip seçtiyse, önce junction'dan type_id ∈ categories olan
-     DISTINCT villa_id'leri çek; sonra main villa query'sine
-     `.in("id", typeMatchedVillaIds)` ekle.
+     SATIRLARI çek; sonra villa_id başına UNIQUE type_id sayısı
+     === categories.length olanları seç (AND semantiği); ve son
+     olarak main villa query'sine `.in("id", typeMatchedVillaIds)`
+     ekle.
 
-     SEMANTIC:
-       - Tip içi: OR (herhangi bir seçili tipe sahip villa eşleşir)
+     SEMANTIC (ÜRÜN KARARI — OR → AND):
+       - Tip içi: AND (TÜM seçili tiplere sahip villa eşleşir)
+           "Balayı + Deniz Manzaralı" → villa hem Balayı'ya hem
+           Deniz Manzaralı'ya AYNI ANDA sahip olmalı.
        - Diğer filtrelerle: AND (region/guest/availability ile birlikte)
+       - Tek kategori seçildiğinde AND === OR (matematiksel olarak
+         aynı sonuç); semantic-only değişiklik 2+ kategori için
+         devreye girer.
 
      PERFORMANS:
        - Tek extra SELECT (villa_type_relations); junction tablosu
          küçük olur, çoğu zaman index hit. N+1 yok.
+       - Mevcut OR'a göre dönen satır sayısı ~aynı (DISTINCT yerine
+         tüm match satırları); JS-side Map<vid, Set<tid>> ile
+         O(N) sayım. Yeni index gerekmez.
        - Sıfır match olursa main query'ye `.in("id", [])` koyup
          supabase'in boş set döndürmesini bekleme yerine kısa-devre:
          hiç villa yok → erken empty list, downstream pipeline
          doğru biçimde 0 sonuç render eder.
+
+     UX REGRESYONU:
+       - 3+ kategori seçimlerinde empty-state olasılığı yüksek;
+         ürün kararı gereği kabul edildi (filtre = daraltma).
      =============================================================== */
   let categoryVillaIds: string[] | null = null;
   if (categories.length > 0) {
     const { data: rels, error: relsErr } = await supabase
       .from("villa_type_relations")
-      .select("villa_id")
+      .select("villa_id, type_id")
       .in("type_id", categories);
 
     if (relsErr) {
@@ -252,11 +281,27 @@ export default async function AramaPage({ searchParams }: Props) {
       // diğer filtreler etkilenmez.
       categoryVillaIds = null;
     } else {
-      const unique = new Set<string>();
+      // villa_id → seçili kategorilerin hangilerine sahip olduğunu
+      // tutan Set. Bir villa SADECE Set.size === categories.length
+      // olduğunda "tüm seçili kategorilere sahip" sayılır → AND.
+      const typeIdsByVilla = new Map<string, Set<string>>();
       for (const r of rels || []) {
-        if (r?.villa_id) unique.add(String(r.villa_id));
+        const vid = r?.villa_id ? String(r.villa_id) : null;
+        const tid = r?.type_id ? String(r.type_id) : null;
+        if (!vid || !tid) continue;
+        let bucket = typeIdsByVilla.get(vid);
+        if (!bucket) {
+          bucket = new Set<string>();
+          typeIdsByVilla.set(vid, bucket);
+        }
+        bucket.add(tid);
       }
-      categoryVillaIds = [...unique];
+      const required = categories.length;
+      const matched: string[] = [];
+      for (const [vid, typeSet] of typeIdsByVilla) {
+        if (typeSet.size === required) matched.push(vid);
+      }
+      categoryVillaIds = matched;
     }
   }
 
@@ -633,22 +678,23 @@ export default async function AramaPage({ searchParams }: Props) {
 
   const total = visibleVillas.length;
 
-  /* 🛡️ SCALE HARDENING — pagination. `?page=N` searchParam (1-based).
-     Filter + availability semantic'i AYNEN; sadece görünür dilim
-     `villasOnPage`. SEO `ItemList` da yine SADECE bu sayfanın
-     entry'lerini yayınlar (Google paginated pages için sayfa-başı
-     ItemList önerir — total payload ve crawl efficiency). */
-  const pageRaw = Array.isArray(sp.page) ? sp.page[0] : sp.page;
-  const pageParsed = Number.parseInt(String(pageRaw ?? "1"), 10);
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const currentPage = Math.min(
-    Math.max(1, Number.isFinite(pageParsed) ? pageParsed : 1),
-    totalPages
-  );
-  const sliceStart = (currentPage - 1) * PAGE_SIZE;
+  /* 🛡️ SCALE HARDENING — pagination. `?page=N` + `?pageSize=M`
+     searchParams. Filter + availability semantic'i AYNEN; sadece
+     görünür dilim `villasOnPage` değişir. SEO `ItemList` da yine
+     SADECE bu sayfanın entry'lerini yayınlar (Google paginated
+     pages için sayfa-başı ItemList önerir).
+
+     PAGE SIZE — public allow-list [12,30,50,100]; default 12.
+     pageSize URL state'inde tutulur; default URL'e yazılmaz
+     (clean URL). Helpers: lib/pagination.ts. */
+  const pageSize = parsePublicPageSize(sp.pageSize);
+  const pageRaw = parsePublicPage(sp.page);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(Math.max(1, pageRaw), totalPages);
+  const sliceStart = (currentPage - 1) * pageSize;
   const villasOnPage = visibleVillas.slice(
     sliceStart,
-    sliceStart + PAGE_SIZE
+    sliceStart + pageSize
   );
 
   /* 🛡️ SEO structured data — BreadcrumbList + ItemList.
@@ -844,6 +890,13 @@ export default async function AramaPage({ searchParams }: Props) {
               </div>
             ) : (
               <>
+                {/* 🛡️ TOOLBAR — page size selector (grid üstü).
+                   Kart boyut/yerleşim/grid sınıfları DEĞİŞMEZ; sadece
+                   üst kısımda küçük bir toolbar render edilir. */}
+                <div className="mb-6 md:mb-8 flex items-center justify-end">
+                  <PageSizeSelector sp={sp} pageSize={pageSize} />
+                </div>
+
                 {/* 🛡️ KART GRID — sidebar-aware breakpoint düzeni.
                    Eski: sm:grid-cols-2 (640+) ile md viewport'ta (768)
                    sidebar 260px ortaya çıkınca sonuç kolonu ~396 px'e
@@ -898,15 +951,16 @@ export default async function AramaPage({ searchParams }: Props) {
                   ))}
                 </div>
 
-                {/* 🛡️ SCALE HARDENING — sayfa nav (Prev / N / Next).
+                {/* 🛡️ Numbered pagination — admin paterni: 1 ... 8 9 10 ... 42.
                    Diğer searchParams (categories/regions/guests/start/
-                   end) korunur; yalnız `page` güncellenir. URL semantic
-                   ve SEO breadcrumb davranışı aynen. */}
+                   end) + pageSize korunur; yalnız `page` güncellenir.
+                   URL semantic ve SEO breadcrumb davranışı aynen. */}
                 {totalPages > 1 && (
                   <PaginationNav
                     sp={sp}
                     currentPage={currentPage}
                     totalPages={totalPages}
+                    pageSize={pageSize}
                   />
                 )}
               </>
@@ -920,61 +974,188 @@ export default async function AramaPage({ searchParams }: Props) {
 }
 
 /* ===============================================================
-   🛡️ PAGINATION NAV — server component, internal helper
+   🛡️ URL BUILDER — pagination + size selector ortak helper
    ===============================================================
-   Mevcut UX'i bozmamak için minimal yatay nav: Önceki / sayfa
-   göstergesi / Sonraki. Searchparams (categories/regions/guests/
-   start/end) preserve edilir; yalnız `page` değişir. */
+   Tek noktada: filter parametreleri + opsiyonel page + opsiyonel
+   pageSize. Default değerler (page=1, pageSize=12) URL'e yazılmaz
+   (clean URL). Repository/service/cache katmanına dokunulmaz —
+   sadece public arama UI URL kontratı. */
+function buildAramaSearchHref(
+  sp: Awaited<Props["searchParams"]>,
+  next: { page?: number; pageSize?: number }
+): string {
+  const usp = new URLSearchParams();
+  const setIf = (k: string, v: unknown) => {
+    if (typeof v === "string" && v.length > 0) usp.set(k, v);
+    else if (Array.isArray(v) && typeof v[0] === "string")
+      usp.set(k, String(v[0]));
+  };
+  setIf("villa-turleri", sp["villa-turleri"]);
+  setIf("categories", sp.categories);
+  setIf("bolgeler", sp.bolgeler);
+  setIf("regions", sp.regions);
+  setIf("start", sp.start);
+  setIf("end", sp.end);
+  setIf("guests", sp.guests);
+
+  /* page: > 1 ise URL'e yaz, değilse silmek (default 1 clean URL). */
+  const p = next.page ?? parsePublicPage(sp.page);
+  if (p > 1) usp.set("page", String(p));
+
+  /* pageSize: default !== ise URL'e yaz; default ise URL'den silmek
+     (clean URL). */
+  const ps = next.pageSize ?? parsePublicPageSize(sp.pageSize);
+  if (ps !== DEFAULT_PUBLIC_PAGE_SIZE) usp.set("pageSize", String(ps));
+
+  const qs = usp.toString();
+  return qs ? `/arama?${qs}` : "/arama";
+}
+
+/* ===============================================================
+   🛡️ PAGE SIZE SELECTOR — pill grup; Link-based (server-safe)
+   ===============================================================
+   Hero altı toolbar; pageSize değişince `?page=1`'e dönmek için
+   buildAramaSearchHref({ page: 1, pageSize: N }) çağrılır. */
+function PageSizeSelector({
+  sp,
+  pageSize,
+}: {
+  sp: Awaited<Props["searchParams"]>;
+  pageSize: number;
+}) {
+  return (
+    <div className="flex items-center gap-2 text-[12.5px] text-[var(--color-stone-500)]">
+      <span>Sayfa başına</span>
+      <div
+        role="group"
+        aria-label="Sayfa başına villa sayısı"
+        className="inline-flex items-center gap-1 rounded-full border border-[var(--color-stone-200)] bg-white p-1"
+      >
+        {ALLOWED_PUBLIC_PAGE_SIZES.map((sz) => {
+          const active = sz === pageSize;
+          /* pageSize değişiminde page=1'e döner (default ise URL'e
+             yazılmaz). Aktif size için href yine kendi href'i (kullanıcı
+             tıklarsa idempotent). */
+          const href = buildAramaSearchHref(sp, { pageSize: sz, page: 1 });
+          return (
+            <Link
+              key={sz}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className={
+                "inline-flex items-center justify-center min-w-[36px] " +
+                "px-2.5 py-1 rounded-full " +
+                "text-[12.5px] font-medium tabular-nums " +
+                "transition-colors motion-reduce:transition-none " +
+                (active
+                  ? "bg-[var(--color-stone-900)] text-white"
+                  : "text-[var(--color-stone-600)] hover:bg-[var(--color-sand-50)]")
+              }
+            >
+              {sz}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ===============================================================
+   🛡️ PAGINATION NAV — numbered window (admin paterni)
+   ===============================================================
+   Görünüm: ← Önceki  1 ... 8 9 10 11 12 ... 42  Sonraki →
+   `computePageWindow` (lib/pagination) ile aynı algoritma admin'le.
+   Searchparams + pageSize preserve edilir; yalnız `page` değişir. */
 function PaginationNav({
   sp,
   currentPage,
   totalPages,
+  pageSize,
 }: {
   sp: Awaited<Props["searchParams"]>;
   currentPage: number;
   totalPages: number;
+  pageSize: number;
 }) {
-  function urlForPage(n: number): string {
-    const usp = new URLSearchParams();
-    const setIf = (k: string, v: unknown) => {
-      if (typeof v === "string" && v.length > 0) usp.set(k, v);
-      else if (Array.isArray(v) && typeof v[0] === "string")
-        usp.set(k, String(v[0]));
-    };
-    setIf("villa-turleri", sp["villa-turleri"]);
-    setIf("categories", sp.categories);
-    setIf("bolgeler", sp.bolgeler);
-    setIf("regions", sp.regions);
-    setIf("start", sp.start);
-    setIf("end", sp.end);
-    setIf("guests", sp.guests);
-    if (n > 1) usp.set("page", String(n));
-    const qs = usp.toString();
-    return qs ? `/arama?${qs}` : "/arama";
-  }
+  const pages = computePageWindow(currentPage, totalPages);
+  const prevDisabled = currentPage <= 1;
+  const nextDisabled = currentPage >= totalPages;
+
   return (
     <nav
       aria-label="Sayfalar"
-      className="mt-16 md:mt-20 flex items-center justify-center gap-2 text-[13px] text-[var(--color-stone-600)]"
+      className="mt-16 md:mt-20 flex flex-wrap items-center justify-center gap-1.5 text-[13px] text-[var(--color-stone-600)]"
     >
-      {currentPage > 1 && (
-        <a
-          href={urlForPage(currentPage - 1)}
-          className="px-4 py-2 rounded-full border border-[var(--color-stone-200)] hover:bg-[var(--color-sand-50)] transition-colors motion-reduce:transition-none"
+      {prevDisabled ? (
+        <span
+          aria-disabled="true"
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12.5px] font-medium text-[var(--color-stone-300)] cursor-not-allowed"
         >
-          ← Önceki
-        </a>
+          <ChevronLeft size={14} />
+          Önceki
+        </span>
+      ) : (
+        <Link
+          href={buildAramaSearchHref(sp, {
+            page: currentPage - 1,
+            pageSize,
+          })}
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12.5px] font-medium text-[var(--color-stone-600)] hover:text-[var(--color-stone-900)] hover:bg-[var(--color-sand-50)] transition-colors motion-reduce:transition-none"
+        >
+          <ChevronLeft size={14} />
+          Önceki
+        </Link>
       )}
-      <span className="px-4 py-2 text-[var(--color-stone-500)] tabular-nums">
-        Sayfa {currentPage} / {totalPages}
-      </span>
-      {currentPage < totalPages && (
-        <a
-          href={urlForPage(currentPage + 1)}
-          className="px-4 py-2 rounded-full border border-[var(--color-stone-200)] hover:bg-[var(--color-sand-50)] transition-colors motion-reduce:transition-none"
+
+      {pages.map((p, idx) =>
+        p === "…" ? (
+          <span
+            key={`gap-${idx}`}
+            className="px-2 py-1.5 text-[12.5px] text-[var(--color-stone-400)]"
+            aria-hidden="true"
+          >
+            …
+          </span>
+        ) : (
+          <Link
+            key={p}
+            href={buildAramaSearchHref(sp, { page: p, pageSize })}
+            aria-current={p === currentPage ? "page" : undefined}
+            className={
+              "inline-flex items-center justify-center min-w-[32px] " +
+              "px-2.5 py-1.5 rounded-full " +
+              "text-[12.5px] font-medium tabular-nums " +
+              "transition-colors motion-reduce:transition-none " +
+              (p === currentPage
+                ? "bg-[var(--color-stone-900)] text-white"
+                : "text-[var(--color-stone-600)] hover:text-[var(--color-stone-900)] hover:bg-[var(--color-sand-50)]")
+            }
+          >
+            {p}
+          </Link>
+        )
+      )}
+
+      {nextDisabled ? (
+        <span
+          aria-disabled="true"
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12.5px] font-medium text-[var(--color-stone-300)] cursor-not-allowed"
         >
-          Sonraki →
-        </a>
+          Sonraki
+          <ChevronRight size={14} />
+        </span>
+      ) : (
+        <Link
+          href={buildAramaSearchHref(sp, {
+            page: currentPage + 1,
+            pageSize,
+          })}
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12.5px] font-medium text-[var(--color-stone-600)] hover:text-[var(--color-stone-900)] hover:bg-[var(--color-sand-50)] transition-colors motion-reduce:transition-none"
+        >
+          Sonraki
+          <ChevronRight size={14} />
+        </Link>
       )}
     </nav>
   );
