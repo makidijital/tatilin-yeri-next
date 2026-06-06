@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import {
@@ -24,10 +25,16 @@ import {
    [12,30,50,100]. Repository/service/cache katmanı etkilenmez. */
 import {
   ALLOWED_PUBLIC_PAGE_SIZES,
+  ALLOWED_PUBLIC_SORTS,
   DEFAULT_PUBLIC_PAGE_SIZE,
+  DEFAULT_PUBLIC_SORT,
+  PUBLIC_SORT_LABELS,
+  applyPublicSort,
+  computePageWindow,
   parsePublicPage,
   parsePublicPageSize,
-  computePageWindow,
+  parsePublicSort,
+  type PublicSort,
 } from "@/lib/pagination";
 
 /* ===============================================================
@@ -103,6 +110,11 @@ type PageProps = {
   searchParams: Promise<{
     page?: string | string[];
     pageSize?: string | string[];
+    /* 🛡️ Public sort — allow-list:
+     *   smart (default, URL'e yazılmaz) | price-asc | price-desc
+     *   | capacity-asc | capacity-desc
+     * helpers: lib/pagination.ts (parsePublicSort + applyPublicSort). */
+    sort?: string | string[];
   }>;
 };
 
@@ -129,10 +141,20 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
      Helpers: lib/pagination.ts. */
   const pageSize = parsePublicPageSize(sp.pageSize);
   const pageRaw = parsePublicPage(sp.page);
+
+  /* 🛡️ SORT — URL state ile JS-side sıralama.
+     `smart` (default) → mevcut sıra (sort_order ASC, created_at DESC)
+     getCachedVillas'tan AYNEN gelir (no-op shortcut).
+     Diğer modlar yeni array döndürür (input mutate edilmez) → cache
+     payload'u dokunulmaz; sadece UI render sırası değişir.
+     Repository/service/cache/availability'e SIFIR dokunma. */
+  const sort: PublicSort = parsePublicSort(sp.sort);
+  const sortedVillas = applyPublicSort(villas, sort);
+
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const currentPage = Math.min(Math.max(1, pageRaw), totalPages);
   const sliceStart = (currentPage - 1) * pageSize;
-  const villasOnPage = villas.slice(sliceStart, sliceStart + pageSize);
+  const villasOnPage = sortedVillas.slice(sliceStart, sliceStart + pageSize);
 
   /* Sidebar initial state — /kiralik-villalar'da filtre yok
      (archive page; URL query'siz). Kullanıcı seçim yapana kadar
@@ -246,11 +268,25 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
                   </div>
                 ) : (
                   <>
-                    {/* 🛡️ TOOLBAR — page size selector (grid üstü).
-                       Kart boyut/yerleşim/grid sınıfları DEĞİŞMEZ. */}
-                    <div className="mb-6 md:mb-8 flex items-center justify-end">
-                      <PageSizeSelector pageSize={pageSize} />
+                    {/* 🛡️ TOOLBAR — sort + page size selector (grid üstü).
+                       Kart boyut/yerleşim/grid sınıfları DEĞİŞMEZ.
+                       Mobile: stacked; desktop: yan yana sağa yaslı. */}
+                    <div className="mb-6 md:mb-8 flex flex-col items-end gap-3 md:flex-row md:items-center md:justify-end md:gap-6">
+                      <SortSelector pageSize={pageSize} sort={sort} />
+                      <PageSizeSelector pageSize={pageSize} sort={sort} />
                     </div>
+                    {/* 🛡️ Sort auto-submit — next/script (afterInteractive).
+                       React 19 server component'te inline <script> hydration
+                       sırasında çalıştırmıyor; Next.js Script component
+                       initial + client navigation'larda exec garanti eder.
+                       Aynı id /arama ile paylaşılır → dedupe; çift bind
+                       riski sıfır. */}
+                    <Script
+                      id="public-sort-auto-submit"
+                      strategy="afterInteractive"
+                    >
+                      {SORT_AUTO_SUBMIT_SCRIPT}
+                    </Script>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
                       {/* 🛡️ Faz 9 hardening: `(villa: any)` → `VillaDTO`.
@@ -290,6 +326,7 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
                         currentPage={currentPage}
                         totalPages={totalPages}
                         pageSize={pageSize}
+                        sort={sort}
                       />
                     )}
                   </>
@@ -383,6 +420,7 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
 function buildArchiveHref(next: {
   page?: number;
   pageSize?: number;
+  sort?: PublicSort;
 }): string {
   const usp = new URLSearchParams();
   if (next.page !== undefined && next.page > 1) {
@@ -394,6 +432,16 @@ function buildArchiveHref(next: {
   ) {
     usp.set("pageSize", String(next.pageSize));
   }
+  /* 🛡️ sort: default ("smart") URL'e yazılmaz (clean URL).
+     Diğer modlar yazılır → pagination + pageSize linkleri sort'u
+     korur (caller her zaman geçer); SortSelector page=1 reset
+     ile yeni sort'u set eder. */
+  if (
+    next.sort !== undefined &&
+    next.sort !== DEFAULT_PUBLIC_SORT
+  ) {
+    usp.set("sort", next.sort);
+  }
   const qs = usp.toString();
   return qs ? `${PAGE_PATH}?${qs}` : PAGE_PATH;
 }
@@ -402,7 +450,13 @@ function buildArchiveHref(next: {
    🛡️ PAGE SIZE SELECTOR — pill grup; Link-based (server-safe)
    ===============================================================
    pageSize değişiminde page=1'e döner (default URL'e yazılmaz). */
-function PageSizeSelector({ pageSize }: { pageSize: number }) {
+function PageSizeSelector({
+  pageSize,
+  sort,
+}: {
+  pageSize: number;
+  sort: PublicSort;
+}) {
   return (
     <div className="flex items-center gap-2 text-[12.5px] text-[var(--color-stone-500)]">
       <span>Sayfa başına</span>
@@ -413,7 +467,9 @@ function PageSizeSelector({ pageSize }: { pageSize: number }) {
       >
         {ALLOWED_PUBLIC_PAGE_SIZES.map((sz) => {
           const active = sz === pageSize;
-          const href = buildArchiveHref({ pageSize: sz, page: 1 });
+          /* sort PRESERVE: pageSize değişiminde kullanıcının seçtiği
+             sıralama korunur (caller her zaman `sort` geçer). */
+          const href = buildArchiveHref({ pageSize: sz, page: 1, sort });
           return (
             <Link
               key={sz}
@@ -447,10 +503,12 @@ function PaginationNav({
   currentPage,
   totalPages,
   pageSize,
+  sort,
 }: {
   currentPage: number;
   totalPages: number;
   pageSize: number;
+  sort: PublicSort;
 }) {
   const pages = computePageWindow(currentPage, totalPages);
   const prevDisabled = currentPage <= 1;
@@ -471,7 +529,7 @@ function PaginationNav({
         </span>
       ) : (
         <Link
-          href={buildArchiveHref({ page: currentPage - 1, pageSize })}
+          href={buildArchiveHref({ page: currentPage - 1, pageSize, sort })}
           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12.5px] font-medium text-[var(--color-stone-600)] hover:text-[var(--color-stone-900)] hover:bg-[var(--color-sand-50)] transition-colors motion-reduce:transition-none"
         >
           <ChevronLeft size={14} />
@@ -491,7 +549,7 @@ function PaginationNav({
         ) : (
           <Link
             key={p}
-            href={buildArchiveHref({ page: p, pageSize })}
+            href={buildArchiveHref({ page: p, pageSize, sort })}
             aria-current={p === currentPage ? "page" : undefined}
             className={
               "inline-flex items-center justify-center min-w-[32px] " +
@@ -518,7 +576,7 @@ function PaginationNav({
         </span>
       ) : (
         <Link
-          href={buildArchiveHref({ page: currentPage + 1, pageSize })}
+          href={buildArchiveHref({ page: currentPage + 1, pageSize, sort })}
           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12.5px] font-medium text-[var(--color-stone-600)] hover:text-[var(--color-stone-900)] hover:bg-[var(--color-sand-50)] transition-colors motion-reduce:transition-none"
         >
           Sonraki
@@ -528,3 +586,81 @@ function PaginationNav({
     </nav>
   );
 }
+
+/* ===============================================================
+   🛡️ SORT SELECTOR — native <form> + select; server-safe.
+   ===============================================================
+   /arama'daki SortSelector ile birebir aynı pattern: hidden inputs
+   ile pageSize preserve edilir; sort değişiminde page=1'e reset
+   (page hidden input olarak yazılmıyor). Mevcut diğer searchParams
+   yok (archive sayfası), sadece pageSize'ı preserve etmek yeterli.
+   Auto-submit için inline script aşağıda (data-public-sort-form
+   selector'üyle eşleşir). */
+function SortSelector({
+  pageSize,
+  sort,
+}: {
+  pageSize: number;
+  sort: PublicSort;
+}) {
+  return (
+    <form
+      action={PAGE_PATH}
+      method="get"
+      data-public-sort-form
+      className="flex items-center gap-2 text-[12.5px] text-[var(--color-stone-500)]"
+    >
+      {/* pageSize preserve — default değilse hidden input olarak yaz */}
+      {pageSize !== DEFAULT_PUBLIC_PAGE_SIZE && (
+        <input type="hidden" name="pageSize" value={String(pageSize)} />
+      )}
+      <label
+        htmlFor="kv-sort-select"
+        className="whitespace-nowrap"
+      >
+        Sırala
+      </label>
+      <div className="relative">
+        <select
+          id="kv-sort-select"
+          name="sort"
+          defaultValue={sort}
+          aria-label="Villa sıralaması"
+          className={
+            "appearance-none cursor-pointer " +
+            "pl-3 pr-7 py-1 rounded-full " +
+            "border border-[var(--color-stone-200)] bg-white " +
+            "text-[12.5px] font-medium text-[var(--color-stone-700)] " +
+            "hover:border-[var(--color-stone-300)] " +
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40 " +
+            "transition-colors motion-reduce:transition-none"
+          }
+        >
+          {ALLOWED_PUBLIC_SORTS.map((s) => (
+            <option key={s} value={s}>
+              {PUBLIC_SORT_LABELS[s]}
+            </option>
+          ))}
+        </select>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-stone-400)]"
+        >
+          ▾
+        </span>
+      </div>
+      <noscript>
+        <button
+          type="submit"
+          className="ml-1 px-2 py-1 rounded-full border border-[var(--color-stone-200)] text-[12.5px] font-medium text-[var(--color-stone-700)] bg-white hover:border-[var(--color-stone-300)]"
+        >
+          Uygula
+        </button>
+      </noscript>
+    </form>
+  );
+}
+
+/* Tiny vanilla JS — sort select değişince formu otomatik submit eder.
+   `/arama` sayfasıyla aynı pattern (data-public-sort-form). */
+const SORT_AUTO_SUBMIT_SCRIPT = `(function(){var fs=document.querySelectorAll('form[data-public-sort-form]');for(var i=0;i<fs.length;i++){fs[i].addEventListener('change',function(e){if(e.target&&e.target.name==='sort'){this.submit();}});}})();`;

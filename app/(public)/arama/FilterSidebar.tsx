@@ -307,6 +307,20 @@ export default function FilterSidebar({
       }
       /* n === 12 (default) veya allow-list dışı → URL'e yazma */
     }
+    /* 🛡️ sort PRESERVE — filter değişimi kullanıcının sıralama
+       tercihini KORUR. Allow-list (lib/pagination.ts): smart |
+       price-asc | price-desc | capacity-asc | capacity-desc.
+       Default ("smart") veya allow-list dışı → URL'e yazılmaz
+       (clean URL). page=1'e zaten döner (URL sıfırdan kuruluyor). */
+    const existingSort = searchParams?.get("sort");
+    if (
+      existingSort === "price-asc" ||
+      existingSort === "price-desc" ||
+      existingSort === "capacity-asc" ||
+      existingSort === "capacity-desc"
+    ) {
+      params.set("sort", existingSort);
+    }
     const qs = params.toString();
     return qs ? `/arama?${qs}` : "/arama";
   };

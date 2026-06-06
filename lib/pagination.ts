@@ -85,3 +85,139 @@ export function computePageWindow(
   }
   return out;
 }
+
+/* ===============================================================
+   🛡️ PUBLIC SORT — URL state + JS-side sort
+   ===============================================================
+   AMAÇ:
+     /arama ve /kiralik-villalar için sıralama seçenekleri. Tüm
+     sıralama JS-side, slice ÖNCESİ uygulanır → pagination'la
+     birebir tutarlı, cache'siz, repository/service/availability'e
+     dokunmaz.
+
+   SEÇENEKLER:
+     - smart         (default): mevcut DB sırası — sort_order ASC,
+                     created_at DESC. URL'e YAZILMAZ.
+     - price-asc:    villa.price (orijinal currency) artan
+     - price-desc:   villa.price azalan
+     - capacity-asc: villa.guests artan (tek alan — kapasite/kişi
+                     ayrımı YOK; sistem `guests` kolonu kullanıyor)
+     - capacity-desc: villa.guests azalan
+
+   CURRENCY:
+     İlk sürümde kur dönüşümü YOK. villa.price aynen sıralama
+     anahtarı; villalar farklı currency olabilir ama mevcut
+     pre-prod veride çoğunluk TRY. Karışım yönetimi ileride
+     ayrı PR (Opsiyon A: TRY anchor).
+
+   NULL HANDLING:
+     price === null veya guests === null kayıtlar SONA gönderilir
+     (asc: +Infinity; desc: -Infinity). Eski "fiyatsız" villalar
+     üst sıraya çıkmaz.
+
+   AKILLI SIRA (smart) DAVRANIŞI:
+     `applyPublicSort(list, "smart")` array'i AYNEN döner — caller
+     mevcut DB sırasına dokunmamış olur (no-op shortcut).
+=============================================================== */
+export const ALLOWED_PUBLIC_SORTS = [
+  "smart",
+  "price-asc",
+  "price-desc",
+  "capacity-asc",
+  "capacity-desc",
+] as const;
+export type PublicSort = (typeof ALLOWED_PUBLIC_SORTS)[number];
+export const DEFAULT_PUBLIC_SORT: PublicSort = "smart";
+
+/** Allow-list parse + defansif fallback. Geçersiz değer (raw string,
+ *  array, allow-list dışı) → default ("smart"). URL'de default yazılı
+ *  gelse bile aynı no-op sonucu döner. */
+export function parsePublicSort(raw: unknown): PublicSort {
+  if (Array.isArray(raw)) raw = raw[0];
+  if (
+    typeof raw === "string" &&
+    (ALLOWED_PUBLIC_SORTS as readonly string[]).includes(raw)
+  ) {
+    return raw as PublicSort;
+  }
+  return DEFAULT_PUBLIC_SORT;
+}
+
+/** Sıralanabilir minimum villa shape — VillaDTO ve /arama normalized
+ *  villa tipiyle yapısal uyumlu. Kart prop sözleşmesini değiştirmez. */
+export type SortableVilla = {
+  price: number | null | undefined;
+  guests: number | null | undefined;
+};
+
+/**
+ * JS-side stable sort. `smart` → no-op (caller'ın mevcut sırasını koru).
+ * Diğer modlar pure comparator; null/undefined değerleri "sona"
+ * gönderir (asc: +∞ key; desc: -∞ key).
+ *
+ * Davranış garantileri:
+ *  - Input array MUTATE EDİLMEZ; yeni array döner.
+ *  - smart için referans korunur (no allocation) → cache-friendly.
+ *  - VillaCard prop'ları hiçbir şekilde değiştirilmez.
+ */
+export function applyPublicSort<T extends SortableVilla>(
+  list: T[],
+  sort: PublicSort
+): T[] {
+  if (sort === "smart") return list;
+  const arr = [...list];
+
+  const priceAsc = (v: T): number => {
+    const p = v.price;
+    if (typeof p !== "number" || !Number.isFinite(p)) {
+      return Number.POSITIVE_INFINITY;
+    }
+    return p;
+  };
+  const priceDesc = (v: T): number => {
+    const p = v.price;
+    if (typeof p !== "number" || !Number.isFinite(p)) {
+      return Number.NEGATIVE_INFINITY;
+    }
+    return p;
+  };
+  const guestsAsc = (v: T): number => {
+    const g = v.guests;
+    if (typeof g !== "number" || !Number.isFinite(g)) {
+      return Number.POSITIVE_INFINITY;
+    }
+    return g;
+  };
+  const guestsDesc = (v: T): number => {
+    const g = v.guests;
+    if (typeof g !== "number" || !Number.isFinite(g)) {
+      return Number.NEGATIVE_INFINITY;
+    }
+    return g;
+  };
+
+  switch (sort) {
+    case "price-asc":
+      arr.sort((a, b) => priceAsc(a) - priceAsc(b));
+      break;
+    case "price-desc":
+      arr.sort((a, b) => priceDesc(b) - priceDesc(a));
+      break;
+    case "capacity-asc":
+      arr.sort((a, b) => guestsAsc(a) - guestsAsc(b));
+      break;
+    case "capacity-desc":
+      arr.sort((a, b) => guestsDesc(b) - guestsDesc(a));
+      break;
+  }
+  return arr;
+}
+
+/** UI label map — toolbar selector ve a11y için tek source-of-truth. */
+export const PUBLIC_SORT_LABELS: Record<PublicSort, string> = {
+  smart: "Akıllı Sıralama",
+  "price-asc": "Fiyat (Düşükten Yükseğe)",
+  "price-desc": "Fiyat (Yüksekten Düşüğe)",
+  "capacity-asc": "Kapasite (Küçükten Büyüğe)",
+  "capacity-desc": "Kapasite (Büyükten Küçüğe)",
+};

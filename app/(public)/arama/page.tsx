@@ -38,12 +38,19 @@ import { getVillaReviewStatsBatch } from "@/app/services/villa-review.service";
    etkilenmez. Default 12 (URL'e yazılmaz); allowed [12,30,50,100]. */
 import {
   ALLOWED_PUBLIC_PAGE_SIZES,
+  ALLOWED_PUBLIC_SORTS,
   DEFAULT_PUBLIC_PAGE_SIZE,
+  DEFAULT_PUBLIC_SORT,
+  PUBLIC_SORT_LABELS,
+  applyPublicSort,
+  computePageWindow,
   parsePublicPage,
   parsePublicPageSize,
-  computePageWindow,
+  parsePublicSort,
+  type PublicSort,
 } from "@/lib/pagination";
 import Link from "next/link";
+import Script from "next/script";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /* 🛡️ Next.js 16: searchParams-bağımlı sayfalar zaten dynamic
@@ -105,6 +112,11 @@ type Props = {
     /** 🛡️ Public page size selector — allow-list [12,30,50,100].
      *  Default 12 (URL'e yazılmaz, clean URL). */
     pageSize?: string | string[];
+    /** 🛡️ Public sort — allow-list:
+     *    smart (default, URL'e yazılmaz) | price-asc | price-desc
+     *    | capacity-asc | capacity-desc
+     *  helpers: lib/pagination.ts (parsePublicSort + applyPublicSort). */
+    sort?: string | string[];
   }>;
 };
 
@@ -689,10 +701,21 @@ export default async function AramaPage({ searchParams }: Props) {
      (clean URL). Helpers: lib/pagination.ts. */
   const pageSize = parsePublicPageSize(sp.pageSize);
   const pageRaw = parsePublicPage(sp.page);
+
+  /* 🛡️ SORT — URL state ile JS-side post-filter sıralama.
+     `smart` (default) → mevcut DB order (sort_order ASC, created_at
+     DESC) AYNEN korunur (applyPublicSort smart için no-op).
+     Diğer modlar yeni array döndürür (input mutate edilmez).
+     Sıralama AVAILABILITY filtresinden SONRA + SLICE'tan ÖNCE
+     uygulanır → pagination ve toplam doğru. Repository/service/
+     cache/availability'e SIFIR dokunma. */
+  const sort: PublicSort = parsePublicSort(sp.sort);
+  const sortedVillas = applyPublicSort(visibleVillas, sort);
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(Math.max(1, pageRaw), totalPages);
   const sliceStart = (currentPage - 1) * pageSize;
-  const villasOnPage = visibleVillas.slice(
+  const villasOnPage = sortedVillas.slice(
     sliceStart,
     sliceStart + pageSize
   );
@@ -890,12 +913,29 @@ export default async function AramaPage({ searchParams }: Props) {
               </div>
             ) : (
               <>
-                {/* 🛡️ TOOLBAR — page size selector (grid üstü).
+                {/* 🛡️ TOOLBAR — sort + page size selector (grid üstü).
                    Kart boyut/yerleşim/grid sınıfları DEĞİŞMEZ; sadece
-                   üst kısımda küçük bir toolbar render edilir. */}
-                <div className="mb-6 md:mb-8 flex items-center justify-end">
+                   üst kısımda küçük bir toolbar render edilir.
+                   Mobile: dikey stack (sort üstte, pageSize altta);
+                   Desktop: yan yana sağa yaslı. */}
+                <div className="mb-6 md:mb-8 flex flex-col items-end gap-3 md:flex-row md:items-center md:justify-end md:gap-6">
+                  <SortSelector sp={sp} sort={sort} />
                   <PageSizeSelector sp={sp} pageSize={pageSize} />
                 </div>
+                {/* 🛡️ Sort auto-submit — next/script (afterInteractive).
+                   React 19 server component'te inline <script> tag'leri
+                   hydration sırasında ÇALIŞTIRMIYOR; bu yüzden Next.js
+                   Script component'i kullanılıyor (initial page load +
+                   client navigation'larda tek seferlik exec).
+                   id="public-sort-auto-submit": Script component bunu
+                   dedupe key olarak kullanır → /arama ve /kiralik-villalar
+                   aynı id'yi paylaşır, çift bind olmaz. */}
+                <Script
+                  id="public-sort-auto-submit"
+                  strategy="afterInteractive"
+                >
+                  {SORT_AUTO_SUBMIT_SCRIPT}
+                </Script>
 
                 {/* 🛡️ KART GRID — sidebar-aware breakpoint düzeni.
                    Eski: sm:grid-cols-2 (640+) ile md viewport'ta (768)
@@ -982,7 +1022,7 @@ export default async function AramaPage({ searchParams }: Props) {
    sadece public arama UI URL kontratı. */
 function buildAramaSearchHref(
   sp: Awaited<Props["searchParams"]>,
-  next: { page?: number; pageSize?: number }
+  next: { page?: number; pageSize?: number; sort?: PublicSort }
 ): string {
   const usp = new URLSearchParams();
   const setIf = (k: string, v: unknown) => {
@@ -1007,6 +1047,13 @@ function buildAramaSearchHref(
   const ps = next.pageSize ?? parsePublicPageSize(sp.pageSize);
   if (ps !== DEFAULT_PUBLIC_PAGE_SIZE) usp.set("pageSize", String(ps));
 
+  /* 🛡️ sort: default ("smart") clean URL; diğerleri URL'e yazılır.
+     - `next.sort` verildiyse onu kullan (Selector new tercih)
+     - verilmediyse mevcut URL'deki sort'u parse et (pagination /
+       pageSize değişimlerinde sort KORUNUR). */
+  const s = next.sort ?? parsePublicSort(sp.sort);
+  if (s !== DEFAULT_PUBLIC_SORT) usp.set("sort", s);
+
   const qs = usp.toString();
   return qs ? `/arama?${qs}` : "/arama";
 }
@@ -1016,6 +1063,120 @@ function buildAramaSearchHref(
    ===============================================================
    Hero altı toolbar; pageSize değişince `?page=1`'e dönmek için
    buildAramaSearchHref({ page: 1, pageSize: N }) çağrılır. */
+/* ===============================================================
+   🛡️ SORT SELECTOR — native <select> + form (server-safe, no JS)
+   ===============================================================
+   Toolbar'da PageSizeSelector ile yan yana render edilir.
+     - 5 opsiyon: Akıllı / Fiyat ↑↓ / Kapasite ↑↓
+     - Mevcut diğer searchParams (filtreler + pageSize) `<input type="hidden">`
+       ile preserve edilir → onChange form submit → URL güncellenir.
+     - `page` form'a YAZILMAZ → otomatik page=1'e döner (default).
+     - sort=smart submit edilirse buildAramaSearchHref default'u
+       URL'den siler (clean).
+   Native select kullanma sebebi:
+     1) Mobil platformlarda OS-native picker (a11y + parmak hedefi)
+     2) JS hydration gerekmez (server component-safe)
+     3) Hiçbir client island'a dokunmaz, VillaCard etkilenmez. */
+function SortSelector({
+  sp,
+  sort,
+}: {
+  sp: Awaited<Props["searchParams"]>;
+  sort: PublicSort;
+}) {
+  /* Mevcut searchParams'tan tek-değer string'leri çek; form submit
+     öncesi hidden input olarak yazılır → filter/pageSize KORUNUR.
+     `page` ve `sort` form'a koymuyoruz (sort change → page=1 reset). */
+  const pickFirst = (v: unknown): string | null => {
+    if (typeof v === "string" && v.length > 0) return v;
+    if (Array.isArray(v) && typeof v[0] === "string") return v[0];
+    return null;
+  };
+  const hidden: Array<{ name: string; value: string }> = [];
+  const carry = (name: string, value: unknown) => {
+    const v = pickFirst(value);
+    if (v !== null) hidden.push({ name, value: v });
+  };
+  carry("villa-turleri", sp["villa-turleri"]);
+  carry("categories", sp.categories);
+  carry("bolgeler", sp.bolgeler);
+  carry("regions", sp.regions);
+  carry("start", sp.start);
+  carry("end", sp.end);
+  carry("guests", sp.guests);
+  carry("pageSize", sp.pageSize);
+
+  /* Native HTML form — server component-safe (no "use client" gerekmez).
+     Sort değişiminde otomatik submit için tiny inline script (no JS
+     framework bağımlılığı, no external island). Script change event'i
+     form'a delege eder; CSP-friendly içerik (no eval, no external src). */
+  return (
+    <form
+      action="/arama"
+      method="get"
+      data-public-sort-form
+      className="flex items-center gap-2 text-[12.5px] text-[var(--color-stone-500)]"
+    >
+      {hidden.map((h, i) => (
+        <input key={i} type="hidden" name={h.name} value={h.value} />
+      ))}
+      <label
+        htmlFor="arama-sort-select"
+        className="whitespace-nowrap"
+      >
+        Sırala
+      </label>
+      <div className="relative">
+        <select
+          id="arama-sort-select"
+          name="sort"
+          defaultValue={sort}
+          aria-label="Villa sıralaması"
+          className={
+            "appearance-none cursor-pointer " +
+            "pl-3 pr-7 py-1 rounded-full " +
+            "border border-[var(--color-stone-200)] bg-white " +
+            "text-[12.5px] font-medium text-[var(--color-stone-700)] " +
+            "hover:border-[var(--color-stone-300)] " +
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40 " +
+            "transition-colors motion-reduce:transition-none"
+          }
+        >
+          {ALLOWED_PUBLIC_SORTS.map((s) => (
+            <option key={s} value={s}>
+              {PUBLIC_SORT_LABELS[s]}
+            </option>
+          ))}
+        </select>
+        {/* Chevron — pure CSS (no client lib) */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-stone-400)]"
+        >
+          ▾
+        </span>
+      </div>
+      {/* JS kapalıyken fallback: kullanıcı seçim yapar, Uygula'ya basar. */}
+      <noscript>
+        <button
+          type="submit"
+          className="ml-1 px-2 py-1 rounded-full border border-[var(--color-stone-200)] text-[12.5px] font-medium text-[var(--color-stone-700)] bg-white hover:border-[var(--color-stone-300)]"
+        >
+          Uygula
+        </button>
+      </noscript>
+    </form>
+  );
+}
+
+/* Tiny vanilla JS — sort select değişince formu otomatik submit eder.
+   Server component'te onChange handler olmadığı için bu inline script
+   en hafif çözüm. Hem `/arama` hem `/kiralik-villalar` toolbar'ları
+   `data-public-sort-form` attribute'unu paylaşır; tek script ikisini
+   de kapsar (her sayfa kendi render'ında ayrı script yayar — overhead
+   ihmal edilebilir <200 byte). */
+const SORT_AUTO_SUBMIT_SCRIPT = `(function(){var fs=document.querySelectorAll('form[data-public-sort-form]');for(var i=0;i<fs.length;i++){fs[i].addEventListener('change',function(e){if(e.target&&e.target.name==='sort'){this.submit();}});}})();`;
+
 function PageSizeSelector({
   sp,
   pageSize,
