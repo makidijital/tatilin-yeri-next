@@ -50,7 +50,6 @@ import {
   type PublicSort,
 } from "@/lib/pagination";
 import Link from "next/link";
-import Script from "next/script";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /* 🛡️ Next.js 16: searchParams-bağımlı sayfalar zaten dynamic
@@ -922,20 +921,8 @@ export default async function AramaPage({ searchParams }: Props) {
                   <SortSelector sp={sp} sort={sort} />
                   <PageSizeSelector sp={sp} pageSize={pageSize} />
                 </div>
-                {/* 🛡️ Sort auto-submit — next/script (afterInteractive).
-                   React 19 server component'te inline <script> tag'leri
-                   hydration sırasında ÇALIŞTIRMIYOR; bu yüzden Next.js
-                   Script component'i kullanılıyor (initial page load +
-                   client navigation'larda tek seferlik exec).
-                   id="public-sort-auto-submit": Script component bunu
-                   dedupe key olarak kullanır → /arama ve /kiralik-villalar
-                   aynı id'yi paylaşır, çift bind olmaz. */}
-                <Script
-                  id="public-sort-auto-submit"
-                  strategy="afterInteractive"
-                >
-                  {SORT_AUTO_SUBMIT_SCRIPT}
-                </Script>
+                {/* 🛡️ Sort artık <details>+<Link> — JS-less, race-condition
+                   free. Buraya script render etmeye gerek yok. */}
 
                 {/* 🛡️ KART GRID — sidebar-aware breakpoint düzeni.
                    Eski: sm:grid-cols-2 (640+) ile md viewport'ta (768)
@@ -1064,19 +1051,24 @@ function buildAramaSearchHref(
    Hero altı toolbar; pageSize değişince `?page=1`'e dönmek için
    buildAramaSearchHref({ page: 1, pageSize: N }) çağrılır. */
 /* ===============================================================
-   🛡️ SORT SELECTOR — native <select> + form (server-safe, no JS)
+   🛡️ SORT SELECTOR — Link/details dropdown (server-safe, JS-less)
    ===============================================================
-   Toolbar'da PageSizeSelector ile yan yana render edilir.
-     - 5 opsiyon: Akıllı / Fiyat ↑↓ / Kapasite ↑↓
-     - Mevcut diğer searchParams (filtreler + pageSize) `<input type="hidden">`
-       ile preserve edilir → onChange form submit → URL güncellenir.
-     - `page` form'a YAZILMAZ → otomatik page=1'e döner (default).
-     - sort=smart submit edilirse buildAramaSearchHref default'u
-       URL'den siler (clean).
-   Native select kullanma sebebi:
-     1) Mobil platformlarda OS-native picker (a11y + parmak hedefi)
-     2) JS hydration gerekmez (server component-safe)
-     3) Hiçbir client island'a dokunmaz, VillaCard etkilenmez. */
+   ÖNCEKİ MİMARİ (form + auto-submit script) iki bug üretiyordu:
+     1) `next/script` afterInteractive — TTI öncesi select değişirse
+        change handler bind edilmeden submit deneniyor → no-op.
+     2) Form submit = hard navigation = React state sıfırlanır → bazı
+        edge case'lerde filter state senkronize olmaz.
+
+   YENİ MİMARİ:
+     - `<details>` + `<summary>` native HTML dropdown (no JS)
+     - Açılır menüdeki opsiyonlar `<Link>` (Next.js soft navigation)
+     - URL inşası TEK source-of-truth: buildAramaSearchHref(sp, {...})
+       → tüm filter/pageSize/sort/page param'ları aynı yerden akar
+     - Sort change → page=1 reset (buildAramaSearchHref { page: 1 })
+     - Hash/refresh/bookmark hepsi URL = canonical truth (zaten öyleydi)
+
+   A11Y: <details> WCAG-compliant disclosure pattern; klavye ile
+   açılır/kapanır; <Link> seçim sonrası navigation. */
 function SortSelector({
   sp,
   sort,
@@ -1084,98 +1076,68 @@ function SortSelector({
   sp: Awaited<Props["searchParams"]>;
   sort: PublicSort;
 }) {
-  /* Mevcut searchParams'tan tek-değer string'leri çek; form submit
-     öncesi hidden input olarak yazılır → filter/pageSize KORUNUR.
-     `page` ve `sort` form'a koymuyoruz (sort change → page=1 reset). */
-  const pickFirst = (v: unknown): string | null => {
-    if (typeof v === "string" && v.length > 0) return v;
-    if (Array.isArray(v) && typeof v[0] === "string") return v[0];
-    return null;
-  };
-  const hidden: Array<{ name: string; value: string }> = [];
-  const carry = (name: string, value: unknown) => {
-    const v = pickFirst(value);
-    if (v !== null) hidden.push({ name, value: v });
-  };
-  carry("villa-turleri", sp["villa-turleri"]);
-  carry("categories", sp.categories);
-  carry("bolgeler", sp.bolgeler);
-  carry("regions", sp.regions);
-  carry("start", sp.start);
-  carry("end", sp.end);
-  carry("guests", sp.guests);
-  carry("pageSize", sp.pageSize);
-
-  /* Native HTML form — server component-safe (no "use client" gerekmez).
-     Sort değişiminde otomatik submit için tiny inline script (no JS
-     framework bağımlılığı, no external island). Script change event'i
-     form'a delege eder; CSP-friendly içerik (no eval, no external src). */
+  const currentLabel = PUBLIC_SORT_LABELS[sort];
   return (
-    <form
-      action="/arama"
-      method="get"
-      data-public-sort-form
-      className="flex items-center gap-2 text-[12.5px] text-[var(--color-stone-500)]"
-    >
-      {hidden.map((h, i) => (
-        <input key={i} type="hidden" name={h.name} value={h.value} />
-      ))}
-      <label
-        htmlFor="arama-sort-select"
-        className="whitespace-nowrap"
+    <details className="relative group/sort">
+      <summary
+        className={
+          "list-none cursor-pointer select-none " +
+          "inline-flex items-center gap-2 px-3 py-1 rounded-full " +
+          "border border-[var(--color-stone-200)] bg-white " +
+          "text-[12.5px] font-medium text-[var(--color-stone-700)] " +
+          "hover:border-[var(--color-stone-300)] " +
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40 " +
+          "transition-colors motion-reduce:transition-none"
+        }
+        aria-label="Villa sıralaması"
       >
-        Sırala
-      </label>
-      <div className="relative">
-        <select
-          id="arama-sort-select"
-          name="sort"
-          defaultValue={sort}
-          aria-label="Villa sıralaması"
-          className={
-            "appearance-none cursor-pointer " +
-            "pl-3 pr-7 py-1 rounded-full " +
-            "border border-[var(--color-stone-200)] bg-white " +
-            "text-[12.5px] font-medium text-[var(--color-stone-700)] " +
-            "hover:border-[var(--color-stone-300)] " +
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40 " +
-            "transition-colors motion-reduce:transition-none"
-          }
-        >
-          {ALLOWED_PUBLIC_SORTS.map((s) => (
-            <option key={s} value={s}>
-              {PUBLIC_SORT_LABELS[s]}
-            </option>
-          ))}
-        </select>
-        {/* Chevron — pure CSS (no client lib) */}
+        <span className="text-[var(--color-stone-500)]">Sırala</span>
+        <span>{currentLabel}</span>
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-stone-400)]"
+          className="text-[var(--color-stone-400)] transition-transform group-open/sort:rotate-180"
         >
           ▾
         </span>
+      </summary>
+      {/* Dropdown panel — sağa yaslı, mobile'da fit-content. */}
+      <div
+        role="menu"
+        className={
+          "absolute right-0 top-full mt-2 z-20 " +
+          "min-w-[220px] rounded-xl border border-[var(--color-stone-200)] " +
+          "bg-white shadow-lg p-1"
+        }
+      >
+        {ALLOWED_PUBLIC_SORTS.map((s) => {
+          const active = s === sort;
+          /* TEK source-of-truth: buildAramaSearchHref tüm filter/
+             pageSize/sort param'larını sp'den ya da next.*'tan akıtır.
+             page=1 reset → sort değişince. */
+          const href = buildAramaSearchHref(sp, { sort: s, page: 1 });
+          return (
+            <Link
+              key={s}
+              href={href}
+              role="menuitemradio"
+              aria-checked={active}
+              className={
+                "block px-3 py-2 rounded-lg " +
+                "text-[12.5px] font-medium " +
+                "transition-colors motion-reduce:transition-none " +
+                (active
+                  ? "bg-[var(--color-stone-900)] text-white"
+                  : "text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)]")
+              }
+            >
+              {PUBLIC_SORT_LABELS[s]}
+            </Link>
+          );
+        })}
       </div>
-      {/* JS kapalıyken fallback: kullanıcı seçim yapar, Uygula'ya basar. */}
-      <noscript>
-        <button
-          type="submit"
-          className="ml-1 px-2 py-1 rounded-full border border-[var(--color-stone-200)] text-[12.5px] font-medium text-[var(--color-stone-700)] bg-white hover:border-[var(--color-stone-300)]"
-        >
-          Uygula
-        </button>
-      </noscript>
-    </form>
+    </details>
   );
 }
-
-/* Tiny vanilla JS — sort select değişince formu otomatik submit eder.
-   Server component'te onChange handler olmadığı için bu inline script
-   en hafif çözüm. Hem `/arama` hem `/kiralik-villalar` toolbar'ları
-   `data-public-sort-form` attribute'unu paylaşır; tek script ikisini
-   de kapsar (her sayfa kendi render'ında ayrı script yayar — overhead
-   ihmal edilebilir <200 byte). */
-const SORT_AUTO_SUBMIT_SCRIPT = `(function(){var fs=document.querySelectorAll('form[data-public-sort-form]');for(var i=0;i<fs.length;i++){fs[i].addEventListener('change',function(e){if(e.target&&e.target.name==='sort'){this.submit();}});}})();`;
 
 function PageSizeSelector({
   sp,

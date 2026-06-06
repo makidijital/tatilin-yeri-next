@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Script from "next/script";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import {
@@ -275,18 +274,8 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
                       <SortSelector pageSize={pageSize} sort={sort} />
                       <PageSizeSelector pageSize={pageSize} sort={sort} />
                     </div>
-                    {/* 🛡️ Sort auto-submit — next/script (afterInteractive).
-                       React 19 server component'te inline <script> hydration
-                       sırasında çalıştırmıyor; Next.js Script component
-                       initial + client navigation'larda exec garanti eder.
-                       Aynı id /arama ile paylaşılır → dedupe; çift bind
-                       riski sıfır. */}
-                    <Script
-                      id="public-sort-auto-submit"
-                      strategy="afterInteractive"
-                    >
-                      {SORT_AUTO_SUBMIT_SCRIPT}
-                    </Script>
+                    {/* 🛡️ Sort artık <details>+<Link> — JS-less, race-condition
+                       free. Buraya script render etmeye gerek yok. */}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
                       {/* 🛡️ Faz 9 hardening: `(villa: any)` → `VillaDTO`.
@@ -588,14 +577,12 @@ function PaginationNav({
 }
 
 /* ===============================================================
-   🛡️ SORT SELECTOR — native <form> + select; server-safe.
+   🛡️ SORT SELECTOR — Link/details dropdown (server-safe, JS-less)
    ===============================================================
-   /arama'daki SortSelector ile birebir aynı pattern: hidden inputs
-   ile pageSize preserve edilir; sort değişiminde page=1'e reset
-   (page hidden input olarak yazılmıyor). Mevcut diğer searchParams
-   yok (archive sayfası), sadece pageSize'ı preserve etmek yeterli.
-   Auto-submit için inline script aşağıda (data-public-sort-form
-   selector'üyle eşleşir). */
+   /arama ile birebir aynı pattern. URL inşası TEK source-of-truth:
+   buildArchiveHref({ sort, page: 1, pageSize }) → pageSize KORUNUR,
+   page=1 reset. Hard navigation YOK; soft navigation (<Link>) ile
+   React state korunur, race condition yok. */
 function SortSelector({
   pageSize,
   sort,
@@ -603,64 +590,62 @@ function SortSelector({
   pageSize: number;
   sort: PublicSort;
 }) {
+  const currentLabel = PUBLIC_SORT_LABELS[sort];
   return (
-    <form
-      action={PAGE_PATH}
-      method="get"
-      data-public-sort-form
-      className="flex items-center gap-2 text-[12.5px] text-[var(--color-stone-500)]"
-    >
-      {/* pageSize preserve — default değilse hidden input olarak yaz */}
-      {pageSize !== DEFAULT_PUBLIC_PAGE_SIZE && (
-        <input type="hidden" name="pageSize" value={String(pageSize)} />
-      )}
-      <label
-        htmlFor="kv-sort-select"
-        className="whitespace-nowrap"
+    <details className="relative group/sort">
+      <summary
+        className={
+          "list-none cursor-pointer select-none " +
+          "inline-flex items-center gap-2 px-3 py-1 rounded-full " +
+          "border border-[var(--color-stone-200)] bg-white " +
+          "text-[12.5px] font-medium text-[var(--color-stone-700)] " +
+          "hover:border-[var(--color-stone-300)] " +
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40 " +
+          "transition-colors motion-reduce:transition-none"
+        }
+        aria-label="Villa sıralaması"
       >
-        Sırala
-      </label>
-      <div className="relative">
-        <select
-          id="kv-sort-select"
-          name="sort"
-          defaultValue={sort}
-          aria-label="Villa sıralaması"
-          className={
-            "appearance-none cursor-pointer " +
-            "pl-3 pr-7 py-1 rounded-full " +
-            "border border-[var(--color-stone-200)] bg-white " +
-            "text-[12.5px] font-medium text-[var(--color-stone-700)] " +
-            "hover:border-[var(--color-stone-300)] " +
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40 " +
-            "transition-colors motion-reduce:transition-none"
-          }
-        >
-          {ALLOWED_PUBLIC_SORTS.map((s) => (
-            <option key={s} value={s}>
-              {PUBLIC_SORT_LABELS[s]}
-            </option>
-          ))}
-        </select>
+        <span className="text-[var(--color-stone-500)]">Sırala</span>
+        <span>{currentLabel}</span>
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-stone-400)]"
+          className="text-[var(--color-stone-400)] transition-transform group-open/sort:rotate-180"
         >
           ▾
         </span>
+      </summary>
+      <div
+        role="menu"
+        className={
+          "absolute right-0 top-full mt-2 z-20 " +
+          "min-w-[220px] rounded-xl border border-[var(--color-stone-200)] " +
+          "bg-white shadow-lg p-1"
+        }
+      >
+        {ALLOWED_PUBLIC_SORTS.map((s) => {
+          const active = s === sort;
+          /* pageSize PRESERVE + page=1 reset. */
+          const href = buildArchiveHref({ sort: s, page: 1, pageSize });
+          return (
+            <Link
+              key={s}
+              href={href}
+              role="menuitemradio"
+              aria-checked={active}
+              className={
+                "block px-3 py-2 rounded-lg " +
+                "text-[12.5px] font-medium " +
+                "transition-colors motion-reduce:transition-none " +
+                (active
+                  ? "bg-[var(--color-stone-900)] text-white"
+                  : "text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)]")
+              }
+            >
+              {PUBLIC_SORT_LABELS[s]}
+            </Link>
+          );
+        })}
       </div>
-      <noscript>
-        <button
-          type="submit"
-          className="ml-1 px-2 py-1 rounded-full border border-[var(--color-stone-200)] text-[12.5px] font-medium text-[var(--color-stone-700)] bg-white hover:border-[var(--color-stone-300)]"
-        >
-          Uygula
-        </button>
-      </noscript>
-    </form>
+    </details>
   );
 }
-
-/* Tiny vanilla JS — sort select değişince formu otomatik submit eder.
-   `/arama` sayfasıyla aynı pattern (data-public-sort-form). */
-const SORT_AUTO_SUBMIT_SCRIPT = `(function(){var fs=document.querySelectorAll('form[data-public-sort-form]');for(var i=0;i<fs.length;i++){fs[i].addEventListener('change',function(e){if(e.target&&e.target.name==='sort'){this.submit();}});}})();`;
