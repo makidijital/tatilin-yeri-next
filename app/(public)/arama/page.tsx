@@ -9,7 +9,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
 import VillaCard from "@/app/components/villa/VillaCard";
-import { getStartingPrice } from "@/lib/price.engine";
+import { calculateGrandTotal, calculateNights, getStartingPrice } from "@/lib/price.engine";
 import { Search } from "lucide-react";
 
 import FilterSidebar from "./FilterSidebar";
@@ -545,6 +545,11 @@ export default async function AramaPage({ searchParams }: Props) {
      *  reviewStatsMap'ten merge; count===0 → undefined kalır. */
     review_average?: number;
     review_count?: number;
+    /* 🛡️ STAY-TOTAL SORT OVERRIDE — yalnız hasDateRange + price-asc/desc
+     *  durumunda set edilir. calculateGrandTotal().total (user currency
+     *  total). VillaCard prop'larına AKMAZ; sadece applyPublicSort
+     *  priceKey shortcut'ı için. */
+    _sortPrice?: number | null;
   };
 
   const villasSource: AramaVillaRaw[] =
@@ -733,7 +738,63 @@ export default async function AramaPage({ searchParams }: Props) {
     EUR: Number(ratesMap.rates.EUR) || 0,
     GBP: Number(ratesMap.rates.GBP) || 0,
   };
-  const sortedVillas = applyPublicSort(visibleVillas, sort, {
+
+  /* 🛡️ STAY-TOTAL OVERRIDE — tarihli durumda fiyat sıralaması.
+     KOŞUL: hasDateRange === true && sort price-asc|price-desc.
+     Diğer durumlarda hesap atlanır (smart/capacity sıralama veya
+     tarihsiz arama).
+
+     EKONOMİK ANAHTAR:
+       VillaCard.tsx tarihli durumda gösterilen değer:
+         result.total = calculateGrandTotal({ ... }).total
+       (stay + cleaning, user currency'sinde; cleaning_limit muafiyeti
+       dahil). Buraya aynı imza + aynı parametreler verilir →
+       sort key === kartta gösterilen sayı (matematiksel garanti).
+
+     EDGE CASE:
+       - calculateNights(start, end) <= 0 → _sortPrice = null (end-of-list)
+       - prices boş veya .total <= 0 → _sortPrice = null
+       - rates eksik → calculateGrandTotal kendi içinde resolveRate
+         fallback ile graceful; kart da aynı fallback'i kullandığı için
+         tutarlı.
+
+     PERFORMANS:
+       - Yalnız visible villa sayısı × pure JS loop (~ms)
+       - DB/Cache çağrısı yok; salt hesap
+       - Tarihsiz veya capacity sort'ta sıfır maliyet (erken atlama). */
+  const needsStayTotalSort =
+    hasDateRange && (sort === "price-asc" || sort === "price-desc");
+
+  let sortInput: AramaVillaNormalized[] = visibleVillas;
+  if (needsStayTotalSort) {
+    const nightsCheck = calculateNights(start!, end!);
+    if (nightsCheck > 0) {
+      sortInput = visibleVillas.map((v) => {
+        if (!Array.isArray(v.prices) || v.prices.length === 0) {
+          return { ...v, _sortPrice: null };
+        }
+        const result = calculateGrandTotal({
+          start: start!,
+          end: end!,
+          prices: v.prices,
+          currency: userCurrency,
+          rates,
+          cleaning_fee: v.cleaning_fee,
+          cleaning_currency: v.cleaning_currency,
+          cleaning_limit: v.cleaning_limit,
+        });
+        const total =
+          typeof result.total === "number" &&
+          Number.isFinite(result.total) &&
+          result.total > 0
+            ? result.total
+            : null;
+        return { ...v, _sortPrice: total };
+      });
+    }
+  }
+
+  const sortedVillas = applyPublicSort(sortInput, sort, {
     userCurrency,
     rates,
   });

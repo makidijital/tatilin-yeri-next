@@ -148,11 +148,16 @@ export function parsePublicSort(raw: unknown): PublicSort {
 /** Sıralanabilir minimum villa shape — VillaDTO ve /arama normalized
  *  villa tipiyle yapısal uyumlu. Kart prop sözleşmesini değiştirmez.
  *  `currency` opsiyonel: verilirse currency-aware sıralama için
- *  villa.currency olarak kullanılır; verilmezse "TRY" varsayılır. */
+ *  villa.currency olarak kullanılır; verilmezse "TRY" varsayılır.
+ *  `_sortPrice` opsiyonel: caller önceden hesaplanmış sıralama
+ *  anahtarı verirse (örn. /arama tarihli durumda calculateGrandTotal
+ *  toplamı), priceKey doğrudan onu kullanır → kart gösterimi ile
+ *  birebir aynı sayı. Yoksa mevcut convertPrice path'i çalışır. */
 export type SortableVilla = {
   price: number | null | undefined;
   guests: number | null | undefined;
   currency?: string | null | undefined;
+  _sortPrice?: number | null | undefined;
 };
 
 /** Currency-aware sort opsiyonları. Verilmezse sıralama raw `price`
@@ -187,8 +192,16 @@ export function applyPublicSort<T extends SortableVilla>(
   /* 🛡️ CURRENCY-AWARE PRICE KEY — VillaCard convertPrice ile aynı
      formül + aynı rates → gösterilen sayı === sıralama anahtarı.
      priceOpts yoksa raw price (eski davranış; admin/diğer caller
-     uyumu). */
+     uyumu).
+
+     🛡️ STAY-TOTAL OVERRIDE — caller `_sortPrice` (önceden hesaplanmış
+     toplam, user currency'sinde) verirse onu doğrudan kullan; convertPrice
+     çağrılmaz çünkü değer zaten user currency'sinde. /arama tarihli
+     durumda calculateGrandTotal().total burada ekonomik anahtardır. */
   const priceKey = (v: T): number => {
+    if (typeof v._sortPrice === "number" && Number.isFinite(v._sortPrice)) {
+      return v._sortPrice;
+    }
     const p = v.price;
     if (typeof p !== "number" || !Number.isFinite(p)) return NaN;
     if (!priceOpts) return p;
