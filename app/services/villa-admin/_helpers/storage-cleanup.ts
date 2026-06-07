@@ -1,10 +1,11 @@
 /* 🛡️ FAZ 2 STABILIZATION — server-role repo (RLS bypass) for the
    findImageUrlsByVillaId READ within hard-delete mutation flow. */
 import { villaAdminRepository } from "@/lib/db/villa.repository.server";
-import {
-  parseVillaStorageUrl,
-  removeVillaStorageFiles,
-} from "@/lib/villa-image.helpers";
+import { parseVillaStorageUrl } from "@/lib/villa-image.helpers";
+/* 🛡️ FAZ C / ADIM 3 — server remove write-driver-aware (write=r2→S3,
+   write=supabase→Supabase bugünküyle aynı). HTTP route değil, server
+   provider doğrudan; hard delete zinciri korunur. */
+import { removeServer } from "@/lib/storage/server";
 
 /* ===============================================================
    🛡️ FAZ 2 — VILLA STORAGE CLEANUP (for hardDeleteVilla)
@@ -50,7 +51,7 @@ export async function cleanupVillaStorageForHardDelete(
         byBucket.set(parsed.bucket, list);
       }
       for (const [bucket, paths] of byBucket) {
-        const result = await removeVillaStorageFiles(bucket, paths);
+        const result = await removeServer(bucket, paths);
         if (!result.ok) {
           console.warn("[villa.hardDelete] STORAGE_ORPHAN_AFTER_RETRY", {
             villaId,
