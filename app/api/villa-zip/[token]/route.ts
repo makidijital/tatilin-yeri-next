@@ -4,6 +4,7 @@ import archiver from "archiver";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { villaZipRepository } from "@/lib/db/villa-zip.repository.server";
 import { applyRateLimit } from "@/lib/rate-limit";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 
 /* ===============================================================
    🛡️ GET /api/villa-zip/[token] — STREAMING ZIP DOWNLOAD
@@ -148,7 +149,13 @@ export async function GET(
     let index = 0;
     for (const row of imageRows) {
       index += 1;
-      const urlStr = (row.image_url || "").trim();
+      /* 🛡️ FAZ B — relative path → absolute URL (CDN veya Supabase).
+         image_url artık relative tutuluyor; ham fetch şemasız → geçersiz.
+         resolveVillaImageUrl driver'a göre CDN/Supabase absolute URL üretir;
+         FULL URL kayıtları (legacy) pass-through. */
+      const rawPath = (row.image_url || "").trim();
+      if (!rawPath) continue;
+      const urlStr = resolveVillaImageUrl(rawPath);
       if (!urlStr) continue;
       try {
         const res = await fetch(urlStr);

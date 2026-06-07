@@ -1,4 +1,8 @@
-import { storageProvider, STORAGE_BUCKETS } from "@/lib/storage";
+import {
+  storageProvider,
+  STORAGE_BUCKETS,
+  bucketFromCdnHost,
+} from "@/lib/storage";
 
 /* ===============================================================
    🛡️ VILLA IMAGE HELPERS — Bucket: "villa-images"
@@ -315,6 +319,23 @@ export function parseVillaStorageUrl(
     const pathWithoutQuery = rest.join("/").split("?")[0];
     if (!pathWithoutQuery) return null;
     return { bucket, path: pathWithoutQuery };
+  }
+
+  /* 🛡️ FAZ B — Pattern 1b: CDN host (cdn./assets.villayagel.com).
+     CDN path R2'ye Supabase path'i ile BİREBİR kopyalandığı için,
+     CDN URL'inin pathname'i hem R2 hem Supabase bucket-relative
+     path'ine eşittir → remove (Supabase) doğru hedefi bulur. */
+  if (/^https?:\/\//i.test(v)) {
+    try {
+      const u = new URL(v);
+      const bucket = bucketFromCdnHost(u.host);
+      if (bucket) {
+        const cdnPath = u.pathname.replace(/^\/+/, "").split("?")[0];
+        if (cdnPath) return { bucket, path: cdnPath };
+      }
+    } catch {
+      /* malformed URL → diğer pattern'lere düş */
+    }
   }
 
   // Pattern 2: bucket-relative path → default villa-images bucket
