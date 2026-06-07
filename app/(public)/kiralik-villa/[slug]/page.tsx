@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import {
   MapPin,
   /* Users / Bed / Bath VillaInfoBar içinde kullanılıyor; bu sayfanın
@@ -63,9 +64,12 @@ import { getVillaDistances } from "@/app/services/villa-distance.service";
 import { getVillaFeaturesByVilla } from "@/app/services/villa-feature.service";
 import { getRuleItemsByVilla } from "@/app/services/rule-item.service";
 import { getPriceIncludeItemsByVilla } from "@/app/services/price-include-item.service";
-import { getPublicSettings } from "@/app/services/settings.service";
-/* 🛡️ FAZ 33 — Villa reviews (cached). Yalnız approved + stats. */
+/* 🛡️ FAZ 33 — Villa reviews + global settings (cached).
+   getCachedSettings, getPublicSettings'i (get_public_settings RPC)
+   sarmalayan unstable_cache helper'ı; dönen shape birebir aynı,
+   admin invalidation ("settings" tag) korunur. */
 import {
+  getCachedSettings,
   getCachedVillaReviews,
   getCachedVillaReviewStats,
 } from "@/lib/cache.helpers";
@@ -134,13 +138,19 @@ function makeExcerpt(text: string | undefined, max = 160) {
   return clean.slice(0, max - 1).trimEnd() + "…";
 }
 
+/* ⚡ PERF — getVillaBySlug request-scoped dedupe.
+   generateMetadata + page aynı request içinde aynı villayı çağırır;
+   React cache() ile TEK DB sorgusu paylaşılır. Dönen DTO, null/404
+   davranışı ve mapVilla çıktısı BİREBİR aynı (yalnız memoize katmanı). */
+const getVillaBySlugCached = cache((slug: string) => getVillaBySlug(slug));
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const villa = await getVillaBySlug(slug);
+  const villa = await getVillaBySlugCached(slug);
 
   if (!villa) {
     return {
@@ -221,7 +231,7 @@ export default async function VillaDetail({
   const hasInitialRange =
     !!initialStart && !!initialEnd && initialStart < initialEnd;
 
-  const villa = await getVillaBySlug(slug);
+  const villa = await getVillaBySlugCached(slug);
 
   if (!villa) {
     return (
@@ -240,41 +250,46 @@ export default async function VillaDetail({
     );
   }
 
-  const images = await getVillaImages(villa.id);
-  const prices = await getVillaPrices(villa.id);
-  const distances = await getVillaDistances(villa.id);
-  const features: Feature[] = await getVillaFeaturesByVilla(villa.id);
-
   /* 🛡️ YouTube videos — VillaDTO.youtube_videos zaten normalize edilmiş
      (villa.service > mapVilla). Defansif olarak parent component-side
-     bir kez daha normalize edilir; backward-compat (DTO field eksikse). */
+     bir kez daha normalize edilir; backward-compat (DTO field eksikse).
+     Saf sync map; villa.id'ye bağlı değil. */
   const youtubeVideos: VillaYouTubeVideo[] = normalizeYouTubeVideos(
     villa.youtube_videos
   );
 
-  // 🔥 master+relation
-  const rules = await getRuleItemsByVilla(villa.id);
-  const priceIncludes = await getPriceIncludeItemsByVilla(villa.id);
-
-  /* 🛡️ FAZ 56H-B/C — External iCal blocks (server-side fetch).
-     Helper fail-safe → hata olursa boş array döner; availability
-     mevcut reservation/manual ile çalışmaya devam eder. */
-  let externalBlocks = EMPTY_EXTERNAL_STRING_ARRAYS;
-  try {
-    externalBlocks = await fetchExternalCalendarStringsForVilla(villa.id);
-  } catch {
-    /* defensive — helper zaten try/catch'li ama tipik no-throw */
-  }
-
-  // 🔥 watermark settings (global)
-  const settings = await getPublicSettings();
-
-  /* 🛡️ FAZ 33 — Guest reviews (paralel cached fetch).
-     Server-side rendered; client form bağımsız submit eder.
-     `getCachedVillaReviews` ve `getCachedVillaReviewStats` aynı
-     "villa-reviews" tag altında — admin moderation tek invalidate
-     ile her ikisini tazeler. */
-  const [reviews, reviewStats] = await Promise.all([
+  /* ⚡ PERF — villa yüklendikten sonra çalışan TÜM bağımsız okumalar
+     tek paralel dalgada toplandı (önceki sıralı await zinciri yerine).
+     Veri çıktıları, sıralama ve fallback davranışı BİREBİR korunur:
+       • images/prices/distances/features/rules/priceIncludes: aynı
+         servisler, aynı argüman (villa.id), aynı sonuç sırası.
+       • externalBlocks: helper fail-safe + .catch() ile eski try/catch
+         davranışı aynen (hata → EMPTY_EXTERNAL_STRING_ARRAYS).
+       • settings: getCachedSettings (getPublicSettings sarmalayıcısı) —
+         watermark/logo/footer alanları ve admin invalidation korunur.
+       • reviews/reviewStats: zaten cached; aynı "villa-reviews" tag. */
+  const [
+    images,
+    prices,
+    distances,
+    features,
+    rules,
+    priceIncludes,
+    externalBlocks,
+    settings,
+    reviews,
+    reviewStats,
+  ] = await Promise.all([
+    getVillaImages(villa.id),
+    getVillaPrices(villa.id),
+    getVillaDistances(villa.id),
+    getVillaFeaturesByVilla(villa.id) as Promise<Feature[]>,
+    getRuleItemsByVilla(villa.id),
+    getPriceIncludeItemsByVilla(villa.id),
+    fetchExternalCalendarStringsForVilla(villa.id).catch(
+      () => EMPTY_EXTERNAL_STRING_ARRAYS
+    ),
+    getCachedSettings(),
     getCachedVillaReviews(villa.id),
     getCachedVillaReviewStats(villa.id),
   ]);

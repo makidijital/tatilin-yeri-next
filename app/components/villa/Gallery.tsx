@@ -53,6 +53,11 @@ export default function Gallery({
   const touchStartX = useRef<number | null>(null);
   const SWIPE_THRESHOLD = 50;
 
+  /* 🛡️ THUMBNAIL FILMSTRIP — lightbox aktif thumbnail referansları.
+     scrollIntoView ile aktif thumb görünür alanda tutulur. Yalnız
+     lightbox açıkken render edilir → LCP etkisi yok. */
+  const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
   // 🔥 scroll lock
   useEffect(() => {
     if (activeIndex !== null) {
@@ -72,6 +77,22 @@ export default function Gallery({
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
+  }, [activeIndex]);
+
+  /* 🛡️ Aktif thumbnail'i görünür alana kaydır (lightbox açılışında +
+     her next/prev/klavye/swipe navigasyonunda). Sayfa scroll-lock
+     olduğundan block:"nearest" dış scroll tetiklemez; inline:"center"
+     yatay şeridi ortalar. */
+  useEffect(() => {
+    if (activeIndex === null) return;
+    const el = thumbRefs.current[activeIndex];
+    if (el) {
+      el.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
   }, [activeIndex]);
 
   function next() {
@@ -240,7 +261,7 @@ export default function Gallery({
       {/* 🔥 LIGHTBOX */}
       {activeIndex !== null && (
         <div
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center"
+          className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center gap-3"
           onClick={() => setActiveIndex(null)} // 🔥 dışa tıklayınca kapat
         >
           {/* içerik tıklanınca kapanmasın
@@ -274,7 +295,7 @@ export default function Gallery({
               <img
                 src={images[activeIndex]}
                 alt={buildImageAlt(villaTitle, activeIndex, images.length)}
-                className="max-h-[90vh] max-w-[90vw] object-contain rounded-xl"
+                className="max-h-[78vh] max-w-[90vw] object-contain rounded-xl"
               />
               <WatermarkOverlay {...watermark} />
             </div>
@@ -286,6 +307,51 @@ export default function Gallery({
             >
               ›
             </button>
+          </div>
+
+          {/* 🛡️ THUMBNAIL FİLMSTRIP — ana görselin altında.
+              - Yalnız lightbox açıkken render (LCP etkisi yok).
+              - Mobilde overflow-x-auto ile yatay scroll; desktop'ta
+                w-max + mx-auto ile ortalanmış filmstrip (foto azsa
+                ortada, çoksa scroll).
+              - Thumbnail tıklaması mevcut activeIndex state'ini set eder.
+              - stopPropagation: şerit içi tıklama/scroll dış overlay'i
+                kapatmaz ve iç görselin swipe handler'larını tetiklemez.
+              - loading="lazy": 30-50 fotoğrafta toplu indirme önlenir. */}
+          <div
+            className="max-w-[92vw] overflow-x-auto"
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+          >
+            <div className="flex gap-2 px-2 py-1 w-max mx-auto">
+              {images.map((src, i) => (
+                <button
+                  key={i}
+                  ref={(el) => {
+                    thumbRefs.current[i] = el;
+                  }}
+                  onClick={() => setActiveIndex(i)}
+                  aria-label={`Fotoğraf ${i + 1}`}
+                  aria-current={i === activeIndex ? "true" : undefined}
+                  className={
+                    "relative shrink-0 h-14 w-20 md:h-16 md:w-24 " +
+                    "overflow-hidden rounded-lg ring-2 transition " +
+                    (i === activeIndex
+                      ? "ring-white opacity-100"
+                      : "ring-transparent opacity-50 hover:opacity-100")
+                  }
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={src}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
