@@ -165,8 +165,8 @@ export default function AdminGallery({
   useEffect(() => {
     if (dragIndex === null) return;
 
-    const EDGE = 80; // px — viewport edge'inden tetikleme mesafesi
-    const MAX_SPEED = 24; // px/frame — en yakın mesafede maksimum
+    const EDGE = 140; // px — viewport edge'inden tetikleme mesafesi
+    const MAX_SPEED = 80; // px/frame — en yakın mesafede maksimum
     let rafId: number | null = null;
     let velocity = 0; // px/frame; > 0 → aşağı, < 0 → yukarı
 
