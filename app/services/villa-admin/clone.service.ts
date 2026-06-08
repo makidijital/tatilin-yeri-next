@@ -111,8 +111,16 @@ export async function cloneVilla(
       .select("start_date, end_date, price, currency")
       .eq("villa_id", sourceVillaId),
     dbAdmin
+      /* 🛡️ FIX — `villa_distances` tablosunda `unit` SÜTUNU YOK
+         (replace_villa_distances yalnız title+distance yazar; unit
+         distance metnine serialize edilir). Eski select "...,unit"
+         var-olmayan sütun → PostgREST 400 → distanceRes.data null →
+         hata yutuluyordu (yalnız villaRes.error kontrol ediliyor) →
+         mesafeler kopyalanmıyordu. Doğru select: yalnız title+distance.
+         Aşağıdaki map zaten `d.unit` yoksa undefined'a düşer; distance
+         metni serialized unit'i taşıdığı için passthrough korunur. */
       .from("villa_distances")
-      .select("title, distance, unit")
+      .select("title, distance")
       .eq("villa_id", sourceVillaId),
   ]);
 
