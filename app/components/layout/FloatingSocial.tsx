@@ -34,57 +34,11 @@ import { getCachedSettings } from "@/lib/cache.helpers";
      - Print: `print:hidden` ile yazdırma çıktısında gizlenir.
    =============================================================== */
 
-/* ---------------- INLINE SOCIAL ICONS (stroke=currentColor) ----------------
-   Footer.tsx (L19-97) stilistik konvansiyonu AYNEN; lucide-react'te
-   WhatsApp brand icon yok, brand kimliği için inline SVG tercih. */
-
-const WhatsappIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.6}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" />
-  </svg>
-);
-
-const InstagramIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.6}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-  </svg>
-);
-
-const YoutubeIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.6}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" />
-    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" />
-  </svg>
-);
+/* ---------------- SOCIAL ICONS — public/icons SVG kaynakları ----------------
+   İkonlar public/icons altından servis edilir (marka renkli SVG):
+     /icons/whatsapp.svg · /icons/instagram.svg · /icons/youtube.svg
+   Eski inline currentColor SVG'lerin yerine geçti; buton shell, hover,
+   pozisyon, boyut (20×20) ve linkler AYNEN korundu. */
 
 /* ---------------- BUTTON SHELL (DRY) ---------------- */
 
@@ -104,7 +58,7 @@ function FloatingSocialButton({
       rel="noopener noreferrer"
       aria-label={label}
       className="
-        w-11 h-11 md:w-12 md:h-12
+        w-14 h-14 md:w-16 md:h-16
         rounded-full
         bg-white
         ring-1 ring-[var(--color-stone-100)]
@@ -161,17 +115,20 @@ export default async function FloatingSocial() {
     >
       {whatsappHref && (
         <FloatingSocialButton href={whatsappHref} label="WhatsApp">
-          <WhatsappIcon width={20} height={20} aria-hidden />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/whatsapp.svg" alt="" aria-hidden width={50} height={50} />
         </FloatingSocialButton>
       )}
       {instagramHref && (
         <FloatingSocialButton href={instagramHref} label="Instagram">
-          <InstagramIcon width={20} height={20} aria-hidden />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/instagram.svg" alt="" aria-hidden width={50} height={50} />
         </FloatingSocialButton>
       )}
       {youtubeHref && (
         <FloatingSocialButton href={youtubeHref} label="YouTube">
-          <YoutubeIcon width={20} height={20} aria-hidden />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/youtube.svg" alt="" aria-hidden width={50} height={50} />
         </FloatingSocialButton>
       )}
     </aside>

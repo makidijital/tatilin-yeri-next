@@ -217,6 +217,42 @@ export async function POST(req: Request) {
       );
     }
 
+    /* 🛡️ ADMIN BİLDİRİM KOPYASI — reservation-request paterni birebir.
+       Müşteriyle AYNI body (`html`), yalnız subject farklı:
+       "Rezervasyonunuz onaylandı" → "Rezervasyonu onayladınız".
+       Müşteri maili (yukarıda) AYNEN gönderildi; bu EK gönderim
+       BEST-EFFORT — müşteri response'unu etkilemez. Ayrı mailType →
+       müşteri mail_logs satırı değişmez. Şablon/diğer route DOKUNULMADI. */
+    const adminNotifyTo = (
+      process.env.MAIL_ADMIN_NOTIFY_TO || "rezervasyon@villayagel.com"
+    ).trim();
+    if (adminNotifyTo) {
+      const adminSubject = subject.replace(
+        "Rezervasyonunuz onaylandı",
+        "Rezervasyonu onayladınız"
+      );
+      try {
+        const adminResult = await sendMail({
+          to: adminNotifyTo,
+          subject: adminSubject,
+          html,
+          mailType: "reservation_approved_admin",
+          reservationId: r.id,
+        });
+        if (!adminResult.ok) {
+          console.error(
+            "[mail.reservation_approved.admin] FAILED",
+            adminResult.error
+          );
+        }
+      } catch (adminErr) {
+        console.error(
+          "[mail.reservation_approved.admin] EXCEPTION",
+          adminErr instanceof Error ? adminErr.message : adminErr
+        );
+      }
+    }
+
     console.log("[mail.reservation_approved] SENT", {
       id: result.id,
       recipient,

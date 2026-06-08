@@ -210,6 +210,43 @@ export async function POST(req: Request) {
       );
     }
 
+    /* 🛡️ ADMIN BİLDİRİM KOPYASI — reservation-request paterni birebir.
+       Müşteriyle AYNI body (`html`), yalnız subject farklı:
+       "Ödemeniz alındı" → "Ödemeyi onayladınız". Müşteri maili
+       (yukarıda) AYNEN gönderildi; bu EK gönderim BEST-EFFORT —
+       müşteri response'unu ve aşağıdaki status update'i ETKİLEMEZ.
+       Ayrı mailType → müşteri mail_logs satırı değişmez.
+       Şablon / diğer route'lar DOKUNULMADI. */
+    const adminNotifyTo = (
+      process.env.MAIL_ADMIN_NOTIFY_TO || "rezervasyon@villayagel.com"
+    ).trim();
+    if (adminNotifyTo) {
+      const adminSubject = subject.replace(
+        "Ödemeniz alındı",
+        "Ödemeyi onayladınız"
+      );
+      try {
+        const adminResult = await sendMail({
+          to: adminNotifyTo,
+          subject: adminSubject,
+          html,
+          mailType: "payment_confirmed_admin",
+          reservationId: r.id,
+        });
+        if (!adminResult.ok) {
+          console.error(
+            "[mail.payment_confirmed.admin] FAILED",
+            adminResult.error
+          );
+        }
+      } catch (adminErr) {
+        console.error(
+          "[mail.payment_confirmed.admin] EXCEPTION",
+          adminErr instanceof Error ? adminErr.message : adminErr
+        );
+      }
+    }
+
     // 🔥 STATUS UPDATE — payment_link_status = "paid"
     // FAZ 36: DB I/O reservationServerRepository.updateById üzerinden
     // delege. Payload `{ payment_link_status: "paid" }` aynen;
