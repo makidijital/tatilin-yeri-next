@@ -29,10 +29,6 @@ import {
   RESERVATION_CONFIRM_GUARD_MESSAGE,
 } from "@/lib/reservation-confirm.helper";
 
-import {
-  shouldDisplayDamageDeposit,
-  formatDamageDepositTRY,
-} from "@/lib/damage-deposit.helper";
 
 import {
   adminFetch,
@@ -499,13 +495,27 @@ export default function AdminReservationsPage() {
                   ? "partial"
                   : "paid";
 
+            /* 🛡️ STATUS GÖRSEL VURGU — yalnız liste kartı arka plan/divider.
+               confirmed→yeşil, pending→sarı, rejected/cancelled→kırmızı.
+               admin-row yalnız border-bottom kullandığı için full border
+               yerine `border-b-*` recolor (yükseklik/grid değişmez); bg `!`
+               ile override + hover deepen. İçerik/aksiyon/status mantığı AYNEN. */
+            const statusTone =
+              r.status === "confirmed"
+                ? "!bg-green-50 hover:!bg-green-100 !border-b-green-200"
+                : r.status === "pending"
+                  ? "!bg-amber-50 hover:!bg-amber-100 !border-b-amber-200"
+                  : r.status === "rejected" || r.status === "cancelled"
+                    ? "!bg-red-50 hover:!bg-red-100 !border-b-red-200"
+                    : "";
+
             return (
               <div
                 key={r.id}
                 onClick={() =>
                   router.push(`/maki-admin/reservations/${r.id}`)
                 }
-                className="admin-row cursor-pointer"
+                className={`admin-row cursor-pointer ${statusTone}`}
               >
                 {/* AVATAR */}
                 <div className="w-10 h-10 rounded-full bg-[var(--admin-bg-soft)] border border-[var(--admin-border)] flex items-center justify-center text-[var(--admin-muted)] font-medium text-[14px] shrink-0">
@@ -560,15 +570,8 @@ export default function AdminReservationsPage() {
                   <StatusBadge status={r.status} />
                   <PaymentBadge status={paymentStatus} />
                   <PaymentPreferenceBadge value={r.payment_preference} />
-                  {shouldDisplayDamageDeposit(r.damage_deposit) && (
-                    <span
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-medium tracking-[0.02em] tabular-nums bg-[var(--admin-bg-soft)] text-[var(--admin-muted)] border border-[var(--admin-border)]"
-                      title="Hasar depozitosu (informational; toplama dahil değil)"
-                    >
-                      Depozito{" "}
-                      {formatDamageDepositTRY(r.damage_deposit)}
-                    </span>
-                  )}
+                  {/* 🛡️ Depozito satırı liste kartından kaldırıldı (yalnız
+                      görsel; veri/hesap/detay ekranı dokunulmadı). */}
                 </div>
 
                 {/* PRICE */}

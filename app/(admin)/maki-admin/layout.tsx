@@ -22,7 +22,7 @@ import {
   CalendarRange,
   Menu,
   X,
-  Search,
+  Eye,
   Bell,
   ShieldCheck,
   BadgeCheck,
@@ -649,20 +649,16 @@ function AdminShell({
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
-            {/* Search */}
-            <div className="hidden md:flex items-center gap-2 admin-search rounded-full px-3.5 py-1.5">
-              <Search
-                size={14}
-                className="text-[var(--admin-muted-2)]"
-              />
-              <input
-                placeholder="Ara…"
-                className="!bg-transparent !border-0 !shadow-none outline-none text-[13px] w-44 placeholder-[var(--admin-muted-2)]"
-              />
-              <kbd className="hidden lg:inline-flex items-center px-1.5 h-5 rounded-md text-[10px] font-medium tracking-wider text-[var(--admin-muted)] bg-white border border-[var(--admin-border)]">
-                ⌘K
-              </kbd>
-            </div>
+            {/* Siteyi Görüntüle — public site, yeni sekme (arama kutusu kaldırıldı) */}
+            <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden md:inline-flex items-center gap-2 admin-btn-ghost"
+            >
+              <Eye size={15} />
+              Siteyi Görüntüle
+            </a>
 
             {/* Notification — unified center (preview + persistent log) */}
             <NotificationBell />

@@ -365,7 +365,12 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
     <article
       className={
         "admin-card p-3 md:p-4 flex items-start gap-3 md:gap-4 group " +
-        (isInactive ? "ring-1 ring-amber-200/70 " : "")
+        /* 🛡️ Pasif villa görsel vurgusu — yalnız is_active === false.
+           Soft kırmızı arka plan + kırmızı border (admin-card bg/border'ı
+           class ile geldiği için `!` ile override). Aktif villalar
+           ETKİLENMEZ; kart yapısı/yükseklik/hover (shadow+transform)
+           korunur. */
+        (isInactive ? "!bg-red-50 !border-red-200 " : "")
       }
     >
       {/* THUMBNAIL */}
