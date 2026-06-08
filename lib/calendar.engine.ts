@@ -128,7 +128,7 @@ export const getDayStyle = ({
   // 🔥 gerçek birleşim noktası
   if (isBoth && isBlocked) {
     return {
-      bg: "linear-gradient(to right, rgba(201, 0, 0, 0.55) 50%, rgba(239, 68, 68, 0.62) 50%)",
+      bg: "linear-gradient(to bottom right, rgba(220,38,38,0.85) 48%, #ffffff 48%, #ffffff 52%,rgba(220,38,38,0.85) 52%)",
       color,
     };
   }
@@ -136,7 +136,7 @@ export const getDayStyle = ({
   // 🔥 reservation giriş + çıkış
   if (isBoth) {
     return {
-      bg: "linear-gradient(to right, rgba(201,0,0,0.55) 50%, rgba(239,68,68,0.62) 50%)",
+      bg: "linear-gradient(to bottom right, rgba(220,38,38,0.85) 48%, #ffffff 48%, #ffffff 52%,rgba(220,38,38,0.85) 52%)",
       color,
     };
   }
@@ -147,7 +147,7 @@ export const getDayStyle = ({
 
   if (isPendingBoth) {
     return {
-      bg: "linear-gradient(to right, #d7970d 50%, #facc15 50%)",
+      bg: "linear-gradient(to bottom right, #d7970d 48%, #ffffff 48%, #ffffff 52%,#facc15 52%)",
       color,
     };
   }
@@ -155,7 +155,7 @@ export const getDayStyle = ({
   // 🔥 pending + confirmed checkout
   if ((isPM && isCO) || (isPCI && isCO)) {
     return {
-      bg: "linear-gradient(to right, rgba(239,68,68,0.4) 50%, rgb(250,204,21) 50%)",
+      bg: "linear-gradient(to bottom right, rgba(220,38,38,0.85) 48%, #ffffff 48%, #ffffff 52%,rgb(250,204,21) 52%)",
       color,
     };
   }
@@ -163,7 +163,7 @@ export const getDayStyle = ({
   // 🔥 pending + confirmed checkin
   if ((isCI && isPM) || (isCI && isPCO)) {
     return {
-      bg: "linear-gradient(to right, rgb(250,204,21) 50%, rgba(239,68,68,0.4) 50%)",
+      bg: "linear-gradient(to bottom right, rgb(250,204,21) 48%, #ffffff 48%, #ffffff 52%,rgba(220,38,38,0.85) 52%)",
       color,
     };
   }
@@ -198,7 +198,7 @@ export const getDayStyle = ({
   // 🔥 external checkout (SOL) + confirmed checkin (SAĞ)
   if (isXCO && isCI && !isCO && !isBlocked) {
     return {
-      bg: "linear-gradient(to right, rgba(139,92,246,0.45) 50%, rgba(239,68,68,0.4) 50%)",
+      bg: "linear-gradient(to bottom right, rgba(139,92,246,0.45) 48%, #ffffff 48%, #ffffff 52%,rgba(220,38,38,0.85) 52%)",
       color,
     };
   }
@@ -206,7 +206,7 @@ export const getDayStyle = ({
   // 🔥 confirmed checkout (SOL) + external checkin (SAĞ)
   if (isCO && isXCI && !isCI && !isBlocked) {
     return {
-      bg: "linear-gradient(to right, rgba(239,68,68,0.4) 50%, rgba(139,92,246,0.45) 50%)",
+      bg: "linear-gradient(to bottom right, rgba(220,38,38,0.85) 48%, #ffffff 48%, #ffffff 52%,rgba(139,92,246,0.45) 52%)",
       color,
     };
   }
@@ -214,7 +214,7 @@ export const getDayStyle = ({
   // 🔥 external checkout (SOL) + pending checkin (SAĞ)
   if (isXCO && isPCI && !isPCO) {
     return {
-      bg: "linear-gradient(to right, rgba(139,92,246,0.45) 50%, #facc15 50%)",
+      bg: "linear-gradient(to bottom right, rgba(139,92,246,0.45) 48%, #ffffff 48%, #ffffff 52%,#facc15 52%)",
       color,
     };
   }
@@ -222,7 +222,7 @@ export const getDayStyle = ({
   // 🔥 pending checkout (SOL) + external checkin (SAĞ)
   if (isPCO && isXCI && !isPCI) {
     return {
-      bg: "linear-gradient(to right, #facc15 50%, rgba(139,92,246,0.45) 50%)",
+      bg: "linear-gradient(to bottom right, #facc15 48%, #ffffff 48%, #ffffff 52%,rgba(139,92,246,0.45) 52%)",
       color,
     };
   }
@@ -234,7 +234,7 @@ export const getDayStyle = ({
   // 🔥 giriş
   if (isCI && !isBlocked) {
     return {
-      bg: "linear-gradient(to right, transparent 50%, rgba(239,68,68,0.4) 50%)",
+      bg: "linear-gradient(to bottom right, transparent 48%, #ffffff 48%, #ffffff 52%,rgba(220,38,38,0.85) 52%)",
       color,
     };
   }
@@ -242,7 +242,7 @@ export const getDayStyle = ({
   // 🔥 çıkış
   if (isCO && !isBlocked) {
     return {
-      bg: "linear-gradient(to right, rgba(239,68,68,0.4) 50%, transparent 50%)",
+      bg: "linear-gradient(to bottom right, rgba(220,38,38,0.85) 48%, #ffffff 48%, #ffffff 52%,transparent 52%)",
       color,
     };
   }
@@ -250,7 +250,7 @@ export const getDayStyle = ({
   // 🔥 full middle blocked
   if (isBlocked) {
     return {
-      bg: "rgba(239,68,68,0.4)",
+      bg: "#DC2626",
       color,
     };
   }
@@ -261,14 +261,14 @@ export const getDayStyle = ({
 
   if (isPCI) {
     return {
-      bg: "linear-gradient(to right, transparent 50%, #facc15 50%)",
+      bg: "linear-gradient(to bottom right, transparent 48%, #ffffff 48%, #ffffff 52%,#facc15 52%)",
       color,
     };
   }
 
   if (isPCO) {
     return {
-      bg: "linear-gradient(to right, #facc15 50%, transparent 50%)",
+      bg: "linear-gradient(to bottom right, #facc15 48%, #ffffff 48%, #ffffff 52%,transparent 52%)",
       color,
     };
   }
@@ -293,21 +293,21 @@ export const getDayStyle = ({
 
   if (isExternalBoth) {
     return {
-      bg: "linear-gradient(to right, rgba(124,58,237,0.55) 50%, rgba(139,92,246,0.62) 50%)",
+      bg: "linear-gradient(to bottom right, rgba(124,58,237,0.55) 48%, #ffffff 48%, #ffffff 52%,rgba(139,92,246,0.62) 52%)",
       color,
     };
   }
 
   if (isXCI && !isXM) {
     return {
-      bg: "linear-gradient(to right, transparent 50%, rgba(139,92,246,0.45) 50%)",
+      bg: "linear-gradient(to bottom right, transparent 48%, #ffffff 48%, #ffffff 52%,rgba(139,92,246,0.45) 52%)",
       color,
     };
   }
 
   if (isXCO && !isXM) {
     return {
-      bg: "linear-gradient(to right, rgba(139,92,246,0.45) 50%, transparent 50%)",
+      bg: "linear-gradient(to bottom right, rgba(139,92,246,0.45) 48%, #ffffff 48%, #ffffff 52%,transparent 52%)",
       color,
     };
   }
