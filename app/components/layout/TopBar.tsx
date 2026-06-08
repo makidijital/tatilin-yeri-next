@@ -49,7 +49,7 @@ export default function TopBar() {
       className="
         flex
         justify-center md:justify-between items-center
-        px-6 py-[7px]
+        px-6 md:px-10 lg:px-12 py-[7px]
         text-[12px] tracking-[0.005em]
         text-[var(--color-stone-600)]
         bg-[var(--color-ivory)]
@@ -177,10 +177,10 @@ export default function TopBar() {
               backgroundSize: "10px",
             }}
           >
-            <option value="TRY">₺ TRY</option>
-            <option value="USD">$ USD</option>
-            <option value="EUR">€ EUR</option>
-            <option value="GBP">£ GBP</option>
+            <option value="TRY">🇹🇷 TRY</option>
+            <option value="USD">🇺🇸 USD</option>
+            <option value="EUR">🇪🇺 EUR</option>
+            <option value="GBP">🇬🇧 GBP</option>
           </select>
         </div>
       </div>

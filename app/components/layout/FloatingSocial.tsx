@@ -58,18 +58,9 @@ function FloatingSocialButton({
       rel="noopener noreferrer"
       aria-label={label}
       className="
-        w-14 h-14 md:w-16 md:h-16
-        rounded-full
-        bg-white
-        ring-1 ring-[var(--color-stone-100)]
-        shadow-[0_8px_24px_-8px_rgba(27,26,23,0.18)]
-        flex items-center justify-center
-        text-[var(--color-stone-700)]
-        hover:text-[var(--brand-coral)]
-        hover:ring-[var(--brand-coral)]
+        inline-flex rounded-full
         hover:-translate-y-[2px]
-        hover:shadow-[0_12px_28px_-10px_rgba(27,26,23,0.22)]
-        transition-[transform,box-shadow,color,border-color] duration-200
+        transition-transform duration-200
         motion-reduce:transition-none motion-reduce:hover:translate-y-0
         focus:outline-none focus-visible:ring-2
         focus-visible:ring-[var(--brand-coral)]/40

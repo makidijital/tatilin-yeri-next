@@ -18,8 +18,6 @@ import {
   Cross,
   Fuel,
   GraduationCap,
-  /* 🛡️ FAZ 24 — tourism document trust badge */
-  ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -929,37 +927,50 @@ export default async function VillaDetail({
                 <div className="flex items-start gap-3">
                   <span
                     className="
-                      w-9 h-9 shrink-0 rounded-xl
+                      w-16 h-16 shrink-0 rounded-xl
                       bg-[var(--color-sand-50)] border border-[var(--color-stone-100)]
                       flex items-center justify-center
                       text-[var(--color-champagne-600)]
                     "
                     aria-hidden
                   >
-                    <ShieldCheck size={16} />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/brand/trust/turizm-bakanligi.svg"
+                      alt=""
+                      aria-hidden
+                      className="w-12 h-12 object-contain"
+                    />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-[10.5px] tracking-[0.18em] uppercase font-medium text-[var(--color-stone-500)]">
                       T.C. Kültür ve Turizm Bakanlığı
                     </p>
-                    {/* Belge no premium typography:
-                         - font-display tabular-nums premium look
-                         - select-all → tek tıkla kopyalanabilir
-                         - break-all → çok uzun değerlerde overflow-safe
-                         - min-w-0 + flex-1 parent shrink garantili */}
+                    {/* Büyük belge no — select-all kopyalanabilir; break-all
+                        overflow-safe; tabular-nums premium görünüm. */}
                     <p
                       className="
-                        font-display text-[15px] md:text-[16px]
+                        font-display text-[18px] md:text-[20px]
                         text-[var(--color-stone-900)] mt-1 tracking-[-0.01em]
                         select-all break-all
                       "
                       style={{ fontVariantNumeric: "tabular-nums" }}
                     >
-                      <span className="text-[var(--color-stone-500)] font-sans text-[12px] tracking-normal mr-1.5">
-                        Belge No:
-                      </span>
                       {villa.tourism_document_number}
                     </p>
+                    {/* Belgeyi Görüntüle — KTB konut belge sorgu (yeni sekme).
+                        URL belge no'dan dinamik üretilir. */}
+                    <a
+                      href={`https://vatandas.ktb.gov.tr/konut-belge/${encodeURIComponent(
+                        villa.tourism_document_number
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 mt-1.5 text-[12px] font-medium text-[var(--color-champagne-700)] hover:underline"
+                    >
+                      Belgeyi Görüntüle
+                      <ExternalLink size={12} />
+                    </a>
                   </div>
                 </div>
               </div>
