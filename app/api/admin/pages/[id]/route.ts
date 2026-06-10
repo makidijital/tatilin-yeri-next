@@ -19,9 +19,10 @@ import { dbAdmin } from "@/lib/db/server";
 
    ALLOWED PATCH FIELDS:
      title, slug, body, content (mirror), excerpt,
-     seo_title, seo_description, noindex, is_active, show_in_menu
+     seo_title, seo_description, noindex, is_active, show_in_menu,
+     cover_image (relative path; null = kapağı kaldır)
    PRESERVED (route HİÇ dokunmaz):
-     sections, cover_image, menu_parent_id, menu_order, created_at,
+     sections, menu_parent_id, menu_order, created_at,
      id, updated_at
    Public consumer (/p/[slug]) ve mevcut "yeni sayfa" akışı bu
    route'tan ETKİLENMEZ.
@@ -95,6 +96,7 @@ type PatchBody = {
   noindex?: unknown;
   is_active?: unknown;
   show_in_menu?: unknown;
+  cover_image?: unknown;
 };
 
 function normString(v: unknown): string | null | undefined {
@@ -170,6 +172,11 @@ export async function PATCH(
   if (typeof body.is_active === "boolean") patch.is_active = body.is_active;
   if (typeof body.show_in_menu === "boolean")
     patch.show_in_menu = body.show_in_menu;
+
+  /* Cover image — relative path (string) veya null (kapağı kaldır).
+     Storage/upload akışı edit ekranında; route yalnız DB alanını yazar. */
+  if (body.cover_image !== undefined)
+    patch.cover_image = normString(body.cover_image) ?? null;
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json(

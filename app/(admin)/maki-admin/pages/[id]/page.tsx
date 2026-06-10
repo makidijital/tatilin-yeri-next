@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Eye } from "lucide-react";
+import { ArrowLeft, Save, Eye, ImagePlus } from "lucide-react";
 
 import { adminFetch } from "@/lib/admin-fetch";
 import { useNotify } from "@/app/components/admin/notifications/NotificationProvider";
 import { revalidateMenu } from "@/app/services/revalidate.actions";
 import { logActivity } from "@/lib/activity-log.client";
+/* 🛡️ Kapak görseli — new sayfasıyla AYNI upload akışı (storageProvider
+   + deterministik path); edit ekranında mevcut kapağı göster + yönet. */
+import { storageProvider } from "@/lib/storage";
+import {
+  getPageCoverPublicUrl,
+  buildPageCoverPath,
+  SITE_ASSETS_BUCKET_NAME,
+} from "@/lib/storage.helpers";
+import { convertImageToWebP } from "@/lib/image.helpers";
 
 /* ===============================================================
    🛡️ ADMIN > SAYFA DÜZENLE — minimal-risk CMS edit
@@ -55,6 +64,7 @@ type PageRow = {
   noindex: boolean | null;
   is_active: boolean | null;
   show_in_menu: boolean | null;
+  cover_image: string | null;
 };
 
 export default function EditPagePage() {
@@ -77,6 +87,11 @@ export default function EditPagePage() {
   const [noindex, setNoindex] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [showInMenu, setShowInMenu] = useState(false);
+
+  /* Kapak görseli — mevcut sayfadan hydrate edilir; new ile aynı state. */
+  const [coverPath, setCoverPath] = useState<string | null>(null);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
 
   /* Original slug — sadece "URL değişecek" uyarısı için. */
   const [originalSlug, setOriginalSlug] = useState("");
@@ -113,6 +128,7 @@ export default function EditPagePage() {
         setNoindex(!!p.noindex);
         setIsActive(p.is_active !== false);
         setShowInMenu(!!p.show_in_menu);
+        setCoverPath(p.cover_image ?? null);
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
@@ -145,6 +161,43 @@ export default function EditPagePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  /* ----- COVER UPLOAD — new sayfasıyla BİREBİR AYNI akış ----- */
+  async function handleCoverUpload(file: File) {
+    const s = slug.trim();
+    if (!s) {
+      toast.error("Önce slug girin", { id: "page-cover" });
+      return;
+    }
+    setCoverUploading(true);
+    try {
+      const webp = await convertImageToWebP(file);
+      const path = buildPageCoverPath(s, "webp");
+      if (!path) return;
+      const upRes = await storageProvider.upload(
+        SITE_ASSETS_BUCKET_NAME,
+        path,
+        webp,
+        {
+          upsert: true,
+          contentType: "image/webp",
+          cacheControl: "3600",
+        }
+      );
+      if (!upRes.ok) {
+        toast.error("Görsel yüklenemedi", {
+          id: "page-cover",
+          description: upRes.error,
+        });
+        return;
+      }
+      setCoverPath(path);
+      toast.success("Kapak yüklendi", { id: "page-cover" });
+    } finally {
+      setCoverUploading(false);
+      if (coverInputRef.current) coverInputRef.current.value = "";
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim() || !slug.trim()) {
@@ -166,6 +219,9 @@ export default function EditPagePage() {
       noindex: !!noindex,
       is_active: !!isActive,
       show_in_menu: !!showInMenu,
+      /* Kapak: yüklendi → relative path; kaldırıldı → null. Route
+         allowlist'inde (cover_image) → DB'ye yazılır. */
+      cover_image: coverPath ?? null,
     };
     try {
       const res = await adminFetch(
@@ -248,6 +304,7 @@ export default function EditPagePage() {
   }
 
   const slugChanged = slug.trim() !== originalSlug && originalSlug.length > 0;
+  const coverUrl = getPageCoverPublicUrl(coverPath);
 
   return (
     <div className="space-y-6 max-w-3xl w-full">
@@ -350,6 +407,63 @@ export default function EditPagePage() {
             Bu sayfaya daha önce bölüm (section) eklenmişse içerik korunur ve
             herkese görünür kalır; buradan yalnız ana metin alanı düzenlenir.
           </p>
+        </div>
+
+        {/* COVER — new sayfasıyla AYNI bileşen/akış; edit'te mevcut kapak
+            önizlemesi + değiştir + kaldır. */}
+        <div className="card-premium p-6 md:p-7">
+          <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block mb-3">
+            Kapak görseli (opsiyonel)
+          </label>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => coverInputRef.current?.click()}
+              disabled={coverUploading || !slug.trim()}
+              className="relative w-32 h-20 rounded-2xl overflow-hidden bg-[var(--color-sand-50)] border border-[var(--color-stone-200)] hover:border-[var(--color-champagne-500)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!slug.trim() ? "Önce slug girin" : "Görsel yükle/değiştir"}
+            >
+              {coverUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={coverUrl}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              ) : (
+                <span className="absolute inset-0 flex items-center justify-center text-[var(--color-stone-400)]">
+                  <ImagePlus size={18} />
+                </span>
+              )}
+              {coverUploading && (
+                <span className="absolute inset-0 flex items-center justify-center bg-white/70 text-[10px] font-medium text-[var(--color-stone-700)]">
+                  Yükleniyor…
+                </span>
+              )}
+            </button>
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleCoverUpload(f);
+              }}
+            />
+            {coverPath && (
+              <button
+                type="button"
+                onClick={() => setCoverPath(null)}
+                className="text-[13px] text-red-600 hover:text-red-700"
+              >
+                Kapağı kaldır
+              </button>
+            )}
+            <p className="text-xs text-[var(--color-stone-400)] ml-auto max-w-xs">
+              Otomatik WebP, max 1920px. Aynı slug için overwrite.
+            </p>
+          </div>
         </div>
 
         {/* SEO */}
