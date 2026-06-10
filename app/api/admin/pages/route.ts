@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ Sayfa silmede orphan cover temizliği — server-side storage abstraction
+   (removeServer write-driver'a göre R2/Supabase'e gider; provider seçme
+   mantığı DEĞİŞMEZ). Cover `site-assets` bucket'ında. */
+import { removeServer } from "@/lib/storage/server";
+import { STORAGE_BUCKETS } from "@/lib/storage";
 
 /* ===============================================================
    🛡️ /api/admin/pages — PAGES CRUD partial (admin-only)
@@ -119,6 +124,36 @@ export async function DELETE(req: Request): Promise<NextResponse> {
     return NextResponse.json(
       { ok: false, error: "id zorunlu" },
       { status: 400 }
+    );
+  }
+
+  /* 🛡️ ORPHAN COVER CLEANUP — DB silmeden ÖNCE cover_image'ı oku;
+     varsa storage'dan (R2 abstraction) sil. Best-effort: silme hatası
+     sayfa silmeyi BLOKLAMAZ (orphan dosya log'lanır, DB silme öncelikli).
+     cover_image yoksa hiçbir storage çağrısı yapılmaz (mevcut davranış). */
+  try {
+    const { data: pageRow } = await dbAdmin
+      .from("pages")
+      .select("cover_image")
+      .eq("id", id)
+      .maybeSingle();
+    const coverPath = (pageRow?.cover_image || "").trim();
+    if (coverPath) {
+      const rmRes = await removeServer(STORAGE_BUCKETS.SITE_ASSETS, [
+        coverPath,
+      ]);
+      if (!rmRes.ok) {
+        console.warn("[admin.pages.delete] COVER_ORPHAN", {
+          id,
+          coverPath,
+          failed: rmRes.failed,
+        });
+      }
+    }
+  } catch (cleanupErr) {
+    console.warn(
+      "[admin.pages.delete] cover cleanup exception",
+      cleanupErr instanceof Error ? cleanupErr.message : cleanupErr
     );
   }
 

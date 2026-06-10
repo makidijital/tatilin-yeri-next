@@ -5,8 +5,6 @@ import {
   Phone,
   MapPin,
   ArrowRight,
-  ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 
 import {
@@ -539,33 +537,6 @@ export default async function Footer() {
                   height={132}
                   className="w-auto object-contain opacity-90"
                 />
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-white/[0.05] border border-white/10 text-[12px] text-white/75">
-                <ShieldCheck
-                  size={13}
-                  strokeWidth={1.75}
-                  aria-hidden
-                  className="text-[var(--brand-coral)]"
-                />
-                Güvenli Rezervasyon
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-white/[0.05] border border-white/10 text-[12px] text-white/75">
-                <ShieldCheck
-                  size={13}
-                  strokeWidth={1.75}
-                  aria-hidden
-                  className="text-[var(--brand-coral)]"
-                />
-                Güvenli Ödeme
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-white/[0.05] border border-white/10 text-[12px] text-white/75">
-                <Sparkles
-                  size={13}
-                  strokeWidth={1.75}
-                  aria-hidden
-                  className="text-[var(--brand-coral)]"
-                />
-                En İyi Fiyat Garantisi
               </span>
             </div>
 
