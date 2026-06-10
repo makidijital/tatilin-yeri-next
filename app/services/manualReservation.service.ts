@@ -185,7 +185,10 @@ export const updateManualReservation = async (
   if (data.start_date && data.end_date && data.villa_id) {
     const start = new Date(data.start_date);
     const end = new Date(data.end_date);
-    if (start > end) throw new Error("Tarih aralığı hatalı");
+    /* 🛡️ ZERO-NIGHT FIX — half-open [start,end) gereği aynı gün
+       (start == end) geçersiz; `>` yerine `>=` ile tek günlük blok
+       reddedilir. Rezervasyon servisiyle (start >= end) parite. */
+    if (start >= end) throw new Error("Tarih aralığı hatalı");
 
     /* SELF conflict — kendi id'sini exclude et.
        Diğer manual_reservations rows ile çakışma varsa engelle.
@@ -300,7 +303,10 @@ export const createManualReservation = async (data: {
   const start = new Date(data.start_date);
   const end = new Date(data.end_date);
 
-  if (start > end) throw new Error("Tarih aralığı hatalı");
+  /* 🛡️ ZERO-NIGHT FIX — half-open [start,end) gereği aynı gün
+     (start == end) geçersiz; `>` yerine `>=` ile tek günlük blok
+     reddedilir. Rezervasyon servisiyle (start >= end) parite. */
+  if (start >= end) throw new Error("Tarih aralığı hatalı");
 
   /* ================================
      🔥 ÇAKIŞMA KONTROLÜ — UX FAST-PATH

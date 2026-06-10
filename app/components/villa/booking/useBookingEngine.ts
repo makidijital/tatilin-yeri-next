@@ -127,6 +127,10 @@ export type UseBookingEngineReturn = {
   selectedNights: number;
   minStayThreshold: number;
   minimumStayValid: boolean;
+  /* 🛡️ Gap override aktif mi? (seçim, mevcut rezervasyonlar arasındaki
+     gerçek bir gap'in tamamını dolduruyor → min_stay esnetildi). UI bunu
+     kullanarak min-stay uyarısını bastırır + bilgi metni gösterir. */
+  isGapOverride: boolean;
   result: BookingResult | null;
   prepayment: number;
   convertedDeposit: number;
@@ -532,11 +536,42 @@ export function useBookingEngine(
       ? calculateNights(formatDate(startDate), formatDate(endDate))
       : 0;
 
+  /* ═══════════════════════════════════════════════════════════
+     🛡️ GAP OVERRIDE — Dynamic Effective Minimum Stay
+     ═══════════════════════════════════════════════════════════
+     Seçim, mevcut rezervasyonlar arasındaki GERÇEK bir gap'in
+     TAMAMINI dolduruyorsa minimum_stay esnetilir.
+       - Gap boundary'leri HAM aralık uçlarıdır:
+           start = bir bloğun ÇIKIŞ günü (end_date → mergedCheckoutDates)
+           end   = bir bloğun GİRİŞ günü (start_date → mergedCheckinDates)
+         (expanded middle dizileri KULLANILMAZ → ±1 gün hatası yok)
+       - `!hasConflict` araya blok girmesini dışlar → kısmi/atlamalı
+         seçim override ALMAZ (15→16, 16→17 reddedilir; 15→17 kabul).
+       - Yalnız normalde reddedilecek (selectedNights < threshold)
+         seçimde devreye girer → diğer tüm tarihlerde min_stay AYNEN.
+       - `minimum_stay_nights` verisi DEĞİŞMEZ; yalnız doğrulama eşiği
+         bu seçim için dinamikleşir. */
+  const isExactGapFill =
+    !!startDate &&
+    !!endDate &&
+    minStayThreshold > 0 &&
+    selectedNights > 0 &&
+    selectedNights < minStayThreshold &&
+    !hasConflict(startDate, endDate) &&
+    mergedCheckoutDates.some(
+      (d) => d.toDateString() === startDate.toDateString()
+    ) &&
+    mergedCheckinDates.some(
+      (d) => d.toDateString() === endDate.toDateString()
+    );
+
+  const effectiveMinStay = isExactGapFill ? selectedNights : minStayThreshold;
+
   const minimumStayValid =
-    minStayThreshold === 0 ||
+    effectiveMinStay === 0 ||
     !startDate ||
     !endDate ||
-    selectedNights >= minStayThreshold;
+    selectedNights >= effectiveMinStay;
 
   /* 🛡️ FAZ 26B — minimum stay invalid → result hesaplama atla.
      calculateGrandTotal eski davranış aynen. */
@@ -637,6 +672,7 @@ export function useBookingEngine(
     selectedNights,
     minStayThreshold,
     minimumStayValid,
+    isGapOverride: isExactGapFill,
     result,
     prepayment,
     convertedDeposit,

@@ -390,6 +390,7 @@ function ModalContent({
     selectedNights,
     minStayThreshold,
     minimumStayValid,
+    isGapOverride,
     result,
     prepayment,
     convertedDeposit,
@@ -564,12 +565,22 @@ function ModalContent({
         {minStayThreshold > 0 &&
           !!startDate &&
           !!endDate &&
-          selectedNights < minStayThreshold && (
+          selectedNights < minStayThreshold &&
+          !isGapOverride && (
             <BookingMinStayWarning
               minStayThreshold={minStayThreshold}
               selectedNights={selectedNights}
             />
           )}
+
+        {/* 🛡️ GAP OVERRIDE bilgi metni — gerçek boşluğun tamamı dolduruluyor →
+            min_stay esnetildi. Yeni kart/modal yok; sade inline not. */}
+        {isGapOverride && (
+          <p className="text-[12px] text-emerald-700 bg-emerald-50/70 border border-emerald-100 rounded-xl px-3 py-2">
+            Kısa süreli boşluk fırsatı nedeniyle bu tarih aralığı rezerve
+            edilebilir.
+          </p>
+        )}
 
         {startDate && endDate && result && (
           <BookingSummary

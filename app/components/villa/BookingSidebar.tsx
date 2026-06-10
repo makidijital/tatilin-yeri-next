@@ -113,6 +113,7 @@ export default function BookingSidebar({
     selectedNights,
     minStayThreshold,
     minimumStayValid,
+    isGapOverride,
     result,
     prepayment,
     convertedDeposit,
@@ -314,12 +315,23 @@ export default function BookingSidebar({
       {minStayThreshold > 0 &&
         !!startDate &&
         !!endDate &&
-        selectedNights < minStayThreshold && (
+        selectedNights < minStayThreshold &&
+        !isGapOverride && (
           <BookingMinStayWarning
             minStayThreshold={minStayThreshold}
             selectedNights={selectedNights}
           />
         )}
+
+      {/* 🛡️ GAP OVERRIDE bilgi metni — seçim, mevcut rezervasyonlar
+          arasındaki gerçek bir boşluğun TAMAMINI dolduruyor → min_stay
+          esnetildi. Yeni kart/modal YOK; sade inline not (tasarım korunur). */}
+      {isGapOverride && (
+        <p className="text-[12px] text-emerald-700 bg-emerald-50/70 border border-emerald-100 rounded-xl px-3 py-2">
+          Kısa süreli boşluk fırsatı nedeniyle bu tarih aralığı rezerve
+          edilebilir.
+        </p>
+      )}
 
       {/* SUMMARY — minimum stay valid + result mevcut ise */}
       {startDate && endDate && result && (
