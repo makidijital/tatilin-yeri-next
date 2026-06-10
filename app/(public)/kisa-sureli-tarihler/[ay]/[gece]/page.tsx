@@ -1,0 +1,435 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+
+import VillaCard from "@/app/components/villa/VillaCard";
+import { JsonLd, buildItemList } from "@/app/components/seo/StructuredData";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCachedVillaLocations, getCachedVillaTypes } from "@/lib/cache.helpers";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+import {
+  resolveBucketMonthFromSlug,
+  parseGapNights,
+  bucketMonthLabelTr,
+  monthNumberToNameTr,
+  slugToMonthNumber,
+  formatGapRangeTr,
+} from "@/lib/short-gaps.helpers";
+import GapFilterSidebar, {
+  type GapFilterOption,
+} from "../../GapFilterSidebar";
+
+/* ===============================================================
+   🛡️ KISA SÜRELİ TARİHLER — LİSTELEME SAYFASI
+   ===============================================================
+   /kisa-sureli-tarihler/[ay]/[gece]  (ör. /haziran/2)
+
+   - villa_short_gaps (053) → bucket_month + gap_nights filtreli
+     DISTINCT villa_id seti + temsilci boşluk tarihi.
+   - Sonra mevcut villa sorgusu (arama ile aynı shape) YALNIZ bu
+     villa_id'ler içinde çalışır.
+   - TARİH FİLTRESİ YOK. minimum_stay_nights KULLANILMAZ.
+   - /arama, booking, availability, pricing'e SIFIR dokunuş.
+   =============================================================== */
+
+export const dynamic = "force-dynamic";
+
+type RouteParams = { ay: string; gece: string };
+type SearchParams = {
+  bolgeler?: string | string[];
+  "villa-turleri"?: string | string[];
+  guests?: string | string[];
+};
+
+/* ----------------------------- helpers ----------------------------- */
+
+function toTokenList(value: string | string[] | undefined): string[] {
+  if (!value) return [];
+  const arr = Array.isArray(value) ? value : [value];
+  return arr
+    .flatMap((v) => v.split(","))
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+function tokensToIds(
+  tokens: string[],
+  options: { id: string; slug: string | null }[]
+): string[] {
+  if (tokens.length === 0) return [];
+  const out = new Set<string>();
+  for (const t of tokens) {
+    const match = options.find((o) => o.id === t || o.slug === t);
+    if (match) out.add(match.id);
+  }
+  return Array.from(out);
+}
+
+/* ----------------------------- metadata ----------------------------- */
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<RouteParams>;
+}): Promise<Metadata> {
+  const { ay, gece } = await params;
+  const nights = parseGapNights(gece);
+  const monthNum = slugToMonthNumber(ay);
+  if (!nights || monthNum === null) return {};
+
+  const bucket = resolveBucketMonthFromSlug(ay);
+  const monthLabel = bucket
+    ? bucketMonthLabelTr(bucket)
+    : monthNumberToNameTr(monthNum);
+
+  const title = `${monthLabel} ${nights} Gecelik Uygun Villalar`;
+  const description = `${monthLabel} döneminde dolu tarihler arasında kalan ${nights} gecelik kısa boşluklara sahip villalar. Kısa süreli tatil için uygun villaları keşfedin.`;
+  const canonical = `/kisa-sureli-tarihler/${ay}/${nights}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: { title, description, url: canonical },
+  };
+}
+
+/* ------------------------------- page ------------------------------- */
+
+type GapRow = { villa_id: string; gap_start: string; gap_end: string };
+
+type VillaImageEmbed = {
+  image_url: string | null;
+  is_cover: boolean | null;
+  sort_order: number | null;
+};
+/* VillaCard.tsx `StayPrice` ile birebir aynı shape (structural). */
+type StayPrice = {
+  price: number;
+  currency: string;
+  start_date: string;
+  end_date: string;
+};
+type VillaPriceEmbed = {
+  price: number | null;
+  currency: string | null;
+  start_date: string | null;
+  end_date: string | null;
+};
+type VillaRow = {
+  id: string;
+  slug: string | null;
+  title: string | null;
+  badge: string | null;
+  price: number | null;
+  currency: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  guests: number | null;
+  /* Temizlik ücreti alanları — villa satırı kolonları (`*` ile gelir).
+     VillaCard calculateGrandTotal'a aynen iletilir (yeni hesap yok). */
+  cleaning_fee: number | null;
+  cleaning_currency: string | null;
+  cleaning_limit: number | null;
+  location: { name: string } | null;
+  villa_images: VillaImageEmbed[] | null;
+  villa_prices: VillaPriceEmbed[] | null;
+};
+
+export default async function ShortGapListingPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<RouteParams>;
+  searchParams: Promise<SearchParams>;
+}) {
+  const { ay, gece } = await params;
+  const sp = await searchParams;
+
+  const nights = parseGapNights(gece);
+  const bucketMonth = resolveBucketMonthFromSlug(ay);
+  if (!nights || !bucketMonth) notFound();
+
+  const supabase = await createSupabaseServerClient();
+
+  /* 1) Boşluk seti — bucket_month + gap_nights filtreli. */
+  const { data: gapData } = await supabase
+    .from("villa_short_gaps")
+    .select("villa_id, gap_start, gap_end")
+    .eq("bucket_month", bucketMonth)
+    .eq("gap_nights", nights)
+    .order("gap_start", { ascending: true });
+
+  const gapRows: GapRow[] = Array.isArray(gapData) ? (gapData as GapRow[]) : [];
+
+  /* villa_id → temsilci (en erken) boşluk. Aynı villanın çoklu boşluğu
+     olabilir; kartta ilk boşluğu gösteririz. */
+  const gapByVilla = new Map<string, GapRow>();
+  for (const g of gapRows) {
+    if (!gapByVilla.has(g.villa_id)) gapByVilla.set(g.villa_id, g);
+  }
+  const gapVillaIds = Array.from(gapByVilla.keys());
+
+  const monthLabel = bucketMonthLabelTr(bucketMonth);
+
+  /* Filtre opsiyonları (taxonomy) — sidebar + token resolve. */
+  const [regionOptionsRaw, typeOptionsRaw] = await Promise.all([
+    getCachedVillaLocations().catch(() => []),
+    getCachedVillaTypes().catch(() => []),
+  ]);
+
+  const regionTokens = toTokenList(sp.bolgeler);
+  const typeTokens = toTokenList(sp["villa-turleri"]);
+  const guests = Number(toTokenList(sp.guests)[0] || 0) || 0;
+
+  /* Boşluk yoksa kısa devre — boş state. */
+  let villas: Array<{
+    id: string;
+    slug: string;
+    title: string;
+    location: string;
+    price: number | null;
+    currency: string;
+    images: string[];
+    badge?: string;
+    bedrooms: number;
+    bathrooms: number;
+    guests: number;
+    prices: StayPrice[];
+    cleaningFee: number;
+    cleaningCurrency: string;
+    cleaningLimit: number;
+  }> = [];
+
+  if (gapVillaIds.length > 0) {
+    /* 2) Villa sorgusu — arama ile AYNI shape, YALNIZ gap villa_id'leri. */
+    let query = supabase
+      .from("villa")
+      .select(
+        `
+          *,
+          location:villa_locations(name),
+          villa_images ( image_url, is_cover, sort_order ),
+          villa_prices ( price, currency, start_date, end_date )
+        `
+      )
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .in("id", gapVillaIds)
+      .order("is_cover", { referencedTable: "villa_images", ascending: false })
+      .order("sort_order", { referencedTable: "villa_images", ascending: true })
+      .limit(1, { referencedTable: "villa_images" });
+
+    /* Bölge (grup-kökü genişletme — arama ile aynı mantık). */
+    const regionIds = tokensToIds(regionTokens, regionOptionsRaw);
+    if (regionIds.length > 0) {
+      const byId = new Map(regionOptionsRaw.map((o) => [o.id, o]));
+      const expanded = new Set<string>();
+      for (const id of regionIds) {
+        const loc = byId.get(id);
+        const group = (loc?.filter_group_name || "").trim();
+        const isGroupRoot = !!loc && !!group && loc.name === group;
+        if (isGroupRoot) {
+          for (const o of regionOptionsRaw) {
+            if ((o.filter_group_name || "").trim() === group) expanded.add(o.id);
+          }
+        } else {
+          expanded.add(id);
+        }
+      }
+      query = query.in("location_id", Array.from(expanded));
+    }
+
+    /* Villa tipi (villa_type_relations junction → villa_id intersection). */
+    const typeIds = tokensToIds(typeTokens, typeOptionsRaw);
+    if (typeIds.length > 0) {
+      const { data: rels } = await supabase
+        .from("villa_type_relations")
+        .select("villa_id, type_id")
+        .in("type_id", typeIds)
+        .in("villa_id", gapVillaIds);
+      const typeVillaIds = Array.from(
+        new Set((rels || []).map((r) => String(r.villa_id)).filter(Boolean))
+      );
+      // Eşleşme yoksa boş sonuç (geçersiz uuid hatası vermemek için guard).
+      query = query.in("id", typeVillaIds.length > 0 ? typeVillaIds : [
+        "00000000-0000-0000-0000-000000000000",
+      ]);
+    }
+
+    /* Kişi. */
+    if (guests > 0) query = query.gte("guests", guests);
+
+    const { data: villaData } = await query;
+    const rows: VillaRow[] = Array.isArray(villaData)
+      ? (villaData as VillaRow[])
+      : [];
+
+    villas = rows.map((v) => {
+      let images: string[] = [];
+      const raw: VillaImageEmbed[] = Array.isArray(v.villa_images)
+        ? v.villa_images
+        : [];
+      if (raw.length > 0) {
+        const sorted = [...raw].sort((a, b) => {
+          if (a?.is_cover) return -1;
+          if (b?.is_cover) return 1;
+          return (a?.sort_order ?? 0) - (b?.sort_order ?? 0);
+        });
+        images = sorted
+          .map((i) => resolveVillaImageUrl(i?.image_url))
+          .filter(
+            (u): u is string => typeof u === "string" && u.trim().length > 0
+          );
+      }
+      /* Tarih-bazlı fiyatlar — /arama ile AYNI StayPrice normalize'ı.
+         price.engine her tarih için kapsayıcı aralığı kendi bulur. */
+      const rawPrices: VillaPriceEmbed[] = Array.isArray(v.villa_prices)
+        ? v.villa_prices
+        : [];
+      const prices: StayPrice[] = rawPrices
+        .filter(
+          (p): p is VillaPriceEmbed & { start_date: string; end_date: string } =>
+            !!p &&
+            typeof p.start_date === "string" &&
+            typeof p.end_date === "string" &&
+            p.start_date.length > 0 &&
+            p.end_date.length > 0
+        )
+        .map((p) => ({
+          price: Number(p.price || 0),
+          currency: p.currency || "TRY",
+          start_date: p.start_date,
+          end_date: p.end_date,
+        }));
+      return {
+        id: v.id,
+        slug: v.slug ?? "",
+        title: v.title ?? "",
+        location: v.location?.name ?? "",
+        price: v.price,
+        currency: v.currency || "TRY",
+        images,
+        badge: v.badge ?? undefined,
+        bedrooms: v.bedrooms || 1,
+        bathrooms: v.bathrooms || 1,
+        guests: v.guests || 2,
+        prices,
+        cleaningFee: Number(v.cleaning_fee || 0),
+        cleaningCurrency: v.cleaning_currency || "TRY",
+        cleaningLimit: Number(v.cleaning_limit || 0),
+      };
+    });
+  }
+
+  const basePath = `/kisa-sureli-tarihler/${ay}/${nights}`;
+  /* Sidebar — /arama FilterSidebar replikası ile aynı prop şekli.
+     show_in_filter curation'ı bileşen içinde (regionGroups) uygulanır. */
+  const sidebarRegionOptions: GapFilterOption[] = regionOptionsRaw.map((o) => ({
+    id: o.id,
+    name: o.name,
+    slug: o.slug,
+    show_in_filter: o.show_in_filter,
+    filter_group_name: o.filter_group_name,
+  }));
+  const sidebarCategoryOptions: GapFilterOption[] = typeOptionsRaw.map((o) => ({
+    id: o.id,
+    name: o.name,
+    slug: o.slug,
+  }));
+  /* Seçili durum: URL token'ları (slug|id) → canonical id dizileri. */
+  const initialRegionIds = tokensToIds(regionTokens, regionOptionsRaw);
+  const initialCategoryIds = tokensToIds(typeTokens, typeOptionsRaw);
+
+  const itemListLd = buildItemList(
+    villas.map((v) => ({
+      slug: v.slug,
+      title: v.title,
+      image: v.images[0],
+    }))
+  );
+
+  return (
+    <main className="px-5 md:px-10 lg:px-16 py-10 md:py-14">
+      <JsonLd data={itemListLd} />
+      <div className="max-w-[1280px] mx-auto">
+        <header className="mb-8 md:mb-10">
+          <p className="text-[10.5px] tracking-[0.28em] uppercase font-medium text-[var(--brand-coral)]">
+            Kısa Süreli Tarihler
+          </p>
+          <h1 className="font-display font-medium text-[26px] md:text-[32px] text-[var(--color-stone-900)] mt-2 leading-tight tracking-[-0.02em]">
+            {monthLabel} · {nights} Gecelik Uygun Villalar
+          </h1>
+          <p className="mt-2 text-[14px] text-[var(--color-stone-500)]">
+            Dolu tarihler arasında kalan {nights} gecelik boşluğa sahip{" "}
+            {villas.length} villa.
+          </p>
+        </header>
+
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+          <aside className="lg:w-64 lg:flex-shrink-0">
+            <GapFilterSidebar
+              basePath={basePath}
+              regionOptions={sidebarRegionOptions}
+              categoryOptions={sidebarCategoryOptions}
+              initial={{
+                regions: initialRegionIds,
+                categories: initialCategoryIds,
+                guests,
+              }}
+              resultCount={villas.length}
+            />
+          </aside>
+
+          <div className="flex-1 min-w-0">
+            {villas.length === 0 ? (
+              <div className="rounded-2xl border border-[var(--color-stone-200)] bg-white p-10 text-center text-[var(--color-stone-500)]">
+                Bu kriterlere uygun kısa süreli boşluk bulunamadı.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                {villas.map((villa) => {
+                  const gap = gapByVilla.get(villa.id);
+                  const gapLabel = gap
+                    ? formatGapRangeTr(gap.gap_start, gap.gap_end)
+                    : "";
+                  return (
+                    <div key={villa.id} className="flex flex-col gap-2">
+                      {gapLabel && (
+                        <div className="inline-flex items-center gap-2 self-start rounded-full bg-[var(--brand-coral)]/10 text-[var(--brand-coral)] px-3 py-1 text-[12.5px] font-medium">
+                          {gapLabel} · {nights} Gece Boşluk
+                        </div>
+                      )}
+                      <VillaCard
+                        id={villa.id}
+                        slug={villa.slug}
+                        title={villa.title}
+                        location={villa.location}
+                        price={villa.price ?? undefined}
+                        currency={villa.currency}
+                        images={villa.images}
+                        badge={villa.badge}
+                        bedrooms={villa.bedrooms}
+                        bathrooms={villa.bathrooms}
+                        guests={villa.guests}
+                        /* 🛡️ Boşluk tarihleriyle /arama ile birebir aynı
+                           toplam fiyat (VillaCard calculateGrandTotal) +
+                           detay linkine start/end continuity (VillaCard
+                           detailHref otomatik ekler). */
+                        stayStart={gap ? gap.gap_start : undefined}
+                        stayEnd={gap ? gap.gap_end : undefined}
+                        prices={villa.prices}
+                        cleaningFee={villa.cleaningFee}
+                        cleaningCurrency={villa.cleaningCurrency}
+                        cleaningLimit={villa.cleaningLimit}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}

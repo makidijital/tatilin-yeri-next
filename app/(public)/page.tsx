@@ -10,6 +10,9 @@ import HomepageReviewsSection from "@/app/components/home/HomepageReviewsSection
 /* 🛡️ Statik güven + dönüşüm bandı (CMS/DB yok). brandName + phone
    homepage'in zaten elindeki settings'ten prop olarak geçer. */
 import WhyUsSection from "@/app/components/home/WhyUsSection";
+/* 🛡️ Kısa Süreli Tarihler — takvimdeki iç boşluklar (053/054).
+   Salt-okuma; boş veride null döner. Diğer section'ları etkilemez. */
+import ShortGapsSection from "@/app/components/home/ShortGapsSection";
 
 import {
   JsonLd,
@@ -122,6 +125,9 @@ export default async function Home() {
          URL param (`regions=`) farklı. Empty location'larda null
          render → layout sessizce gizlenir. */}
       <LocationCollection />
+      {/* 🛡️ "Kısa Süreli Tarihler" — takvimdeki dolu-boş-dolu iç boşluklar.
+         Veri yoksa component null döner; layout etkilenmez. */}
+      <ShortGapsSection />
       {/* 🛡️ FAZ 34 — "Misafir Deneyimleri" testimonial section.
          LocationCollection ile FaqSection arasında doğal trust-building
          akışı: villa keşfi → sosyal kanıt → SSS. Approved review yoksa
