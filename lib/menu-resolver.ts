@@ -90,11 +90,23 @@ export function resolveMenuRow(
   switch (sourceType) {
     case "manual": {
       /* Manual satırlar canonical: name/href direkt menu tablosunda.
-         Boş ise yine de göster — admin temizleyebilsin. */
+         Boş ise yine de göster — admin temizleyebilsin.
+
+         🛡️ HREF NORMALIZE — içsel relative path'ler (örn. DB'de baştaki
+         "/" olmadan kayıtlı "kiralik-villalar") her sayfada relative
+         çözülüp "/kiralik-villa/kiralik-villalar" gibi 404 üretiyordu.
+         İçsel path'lere baştaki "/" eklenir → absolute. Dış URL (http/
+         https), anchor (#), mailto:/tel: olduğu gibi korunur. */
+      const rawHref = (row.href ?? "").trim();
+      const manualHref = !rawHref
+        ? "#"
+        : /^(https?:\/\/|mailto:|tel:|#|\/)/i.test(rawHref)
+          ? rawHref
+          : `/${rawHref}`;
       return {
         id: row.id,
         name: row.name ?? "",
-        href: row.href ?? "#",
+        href: manualHref,
         order,
         parent_id,
         source_type: "manual",
