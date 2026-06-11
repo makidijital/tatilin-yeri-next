@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
 import {
@@ -91,11 +92,13 @@ type Props = {
        daha sıkı image aspect. Logic (pricing/data/image selection)
        AYNEN — sadece presentation katmanı koşullu. */
   variant?: "default" | "curation";
-  /* 🛡️ OPSİYONEL SLOT — "Müsaitlik / Tarih Seç" butonunun HEMEN ALTINA
-     ekstra içerik (örn. kısa-süreli tarihler sayfasındaki gap bilgi alanı
-     + "Hemen Rezervasyon Yap" CTA). Verilmezse HİÇBİR ŞEY render edilmez
-     → /arama, homepage ve diğer VillaCard kullanımları AYNEN korunur. */
-  reserveSlot?: React.ReactNode;
+  /* 🛡️ OPSİYONEL — "Müsaitlik / Tarih Seç" butonunun HEMEN ALTINA gap
+     bilgi alanı (açık yeşil) + tam genişlik "Hemen Rezervasyon Yap" CTA
+     için VERİ. Verilmezse HİÇBİR ŞEY render edilmez → /arama, homepage ve
+     diğer VillaCard kullanımları AYNEN korunur. CTA bir <button>'dır
+     (kart Link'i içinde nested <a> olmaması için) → onClick router.push +
+     stopPropagation (kartın detay navigasyonu tetiklenmez). */
+  reserveInfo?: { label: string; nights: number; href: string };
 };
 
 export default function VillaCard({
@@ -119,8 +122,9 @@ export default function VillaCard({
   reviewAverage,
   reviewCount,
   variant = "default",
-  reserveSlot,
+  reserveInfo,
 }: Props) {
+  const router = useRouter();
   /* Compact variant flag — curation flow için presentation density.
      Logic (price/state/handlers/modal) hiç dokunulmaz. */
   const isCuration = variant === "curation";
@@ -199,6 +203,30 @@ export default function VillaCard({
     qs.set("end", stayEnd);
     detailHref = `${detailHref}?${qs.toString()}`;
   }
+
+  /* 🛡️ Rezervasyon bilgi alanı + CTA — yalnız reserveInfo verilince
+     (kısa-süreli tarihler sayfası). CTA <button> (kart Link'i içinde
+     nested <a> olmasın) + preventDefault/stopPropagation → kartın detay
+     navigasyonu tetiklenmez; router.push ile /rezervasyon'a gider. */
+  const reserveBlock = reserveInfo ? (
+    <div className="mt-2.5 flex flex-col gap-2">
+      <div className="rounded-xl bg-emerald-50 px-3 py-2 text-center text-[13px] font-medium text-emerald-800">
+        {reserveInfo.label} · {reserveInfo.nights} Gece
+      </div>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          router.push(reserveInfo.href);
+        }}
+        aria-label="Hemen rezervasyon yap"
+        className="w-full inline-flex items-center justify-center gap-2 h-10 rounded-xl bg-emerald-700 text-white uppercase font-medium text-[11px] tracking-[0.08em] hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 transition-colors duration-200 motion-reduce:transition-none"
+      >
+        Hemen Rezervasyon Yap
+      </button>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -527,9 +555,6 @@ export default function VillaCard({
             />
             Müsaitlik / Tarih Seç
           </button>
-          {/* 🛡️ Opsiyonel slot — yalnız prop verilen sayfalarda (kısa-süreli
-              tarihler) butonun hemen altında render edilir; aksi halde yok. */}
-          {reserveSlot ? <div className="mt-2.5">{reserveSlot}</div> : null}
         </div>
 
         {/* ════════════════════════════════════════════════
@@ -802,6 +827,7 @@ export default function VillaCard({
             <CalendarRange size={13} strokeWidth={1.75} aria-hidden />
             Müsaitlik / Tarih Seç
           </button>
+          {reserveBlock}
         </div>
       </article>
       )}

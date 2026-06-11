@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import VillaCard from "@/app/components/villa/VillaCard";
@@ -426,31 +425,17 @@ export default async function ShortGapListingPage({
                         cleaningFee={villa.cleaningFee}
                         cleaningCurrency={villa.cleaningCurrency}
                         cleaningLimit={villa.cleaningLimit}
-                        /* 🛡️ Kart-içi slot: "Müsaitlik / Tarih Seç" butonunun
-                           hemen altında gap bilgi alanı (açık yeşil) +
-                           tam genişlik koyu yeşil "Hemen Rezervasyon Yap"
-                           CTA. Yalnız bu sayfada (prop verildiği için). */
-                        reserveSlot={
-                          <div className="flex flex-col gap-2">
-                            <div className="rounded-xl bg-emerald-50 px-3 py-2 text-center text-emerald-800">
-                              {gapLabel && (
-                                <div className="text-[13px] font-medium">
-                                  {gapLabel}
-                                </div>
-                              )}
-                              <div className="text-[12px] text-emerald-700">
-                                {nights} Gece
-                              </div>
-                            </div>
-                            {villa.slug && (
-                              <Link
-                                href={`/rezervasyon/${villa.slug}?start=${gap.gap_start}&end=${gap.gap_end}`}
-                                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 py-2.5 text-[12px] font-medium uppercase tracking-[0.08em] text-white hover:bg-emerald-800 transition-colors motion-reduce:transition-none"
-                              >
-                                Hemen Rezervasyon Yap
-                              </Link>
-                            )}
-                          </div>
+                        /* 🛡️ Kart-içi gap bilgi alanı + "Hemen Rezervasyon
+                           Yap" CTA verisi (VillaCard butonun altında render
+                           eder). Yalnız bu sayfada (prop verildiği için). */
+                        reserveInfo={
+                          villa.slug
+                            ? {
+                                label: gapLabel,
+                                nights,
+                                href: `/rezervasyon/${villa.slug}?start=${gap.gap_start}&end=${gap.gap_end}`,
+                              }
+                            : undefined
                         }
                       />
                     </div>
