@@ -44,7 +44,7 @@ import AvailabilityInlineCalendar from "@/app/components/villa/AvailabilityInlin
 
 import { getVillaByPrivateToken } from "@/app/services/villa.service";
 import { getVillaImages } from "@/app/services/villa-image.service";
-import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+import { resolveVillaImageUrl, resolveAssetUrl } from "@/lib/storage.helpers";
 import { getVillaPrices } from "@/app/services/villa-price.service";
 import { getVillaDistances } from "@/app/services/villa-distance.service";
 import { getVillaFeaturesByVilla } from "@/app/services/villa-feature.service";
@@ -236,7 +236,10 @@ export default async function PrivateVillaDetail({
   );
 
   const watermark = {
-    logo: settings?.watermark_logo ?? null,
+    /* 🛡️ Watermark logo, diğer site-asset'lerle AYNI resolveAssetUrl yolu:
+       bucket-relative path → R2/CDN URL; legacy full URL pass-through.
+       Ham path relative çözülünce 404 oluyordu. */
+    logo: resolveAssetUrl(settings?.watermark_logo) ?? null,
     enabled: settings?.watermark_enabled ?? false,
     opacity: settings?.watermark_opacity ?? 0.15,
     position: settings?.watermark_position ?? "center",

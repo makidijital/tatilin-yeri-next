@@ -56,7 +56,7 @@ import AccommodationLayout from "@/app/components/villa/AccommodationLayout";
 
 import { getVillaBySlug } from "@/app/services/villa.service";
 import { getVillaImages } from "@/app/services/villa-image.service";
-import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+import { resolveVillaImageUrl, resolveAssetUrl } from "@/lib/storage.helpers";
 import { getVillaPrices } from "@/app/services/villa-price.service";
 import { getVillaDistances } from "@/app/services/villa-distance.service";
 import { getVillaFeaturesByVilla } from "@/app/services/villa-feature.service";
@@ -295,7 +295,11 @@ export default async function VillaDetail({
     getCachedVillaReviewStats(villa.id),
   ]);
   const watermark = {
-    logo: settings?.watermark_logo ?? null,
+    /* 🛡️ Watermark logo, diğer site-asset'ler (site_logo/footer_logo/hero/
+       favicon) ile AYNI şekilde resolveAssetUrl'den geçer: bucket-relative
+       path → R2/CDN public URL; legacy full URL pass-through. Ham path
+       <img src>'e gidip relative çözülünce 404 oluyordu (watermark görünmüyor). */
+    logo: resolveAssetUrl(settings?.watermark_logo) ?? null,
     enabled: settings?.watermark_enabled ?? false,
     opacity: settings?.watermark_opacity ?? 0.15,
     position: settings?.watermark_position ?? "center",
