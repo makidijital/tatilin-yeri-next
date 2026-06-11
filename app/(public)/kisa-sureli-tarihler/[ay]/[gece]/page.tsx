@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import VillaCard from "@/app/components/villa/VillaCard";
@@ -434,6 +435,20 @@ export default async function ShortGapListingPage({
                         cleaningCurrency={villa.cleaningCurrency}
                         cleaningLimit={villa.cleaningLimit}
                       />
+                      {/* 🛡️ İKİNCİL CTA — yalnız bu sayfada (VillaCard'a
+                          dokunulmadı). Boşluk tarihleriyle doğrudan
+                          rezervasyon formuna (/rezervasyon/[slug]) gider;
+                          form start/end'i okuyup tarihleri seçili + fiyatı
+                          hesaplanmış getirir. Mevcut "Müsaitlik / Tarih Seç"
+                          butonu (VillaCard içi) aynen kalır. */}
+                      {villa.slug && (
+                        <Link
+                          href={`/rezervasyon/${villa.slug}?start=${gap.gap_start}&end=${gap.gap_end}`}
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-2.5 text-[13px] font-medium text-white hover:bg-emerald-700 transition-colors motion-reduce:transition-none"
+                        >
+                          Hemen Rezervasyon Yap
+                        </Link>
+                      )}
                     </div>
                   );
                 })}
