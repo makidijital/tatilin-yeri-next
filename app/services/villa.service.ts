@@ -46,6 +46,10 @@ export type Villa = {
     name: string;
   };
 
+  /* 🛡️ Benzer villa (aynı bölge) eşleştirmesi için FK. `select *` ile
+     zaten gelir; additive — mevcut davranış/sorgu değişmez. */
+  location_id?: string | null;
+
   // 🔥 FİYAT
   price?: number;
 
@@ -172,6 +176,9 @@ export type VillaDTO = {
   description: string;
 
   location: string;
+
+  /* 🛡️ Benzer villa eşleştirmesi için FK (additive, opsiyonel). */
+  location_id?: string | null;
 
   badge?: string;
 
@@ -346,6 +353,9 @@ function mapVilla(
 
     location:
       villa.location?.name || "",
+
+    /* 🛡️ FK passthrough — benzer villa (aynı bölge) eşleştirmesi için. */
+    location_id: villa.location_id ?? null,
 
     badge:
       villa.badge || "",

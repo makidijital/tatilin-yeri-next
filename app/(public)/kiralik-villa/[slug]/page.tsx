@@ -72,6 +72,9 @@ import {
   getCachedVillaReviewStats,
 } from "@/lib/cache.helpers";
 import VillaReviewsSection from "@/app/components/villa/VillaReviewsSection";
+/* 🛡️ Full-width "Beğenebileceğiniz Diğer Villalar" — additive, yorumlardan
+   sonra/footer'dan önce. Kendi verisini çeker (max 2 query). */
+import SimilarVillasSection from "@/app/components/villa/SimilarVillasSection";
 /* 🛡️ FAZ 36 — Favorite CTA (guest, localStorage only) */
 import FavoriteButton from "@/app/components/favorites/FavoriteButton";
 
@@ -357,6 +360,7 @@ export default async function VillaDetail({
   ]);
 
   return (
+    <>
     <div className="px-5 md:px-10 lg:px-16 pt-28 md:pt-40 pb-24 md:pb-32">
       <div className="max-w-[1280px] mx-auto">
         {/* SEO — JSON-LD structured data */}
@@ -989,5 +993,14 @@ export default async function VillaDetail({
         targetId="booking-sidebar"
       />
     </div>
+
+      {/* 🛡️ FULL-WIDTH — Misafir Yorumları'ndan SONRA, Footer'dan ÖNCE.
+          Dış padding div'inin KARDEŞİ → boydan boya arka plan; içerik
+          kendi max-w-[1280px] container'ında. Kendi verisini çeker. */}
+      <SimilarVillasSection
+        villaId={villa.id}
+        locationId={villa.location_id ?? null}
+      />
+    </>
   );
 }
