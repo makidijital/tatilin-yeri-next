@@ -161,13 +161,10 @@ export default async function ShortGapListingPage({
 
   const gapRows: GapRow[] = Array.isArray(gapData) ? (gapData as GapRow[]) : [];
 
-  /* villa_id → temsilci (en erken) boşluk. Aynı villanın çoklu boşluğu
-     olabilir; kartta ilk boşluğu gösteririz. */
-  const gapByVilla = new Map<string, GapRow>();
-  for (const g of gapRows) {
-    if (!gapByVilla.has(g.villa_id)) gapByVilla.set(g.villa_id, g);
-  }
-  const gapVillaIds = Array.from(gapByVilla.keys());
+  /* 1 gap = 1 kart: TÜM boşluklar korunur (dedup YOK). Villa sorgusu
+     için yalnız UNIQUE villa_id'ler kullanılır (aynı villayı tekrar
+     çekmemek için); render gapRows üzerinden gap-başına döner. */
+  const gapVillaIds = Array.from(new Set(gapRows.map((g) => g.villa_id)));
 
   const monthLabel = bucketMonthLabelTr(bucketMonth);
 
@@ -321,6 +318,11 @@ export default async function ShortGapListingPage({
     });
   }
 
+  /* 1 gap = 1 kart: filtreden geçen villalar id→veri map'i; render
+     edilecek gap'ler (villası filtreyi geçmeyen gap'ler elenir). */
+  const villaById = new Map(villas.map((v) => [v.id, v]));
+  const visibleGaps = gapRows.filter((g) => villaById.has(g.villa_id));
+
   const basePath = `/kisa-sureli-tarihler/${ay}/${nights}`;
   /* Sidebar — /arama FilterSidebar replikası ile aynı prop şekli.
      show_in_filter curation'ı bileşen içinde (regionGroups) uygulanır. */
@@ -340,13 +342,18 @@ export default async function ShortGapListingPage({
   const initialRegionIds = tokensToIds(regionTokens, regionOptionsRaw);
   const initialCategoryIds = tokensToIds(typeTokens, typeOptionsRaw);
 
-  const itemListLd = buildItemList(
-    villas.map((v) => ({
-      slug: v.slug,
-      title: v.title,
-      image: v.images[0],
-    }))
-  );
+  /* JSON-LD ItemList — kartlar gap-başına olsa da structured data
+     villa-başına temiz kalsın diye slug'a göre dedupe edilir
+     (aynı villa URL'i tek ListItem). buildItemList/SEO koduna dokunulmaz. */
+  const itemListItems: { slug: string; title: string; image?: string }[] = [];
+  const seenItemSlugs = new Set<string>();
+  for (const g of visibleGaps) {
+    const v = villaById.get(g.villa_id);
+    if (!v || !v.slug || seenItemSlugs.has(v.slug)) continue;
+    seenItemSlugs.add(v.slug);
+    itemListItems.push({ slug: v.slug, title: v.title, image: v.images[0] });
+  }
+  const itemListLd = buildItemList(itemListItems);
 
   return (
     <main className="px-5 md:px-10 lg:px-16 py-10 md:py-14">
@@ -360,8 +367,8 @@ export default async function ShortGapListingPage({
             {monthLabel} · {nights} Gecelik Uygun Villalar
           </h1>
           <p className="mt-2 text-[14px] text-[var(--color-stone-500)]">
-            Dolu tarihler arasında kalan {nights} gecelik boşluğa sahip{" "}
-            {villas.length} villa.
+            Dolu tarihler arasında kalan {nights} gecelik {visibleGaps.length}{" "}
+            uygun boşluk.
           </p>
         </header>
 
@@ -376,24 +383,29 @@ export default async function ShortGapListingPage({
                 categories: initialCategoryIds,
                 guests,
               }}
-              resultCount={villas.length}
+              resultCount={visibleGaps.length}
             />
           </aside>
 
           <div className="flex-1 min-w-0">
-            {villas.length === 0 ? (
+            {visibleGaps.length === 0 ? (
               <div className="rounded-2xl border border-[var(--color-stone-200)] bg-white p-10 text-center text-[var(--color-stone-500)]">
                 Bu kriterlere uygun kısa süreli boşluk bulunamadı.
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {villas.map((villa) => {
-                  const gap = gapByVilla.get(villa.id);
-                  const gapLabel = gap
-                    ? formatGapRangeTr(gap.gap_start, gap.gap_end)
-                    : "";
+                {/* 1 gap = 1 kart: gap-başına döner; aynı villa birden çok
+                    boşluğuyla birden çok kart olarak görünür. Her kart kendi
+                    gap_start/gap_end ile fiyat + detay linki üretir. */}
+                {visibleGaps.map((gap) => {
+                  const villa = villaById.get(gap.villa_id);
+                  if (!villa) return null;
+                  const gapLabel = formatGapRangeTr(gap.gap_start, gap.gap_end);
                   return (
-                    <div key={villa.id} className="flex flex-col gap-2">
+                    <div
+                      key={`${gap.villa_id}_${gap.gap_start}`}
+                      className="flex flex-col gap-2"
+                    >
                       {gapLabel && (
                         <div className="inline-flex items-center gap-2 self-start rounded-full bg-[var(--brand-coral)]/10 text-[var(--brand-coral)] px-3 py-1 text-[12.5px] font-medium">
                           {gapLabel} · {nights} Gece Boşluk
@@ -414,9 +426,9 @@ export default async function ShortGapListingPage({
                         /* 🛡️ Boşluk tarihleriyle /arama ile birebir aynı
                            toplam fiyat (VillaCard calculateGrandTotal) +
                            detay linkine start/end continuity (VillaCard
-                           detailHref otomatik ekler). */
-                        stayStart={gap ? gap.gap_start : undefined}
-                        stayEnd={gap ? gap.gap_end : undefined}
+                           detailHref otomatik ekler). Her kart KENDİ gap'i. */
+                        stayStart={gap.gap_start}
+                        stayEnd={gap.gap_end}
                         prices={villa.prices}
                         cleaningFee={villa.cleaningFee}
                         cleaningCurrency={villa.cleaningCurrency}
