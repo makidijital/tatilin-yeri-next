@@ -403,15 +403,7 @@ export default async function ShortGapListingPage({
                   if (!villa) return null;
                   const gapLabel = formatGapRangeTr(gap.gap_start, gap.gap_end);
                   return (
-                    <div
-                      key={`${gap.villa_id}_${gap.gap_start}`}
-                      className="flex flex-col gap-2"
-                    >
-                      {gapLabel && (
-                        <div className="inline-flex items-center gap-2 self-start rounded-full bg-[var(--brand-coral)]/10 text-[var(--brand-coral)] px-3 py-1 text-[12.5px] font-medium">
-                          {gapLabel} · {nights} Gece Boşluk
-                        </div>
-                      )}
+                    <div key={`${gap.villa_id}_${gap.gap_start}`}>
                       <VillaCard
                         id={villa.id}
                         slug={villa.slug}
@@ -434,21 +426,33 @@ export default async function ShortGapListingPage({
                         cleaningFee={villa.cleaningFee}
                         cleaningCurrency={villa.cleaningCurrency}
                         cleaningLimit={villa.cleaningLimit}
+                        /* 🛡️ Kart-içi slot: "Müsaitlik / Tarih Seç" butonunun
+                           hemen altında gap bilgi alanı (açık yeşil) +
+                           tam genişlik koyu yeşil "Hemen Rezervasyon Yap"
+                           CTA. Yalnız bu sayfada (prop verildiği için). */
+                        reserveSlot={
+                          <div className="flex flex-col gap-2">
+                            <div className="rounded-xl bg-emerald-50 px-3 py-2 text-center text-emerald-800">
+                              {gapLabel && (
+                                <div className="text-[13px] font-medium">
+                                  {gapLabel}
+                                </div>
+                              )}
+                              <div className="text-[12px] text-emerald-700">
+                                {nights} Gece
+                              </div>
+                            </div>
+                            {villa.slug && (
+                              <Link
+                                href={`/rezervasyon/${villa.slug}?start=${gap.gap_start}&end=${gap.gap_end}`}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 py-2.5 text-[12px] font-medium uppercase tracking-[0.08em] text-white hover:bg-emerald-800 transition-colors motion-reduce:transition-none"
+                              >
+                                Hemen Rezervasyon Yap
+                              </Link>
+                            )}
+                          </div>
+                        }
                       />
-                      {/* 🛡️ İKİNCİL CTA — yalnız bu sayfada (VillaCard'a
-                          dokunulmadı). Boşluk tarihleriyle doğrudan
-                          rezervasyon formuna (/rezervasyon/[slug]) gider;
-                          form start/end'i okuyup tarihleri seçili + fiyatı
-                          hesaplanmış getirir. Mevcut "Müsaitlik / Tarih Seç"
-                          butonu (VillaCard içi) aynen kalır. */}
-                      {villa.slug && (
-                        <Link
-                          href={`/rezervasyon/${villa.slug}?start=${gap.gap_start}&end=${gap.gap_end}`}
-                          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-2.5 text-[13px] font-medium text-white hover:bg-emerald-700 transition-colors motion-reduce:transition-none"
-                        >
-                          Hemen Rezervasyon Yap
-                        </Link>
-                      )}
                     </div>
                   );
                 })}

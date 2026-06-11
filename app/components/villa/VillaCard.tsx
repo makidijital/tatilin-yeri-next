@@ -91,6 +91,11 @@ type Props = {
        daha sıkı image aspect. Logic (pricing/data/image selection)
        AYNEN — sadece presentation katmanı koşullu. */
   variant?: "default" | "curation";
+  /* 🛡️ OPSİYONEL SLOT — "Müsaitlik / Tarih Seç" butonunun HEMEN ALTINA
+     ekstra içerik (örn. kısa-süreli tarihler sayfasındaki gap bilgi alanı
+     + "Hemen Rezervasyon Yap" CTA). Verilmezse HİÇBİR ŞEY render edilmez
+     → /arama, homepage ve diğer VillaCard kullanımları AYNEN korunur. */
+  reserveSlot?: React.ReactNode;
 };
 
 export default function VillaCard({
@@ -114,6 +119,7 @@ export default function VillaCard({
   reviewAverage,
   reviewCount,
   variant = "default",
+  reserveSlot,
 }: Props) {
   /* Compact variant flag — curation flow için presentation density.
      Logic (price/state/handlers/modal) hiç dokunulmaz. */
@@ -521,6 +527,9 @@ export default function VillaCard({
             />
             Müsaitlik / Tarih Seç
           </button>
+          {/* 🛡️ Opsiyonel slot — yalnız prop verilen sayfalarda (kısa-süreli
+              tarihler) butonun hemen altında render edilir; aksi halde yok. */}
+          {reserveSlot ? <div className="mt-2.5">{reserveSlot}</div> : null}
         </div>
 
         {/* ════════════════════════════════════════════════
