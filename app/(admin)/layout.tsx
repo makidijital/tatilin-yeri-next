@@ -1,3 +1,7 @@
+import type { Metadata } from "next";
+
+import { getAdminIconUrl } from "@/lib/admin-branding";
+
 /* ===============================================================
    🛡️ ADMIN-WIDE CACHE BYPASS — force-dynamic (server layout)
    ===============================================================
@@ -35,6 +39,23 @@
    render yaptığı için davranış local'de değişmez.
 =============================================================== */
 export const dynamic = "force-dynamic";
+
+/* ===============================================================
+   🛡️ ADMIN METADATA — public root metadata'sını YALNIZ (admin)/** için
+   ezer (Next.js metadata kalıtımı; deeper-wins).
+     - title.absolute: root'un public title'ını + olası template'i yok
+       sayar → tüm admin sekmelerinde sabit "MAKİ Dijital — Yönetim Paneli".
+     - icons: MAKİ admin favicon (server-side; client useAdminFavicon hook'u
+       zararsız kalır, flash kalkar).
+     - robots: admin noindex/nofollow (hijyen; public SEO ETKİLENMEZ).
+   PUBLIC ROUTE GROUP `(public)` root metadata'sını AYNEN kullanır —
+   bu override route-group izole, public'e SIZMAZ.
+=============================================================== */
+export const metadata: Metadata = {
+  title: { absolute: "MAKİ Dijital — Yönetim Paneli" },
+  icons: { icon: getAdminIconUrl() },
+  robots: { index: false, follow: false },
+};
 
 export default function AdminGroupLayout({
   children,

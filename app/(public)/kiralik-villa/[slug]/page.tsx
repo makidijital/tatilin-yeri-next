@@ -57,6 +57,8 @@ import AccommodationLayout from "@/app/components/villa/AccommodationLayout";
 import { getVillaBySlug } from "@/app/services/villa.service";
 import { getVillaImages } from "@/app/services/villa-image.service";
 import { resolveVillaImageUrl, resolveAssetUrl } from "@/lib/storage.helpers";
+/* 🛡️ Rich text — render'da XSS-güvenli HTML; SEO meta/JSON-LD'de düz metin. */
+import { sanitizeHtml, stripHtml } from "@/lib/html-sanitize";
 import { getVillaPrices } from "@/app/services/villa-price.service";
 import { getVillaDistances } from "@/app/services/villa-distance.service";
 import { getVillaFeaturesByVilla } from "@/app/services/villa-feature.service";
@@ -167,7 +169,7 @@ export async function generateMetadata({
 
   const description =
     (villa.seo_description && villa.seo_description.trim()) ||
-    makeExcerpt(villa.description, 160);
+    makeExcerpt(stripHtml(villa.description), 160);
 
   // OG: kapak görseli (mapVilla images sıralaması is_cover öncelikli)
   const cover =
@@ -330,7 +332,7 @@ export default async function VillaDetail({
   const vacationRentalLd = buildVacationRental({
     slug: villa.slug || slug,
     title: villa.title,
-    description: villa.description,
+    description: stripHtml(villa.description),
     images: imageUrls,
     locationName: villa.location || null,
     latitude:
@@ -422,13 +424,20 @@ export default async function VillaDetail({
             <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
               Villa hakkında
             </h2>
-            <div className="card-premium mt-5 p-6 md:p-7 text-[var(--color-stone-600)] leading-[1.75] text-[15px]">
-              {villa.description || (
+            {villa.description && villa.description.trim() ? (
+              <div
+                className="villa-description card-premium mt-5 p-6 md:p-7 text-[var(--color-stone-600)] leading-[1.75] text-[15px]"
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeHtml(villa.description),
+                }}
+              />
+            ) : (
+              <div className="card-premium mt-5 p-6 md:p-7 text-[var(--color-stone-600)] leading-[1.75] text-[15px]">
                 <span className="italic text-[var(--color-stone-400)]">
                   Açıklama bulunmuyor
                 </span>
-              )}
-            </div>
+              </div>
+            )}
           </section>
 
           {/* 🛡️ KONAKLAMA DÜZENİ (mig 047) — Airbnb tarzı oda/banyo

@@ -45,6 +45,8 @@ import AvailabilityInlineCalendar from "@/app/components/villa/AvailabilityInlin
 import { getVillaByPrivateToken } from "@/app/services/villa.service";
 import { getVillaImages } from "@/app/services/villa-image.service";
 import { resolveVillaImageUrl, resolveAssetUrl } from "@/lib/storage.helpers";
+/* 🛡️ Rich text — render'da XSS-güvenli HTML. */
+import { sanitizeHtml } from "@/lib/html-sanitize";
 import { getVillaPrices } from "@/app/services/villa-price.service";
 import { getVillaDistances } from "@/app/services/villa-distance.service";
 import { getVillaFeaturesByVilla } from "@/app/services/villa-feature.service";
@@ -339,13 +341,20 @@ export default async function PrivateVillaDetail({
               <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
                 Villa hakkında
               </h2>
-              <div className="card-premium mt-5 p-6 md:p-7 text-[var(--color-stone-600)] leading-[1.75] text-[15px]">
-                {villa.description || (
+              {villa.description && villa.description.trim() ? (
+                <div
+                  className="villa-description card-premium mt-5 p-6 md:p-7 text-[var(--color-stone-600)] leading-[1.75] text-[15px]"
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeHtml(villa.description),
+                  }}
+                />
+              ) : (
+                <div className="card-premium mt-5 p-6 md:p-7 text-[var(--color-stone-600)] leading-[1.75] text-[15px]">
                   <span className="italic text-[var(--color-stone-400)]">
                     Açıklama bulunmuyor
                   </span>
-                )}
-              </div>
+                </div>
+              )}
             </section>
 
             {/* POOL */}

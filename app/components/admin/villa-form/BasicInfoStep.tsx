@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 
 import Section from "./shared/Section";
 import Label from "./shared/Label";
+import RichTextEditor from "./RichTextEditor";
 import VillaCombobox from "@/app/(admin)/maki-admin/manual-reservations/ekle/VillaCombobox";
 
 import {
@@ -310,19 +311,17 @@ export default function BasicInfoStep({
         title="Açıklama"
         subtitle="Villayı detaylı ve etkileyici şekilde anlat"
       >
-        <textarea
-          placeholder="Örn: Doğa ile iç içe, özel havuzlu ve korunaklı villamız…"
-          className="input !rounded-2xl !p-4 h-40 resize-none leading-relaxed"
+        <RichTextEditor
           value={form.description || ""}
-          onChange={(e) =>
-            setForm({ ...form, description: e.target.value })
-          }
+          onChange={(html) => setForm({ ...form, description: html })}
         />
         <div className="flex justify-between text-xs text-[var(--color-stone-400)] mt-2">
           <span>
             Açıklaman ne kadar detaylı olursa dönüşüm o kadar artar.
           </span>
-          <span>{(form.description || "").length} karakter</span>
+          <span>
+            {(form.description || "").replace(/<[^>]*>/g, "").length} karakter
+          </span>
         </div>
       </Section>
 

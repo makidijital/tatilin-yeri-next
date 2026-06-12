@@ -8,6 +8,10 @@ import {
   normalizeBathroomLayoutForVilla,
 } from "./normalizers";
 
+/* 🛡️ Rich text description — KAYIT anında XSS-güvenli sanitize
+   (defense-in-depth; render'da tekrar sanitize edilir). */
+import { sanitizeHtml } from "@/lib/html-sanitize";
+
 import type {
   BedroomLayoutItem,
   BathroomLayoutItem,
@@ -118,7 +122,7 @@ export function buildVillaCorePayload(
 
   return {
     title: form.title,
-    description: form.description,
+    description: sanitizeHtml(form.description),
 
     location_id:
       selectedLocation || null,

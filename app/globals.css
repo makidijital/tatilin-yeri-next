@@ -1665,3 +1665,99 @@ select.input {
   background: var(--admin-bg-soft);
   border-color: var(--admin-border-strong);
 }
+
+/* ================================================================
+   VILLA DESCRIPTION — rich text (Tiptap) render + editör tipografisi
+   ================================================================
+   `.villa-description` : public villa detay render (sanitize edilmiş HTML).
+   `.villa-rte`         : admin editör içi WYSIWYG parite.
+   Public token'larıyla (mevcut palet) uyumlu; tasarımı bozmaz.
+   ================================================================ */
+.villa-description > :first-child,
+.villa-rte > :first-child {
+  margin-top: 0;
+}
+.villa-description h2,
+.villa-rte h2 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--color-stone-900);
+  margin: 1.4em 0 0.5em;
+  line-height: 1.25;
+}
+.villa-description h3,
+.villa-rte h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-stone-900);
+  margin: 1.2em 0 0.4em;
+}
+.villa-description h4,
+.villa-rte h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-stone-800);
+  margin: 1em 0 0.35em;
+}
+.villa-description p,
+.villa-rte p {
+  margin: 0.6em 0;
+}
+.villa-description ul,
+.villa-rte ul {
+  list-style: disc;
+  padding-left: 1.4em;
+  margin: 0.6em 0;
+}
+.villa-description ol,
+.villa-rte ol {
+  list-style: decimal;
+  padding-left: 1.4em;
+  margin: 0.6em 0;
+}
+.villa-description li,
+.villa-rte li {
+  margin: 0.25em 0;
+}
+.villa-description a,
+.villa-rte a {
+  color: var(--brand-coral);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.villa-description blockquote,
+.villa-rte blockquote {
+  border-left: 3px solid var(--brand-coral);
+  padding-left: 1em;
+  margin: 0.8em 0;
+  color: var(--color-stone-500);
+  font-style: italic;
+}
+.villa-description img,
+.villa-rte img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  margin: 0.8em 0;
+}
+.villa-description table,
+.villa-rte table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.8em 0;
+  font-size: 0.95em;
+}
+.villa-description th,
+.villa-description td,
+.villa-rte th,
+.villa-rte td {
+  border: 1px solid var(--color-stone-200);
+  padding: 0.5em 0.7em;
+  text-align: left;
+}
+.villa-description th,
+.villa-rte th {
+  background: var(--color-stone-50);
+  font-weight: 600;
+  color: var(--color-stone-800);
+}
