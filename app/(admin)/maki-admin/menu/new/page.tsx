@@ -44,10 +44,15 @@ export default function NewMenu() {
 
   // option lists
   const [pageOptions, setPageOptions] = useState<
-    { id: string; title: string; slug: string }[]
+    { id: string; title: string; slug: string; show_in_menu?: boolean }[]
   >([]);
   const [typeOptions, setTypeOptions] = useState<Option[]>([]);
   const [locationOptions, setLocationOptions] = useState<Option[]>([]);
+  /* 🛡️ "Zaten kullanılıyor" işareti için mevcut menü satırları
+     (source_type/source_id). GET zaten döndürüyor; ekstra sorgu YOK. */
+  const [menuRows, setMenuRows] = useState<
+    { source_type: string; source_id: string | null }[]
+  >([]);
 
   const [loading, setLoading] = useState(false);
 
@@ -61,14 +66,21 @@ export default function NewMenu() {
         const res = await adminFetch("/api/admin/menu");
         const json = (await res.json().catch(() => ({}))) as {
           ok?: boolean;
-          pages?: Array<{ id: string; title: string; slug: string }>;
+          pages?: Array<{
+            id: string;
+            title: string;
+            slug: string;
+            show_in_menu?: boolean;
+          }>;
           types?: Option[];
           locations?: Option[];
+          menu?: Array<{ source_type: string; source_id: string | null }>;
         };
         if (!res.ok || !json.ok) return;
         setPageOptions(json.pages || []);
         setTypeOptions(json.types || []);
         setLocationOptions(json.locations || []);
+        setMenuRows(json.menu || []);
       } catch {
         /* fail-soft: dropdownlar boş kalır, kullanıcı yine manual seçebilir. */
       }
@@ -123,6 +135,32 @@ export default function NewMenu() {
     typeOptions,
     locationOptions,
   ]);
+
+  /* 🛡️ "Zaten kullanılıyor" — gelen menü satırlarından (source_type:
+     source_id) sayım + page için show_in_menu. Salt-okuma, ekstra
+     sorgu yok. N = aynı source_id ile oluşturulmuş menu satırı sayısı. */
+  const usedCountMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of menuRows) {
+      if (!r.source_id) continue;
+      const k = `${r.source_type}:${r.source_id}`;
+      m.set(k, (m.get(k) ?? 0) + 1);
+    }
+    return m;
+  }, [menuRows]);
+
+  const pageInMenu = useMemo(
+    () => new Set(pageOptions.filter((p) => p.show_in_menu).map((p) => p.id)),
+    [pageOptions]
+  );
+
+  const usageFor =
+    (type: MenuSourceType) =>
+    (id: string): { used: boolean; count: number } => {
+      const count = usedCountMap.get(`${type}:${id}`) ?? 0;
+      const used = count > 0 || (type === "page" && pageInMenu.has(id));
+      return { used, count };
+    };
 
   const canSubmit =
     !loading &&
@@ -329,6 +367,7 @@ export default function NewMenu() {
             onChange={setSelectedSourceId}
             options={pageOptions.map((p) => ({ id: p.id, name: p.title }))}
             emptyMessage="Aktif CMS sayfası bulunamadı."
+            getUsage={usageFor("page")}
           />
         )}
 
@@ -340,6 +379,7 @@ export default function NewMenu() {
             onChange={setSelectedSourceId}
             options={typeOptions}
             emptyMessage="Tanımlı villa tipi yok."
+            getUsage={usageFor("category")}
           />
         )}
 
@@ -351,6 +391,7 @@ export default function NewMenu() {
             onChange={setSelectedSourceId}
             options={locationOptions}
             emptyMessage="Tanımlı bölge yok."
+            getUsage={usageFor("region")}
           />
         )}
 
@@ -393,6 +434,7 @@ function SourcePicker({
   onChange,
   options,
   emptyMessage,
+  getUsage,
 }: {
   label: string;
   hint: string;
@@ -400,6 +442,8 @@ function SourcePicker({
   onChange: (v: string) => void;
   options: Option[];
   emptyMessage: string;
+  /** 🛡️ Opsiyonel: öğenin menüde kullanım durumu (✓ + "Kullanılıyor (N)"). */
+  getUsage?: (id: string) => { used: boolean; count: number };
 }) {
   return (
     <div className="space-y-1.5 pt-5 border-t border-[var(--color-stone-100)]">
@@ -418,11 +462,19 @@ function SourcePicker({
             onChange={(e) => onChange(e.target.value)}
           >
             <option value="">— Seç —</option>
-            {options.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
+            {options.map((o) => {
+              const u = getUsage?.(o.id);
+              const label = u?.used
+                ? `✓ ${o.name} — Kullanılıyor${
+                    u.count > 1 ? ` (${u.count})` : ""
+                  }`
+                : o.name;
+              return (
+                <option key={o.id} value={o.id}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
           <p className="text-xs text-[var(--color-stone-400)]">{hint}</p>
         </>
