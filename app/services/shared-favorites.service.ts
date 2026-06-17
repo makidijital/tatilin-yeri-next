@@ -115,11 +115,19 @@ export async function createSharedFavoritesList(
   /* Insert + retry on collision. */
   const attempt = async (): Promise<CreateSharedListResult | "COLLISION"> => {
     const token = generateShareToken();
+    /* 🛡️ TTL — favori paylaşım linkleri geçici veridir: 7 gün sonra
+       geçersiz (now() < expires_at getter'ı) + pg_cron cleanup (mig 057)
+       satırı siler. shared_villa_lists (insert-time expires_at) deseniyle
+       birebir aynı; created_at = now() olduğundan expires = created_at + 7g. */
+    const expiresAtIso = new Date(
+      Date.now() + 7 * 24 * 60 * 60 * 1000
+    ).toISOString();
     const { error } = await supabase
       .from("shared_favorite_lists")
       .insert({
         token,
         villa_ids: cleaned,
+        expires_at: expiresAtIso,
       });
 
     if (error) {
