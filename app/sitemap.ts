@@ -7,6 +7,8 @@ import type { MetadataRoute } from "next";
    artık gerekmez (RLS anon context repository `db` üzerinden aynen). */
 import { villaRepository } from "@/lib/db/villa.repository";
 import { pagesRepository } from "@/lib/db/pages.repository";
+/* 🛡️ Blog (FAZ 3) — yayında olan blog yazıları sitemap'e dahil. */
+import { blogRepository } from "@/lib/db/blog.repository";
 
 /* ===============================================================
    🛡️ SITEMAP — Next.js App Router (production-grade, dynamic)
@@ -166,7 +168,50 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     );
   }
 
-  return [...staticEntries, ...villaEntries, ...pageEntries];
+  /* ---------- DİNAMİK: YAYINDA BLOG YAZILARI (/blog/[slug]) ---------- */
+  let blogEntries: MetadataRoute.Sitemap = [];
+  try {
+    const { data, error } = await blogRepository.findActiveSlugs();
+    if (error) {
+      console.error("[sitemap] blog fetch error:", error.message);
+    } else {
+      blogEntries = (
+        (data as
+          | { slug: string | null; published_at: string | null; updated_at: string | null }[]
+          | null) || []
+      )
+        .filter((b) => !!b.slug)
+        .map((b) => ({
+          url: url(`/blog/${b.slug}`),
+          lastModified: toDate(b.updated_at || b.published_at),
+          changeFrequency: "weekly",
+          priority: 0.7,
+        }));
+    }
+  } catch (err) {
+    console.error(
+      "[sitemap] blog fetch EXCEPTION:",
+      err instanceof Error ? err.message : err
+    );
+  }
+
+  /* Blog index sayfası (statik route). */
+  const blogIndexEntry: MetadataRoute.Sitemap = [
+    {
+      url: url("/blog"),
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.7,
+    },
+  ];
+
+  return [
+    ...staticEntries,
+    ...villaEntries,
+    ...pageEntries,
+    ...blogIndexEntry,
+    ...blogEntries,
+  ];
 }
 
 /* ===============================================================

@@ -16,6 +16,7 @@ import {
   Layers,
   CalendarDays,
   FileText,
+  Newspaper,
   MapPin,
   CreditCard,
   Landmark,
@@ -206,6 +207,14 @@ const menuGroups: MenuGroup[] = [
         name: "Sayfalar",
         href: "/maki-admin/pages",
         icon: FileText,
+        permissionKey: "pages",
+      },
+      {
+        /* 🛡️ Blog Yazıları — İçerik grubu. permissionKey "pages" REUSE
+           (yeni yetki/migration YOK; villas/siralama paterni). */
+        name: "Blog Yazıları",
+        href: "/maki-admin/blog",
+        icon: Newspaper,
         permissionKey: "pages",
       },
       {

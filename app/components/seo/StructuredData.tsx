@@ -307,3 +307,34 @@ export function buildItemList(
     })),
   };
 }
+
+/* ---------------------------------------------
+   🔥 Article / BlogPosting — blog detay
+---------------------------------------------- */
+export function buildArticle(opts: {
+  slug: string;
+  title: string;
+  description?: string | null;
+  image?: string | null;
+  datePublished?: string | null;
+  dateModified?: string | null;
+  author?: string | null;
+}) {
+  const canonical = abs(`/blog/${opts.slug}`);
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: opts.title,
+    mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
+    url: canonical,
+    ...(opts.description ? { description: opts.description } : {}),
+    ...(opts.image ? { image: abs(opts.image) } : {}),
+    ...(opts.datePublished ? { datePublished: opts.datePublished } : {}),
+    ...(opts.dateModified || opts.datePublished
+      ? { dateModified: opts.dateModified || opts.datePublished }
+      : {}),
+    ...(opts.author
+      ? { author: { "@type": "Person", name: opts.author } }
+      : {}),
+  };
+}
