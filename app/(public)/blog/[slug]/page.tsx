@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import Image from "next/image";
-import { CalendarDays } from "lucide-react";
 
 import { getBlogPostBySlug } from "@/app/services/blog.service";
 import { sanitizeHtml, stripHtml } from "@/lib/html-sanitize";
 import { resolveAssetUrl } from "@/lib/storage.helpers";
+import PageHero from "@/app/components/ui/PageHero";
 import {
   JsonLd,
   buildArticle,
@@ -70,17 +69,6 @@ export async function generateMetadata({
   };
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("tr-TR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
 export default async function BlogDetailPage({
   params,
 }: {
@@ -91,7 +79,6 @@ export default async function BlogDetailPage({
   if (!post) notFound();
 
   const cover = resolveAssetUrl(post.cover_image);
-  const dateLabel = formatDate(post.published_at);
 
   const articleLd = buildArticle({
     slug: post.slug,
@@ -111,67 +98,58 @@ export default async function BlogDetailPage({
     { name: post.title },
   ]);
 
+  /* 🛡️ TASARIM — CMS sayfa detayı (app/p/[slug]) ile BİREBİR hizalı:
+     PageHero (breadcrumb + eyebrow + title + description) + aynı content
+     container (px-5 md:px-10 lg:px-16 pb-32 md:pb-44 pt-12 md:pt-16 +
+     max-w-[1100px] mx-auto). Yalnız görsel; data/SEO/JSON-LD aynen. */
   return (
-    <main className="px-5 md:px-10 lg:px-16 py-12 md:py-20">
+    <article className="bg-white">
       <JsonLd data={articleLd} />
       <JsonLd data={breadcrumbLd} />
-      <article className="max-w-[760px] mx-auto">
-        {/* Breadcrumb */}
-        <nav className="text-[12px] text-[var(--color-stone-400)] mb-6 flex items-center gap-1.5">
-          <Link href="/" className="hover:text-[var(--color-stone-700)]">
-            Ana Sayfa
-          </Link>
-          <span>/</span>
-          <Link href="/blog" className="hover:text-[var(--color-stone-700)]">
-            Blog
-          </Link>
-        </nav>
 
-        {post.category && (
-          <span className="text-[10.5px] tracking-[0.18em] uppercase font-medium text-[var(--brand-coral)]">
-            {post.category}
-          </span>
-        )}
-        <h1 className="font-display font-medium text-[28px] md:text-[40px] leading-tight tracking-[-0.02em] text-[var(--color-stone-900)] mt-2">
-          {post.title}
-        </h1>
-        <div className="mt-3 flex items-center gap-3 text-[13px] text-[var(--color-stone-400)]">
-          {dateLabel && (
-            <span className="inline-flex items-center gap-1.5">
-              <CalendarDays size={14} />
-              {dateLabel}
-            </span>
+      <PageHero
+        breadcrumb={[
+          { name: "Ana sayfa", href: "/" },
+          { name: "Blog", href: "/blog" },
+          { name: post.title },
+        ]}
+        eyebrow={post.category || "Blog"}
+        title={post.title}
+        description={post.excerpt || undefined}
+      />
+
+      <section className="px-5 md:px-10 lg:px-16 pb-32 md:pb-44 pt-12 md:pt-16">
+        <div className="max-w-[1100px] mx-auto space-y-12 md:space-y-16">
+          {cover && (
+            <div className="relative aspect-[16/9] overflow-hidden rounded-3xl bg-[var(--color-sand-50)]">
+              <Image
+                src={cover}
+                alt={post.title}
+                fill
+                priority
+                sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1100px"
+                className="object-cover object-center"
+                unoptimized
+              />
+            </div>
           )}
-          {post.author && <span>· {post.author}</span>}
-        </div>
 
-        {cover && (
-          <div className="relative aspect-[16/9] mt-7 rounded-2xl overflow-hidden bg-[var(--color-sand-50)]">
-            <Image
-              src={cover}
-              alt={post.title}
-              fill
-              sizes="(max-width:768px) 100vw, 760px"
-              className="object-cover"
-              priority
-              unoptimized
+          {post.body && post.body.trim() ? (
+            <div
+              className="villa-description text-[16px] md:text-[17px] leading-[1.8] text-[var(--color-stone-700)]"
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.body) }}
             />
-          </div>
-        )}
-
-        {post.body && post.body.trim() ? (
-          <div
-            className="villa-description mt-8 text-[var(--color-stone-700)] leading-[1.85] text-[16px]"
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.body) }}
-          />
-        ) : (
-          post.excerpt && (
-            <p className="mt-8 text-[16px] leading-relaxed text-[var(--color-stone-600)]">
+          ) : post.excerpt ? (
+            <p className="text-[16px] md:text-[17px] leading-[1.8] text-[var(--color-stone-700)]">
               {post.excerpt}
             </p>
-          )
-        )}
-      </article>
-    </main>
+          ) : (
+            <p className="text-[var(--color-stone-400)] italic text-center">
+              İçerik yakında.
+            </p>
+          )}
+        </div>
+      </section>
+    </article>
   );
 }

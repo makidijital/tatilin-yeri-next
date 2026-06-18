@@ -458,7 +458,11 @@ export default function Header({
             "md:hidden bg-white border-t border-[var(--color-stone-100)] shadow-lg " +
             "transition-all duration-300 origin-top " +
             (open
-              ? "opacity-100 max-h-[80vh]"
+              ? /* 🛡️ MOBİL MENÜ SCROLL FIX — bar (h-[72px]) altından
+                   viewport sonuna; dvh → iPhone Safari toolbar-safe.
+                   overflow-y-auto: uzun menüde alt öğelere erişim;
+                   overscroll-contain: iOS body scroll-chaining engeli. */
+                "opacity-100 max-h-[calc(100dvh-72px)] overflow-y-auto overscroll-contain"
               : "opacity-0 max-h-0 overflow-hidden")
           }
         >
