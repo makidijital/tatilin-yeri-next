@@ -99,4 +99,21 @@ export const manualReservationServerRepository = {
       .eq("id", id)
       .maybeSingle();
   },
+
+  /* ===============================================================
+     CLEANUP — throttle'lı geçmiş blok temizliği (migration 059)
+     ===============================================================
+     `cleanup_past_manual_reservations()` RPC'sine delege eder.
+     Fonksiyon kendi içinde ATOMİK 24h throttle uygular ve yalnız
+     `manual_reservations` tablosunda `end_date < current_date-7`
+     satırlarını siler (başka tabloya dokunmaz). Dönüş:
+       • silinen satır sayısı (>= 0)  → temizlik çalıştı
+       • -1                           → 24 saat dolmadı, atlandı
+     service_role (dbAdmin) RLS bypass → app_meta + delete erişimi.
+     Caller (GET route) bunu FAIL-SAFE çağırır: hata olsa bile liste
+     yanıtı (mevcut API contract) bozulmaz.
+  =============================================================== */
+  async runThrottledCleanup() {
+    return await dbAdmin.rpc("cleanup_past_manual_reservations");
+  },
 };

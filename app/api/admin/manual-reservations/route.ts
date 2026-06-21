@@ -61,6 +61,31 @@ export async function GET(req: Request): Promise<NextResponse> {
     );
   }
 
+  /* 🧹 Migration 059 — geçmiş manuel blok cleanup (FAIL-SAFE).
+     Fonksiyon kendi içinde atomik 24h throttle uygular → her açılışta
+     değil, 24 saatte bir kez çalışır. Hata olursa SADECE loglanır;
+     liste yanıtı (mevcut API contract) ASLA bozulmaz. */
+  /* Cleanup metadata — fonksiyon dönüşü: >=0 silinen sayı, -1 throttle skip.
+     ran=false (skip/hata) ya da deletedCount=0 ise UI statik kutuyu korur. */
+  let cleanup: { ran: boolean; deletedCount: number } = {
+    ran: false,
+    deletedCount: 0,
+  };
+  try {
+    const { data: cleanupData, error: cleanupError } =
+      await manualReservationServerRepository.runThrottledCleanup();
+    if (cleanupError) {
+      console.error(
+        "[admin.manual-reservations.cleanup] SKIPPED",
+        cleanupError.message
+      );
+    } else if (typeof cleanupData === "number" && cleanupData >= 0) {
+      cleanup = { ran: true, deletedCount: cleanupData };
+    }
+  } catch (e) {
+    console.error("[admin.manual-reservations.cleanup] EXCEPTION", e);
+  }
+
   const { data, error } =
     await manualReservationServerRepository.findList();
 
@@ -78,5 +103,6 @@ export async function GET(req: Request): Promise<NextResponse> {
   return NextResponse.json({
     ok: true,
     manual_reservations: data || [],
+    cleanup,
   });
 }

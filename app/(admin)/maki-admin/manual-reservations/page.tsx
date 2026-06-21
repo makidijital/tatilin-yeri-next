@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Info } from "lucide-react";
 
 import { adminFetch } from "@/lib/admin-fetch";
 import ManualReservationList from "./ManualReservationList";
@@ -46,6 +46,8 @@ type ManualReservationRow = {
 export default function Page() {
   const [data, setData] = useState<ManualReservationRow[]>([]);
   const [loading, setLoading] = useState(true);
+  /* Cleanup metadata (route'tan). null/ran:false/0 → statik info box. */
+  const [cleanupDeleted, setCleanupDeleted] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +58,7 @@ export default function Page() {
         const json = (await res.json().catch(() => ({}))) as {
           ok?: boolean;
           manual_reservations?: ManualReservationRow[];
+          cleanup?: { ran?: boolean; deletedCount?: number };
           error?: string;
         };
         if (cancelled) return;
@@ -68,6 +71,9 @@ export default function Page() {
           return;
         }
         setData(json.manual_reservations || []);
+        setCleanupDeleted(
+          json.cleanup?.ran ? json.cleanup.deletedCount || 0 : 0
+        );
       } catch (err) {
         if (cancelled) return;
         console.error("[manual-reservations.list] EXCEPTION", err);
@@ -101,6 +107,21 @@ export default function Page() {
           <Plus size={15} />
           Yeni Blok
         </Link>
+      </div>
+
+      {/* 🧹 Migration 059 — otomatik cleanup bilgilendirmesi (intrusive değil).
+         Cleanup çalışıp >0 kayıt sildiyse dinamik özet; aksi halde
+         (skip / 0 silme) statik açıklama. Tasarım aynı. */}
+      <div className="flex items-start gap-2.5 rounded-xl border border-[var(--color-stone-100)] bg-[var(--color-sand-50)]/50 px-4 py-3">
+        <Info
+          size={15}
+          className="mt-0.5 shrink-0 text-[var(--color-stone-400)]"
+        />
+        <p className="text-[12.5px] leading-relaxed text-[var(--color-stone-500)]">
+          {cleanupDeleted > 0
+            ? `🧹 Son otomatik temizlikte ${cleanupDeleted} eski blok temizlendi.`
+            : "Geçmiş manuel bloklar, çıkış tarihinden 7 gün sonra otomatik temizlenir. Temizlik bu sayfa açıldığında arka planda kontrol edilir."}
+        </p>
       </div>
 
       {loading ? (
