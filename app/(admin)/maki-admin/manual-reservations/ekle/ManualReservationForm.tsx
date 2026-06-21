@@ -537,6 +537,7 @@ export default function ManualReservationForm({
             }}
             resetKey={calendarKey}
             showRangeChip
+            monthCount={5}
           />
         </div>
       )}

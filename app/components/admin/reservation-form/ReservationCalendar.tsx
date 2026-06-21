@@ -169,6 +169,12 @@ export type ReservationCalendarProps = {
   /** Compact mode (popover'da kullanılır) — biraz daha sıkı padding */
   compact?: boolean;
 
+  /** Yan yana gösterilecek ay sayısı. Default 3 (backward-compat —
+   *  tüm mevcut kullanım yerleri aynen kalır). Yalnız manual-reservations
+   *  ekle/düzenle formu 6 geçer; dış grid 2xl breakpoint'inde 6 kolona
+   *  çıkar, daha küçük ekranlarda satıra sarar (horizontal overflow yok). */
+  monthCount?: number;
+
   /** Reset key — parent'ın calendarKey'i (manual form gibi).
    *  Değişince component remount ve drag state temizlenir. */
   resetKey?: number;
@@ -208,6 +214,7 @@ export default function ReservationCalendar({
   onSelectRange,
   showRangeChip = true,
   compact = false,
+  monthCount = 3,
   resetKey = 0,
   externalCheckinDates = [],
   externalCheckoutDates = [],
@@ -361,12 +368,23 @@ export default function ReservationCalendar({
   const visibleMonths = useMemo(() => {
     const y = currentMonth.getFullYear();
     const m = currentMonth.getMonth();
-    return [
-      new Date(y, m, 1),
-      new Date(y, m + 1, 1),
-      new Date(y, m + 2, 1),
-    ];
-  }, [currentMonth]);
+    /* monthCount kadar ardışık ay (default 3 → eski davranışla
+       byte-identical: [m, m+1, m+2]). */
+    return Array.from(
+      { length: Math.max(1, monthCount) },
+      (_, i) => new Date(y, m + i, 1)
+    );
+  }, [currentMonth, monthCount]);
+
+  /* 🛡️ Dış grid kolon tavanı — default (≤3 ay) AYNEN korunur.
+     Yalnız 6+ ay istendiğinde 2xl breakpoint'inde 6 kolon eklenir;
+     xl ve altında 3'erli satıra sarar → küçük ekranda overflow yok. */
+  const monthGridColsClass =
+    monthCount >= 6
+      ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6"
+      : monthCount === 5
+        ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5"
+        : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3";
 
   const todayKey = new Date().toDateString();
 
@@ -416,10 +434,13 @@ export default function ReservationCalendar({
           <h3 className="font-display text-sm text-[var(--color-stone-900)] tracking-[-0.015em] ml-2 capitalize">
             {visibleMonths[0].toLocaleDateString("tr-TR", { month: "short" })}
             <span className="text-[var(--color-stone-400)] mx-1">→</span>
-            {visibleMonths[2].toLocaleDateString("tr-TR", {
-              month: "short",
-              year: "numeric",
-            })}
+            {visibleMonths[visibleMonths.length - 1].toLocaleDateString(
+              "tr-TR",
+              {
+                month: "short",
+                year: "numeric",
+              }
+            )}
           </h3>
         </div>
 
@@ -454,7 +475,7 @@ export default function ReservationCalendar({
       </p>
 
       {/* Multi-month grid — Desktop 3 / Tablet 2 / Mobile 1 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
+      <div className={`grid ${monthGridColsClass} gap-3 md:gap-4`}>
         {/* 🛡️ React 19 react-hooks/refs: bu .map içinde draggingRef.current
            okunuyor → "ref accessed during render" uyarısı. Legacy drag-select
            pattern; ref render-time okunmazsa highlight kayar. Block disable
@@ -472,7 +493,7 @@ export default function ReservationCalendar({
               <div className="px-1 mb-1.5">
                 <span className="font-display text-[12px] font-semibold text-[var(--color-stone-800)] tracking-[-0.01em] capitalize">
                   {viewMonth.toLocaleDateString("tr-TR", { month: "long" })}
-                  {monthIdx === 2 && (
+                  {monthIdx === visibleMonths.length - 1 && (
                     <span className="text-[var(--color-stone-400)] font-normal ml-1">
                       {viewMonth.getFullYear()}
                     </span>

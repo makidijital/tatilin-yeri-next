@@ -544,6 +544,7 @@ export default function EditVilla() {
           <PricingStep
             pricingCanvasSlot={
               <PricingCalendarCanvas
+                visibleMonths={5}
                 villaId={id}
                 onPricesChanged={(updated) => {
                   setPrices(

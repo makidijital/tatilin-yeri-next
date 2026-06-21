@@ -85,3 +85,26 @@ export function compactPrice(
   }
   return formatMoney(v, currency || "TRY");
 }
+
+/* ---------------------------------------------
+   🔥 formatCompactPrice(price, currency?) → "₺9K" / "₺14.5K"
+   - PURE DISPLAY formatter (DB/state/price logic'e dokunmaz).
+   - Pricing calendar 5-ay (compact) day-cell render'ında kullanılır;
+     dar hücrede uzun fiyat metnini ("₺14.000") kısaltır.
+   - Kural:
+       • < 1000  → formatMoney (kısaltma YOK, tam değer)
+       • >= 1000 → "{symbol}{k}K"  (k = price/1000)
+       • en fazla 1 ondalık; gereksiz ".0" gizlenir ("17K", "14.5K")
+       • ondalık ayıracı nokta (locale-bağımsız).
+   Örnek: 6000→₺6K · 9500→₺9.5K · 12000→₺12K · 17500→₺17.5K
+---------------------------------------------- */
+export function formatCompactPrice(
+  price: number,
+  currency?: string | null
+): string {
+  const sym = currencySymbol(currency);
+  const v = Number(price) || 0;
+  if (v < 1000) return formatMoney(v, currency || "TRY");
+  const str = (v / 1000).toFixed(1).replace(/\.0$/, "");
+  return `${sym}${str}K`;
+}

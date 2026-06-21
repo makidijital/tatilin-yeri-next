@@ -37,6 +37,7 @@ export default function MonthBlock({
   isDraggingNow,
   onCellDown,
   onCellEnter,
+  compact = false,
 }: {
   monthStart: Date;
   dayPriceMap: Map<string, PricingCanvasRange>;
@@ -47,6 +48,8 @@ export default function MonthBlock({
   isDraggingNow: boolean;
   onCellDown: (d: Date) => void;
   onCellEnter: (d: Date) => void;
+  /** 5 ay görünümünde kompakt DayCell'leri tetikler. Default false. */
+  compact?: boolean;
 }) {
   const cells = useMemo(
     () => buildMonthGrid(monthStart),
@@ -86,6 +89,7 @@ export default function MonthBlock({
               maxPrice={maxPrice}
               onCellDown={onCellDown}
               onCellEnter={onCellEnter}
+              compact={compact}
             />
           );
         })}

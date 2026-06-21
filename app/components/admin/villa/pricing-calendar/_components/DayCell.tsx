@@ -1,4 +1,7 @@
-import { compactPrice as sharedCompactPrice } from "@/lib/format";
+import {
+  compactPrice as sharedCompactPrice,
+  formatCompactPrice,
+} from "@/lib/format";
 
 import { priceColorTone } from "../_helpers/color-tone";
 
@@ -58,6 +61,7 @@ export default function DayCell({
   maxPrice,
   onCellDown,
   onCellEnter,
+  compact = false,
 }: {
   date: Date;
   inCurrentMonth: boolean;
@@ -69,6 +73,9 @@ export default function DayCell({
   maxPrice: number;
   onCellDown: (d: Date) => void;
   onCellEnter: (d: Date) => void;
+  /** 5 ay görünümünde kompakt hücre (yükseklik/padding/font küçülür).
+   *  Default false → 3 ay görünümü BYTE-IDENTICAL kalır. */
+  compact?: boolean;
 }) {
   const tone = priceRange
     ? priceColorTone(priceRange.price, minPrice, maxPrice)
@@ -97,8 +104,8 @@ export default function DayCell({
       }}
       className="relative"
       style={{
-        height: 58,
-        borderRadius: 8,
+        height: compact ? 50 : 58,
+        borderRadius: compact ? 6 : 8,
         background: baseBg,
         color: baseText,
         cursor: inCurrentMonth ? "pointer" : "default",
@@ -127,20 +134,25 @@ export default function DayCell({
 
       {inCurrentMonth && (
         <div
-          className="absolute inset-0 flex items-center justify-center px-1"
-          style={{ paddingTop: 10 }}
+          className={`absolute inset-0 flex items-center justify-center ${
+            compact ? "px-0.5" : "px-1"
+          }`}
+          style={{ paddingTop: compact ? 7 : 10 }}
         >
           {priceRange ? (
             <span
               className="font-display tabular-nums"
               style={{
-                fontSize: 12,
+                fontSize: compact ? 10 : 12,
                 fontWeight: 700,
                 letterSpacing: "-0.01em",
                 color: baseText,
+                whiteSpace: compact ? "nowrap" : undefined,
               }}
             >
-              {compactPrice(priceRange.price, priceRange.currency)}
+              {compact
+                ? formatCompactPrice(priceRange.price, priceRange.currency)
+                : compactPrice(priceRange.price, priceRange.currency)}
             </span>
           ) : (
             <span

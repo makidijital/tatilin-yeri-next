@@ -91,6 +91,7 @@ export default function PricingCalendarCanvas({
   villaId,
   initialPrices,
   onPricesChanged,
+  visibleMonths = VISIBLE_MONTHS,
 }: PricingCalendarCanvasProps) {
   const [villa, setVilla] = useState<VillaMeta | null>(null);
   const [prices, setPrices] = useState<PricingCanvasRange[]>([]);
@@ -352,11 +353,20 @@ export default function PricingCalendarCanvas({
   /* ---------- DERIVED ---------- */
   const months = useMemo(() => {
     const list: Date[] = [];
-    for (let i = 0; i < VISIBLE_MONTHS; i++) {
+    const count = Math.max(1, visibleMonths);
+    for (let i = 0; i < count; i++) {
       list.push(addMonths(anchorMonth, i));
     }
     return list;
-  }, [anchorMonth]);
+  }, [anchorMonth, visibleMonths]);
+
+  /* 🛡️ Dış grid kolon tavanı — default (≤3 ay) AYNEN korunur.
+     Yalnız 5+ ay istendiğinde 2xl breakpoint'inde 5 kolon eklenir;
+     lg ve altında 3'erli satıra sarar → laptopta sıkışma / overflow yok. */
+  const monthGridColsClass =
+    visibleMonths >= 5
+      ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5"
+      : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
 
   const activeFrom = drawerOpen ? selectedFrom : dragStart;
   const activeTo = drawerOpen ? selectedTo : dragEnd;
@@ -406,7 +416,7 @@ export default function PricingCalendarCanvas({
             Takvim yükleniyor…
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+          <div className={`grid ${monthGridColsClass} gap-x-6 gap-y-6`}>
             {months.map((m) => (
               <MonthBlock
                 key={dayKey(m)}
@@ -419,6 +429,7 @@ export default function PricingCalendarCanvas({
                 isDraggingNow={!!dragStart && !!dragEnd}
                 onCellDown={onCellDown}
                 onCellEnter={onCellEnter}
+                compact={visibleMonths >= 5}
               />
             ))}
           </div>

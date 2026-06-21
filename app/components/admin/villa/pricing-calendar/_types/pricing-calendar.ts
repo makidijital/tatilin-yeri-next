@@ -36,6 +36,11 @@ export type PricingCalendarCanvasProps = {
   initialPrices?: PricingCanvasRange[];
   /** Save/delete sonrası güncel prices array'i parent'a aktarır. */
   onPricesChanged?: (prices: PricingCanvasRange[]) => void;
+  /** Yan yana gösterilecek ardışık ay sayısı. Default 3 (backward-compat —
+   *  tüm mevcut kullanımlar aynen kalır). Yalnız fiyatlandırma adımı
+   *  (villa ekle/düzenle) 5 geçer; dış grid 2xl breakpoint'inde 5 kolona
+   *  çıkar, daha küçük ekranlarda satıra sarar (horizontal overflow yok). */
+  visibleMonths?: number;
 };
 
 /** loadData() içinde DB'den alınan villa snapshot. */
