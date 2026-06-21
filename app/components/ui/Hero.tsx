@@ -55,10 +55,11 @@ export default function Hero({
   void reviewStats;
 
   return (
+    <>
     <section
       className="
         relative
-        min-h-[72svh] lg:min-h-[85svh]
+        min-h-[60svh] lg:min-h-[70svh]
         w-full
         overflow-hidden
         bg-[var(--color-stone-900)]
@@ -109,10 +110,10 @@ export default function Hero({
           relative
           max-w-[1480px] mx-auto
           px-5 md:px-10 lg:px-16
-          min-h-[72svh] lg:min-h-[85svh]
+          min-h-[60svh] lg:min-h-[70svh]
           flex flex-col justify-end
-          pt-24 md:pt-28 lg:pt-32
-          pb-12 md:pb-32
+          pt-20 md:pt-20 lg:pt-24
+          pb-4 md:pb-10
         "
       >
         {/* ─── COPY BLOCK ───────────────────────────────────────── */}
@@ -141,7 +142,7 @@ export default function Hero({
           <h1
             className="
               font-display
-              text-[44px] sm:text-[60px] md:text-[76px] lg:text-[88px]
+              text-[32px] sm:text-[40px] md:text-[50px] lg:text-[60px]
               leading-[0.98] tracking-[-0.03em]
               text-white
               mt-5 md:mt-7
@@ -219,14 +220,20 @@ export default function Hero({
 
         {/* ─── FLOATING SEARCH PANEL — client island, AYNEN ───── */}
         <HeroSearchPanel />
-
-        {/* ─── TRUST STRIP — koyu BG üzerinde glass kartlar ───── */}
-        <HeroTrustStrip />
       </div>
 
       {/* 🛡️ DATEPICKER PORTAL TARGET — HeroSearchPanel'in
          react-datepicker portalId="hero-datepicker-portal" hedefi. */}
       <div id="hero-datepicker-portal" />
     </section>
+
+    {/* 🛡️ TRUST STRIP — hero section ALTINA taşındı (hero görünür
+       yüksekliğini azaltmak için). Görünüm/responsive korunur: hero
+       content container ile AYNI max-w + px (full-bleed olmasın).
+       HeroTrustStrip iç stili (mt-14, grid, kart tonları) DEĞİŞMEDİ. */}
+    <div className="max-w-[1480px] mx-auto px-5 md:px-10 lg:px-16 pb-10 md:pb-14">
+      <HeroTrustStrip />
+    </div>
+    </>
   );
 }

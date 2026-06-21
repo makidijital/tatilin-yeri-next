@@ -1,10 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Phone, Mail } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Phone, Mail, ChevronDown } from "lucide-react";
 
 import { getPublicSettings, type Settings } from "@/app/services/settings.service";
 import { useCurrency } from "@/app/context/CurrencyContext";
+
+/* 🛡️ Para birimi seçenekleri — bayraklar LOCAL SVG asset (public/flags).
+   Emoji yerine OS-bağımsız render (Windows'ta da görünür). */
+const CURRENCY_OPTIONS: { code: string; flag: string }[] = [
+  { code: "TRY", flag: "/flags/tr.svg" },
+  { code: "USD", flag: "/flags/us.svg" },
+  { code: "EUR", flag: "/flags/eu.svg" },
+  { code: "GBP", flag: "/flags/gb.svg" },
+];
 
 export default function TopBar() {
   /* 🛡️ Faz 9 hardening: `useState<any>` → `Settings | null`. */
@@ -25,6 +34,21 @@ export default function TopBar() {
       cancelled = true;
     };
   }, []);
+
+  /* 🛡️ Currency dropdown (custom — native <select> emoji bayrakları
+     Windows'ta render edilmiyordu). State + dışa-tık ile kapanır. */
+  const [curOpen, setCurOpen] = useState(false);
+  const curRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!curOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (curRef.current && !curRef.current.contains(e.target as Node)) {
+        setCurOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [curOpen]);
 
   if (!settings) return null;
 
@@ -156,32 +180,70 @@ export default function TopBar() {
            🛡️ TR (Globe + "TR" + ChevronDown) butonu ve onu currency'den
            ayıran divider kaldırıldı; RIGHT bloğunda yalnız currency
            seçici kaldı. useCurrency context aynen kullanılır. */}
-        <div className="relative">
-          <select
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
+        {/* 🛡️ Currency seçici — custom dropdown (SVG bayrak; OS-bağımsız).
+            useCurrency context (currency/setCurrency) AYNEN kullanılır;
+            API değişmedi, yalnız native <select> → button+liste. */}
+        <div className="relative" ref={curRef}>
+          <button
+            type="button"
+            onClick={() => setCurOpen((o) => !o)}
+            aria-haspopup="listbox"
+            aria-expanded={curOpen}
             className="
-              !bg-transparent !border-0
-              !text-[var(--color-stone-700)]
-              text-[12px] font-medium
-              cursor-pointer pr-5 pl-0 py-0
-              focus:!shadow-none focus:!border-0
-              hover:!text-[var(--color-stone-900)]
-              transition appearance-none
+              inline-flex items-center gap-1.5
+              bg-transparent border-0
+              text-[var(--color-stone-700)] hover:text-[var(--color-stone-900)]
+              text-[12px] font-medium cursor-pointer py-0
+              transition
             "
-            style={{
-              backgroundImage:
-                "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%237a7163' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\")",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right center",
-              backgroundSize: "10px",
-            }}
           >
-            <option value="TRY">🇹🇷 TRY</option>
-            <option value="USD">🇺🇸 USD</option>
-            <option value="EUR">🇪🇺 EUR</option>
-            <option value="GBP">🇬🇧 GBP</option>
-          </select>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={
+                CURRENCY_OPTIONS.find((c) => c.code === currency)?.flag ||
+                "/flags/tr.svg"
+              }
+              alt=""
+              className="w-4 h-3 rounded-[1px] object-cover shrink-0"
+            />
+            {currency}
+            <ChevronDown size={11} className="text-[var(--color-stone-400)]" />
+          </button>
+
+          {curOpen && (
+            <ul
+              role="listbox"
+              className="absolute right-0 mt-2 z-50 min-w-[100px] bg-white rounded-lg border border-[var(--color-stone-100)] shadow-[0_12px_28px_-12px_rgb(27_26_23/0.22)] overflow-hidden py-1"
+            >
+              {CURRENCY_OPTIONS.map((c) => (
+                <li key={c.code}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={c.code === currency}
+                    onClick={() => {
+                      setCurrency(c.code);
+                      setCurOpen(false);
+                    }}
+                    className={
+                      "w-full flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-left transition-colors " +
+                      (c.code === currency
+                        ? "bg-[var(--color-sand-50)] text-[var(--color-stone-900)]"
+                        : "text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)]")
+                    }
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={c.flag}
+                      alt=""
+                      className="w-4 h-3 rounded-[1px] object-cover shrink-0"
+                    />
+                    {c.code}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

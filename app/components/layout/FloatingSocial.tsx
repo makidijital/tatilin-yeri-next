@@ -107,19 +107,19 @@ export default async function FloatingSocial() {
       {whatsappHref && (
         <FloatingSocialButton href={whatsappHref} label="WhatsApp">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/whatsapp.svg" alt="" aria-hidden width={50} height={50} />
+          <img src="/icons/whatsapp.svg" alt="" aria-hidden width={35} height={35} />
         </FloatingSocialButton>
       )}
       {instagramHref && (
         <FloatingSocialButton href={instagramHref} label="Instagram">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/instagram.svg" alt="" aria-hidden width={50} height={50} />
+          <img src="/icons/instagram.svg" alt="" aria-hidden width={35} height={35} />
         </FloatingSocialButton>
       )}
       {youtubeHref && (
         <FloatingSocialButton href={youtubeHref} label="YouTube">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/youtube.svg" alt="" aria-hidden width={50} height={50} />
+          <img src="/icons/youtube.svg" alt="" aria-hidden width={35} height={35} />
         </FloatingSocialButton>
       )}
     </aside>
