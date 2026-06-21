@@ -299,6 +299,12 @@ export function UploadField({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* 🛡️ Admin-only preview cache-bust — singleton dosya adı (örn.
+     hero/homepage-hero.webp) upload sonrası AYNI URL ürettiğinden
+     tarayıcı eski görseli cache'ten gösteriyordu. Upload başarısında
+     bu key güncellenir; preview src'sine ?ts=<key> eklenir. Public
+     frontend / upload / storage / DB DEĞİŞMEZ. */
+  const [bustTs, setBustTs] = useState<number | null>(null);
 
   async function handleFile(file: File) {
     if (!slug || !slug.trim()) {
@@ -332,11 +338,22 @@ export function UploadField({
          AYNEN çalışmaya devam eder (resolveAssetUrl HTTP(S) pass-through).
          Storage provider değişiminde DB UPDATE gerekmez. */
       onChange(path);
+      /* Preview cache-bust — yeni baytları AYNI URL'de görebilmek için. */
+      setBustTs(Date.now());
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
     }
   }
+
+  /* Preview src — resolveAssetUrl çıktısına (varsa) ?ts=<bustTs> ekle.
+     bustTs null iken (sayfa ilk açılış) davranış AYNEN eski (ts yok). */
+  const resolvedPreview = resolveAssetUrl(currentUrl);
+  const previewSrc = resolvedPreview
+    ? bustTs
+      ? `${resolvedPreview}${resolvedPreview.includes("?") ? "&" : "?"}ts=${bustTs}`
+      : resolvedPreview
+    : "";
 
   return (
     <FieldShell label={label} hint={hint}>
@@ -354,7 +371,7 @@ export function UploadField({
                pass-through, yeni path'ler runtime'da URL'e çevrilir. */
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={resolveAssetUrl(currentUrl) ?? ""}
+              src={previewSrc}
               alt=""
               className="absolute inset-0 w-full h-full object-cover"
             />
