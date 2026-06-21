@@ -75,10 +75,11 @@ export default async function VillaList() {
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 md:gap-10 mb-8 md:mb-12">
           <div className="max-w-xl">
             <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] leading-tight tracking-[-0.02em]">
-              Koleksiyonlar
+              En Çok Tercih Edilen{" "}
+              <span className="text-[var(--brand-coral)]">Villalar</span>
             </h2>
             <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-stone-500)] max-w-md">
-              Tarzınıza uygun seçilmiş villa kategorileri.
+              Sizin İçin Özenle Seçilmiş Villalar
             </p>
           </div>
           <a
@@ -97,7 +98,7 @@ export default async function VillaList() {
               shrink-0
             "
           >
-            <span>Tüm koleksiyonu gör</span>
+            <span>Tüm Villaları Gör</span>
             <span
               aria-hidden="true"
               className="text-[var(--color-stone-500)] group-hover:text-[var(--brand-coral)] transition-colors"
@@ -146,7 +147,7 @@ export default async function VillaList() {
               transition-colors motion-reduce:transition-none
             "
           >
-            <span>Tüm koleksiyonu gör</span>
+            <span>Tüm Villaları Gör</span>
             <span
               aria-hidden="true"
               className="text-[var(--color-stone-500)] group-hover:text-[var(--brand-coral)]"

@@ -58,10 +58,9 @@ export default function Hero({
     <>
     <section
       className="
-        relative
+        relative z-20
         min-h-[60svh] lg:min-h-[70svh]
         w-full
-        overflow-hidden
         bg-[var(--color-stone-900)]
       "
     >
