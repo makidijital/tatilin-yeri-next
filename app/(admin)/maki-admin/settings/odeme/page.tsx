@@ -28,6 +28,7 @@ import {
   SettingsSection,
   FieldShell,
 } from "../_components/SettingsField";
+import WesternUnionAccountsCard from "./_components/WesternUnionAccountsCard";
 
 /* ===============================================================
    🛡️ /settings/odeme — payment_accounts CRUD (mevcut service reuse)
@@ -472,6 +473,10 @@ export default function SettingsPaymentPage() {
           })}
         </div>
       )}
+
+      {/* 🔥 Western Union Hesapları — banka hesaplarından AYRI section.
+         EFT/payment_accounts akışına temas etmez (ayrı tablo + service). */}
+      <WesternUnionAccountsCard />
     </div>
   );
 }

@@ -269,6 +269,54 @@ export const paymentRepository = {
       .update({ is_active: false })
       .neq("id", keepId);
   },
+
+  /* ===============================================================
+     WESTERN UNION ACCOUNTS — CRUD + single-active (migration 060)
+     ===============================================================
+     payment_accounts metodlarının BİREBİR aynası; ayrı tablo
+     `western_union_accounts`. EFT akışına SIFIR temas — additive.
+  =============================================================== */
+  async findWesternUnionAccounts() {
+    return await db
+      .from("western_union_accounts")
+      .select("*")
+      .order("is_active", { ascending: false })
+      .order("created_at", { ascending: false });
+  },
+  async insertWesternUnionAccount(payload: Record<string, unknown>) {
+    return await db
+      .from("western_union_accounts")
+      .insert(payload)
+      .select()
+      .single();
+  },
+  async updateWesternUnionAccountById(
+    id: string,
+    payload: Record<string, unknown>
+  ) {
+    return await db
+      .from("western_union_accounts")
+      .update(payload)
+      .eq("id", id);
+  },
+  async deleteWesternUnionAccountById(id: string) {
+    return await db
+      .from("western_union_accounts")
+      .delete()
+      .eq("id", id);
+  },
+  async setWesternUnionAccountActive(id: string) {
+    return await db
+      .from("western_union_accounts")
+      .update({ is_active: true })
+      .eq("id", id);
+  },
+  async deactivateOtherWesternUnionAccounts(keepId: string) {
+    return await db
+      .from("western_union_accounts")
+      .update({ is_active: false })
+      .neq("id", keepId);
+  },
 };
 
 /* ---------------------------------------------------------------

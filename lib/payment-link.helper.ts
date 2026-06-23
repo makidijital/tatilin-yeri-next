@@ -115,6 +115,11 @@ export function paymentLinkStatusColor(
    =============================================================== */
 export type PaymentMethodLike = {
   type?: string | null;
+  /* 🛡️ Western Union tespiti için isim (additive — mevcut tüketiciler
+     yalnız `type` okur, etkilenmez). WU satırı admin formunda yalnız
+     name ile eklendiğinden type=bank_transfer default'una düşer; bu
+     yüzden WU ayrımı isimden yapılır. */
+  name?: string | null;
 } | null | undefined;
 
 /* ---------------------------------------------
@@ -145,6 +150,23 @@ export function isBankTransferMethod(
 }
 
 /* ---------------------------------------------
+   🔥 WESTERN UNION TESPİTİ
+   - type === "western_union" (ileride forma type seçici eklenirse) VEYA
+   - name "western union" içeriyorsa (mevcut durum: WU satırı yalnız
+     name ile eklendi, type=bank_transfer default'una düştü).
+   Önemli: WU type'ı çoğunlukla bank_transfer olduğundan, endpoint/label
+   kararlarında WU kontrolü bank_transfer'dan ÖNCE yapılmalı.
+---------------------------------------------- */
+export function isWesternUnionMethod(
+  method: PaymentMethodLike
+): boolean {
+  const t = ((method?.type ?? "") + "").toLowerCase().trim();
+  if (t === "western_union") return true;
+  const n = ((method?.name ?? "") + "").toLowerCase().trim();
+  return n.includes("western union") || n.includes("western_union");
+}
+
+/* ---------------------------------------------
    🔥 SHOULD DISPLAY PAYMENT LINK SECTION
    - credit_card → true
    - bank_transfer veya tanımsız → false
@@ -171,7 +193,9 @@ export function isPaymentRequestSupported(
   method: PaymentMethodLike
 ): boolean {
   return (
-    isCreditCardMethod(method) || isBankTransferMethod(method)
+    isCreditCardMethod(method) ||
+    isWesternUnionMethod(method) ||
+    isBankTransferMethod(method)
   );
 }
 
@@ -179,6 +203,8 @@ export function paymentRequestActionLabel(
   method: PaymentMethodLike
 ): string {
   if (isCreditCardMethod(method)) return "Ödeme Linki Gönder";
+  /* WU kontrolü bank_transfer'dan ÖNCE (WU type=bank_transfer olabilir). */
+  if (isWesternUnionMethod(method)) return "Western Union Bilgilerini Gönder";
   if (isBankTransferMethod(method))
     return "Ödeme Bilgilerini Gönder";
   return "Ödeme Talebi Gönder";
@@ -188,6 +214,9 @@ export function paymentRequestEndpoint(
   method: PaymentMethodLike
 ): string | null {
   if (isCreditCardMethod(method)) return "/api/mail/payment-link";
+  /* WU kontrolü bank_transfer'dan ÖNCE — WU çoğunlukla type=bank_transfer
+     olduğundan aksi halde yanlışlıkla EFT route'una giderdi. */
+  if (isWesternUnionMethod(method)) return "/api/mail/western-union-payment";
   if (isBankTransferMethod(method))
     return "/api/mail/bank-transfer-payment";
   return null;
