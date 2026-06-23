@@ -586,9 +586,14 @@ export const getCachedLocationVillaCounts = unstable_cache(
  *  (FE/URL layer slug NULL'sa UUID'ye düşer). */
 export const getCachedVillaTypes = unstable_cache(
   async () => {
+    /* 🛡️ select("*") — migration 061 `show_on_homepage` kolonunu da getirir.
+       DEPLOY-SAFE: kolon henüz yoksa (migration uygulanmadıysa) explicit
+       select hata verirdi; "*" hata vermez, alan undefined gelir →
+       CategoryCollection `!== false` ile undefined'ı görünür sayar →
+       migration öncesi "hepsi görünür" davranışı korunur. */
     const { data, error } = await supabase
       .from("villa_types")
-      .select("id, name, slug, cover_image")
+      .select("*")
       .order("name", { ascending: true });
     if (error) {
       console.error("[cache.villaTypes] FAILED", error.message);
@@ -601,6 +606,9 @@ export const getCachedVillaTypes = unstable_cache(
       /** Relative storage path (migration 010). NULL → görseli yok.
        *  Public URL üretimi için: lib/storage.helpers > getCategoryCoverPublicUrl */
       cover_image: string | null;
+      /** Migration 061 — homepage kategori slider gösterimi. Migration
+       *  öncesi undefined olabilir (deploy-safe); `!== false` → görünür. */
+      show_on_homepage?: boolean | null;
     }>;
   },
   ["villa-types:get"],

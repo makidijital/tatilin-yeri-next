@@ -96,6 +96,25 @@ export async function setVillaTypeCover(
   return true;
 }
 
+/* 🛡️ Migration 061 — "Anasayfada Göster" toggle persist (additive).
+   show_in_filter pattern'inin kategori karşılığı; yalnız bu kolonu update
+   eder, diğer alanlara (name/slug/cover) dokunmaz. */
+export async function setVillaTypeHomepage(
+  id: string,
+  show: boolean
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("villa_types")
+    .update({ show_on_homepage: show })
+    .eq("id", id);
+
+  if (error) {
+    console.error("❌ setVillaTypeHomepage error:", error.message);
+    return false;
+  }
+  return true;
+}
+
 // ❌ DELETE (relation varsa önce temizler)
 export async function deleteVillaType(id: string) {
   // 🔥 önce relation sil (çok önemli)

@@ -47,6 +47,9 @@ type Item = {
   name: string;
   count: number;
   coverUrl: string | null;
+  /* 🛡️ Migration 061 — homepage slider kürasyon. Yalnız explicit false
+     gizler; undefined/null (migration öncesi) → görünür. */
+  show_on_homepage: boolean;
 };
 
 export default async function CategoryCollection() {
@@ -79,9 +82,15 @@ export default async function CategoryCollection() {
         name: String(t.name || "").trim(),
         count: covers[tid]?.villaCount ?? 0,
         coverUrl,
+        show_on_homepage:
+          (t as { show_on_homepage?: boolean | null }).show_on_homepage !==
+          false,
       };
     })
-    .filter((item) => item.count > 0 && item.name.length > 0);
+    .filter(
+      (item) =>
+        item.count > 0 && item.name.length > 0 && item.show_on_homepage
+    );
 
   if (!items.length) return null;
 

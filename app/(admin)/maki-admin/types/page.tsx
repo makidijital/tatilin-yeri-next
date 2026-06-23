@@ -7,6 +7,7 @@ import {
   updateVillaType,
   deleteVillaType,
   setVillaTypeCover,
+  setVillaTypeHomepage,
 } from "@/app/services/villa-type.service";
 import { Plus, Save, Trash2, Layers, ImagePlus } from "lucide-react";
 import {
@@ -44,6 +45,31 @@ export default function TypesPage() {
   useEffect(() => {
     load();
   }, []);
+
+  /* 🛡️ Migration 061 — "Anasayfada Göster" toggle. Optimistic state +
+     servis persist + taxonomy cache invalidate (homepage CategoryCollection
+     `getCachedVillaTypes` tag "taxonomy" → değişiklik anında yansır). */
+  async function handleToggleHomepage(id: string, next: boolean) {
+    setTypes((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, show_on_homepage: next } : x))
+    );
+    const ok = await setVillaTypeHomepage(id, next);
+    if (!ok) {
+      // geri al
+      setTypes((prev) =>
+        prev.map((x) =>
+          x.id === id ? { ...x, show_on_homepage: !next } : x
+        )
+      );
+      toast.error("Güncellenemedi", { id: `type-home-${id}` });
+      return;
+    }
+    await revalidateTaxonomy();
+    toast.success(
+      next ? "Anasayfada gösterilecek" : "Anasayfadan gizlendi",
+      { id: `type-home-${id}` }
+    );
+  }
 
   async function handleAdd() {
     if (!name) return;
@@ -303,6 +329,22 @@ export default function TypesPage() {
                     </p>
                   )}
                 </div>
+
+                {/* 🛡️ Migration 061 — "Anasayfada Göster" toggle.
+                   show_on_homepage !== false → checked (DEFAULT true). */}
+                <label
+                  className="inline-flex items-center gap-2 text-[12.5px] text-[var(--color-stone-600)] cursor-pointer select-none px-2 shrink-0"
+                  title="Anasayfa Kategoriler slider'ında göster"
+                >
+                  <input
+                    type="checkbox"
+                    checked={t.show_on_homepage !== false}
+                    onChange={(e) =>
+                      handleToggleHomepage(t.id, e.target.checked)
+                    }
+                  />
+                  <span className="hidden sm:inline">Anasayfada Göster</span>
+                </label>
 
                 <button
                   onClick={() => handleUpdate(t.id, t.name)}
