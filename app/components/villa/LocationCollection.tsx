@@ -47,11 +47,14 @@ import HorizontalCarousel from "@/app/components/villa/HorizontalCarousel";
    =============================================================== */
 
 type Item = {
-  id: string;
-  slug: string | null;
-  name: string;
+  /** Grup anahtarı = filter_group_name ?? name (kart başlığı + react key). */
+  key: string;
+  /** Gruptaki tüm lokasyonların villa sayısı toplamı. */
   count: number;
+  /** cover_image'i olan ilk grup üyesinin cover URL'i. */
   coverUrl: string | null;
+  /** Grup üyelerinin slug|id token'ları, /arama?bolgeler= için virgülle birleşik. */
+  token: string;
 };
 
 export default async function LocationCollection() {
@@ -62,26 +65,70 @@ export default async function LocationCollection() {
 
   if (!locations?.length) return null;
 
-  const items: Item[] = locations
-    .map((l) => {
-      const lid = String(l.id);
-      const rawSlug = (l as { slug?: string | null }).slug;
-      const slug =
-        typeof rawSlug === "string" && rawSlug.trim().length > 0
-          ? rawSlug.trim()
-          : null;
-      const coverUrl = getLocationCoverPublicUrl(
-        (l as { cover_image?: string | null }).cover_image
-      );
-      return {
-        id: lid,
-        slug,
-        name: String(l.name || "").trim(),
-        count: counts[lid] ?? 0,
-        coverUrl,
+  /* 🛡️ GRUPLAMA — group key = filter_group_name ?? name.
+     Alt bölgeler (ör. "Kalkan / Üzümlü", "Kalkan / Çavdır") tek "Kalkan"
+     kartında birleşir. Veri kaynağı / cache / helper DEĞİŞMEDİ; gruplama
+     yalnız bu render katmanında. Map insertion order = query order
+     (name ASC) → kartlar deterministik sırada. */
+  const groups = new Map<
+    string,
+    {
+      count: number;
+      coverUrl: string | null;
+      tokens: string[];
+      /* Plan A — grup-kökü (name === filter_group_name) slug/id token'ı.
+         Varsa /arama'ya TEK token gider (ör. "kalkan"); /arama'daki
+         expandedRegions kökü tüm alt bölgelere genişletir, sidebar yalnız
+         "Tüm Kalkan"ı seçili gösterir. */
+      rootToken: string | null;
+    }
+  >();
+
+  for (const l of locations) {
+    const lid = String(l.id);
+    const name = String(l.name || "").trim();
+    const rawGroup = (l as { filter_group_name?: string | null })
+      .filter_group_name;
+    const groupTrim =
+      typeof rawGroup === "string" ? rawGroup.trim() : "";
+    const key = groupTrim.length > 0 ? groupTrim : name;
+    if (!key) continue;
+
+    const rawSlug = (l as { slug?: string | null }).slug;
+    const token =
+      typeof rawSlug === "string" && rawSlug.trim().length > 0
+        ? rawSlug.trim()
+        : lid;
+    const cover = getLocationCoverPublicUrl(
+      (l as { cover_image?: string | null }).cover_image
+    );
+
+    const g =
+      groups.get(key) ?? {
+        count: 0,
+        coverUrl: null,
+        tokens: [],
+        rootToken: null,
       };
-    })
-    .filter((item) => item.count > 0 && item.name.length > 0);
+    g.count += counts[lid] ?? 0;
+    if (!g.coverUrl && cover) g.coverUrl = cover; // cover_image olan ilk kayıt
+    g.tokens.push(token);
+    /* Grup-kökü tespiti: name === filter_group_name → token'ı kökün slug'ı. */
+    if (!g.rootToken && groupTrim.length > 0 && name === groupTrim) {
+      g.rootToken = token;
+    }
+    groups.set(key, g);
+  }
+
+  const items: Item[] = Array.from(groups.entries())
+    .map(([key, g]) => ({
+      key,
+      count: g.count,
+      coverUrl: g.coverUrl,
+      /* Kök varsa TEK token (ör. "kalkan"); yoksa eski çoklu-token fallback. */
+      token: g.rootToken ?? g.tokens.join(","),
+    }))
+    .filter((item) => item.count > 0);
 
   if (!items.length) return null;
 
@@ -150,7 +197,7 @@ export default async function LocationCollection() {
             >
               {items.map((item) => (
                 <li
-                  key={item.id}
+                  key={item.key}
                   className="snap-start shrink-0 w-[78vw] max-w-[320px] md:w-[320px] md:max-w-none"
                 >
                   <LocationCard item={item} />
@@ -197,10 +244,10 @@ export default async function LocationCollection() {
    LocationCard — premium image-card (CategoryCard paraleli)
 =============================================================== */
 function LocationCard({ item }: { item: Item }) {
-  /* slug öncelikli, fallback UUID; canonical param `bolgeler` */
-  const token = item.slug || item.id;
-  const href = `/arama?bolgeler=${encodeURIComponent(token)}`;
-  const initial = (item.name?.[0] || "·").toUpperCase();
+  /* Grup üyelerinin token'ları (slug|id) virgülle; /arama çoklu değeri
+     `regionsRaw.split(",")` ile parse edip `.in("location_id", …)` uygular. */
+  const href = `/arama?bolgeler=${encodeURIComponent(item.token)}`;
+  const initial = (item.key?.[0] || "·").toUpperCase();
 
   return (
     <Link
@@ -210,7 +257,7 @@ function LocationCard({ item }: { item: Item }) {
       {item.coverUrl ? (
         <Image
           src={item.coverUrl}
-          alt={item.name}
+          alt={item.key}
           fill
           sizes="(max-width: 768px) 78vw, 320px"
           className="object-cover object-center transition-transform duration-[900ms] ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
@@ -241,7 +288,7 @@ function LocationCard({ item }: { item: Item }) {
       <div className="absolute inset-x-0 bottom-0 p-5 md:p-6 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-display text-[22px] md:text-[24px] leading-[1.1] text-white tracking-[-0.02em] line-clamp-2">
-            {item.name}
+            {item.key}
           </h3>
           <p className="text-[11px] tracking-[0.12em] uppercase font-medium text-white/75 mt-1.5 tabular-nums">
             {item.count} villa
