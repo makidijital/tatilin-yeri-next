@@ -1,7 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Check, Square, CheckSquare, Share2, Copy, X, Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Check,
+  Square,
+  CheckSquare,
+  Share2,
+  Copy,
+  X,
+  Search,
+  ChevronDown,
+} from "lucide-react";
 
 import AdminDateRangePicker from "@/app/components/admin/shared/AdminDateRangePicker";
 /* 🛡️ Public /arama ile AYNI availability motoru — get_blocked_villa_ids
@@ -120,7 +129,26 @@ export default function VillaListesiClient({
   const [startDateObj, endDateObj] = dateRange;
   const [guests, setGuests] = useState<string>("");
   const [locationId, setLocationId] = useState<string>("");
-  const [categoryId, setCategoryId] = useState<string>("");
+  /* 🛡️ Kategori filtresi MULTI-SELECT (OR). Boş array = tüm kategoriler.
+     Bölge (locationId) tek-seçim olarak KORUNDU. */
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  /* Checkbox dropdown aç/kapa + outside-click ref. */
+  const [catOpen, setCatOpen] = useState(false);
+  const catRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!catOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (catRef.current && !catRef.current.contains(e.target as Node)) {
+        setCatOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [catOpen]);
+  const toggleCategory = (id: string) =>
+    setCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   /* 🛡️ Client-side UI search — rezervasyonlar ekranı paritesi.
      Title / location adı / slug / id üzerinde lowercase includes;
      mevcut dropdown filtreleriyle AND mantığıyla kombine. */
@@ -223,9 +251,13 @@ export default function VillaListesiClient({
       if (expandedLocationIds && !expandedLocationIds.has(v.location_id))
         return false;
       if (guestsNum > 0 && (v.guests ?? 0) < guestsNum) return false;
-      if (categoryId) {
+      if (categoryIds.length > 0) {
+        /* 🛡️ AND — public /arama ile birebir: villa seçili TÜM
+           kategorilere sahip olmalı (arama page typeSet.size === required
+           semantiği). Tek kategori seçiminde AND === OR. */
         const cats = villaCategoryMap[v.id];
-        if (!cats || !cats.includes(categoryId)) return false;
+        if (!cats || !categoryIds.every((c) => cats.includes(c)))
+          return false;
       }
       /* 🛡️ Search — title / location adı / slug / id üzerinde lowercase
          includes. Dropdown filtreleriyle AND mantığı (en sonda). */
@@ -247,7 +279,7 @@ export default function VillaListesiClient({
     villas,
     expandedLocationIds,
     guestsNum,
-    categoryId,
+    categoryIds,
     villaCategoryMap,
     search,
     blockedSet,
@@ -289,7 +321,7 @@ export default function VillaListesiClient({
     }
     if (guestsNum > 0) searchParams.guests = guestsNum;
     if (locationId) searchParams.regions = [locationId];
-    if (categoryId) searchParams.categories = [categoryId];
+    if (categoryIds.length) searchParams.categories = categoryIds;
 
     const res = await createSharedVillaList({
       villaIds: Array.from(selected),
@@ -367,23 +399,59 @@ export default function VillaListesiClient({
               ariaLabel="Konaklama tarihi aralığı"
             />
           </div>
-          {/* 🏷️ Kategori — single-select. Boş = tüm kategoriler. */}
+          {/* 🏷️ Kategori — MULTI-SELECT (OR). Compact checkbox dropdown.
+              Boş seçim = tüm kategoriler. Bölge filtresi single kalır. */}
           <div className="space-y-1.5">
             <label className="text-[11px] uppercase tracking-wide text-[var(--admin-muted-2)] font-medium">
               Kategori
             </label>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="input"
-            >
-              <option value="">Tüm kategoriler</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative z-40" ref={catRef}>
+              <button
+                type="button"
+                onClick={() => setCatOpen((o) => !o)}
+                aria-haspopup="listbox"
+                aria-expanded={catOpen}
+                className="input w-full flex items-center justify-between gap-2 text-left"
+              >
+                <span
+                  className={
+                    categoryIds.length === 0
+                      ? "text-[var(--admin-muted-2)]"
+                      : ""
+                  }
+                >
+                  {categoryIds.length === 0
+                    ? "Tüm kategoriler"
+                    : `${categoryIds.length} kategori seçili`}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className="text-[var(--admin-muted-2)] shrink-0"
+                />
+              </button>
+              {catOpen && (
+                <ul
+                  role="listbox"
+                  className="absolute z-40 mt-1 left-0 right-0 max-h-64 overflow-auto rounded-lg border border-[var(--color-stone-200)] bg-white shadow-[0_12px_28px_-12px_rgb(27_26_23/0.22)] py-1"
+                >
+                  {categories.map((c) => {
+                    const checked = categoryIds.includes(c.id);
+                    return (
+                      <li key={c.id}>
+                        <label className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)] cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleCategory(c.id)}
+                          />
+                          <span className="truncate">{c.name}</span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </div>
           <div className="space-y-1.5">
             <label className="text-[11px] uppercase tracking-wide text-[var(--admin-muted-2)] font-medium">
