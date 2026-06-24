@@ -83,10 +83,15 @@ export default function VillaOperationsList({
      yapmasın. */
   const lastUrlQ = useRef<string>(q);
 
-  /* Server q değişti (örn. user back tuşuna bastı) → local input'u sync et. */
+  /* Server q değişti (örn. user back tuşuna bastı) → local input'u sync et.
+     🛡️ Yalnız DIŞ değişimde (back/forward) sync; kendi router.replace
+     echo'muzda (q === lastUrlQ.current) ATLA → in-flight kullanıcı girişi
+     overwrite edilmez (son-karakter silinme bug fix). */
   useEffect(() => {
-    setSearchValue(q);
-    lastUrlQ.current = q;
+    if (q !== lastUrlQ.current) {
+      setSearchValue(q);
+      lastUrlQ.current = q;
+    }
   }, [q]);
 
   /* URL builder — diğer query parametrelerini korur. Default değerler
@@ -119,7 +124,7 @@ export default function VillaOperationsList({
     if (searchValue === lastUrlQ.current) return;
 
     const t = setTimeout(() => {
-      lastUrlQ.current = searchValue;
+      lastUrlQ.current = searchValue.trim();
       router.replace(buildHref({ q: searchValue, page: 1 }), {
         scroll: false,
       });
