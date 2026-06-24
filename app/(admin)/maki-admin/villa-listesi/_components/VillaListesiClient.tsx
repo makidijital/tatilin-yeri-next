@@ -1,9 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, Square, CheckSquare, Share2, Copy, X, Search } from "lucide-react";
 
 import AdminDateRangePicker from "@/app/components/admin/shared/AdminDateRangePicker";
+/* 🛡️ Public /arama ile AYNI availability motoru — get_blocked_villa_ids
+   RPC (mig 039, SECURITY DEFINER, PII-safe, anon'dan da çağrılabilir).
+   Reservations(pending/confirmed) + manual_reservations + external
+   (is_active) half-open [start,end) overlap birleşimi. */
+import { getBlockedVillaIds } from "@/lib/availability.helper";
 
 import VillaCard from "@/app/components/villa/VillaCard";
 import { getStartingPrice } from "@/lib/price.engine";
@@ -153,6 +158,39 @@ export default function VillaListesiClient({
   })();
   const hasDateRange = !!start && !!end;
 
+  /* ---------------- AVAILABILITY (public /arama paritesi) ----------------
+     Tarih aralığı seçiliyse o aralıkta DOLU villa id'lerini getir
+     (getBlockedVillaIds → get_blocked_villa_ids RPC). hasDateRange false
+     ise boş Set → availability filtresi devre dışı (eski davranış).
+
+     - YARIŞ KOŞULU GUARD: her fetch'e bir `reqId` verilir; yalnız EN SON
+       isteğin yanıtı state'e yazılır (kullanıcı tarih değiştirirse eski
+       response yazılmaz). cancelled flag unmount'ta da yazımı durdurur.
+     - FAIL-SOFT: helper RPC hatasında zaten boş Set döner; ayrıca catch
+       ile boş Set'e düşülür → liste eski davranışa (tüm villalar) iner. */
+  const [blockedSet, setBlockedSet] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+
+    /* getBlockedVillaIds geçersiz/eksik range'de RPC çağırmadan boş Set
+       döner → hasDateRange false iken availability filtresi otomatik
+       devre dışı (boş Set). Tek setState async callback içinde. */
+    const candidateIds = villas.map((v) => v.id);
+    (async () => {
+      try {
+        const set = await getBlockedVillaIds(start, end, candidateIds);
+        if (!cancelled) setBlockedSet(set);
+      } catch {
+        if (!cancelled) setBlockedSet(new Set()); // fail-soft
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [start, end, villas]);
+
   /* 🛡️ Migration 050 — dropdown yalnız grup kökleri (name === group). */
   const rootLocations = useMemo(
     () =>
@@ -179,6 +217,9 @@ export default function VillaListesiClient({
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return villas.filter((v) => {
+      /* 🛡️ AVAILABILITY — public /arama ile aynı: seçili tarihte dolu
+         villayı gizle. hasDateRange false iken blockedSet boş → no-op. */
+      if (blockedSet.has(v.id)) return false;
       if (expandedLocationIds && !expandedLocationIds.has(v.location_id))
         return false;
       if (guestsNum > 0 && (v.guests ?? 0) < guestsNum) return false;
@@ -209,6 +250,7 @@ export default function VillaListesiClient({
     categoryId,
     villaCategoryMap,
     search,
+    blockedSet,
   ]);
 
   /* ---------------- HANDLERS ---------------- */
