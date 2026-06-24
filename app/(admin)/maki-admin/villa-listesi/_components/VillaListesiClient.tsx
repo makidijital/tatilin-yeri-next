@@ -20,7 +20,18 @@ import AdminDateRangePicker from "@/app/components/admin/shared/AdminDateRangePi
 import { getBlockedVillaIds } from "@/lib/availability.helper";
 
 import VillaCard from "@/app/components/villa/VillaCard";
-import { getStartingPrice } from "@/lib/price.engine";
+import {
+  getStartingPrice,
+  calculateGrandTotal,
+  calculateNights,
+} from "@/lib/price.engine";
+/* 🛡️ Public /arama sorting motoru — AYNEN reuse (duplicate logic yok). */
+import {
+  applyPublicSort,
+  parsePublicSort,
+  type PublicSort,
+} from "@/lib/pagination";
+import { useCurrency } from "@/app/context/CurrencyContext";
 import {
   createSharedVillaList,
   DEFAULT_EXPIRATION_KEY,
@@ -149,6 +160,15 @@ export default function VillaListesiClient({
     setCategoryIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
+  /* 🛡️ SORT — public /arama allow-list (smart | price-asc/desc |
+     capacity-asc/desc). Default "smart" = mevcut server sırası (sort_order
+     ASC, created_at DESC) AYNEN. */
+  const [sort, setSort] = useState<PublicSort>("smart");
+  /* Public ile aynı currency davranışı (yeni logic yok): CurrencyContext'ten
+     currency + rates. Provider yoksa default (TRY, {}) → graceful, public ilk
+     ziyaret fallback'iyle aynı. */
+  const { currency, rates } = useCurrency();
+
   /* 🛡️ Client-side UI search — rezervasyonlar ekranı paritesi.
      Title / location adı / slug / id üzerinde lowercase includes;
      mevcut dropdown filtreleriyle AND mantığıyla kombine. */
@@ -285,6 +305,55 @@ export default function VillaListesiClient({
     blockedSet,
   ]);
 
+  /* ---------------- SORT STAGE (public /arama reuse) ----------------
+     `filtered` (availability + tüm filtreler) SONRASI, render ÖNCESİ temiz
+     bir sıralama. Pipeline'a dokunulmaz; yalnız sıra değişir.
+     - smart → no-op (applyPublicSort referansı aynen döner = server sırası).
+     - capacity-asc/desc → public ile aynı: `guests` alanı.
+     - price-asc/desc → public ile aynı motor:
+         tarih var  → calculateGrandTotal().total (stay+cleaning, grand total)
+         tarih yok  → getStartingPrice(prices) (base/starting fallback)
+       Sonuç `_sortPrice` ile applyPublicSort'a verilir (public stay-total
+       override deseniyle birebir). */
+  const sortedFiltered = useMemo(() => {
+    if (sort === "smart") return filtered;
+
+    const isPrice = sort === "price-asc" || sort === "price-desc";
+    if (!isPrice) {
+      // Kapasite — applyPublicSort `guests` kullanır.
+      return applyPublicSort(filtered, sort, { userCurrency: currency, rates });
+    }
+
+    const nights = hasDateRange ? calculateNights(start, end) : 0;
+    const input = filtered.map((v) => {
+      let sp: number | null = null;
+      if (hasDateRange && nights > 0 && v.prices.length > 0) {
+        const r = calculateGrandTotal({
+          start,
+          end,
+          prices: v.prices,
+          currency,
+          rates,
+          cleaning_fee: v.cleaning_fee,
+          cleaning_currency: v.cleaning_currency,
+          cleaning_limit: v.cleaning_limit,
+        });
+        sp =
+          typeof r.total === "number" &&
+          Number.isFinite(r.total) &&
+          r.total > 0
+            ? r.total
+            : null;
+      } else {
+        const base = getStartingPrice(v.prices);
+        sp = base && base.price > 0 ? base.price : null;
+      }
+      return { ...v, _sortPrice: sp };
+    });
+
+    return applyPublicSort(input, sort, { userCurrency: currency, rates });
+  }, [filtered, sort, hasDateRange, start, end, currency, rates]);
+
   /* ---------------- HANDLERS ---------------- */
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -378,6 +447,20 @@ export default function VillaListesiClient({
         <span className="text-[12px] text-[var(--admin-muted-2)] px-2">
           {filtered.length} villa
         </span>
+        {/* 🛡️ SIRALAMA — public /arama allow-list. Filtre grid'i (4 kolon)
+           byte-identical kalsın diye search bar'a eklendi. */}
+        <select
+          value={sort}
+          onChange={(e) => setSort(parsePublicSort(e.target.value))}
+          className="input ml-auto w-auto"
+          aria-label="Sıralama"
+        >
+          <option value="smart">Varsayılan</option>
+          <option value="capacity-asc">Kapasite (artan)</option>
+          <option value="capacity-desc">Kapasite (azalan)</option>
+          <option value="price-asc">Fiyat (artan)</option>
+          <option value="price-desc">Fiyat (azalan)</option>
+        </select>
       </div>
 
       {/* ════════ FILTER BAR ════════ */}
@@ -563,7 +646,7 @@ export default function VillaListesiClient({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-x-5 md:gap-x-6 gap-y-10">
-          {filtered.map((v) => {
+          {sortedFiltered.map((v) => {
             const isSelected = selected.has(v.id);
             /* Starting price fallback (arama page ile aynı pattern). */
             const fallback = (() => {
