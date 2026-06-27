@@ -56,7 +56,10 @@ import AccommodationLayout from "@/app/components/villa/AccommodationLayout";
 
 import { getVillaBySlug } from "@/app/services/villa.service";
 import { getVillaImages } from "@/app/services/villa-image.service";
-import { resolveVillaImageUrl, resolveAssetUrl } from "@/lib/storage.helpers";
+import {
+  resolveVillaImageUrl,
+  resolveAssetUrlVersioned,
+} from "@/lib/storage.helpers";
 /* 🛡️ Rich text — render'da XSS-güvenli HTML; SEO meta/JSON-LD'de düz metin. */
 import { sanitizeHtml, stripHtml } from "@/lib/html-sanitize";
 import { getVillaPrices } from "@/app/services/villa-price.service";
@@ -301,7 +304,11 @@ export default async function VillaDetail({
        favicon) ile AYNI şekilde resolveAssetUrl'den geçer: bucket-relative
        path → R2/CDN public URL; legacy full URL pass-through. Ham path
        <img src>'e gidip relative çözülünce 404 oluyordu (watermark görünmüyor). */
-    logo: resolveAssetUrl(settings?.watermark_logo) ?? null,
+    logo:
+      resolveAssetUrlVersioned(
+        settings?.watermark_logo,
+        settings?.updated_at
+      ) ?? null,
     enabled: settings?.watermark_enabled ?? false,
     opacity: settings?.watermark_opacity ?? 0.15,
     position: settings?.watermark_position ?? "center",

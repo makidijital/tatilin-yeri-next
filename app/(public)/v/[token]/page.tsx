@@ -44,7 +44,10 @@ import AvailabilityInlineCalendar from "@/app/components/villa/AvailabilityInlin
 
 import { getVillaByPrivateToken } from "@/app/services/villa.service";
 import { getVillaImages } from "@/app/services/villa-image.service";
-import { resolveVillaImageUrl, resolveAssetUrl } from "@/lib/storage.helpers";
+import {
+  resolveVillaImageUrl,
+  resolveAssetUrlVersioned,
+} from "@/lib/storage.helpers";
 /* 🛡️ Rich text — render'da XSS-güvenli HTML. */
 import { sanitizeHtml } from "@/lib/html-sanitize";
 import { getVillaPrices } from "@/app/services/villa-price.service";
@@ -241,7 +244,11 @@ export default async function PrivateVillaDetail({
     /* 🛡️ Watermark logo, diğer site-asset'lerle AYNI resolveAssetUrl yolu:
        bucket-relative path → R2/CDN URL; legacy full URL pass-through.
        Ham path relative çözülünce 404 oluyordu. */
-    logo: resolveAssetUrl(settings?.watermark_logo) ?? null,
+    logo:
+      resolveAssetUrlVersioned(
+        settings?.watermark_logo,
+        settings?.updated_at
+      ) ?? null,
     enabled: settings?.watermark_enabled ?? false,
     opacity: settings?.watermark_opacity ?? 0.15,
     position: settings?.watermark_position ?? "center",

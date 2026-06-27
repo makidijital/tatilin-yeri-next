@@ -13,7 +13,7 @@ import {
 } from "@/app/services/settings.service";
 import { menuRepository } from "@/lib/db/menu.repository";
 import { pagesRepository } from "@/lib/db/pages.repository";
-import { resolveAssetUrl } from "@/lib/storage.helpers";
+import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
 
 /* ---------------- INLINE SOCIAL ICONS (stroke=currentColor) ---------------- */
 
@@ -333,8 +333,14 @@ export default async function Footer() {
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={
-                    resolveAssetUrl(settings.footer_logo) ||
-                    resolveAssetUrl(settings.site_logo) ||
+                    resolveAssetUrlVersioned(
+                      settings.footer_logo,
+                      settings.updated_at
+                    ) ||
+                    resolveAssetUrlVersioned(
+                      settings.site_logo,
+                      settings.updated_at
+                    ) ||
                     ""
                   }
                   alt={`${siteName} logosu`}

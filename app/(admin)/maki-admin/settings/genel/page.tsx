@@ -63,6 +63,9 @@ export default function SettingsGeneralPage() {
   /* 🛡️ mig 048 — footer'a özel logo (koyu zemin). */
   const [footerLogo, setFooterLogo] = useState<string | null>(null);
   const [favicon, setFavicon] = useState<string | null>(null);
+  /* 🛡️ Cache-bust — singleton asset preview'ları (logo/footer/favicon/
+     watermark) için ?v= anahtarı; settings.updated_at her save'de ilerler. */
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
   // Watermark
   const [wmEnabled, setWmEnabled] = useState(false);
@@ -101,6 +104,7 @@ export default function SettingsGeneralPage() {
       setSiteLogo(s.site_logo || null);
       setFooterLogo(s.footer_logo || null);
       setFavicon(s.favicon_url || null);
+      setUpdatedAt(s.updated_at || null);
       setWmEnabled(!!s.watermark_enabled);
       setWmLogo(s.watermark_logo || null);
       setWmOpacity(typeof s.watermark_opacity === "number" ? s.watermark_opacity : 0.15);
@@ -227,6 +231,7 @@ export default function SettingsGeneralPage() {
             onChange={setSiteLogo}
             folder="logo"
             slug="logo"
+            version={updatedAt}
             disabled={loading}
             hint="Header marka logosu. site-assets/logo/logo.webp"
           />
@@ -240,6 +245,7 @@ export default function SettingsGeneralPage() {
             onChange={setFooterLogo}
             folder="logo"
             slug="footer-logo"
+            version={updatedAt}
             disabled={loading}
             hint="Koyu footer zemini için beyaz/negatif logo (opsiyonel). Boşsa site logosu kullanılır. site-assets/logo/footer-logo.webp"
           />
@@ -249,6 +255,7 @@ export default function SettingsGeneralPage() {
             onChange={setFavicon}
             folder="favicon"
             slug="favicon"
+            version={updatedAt}
             disabled={loading}
             hint="Browser tab ikonu. site-assets/favicon/favicon.webp"
           />
@@ -272,6 +279,7 @@ export default function SettingsGeneralPage() {
             onChange={setWmLogo}
             folder="watermark"
             slug="watermark"
+            version={updatedAt}
             disabled={loading || !wmEnabled}
             hint="PNG/SVG (alpha) önerilir; WebP'e çevrilir. site-assets/watermark/watermark.webp"
           />

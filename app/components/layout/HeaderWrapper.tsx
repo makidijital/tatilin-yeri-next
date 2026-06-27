@@ -1,7 +1,7 @@
 import Header from "./Header";
 import { getMenu } from "@/app/services/menu.service";
 import { getPublicSettings } from "@/app/services/settings.service";
-import { resolveAssetUrl } from "@/lib/storage.helpers";
+import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
 
 export default async function HeaderWrapper() {
   /* ===============================================================
@@ -15,7 +15,9 @@ export default async function HeaderWrapper() {
   let siteLogo: string | null = null;
   try {
     const settings = await getPublicSettings();
-    siteLogo = resolveAssetUrl(settings?.site_logo) || null;
+    siteLogo =
+      resolveAssetUrlVersioned(settings?.site_logo, settings?.updated_at) ||
+      null;
   } catch {
     siteLogo = null;
   }

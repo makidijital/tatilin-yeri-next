@@ -193,6 +193,35 @@ export function resolveAssetUrl(
 }
 
 /* ===============================================================
+   🛡️ RESOLVE ASSET URL + CACHE-BUST — singleton asset versiyonlama
+   ===============================================================
+   `resolveAssetUrl`'in additive sarmalayıcısı. Singleton asset'ler
+   (logo / footer-logo / favicon / og / watermark) sabit path'e
+   overwrite edildiği için public URL değişmiyor → browser/CDN eski
+   byte'ı cache'liyor. Hero'daki `withCacheBust` mantığının aynısı:
+   URL'e `?v=<cacheKey>` ekler. cacheKey = `settings.updated_at`
+   (server'dan gelir → SSR/client aynı string → hydration-safe).
+
+   DAVRANIŞ:
+     - value yok/boş               → null (resolveAssetUrl ile birebir)
+     - cacheKey yok/boş            → resolveAssetUrl(value) (bust YOK; aynen)
+     - cacheKey var + URL üretildi → `<url>?v=<encoded>` (query varsa &)
+   ⚠️ `resolveAssetUrl` imzası DEĞİŞMEZ; mevcut çağıranlar etkilenmez.
+   =============================================================== */
+export function resolveAssetUrlVersioned(
+  value: string | null | undefined,
+  cacheKey?: string | number | null
+): string | null {
+  const url = resolveAssetUrl(value);
+  if (!url) return null;
+  if (cacheKey === undefined || cacheKey === null || cacheKey === "") {
+    return url;
+  }
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}v=${encodeURIComponent(String(cacheKey))}`;
+}
+
+/* ===============================================================
    🛡️ RESOLVE VILLA IMAGE URL — villa-images bucket için
    ===============================================================
    `villa_images.image_url` alanı VILLA_IMAGES bucket'ında dosyaları

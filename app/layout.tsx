@@ -7,7 +7,7 @@ import "./globals.css";
 import { CurrencyProvider } from "@/app/context/CurrencyContext";
 import { getCachedSettings } from "@/lib/cache.helpers";
 import { siteMetadataBase } from "@/lib/seo";
-import { resolveAssetUrl } from "@/lib/storage.helpers";
+import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -65,8 +65,12 @@ export async function generateMetadata(): Promise<Metadata> {
     "Akdeniz'in seçkin villalarında özel havuz, deniz manzarası ve butik konfor. Hayalindeki tatili keşfet.";
   /* 🛡️ Aşama A — resolveAssetUrl normalize: FULL URL (legacy) ve
      relative path (yeni) için tutarlı render URL'i üretir. */
-  const ogImage = resolveAssetUrl(settings?.default_og_image) || undefined;
-  const favicon = resolveAssetUrl(settings?.favicon_url) || undefined;
+  const ogImage =
+    resolveAssetUrlVersioned(settings?.default_og_image, settings?.updated_at) ||
+    undefined;
+  const favicon =
+    resolveAssetUrlVersioned(settings?.favicon_url, settings?.updated_at) ||
+    undefined;
   const themeColor = settings?.browser_theme_color?.trim() || "#1B1A17";
 
   const robotsIndex = settings?.robots_index !== false;

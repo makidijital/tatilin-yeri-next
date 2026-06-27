@@ -5,7 +5,10 @@ import { ImagePlus, Trash2 } from "lucide-react";
 
 import { storageProvider } from "@/lib/storage";
 import { convertImageToWebP } from "@/lib/image.helpers";
-import { SITE_ASSETS_BUCKET_NAME, resolveAssetUrl } from "@/lib/storage.helpers";
+import {
+  SITE_ASSETS_BUCKET_NAME,
+  resolveAssetUrlVersioned,
+} from "@/lib/storage.helpers";
 
 /* ===============================================================
    🛡️ SETTINGS FIELDS — reusable form primitives
@@ -282,6 +285,7 @@ export function UploadField({
   folder,
   slug,
   disabled,
+  version,
 }: {
   label: string;
   hint?: string;
@@ -295,6 +299,9 @@ export function UploadField({
   /** Path'in dosya adı kısmı (`<folder>/<slug>.webp`). */
   slug: string;
   disabled?: boolean;
+  /** Cache-bust anahtarı (settings.updated_at). Verilirse preview
+   *  URL'ine `?v=` eklenir → overwrite sonrası reload'da taze görsel. */
+  version?: string | number | null;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -348,7 +355,7 @@ export function UploadField({
 
   /* Preview src — resolveAssetUrl çıktısına (varsa) ?ts=<bustTs> ekle.
      bustTs null iken (sayfa ilk açılış) davranış AYNEN eski (ts yok). */
-  const resolvedPreview = resolveAssetUrl(currentUrl);
+  const resolvedPreview = resolveAssetUrlVersioned(currentUrl, version);
   const previewSrc = resolvedPreview
     ? bustTs
       ? `${resolvedPreview}${resolvedPreview.includes("?") ? "&" : "?"}ts=${bustTs}`
