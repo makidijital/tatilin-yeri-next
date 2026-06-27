@@ -96,39 +96,6 @@ async function toUint8Array(
   return new Uint8Array(ab);
 }
 
-/* ===============================================================
-   🛡️ R2 BOUNDARY — LOGICAL → PHYSICAL BUCKET MAPPING
-   ===============================================================
-   Bucket adları kodun her yerinde MANTIKSAL kalır ("site-assets" /
-   "villa-images"). R2/S3 fiziksel bucket adları yeniden adlandırıldı
-   (yazvillam-*). Bu çeviri YALNIZ burada — S3 komutuna `Bucket`
-   verilmeden hemen önce — uygulanır.
-
-   ⚠️ KAPSAM: Sadece write/remove (PutObject/DeleteObjects). READ
-   (getPublicUrl → CDN) MANTIKSAL isimle kalır; CDN domain bazlı,
-   bucket adı path'te yok → çeviri uygulanmaz. Supabase provider,
-   allow-list'ler, storage.constants AYNEN korunur.
-
-   ENV-OVERRIDE (server-only; secret değil): tanımlıysa env kazanır,
-   yoksa fiziksel default kullanılır, bilinmeyen bucket pass-through.
-     S3_BUCKET_SITE_ASSETS   (default: yazvillam-site-assets)
-     S3_BUCKET_VILLA_IMAGES  (default: yazvillam-villa-images)
-   =============================================================== */
-const R2_PHYSICAL_BUCKET_DEFAULTS: Record<string, string> = {
-  "site-assets": "yazvillam-site-assets",
-  "villa-images": "yazvillam-villa-images",
-};
-
-function toPhysicalBucket(bucket: string): string {
-  const envOverride: Record<string, string | undefined> = {
-    "site-assets": process.env.S3_BUCKET_SITE_ASSETS,
-    "villa-images": process.env.S3_BUCKET_VILLA_IMAGES,
-  };
-  const override = envOverride[bucket]?.trim();
-  if (override) return override;
-  return R2_PHYSICAL_BUCKET_DEFAULTS[bucket] ?? bucket;
-}
-
 export const s3StorageProvider: StorageProvider = {
   /* ===============================================================
      UPLOAD — tek obje PUT
@@ -150,7 +117,7 @@ export const s3StorageProvider: StorageProvider = {
       const Body = await toUint8Array(body);
       await client.send(
         new PutObjectCommand({
-          Bucket: toPhysicalBucket(bucket),
+          Bucket: bucket,
           Key: path,
           Body,
           ContentType: options?.contentType,
@@ -197,7 +164,7 @@ export const s3StorageProvider: StorageProvider = {
         const client = getClient();
         const res = await client.send(
           new DeleteObjectsCommand({
-            Bucket: toPhysicalBucket(bucket),
+            Bucket: bucket,
             Delete: {
               Objects: pending.map((Key) => ({ Key })),
               Quiet: true,

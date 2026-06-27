@@ -10,6 +10,7 @@ import { useNotify } from "@/app/components/admin/notifications/NotificationProv
 import RichTextEditor from "@/app/components/admin/villa-form/RichTextEditor";
 import { convertImageToWebP } from "@/lib/image.helpers";
 import { resolveAssetUrl } from "@/lib/storage.helpers";
+import { STORAGE_BUCKETS } from "@/lib/storage";
 
 /* ===============================================================
    🛡️ BLOG POST FORM — paylaşılan create/edit (admin)
@@ -95,7 +96,7 @@ export default function BlogPostForm({
       const path = `blog/${s}.webp`;
       const fd = new FormData();
       fd.append("file", webp);
-      fd.append("bucket", "site-assets");
+      fd.append("bucket", STORAGE_BUCKETS.SITE_ASSETS);
       fd.append("path", path);
       fd.append("upsert", "true");
       const res = await adminFetch("/api/admin/storage/upload", {

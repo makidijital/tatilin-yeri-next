@@ -22,6 +22,7 @@ import {
 
 import { convertImageToWebP } from "@/lib/image.helpers";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+import { STORAGE_BUCKETS } from "@/lib/storage";
 
 /* ===============================================================
    🛡️ RICH TEXT EDITOR — villa açıklaması (Tiptap, admin-only)
@@ -119,7 +120,7 @@ export default function RichTextEditor({ value, onChange }: Props) {
       const path = `descriptions/${crypto.randomUUID()}.webp`;
       const fd = new FormData();
       fd.append("file", webp);
-      fd.append("bucket", "villa-images");
+      fd.append("bucket", STORAGE_BUCKETS.VILLA_IMAGES);
       fd.append("path", path);
       const res = await fetch("/api/admin/storage/upload", {
         method: "POST",
