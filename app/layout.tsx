@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Inter_Tight, Fraunces, Geist_Mono } from "next/font/google";
+import { Montserrat, Manrope, Inter, Fraunces, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
@@ -9,18 +9,29 @@ import { getCachedSettings } from "@/lib/cache.helpers";
 import { siteMetadataBase } from "@/lib/seo";
 import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
 
-const inter = Inter({
-  variable: "--font-inter",
+/* 🛡️ PUBLIC BODY/UI FONT — Montserrat. Global `--font-sans` buna
+   bağlanır. next/font self-host + display:swap + adjustFontFallback
+   (default) → CLS minimal. Admin gövde Inter'de kalır (aşağıda pin). */
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
   subsets: ["latin"],
   display: "swap",
 });
 
-/* 🛡️ PUBLIC DISPLAY FONT — Inter Tight (modern premium sans;
-   "otel scripti"/serif hissini kaldırır). next/font self-host +
-   display:swap → CLS yok. Global `--font-display` token'ı buna
-   bağlanır; admin `.admin-shell` içinde eski Fraunces'e pinlenir. */
-const interTight = Inter_Tight({
-  variable: "--font-inter-tight",
+/* 🛡️ PUBLIC DISPLAY/HEADING FONT — Manrope (modern premium geometric
+   sans). Global `--font-display` token'ı buna bağlanır; admin
+   `.admin-shell` içinde Fraunces'e pinli kalır. */
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+/* 🛡️ Inter — YALNIZ admin gövde tipografisi için korunur. Public gövde
+   Montserrat'a geçti; admin `.admin-shell --font-sans` Inter'e pinli
+   (admin typography'ye dokunulmadı). */
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
 });
@@ -134,7 +145,7 @@ export default async function RootLayout({
   return (
     <html
       lang="tr"
-      className={`${inter.variable} ${interTight.variable} ${fraunces.variable} ${geistMono.variable}`}
+      className={`${montserrat.variable} ${manrope.variable} ${inter.variable} ${fraunces.variable} ${geistMono.variable}`}
     >
       <head>
         {/* 🛡️ Custom head HTML — admin tarafından kontrol edilen

@@ -2,16 +2,14 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Menu, X, Search, ChevronDown, Heart, Sparkles } from "lucide-react";
+import { Menu, X, ChevronDown, Heart, Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
 import TopBar from "./TopBar";
-/* 🛡️ EXIT HARDENING — canlı arama sorgusu inline `supabase.from()`
-   yerine villaRepository.searchByTitle. `db` barrel client-safe;
-   aynı anon RLS + birebir aynı SELECT/filter/ilike/limit. */
-import { villaRepository } from "@/lib/db/villa.repository";
-import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 /* 🛡️ FAZ 36 — Favorites shortcut (localStorage badge counter) */
 import HeaderFavoritesLink from "@/app/components/favorites/HeaderFavoritesLink";
+/* 🛡️ Canlı arama paylaşılan component (header + hero) — duplikasyon yok.
+   Arama state/debounce/dropdown mantığı VillaSearchBox'a taşındı. */
+import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
 
 /* ===============================================================
    🛡️ FAZ 39C — HEADER CSS CLEANUP
@@ -67,11 +65,11 @@ export default function Header({
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-
-  const [search, setSearch] = useState("");
-  const [results, setResults] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [openSearch, setOpenSearch] = useState(false);
+  /* 🛡️ Anasayfada canlı arama Hero içine taşındı → header search
+     (desktop + mobile) yalnız anasayfa-DIŞI sayfalarda gösterilir.
+     İç sayfalarda davranış birebir korunur (paylaşılan VillaSearchBox).
+     Arama state/debounce/dropdown mantığı artık VillaSearchBox'ta. */
+  const isHome = pathname === "/";
 
   const [scrolled, setScrolled] = useState(false);
 
@@ -84,53 +82,6 @@ export default function Header({
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  const getImage = (villa: any) => {
-    if (!villa.villa_images?.length) return "/placeholder.jpg";
-    const sorted = villa.villa_images.sort((a: any, b: any) => {
-      if (a.is_cover) return -1;
-      if (b.is_cover) return 1;
-      return a.sort_order - b.sort_order;
-    });
-    /* 🛡️ Bucket-fix — resolveVillaImageUrl: villa-images bucket'ından
-       URL üretir; legacy FULL URL pass-through, Phase B path → URL.
-       Hiçbiri yoksa placeholder. */
-    return resolveVillaImageUrl(sorted[0]?.image_url) || "/placeholder.jpg";
-  };
-
-  /* 🛡️ LIVE SEARCH — debounce + memory-leak guard (FAZ 2A).
-     `cancelled` flag, debounce timer'ın geç tetiklemesi veya
-     Supabase response'unun gelmesinden önce component unmount
-     olursa setState çağrılmaması için. Davranış: AYNEN korundu. */
-  useEffect(() => {
-    if (!search.trim()) {
-      setResults([]);
-      return;
-    }
-    let cancelled = false;
-    const timeout = setTimeout(async () => {
-      if (cancelled) return;
-      setLoading(true);
-      /* 🛡️ EXIT HARDENING — repository delege; SELECT/filter/ilike/
-         limit birebir aynı. Visibility filtresi (is_active +
-         deleted_at) repo içinde korunur. */
-      const data = await villaRepository.searchByTitle(search, 5);
-      if (cancelled) return;
-      setResults(data || []);
-      setLoading(false);
-      setOpenSearch(true);
-    }, 300);
-    return () => {
-      cancelled = true;
-      clearTimeout(timeout);
-    };
-  }, [search]);
-
-  useEffect(() => {
-    const handleClick = () => setOpenSearch(false);
-    window.addEventListener("click", handleClick);
-    return () => window.removeEventListener("click", handleClick);
   }, []);
 
   /* Subtle scroll-state shadow: scrolled iken hairline shadow ekle.
@@ -149,7 +100,7 @@ export default function Header({
         <TopBar />
 
         <div className={headerShellClass}>
-          <div className="max-w-[1280px] mx-auto px-5 md:px-10 lg:px-16 h-[72px] md:h-[80px] flex items-center justify-between">
+          <div className="max-w-[1480px] mx-auto px-5 md:px-10 lg:px-16 h-[72px] md:h-[80px] flex items-center justify-between">
             {/* LOGO */}
             <Link
               href="/"
@@ -243,87 +194,9 @@ export default function Header({
 
             {/* RIGHT — search + favorites + CTA */}
             <div className="hidden md:flex items-center gap-3">
-              {/* SEARCH PILL */}
-              <div
-                className="
-                  relative flex items-center rounded-full border
-                  bg-[var(--color-sand-50)] border-[var(--color-stone-100)]
-                  text-[var(--color-stone-700)]
-                  px-4 py-2
-                  transition-colors duration-300 motion-reduce:transition-none
-                "
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Search
-                  size={15}
-                  className="text-[var(--color-stone-400)]"
-                />
-
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onFocus={() => setOpenSearch(true)}
-                  placeholder="Villa ara..."
-                  className="
-                    !bg-transparent !border-0 !shadow-none
-                    outline-none text-[13.5px] px-2 w-32 focus:w-48 transition-all
-                    !text-[var(--color-stone-900)]
-                    placeholder-[var(--color-stone-400)]
-                  "
-                />
-
-                {/* DROPDOWN */}
-                {openSearch && search && (
-                  <div className="absolute top-full mt-3 left-0 w-96 bg-white shadow-[0_24px_48px_-16px_rgb(27_26_23/0.22)] rounded-2xl border border-[var(--color-stone-100)] z-50 overflow-hidden">
-                    {loading && (
-                      <div className="p-4 text-sm text-[var(--color-stone-500)] flex items-center gap-2">
-                        {/* 🛡️ FAZ 39C — Coral spinner (was cyan champagne). */}
-                        <span className="w-3 h-3 border-2 border-[var(--brand-coral)] border-t-transparent rounded-full animate-spin" />
-                        Aranıyor...
-                      </div>
-                    )}
-
-                    {!loading && results.length === 0 && (
-                      <div className="p-5 text-center text-sm text-[var(--color-stone-400)]">
-                        <p className="font-medium text-[var(--color-stone-600)]">
-                          Sonuç bulunamadı
-                        </p>
-                        <p className="text-xs mt-1">
-                          Farklı bir arama denemeye ne dersin?
-                        </p>
-                      </div>
-                    )}
-
-                    {!loading &&
-                      results.map((villa) => (
-                        <Link
-                          key={villa.id}
-                          href={`/kiralik-villa/${villa.slug}`}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-sand-50)] transition border-b border-[var(--color-stone-100)] last:border-b-0"
-                          onClick={() => {
-                            setOpenSearch(false);
-                            setSearch("");
-                          }}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={getImage(villa)}
-                            alt=""
-                            className="w-14 h-12 object-cover rounded-lg ring-1 ring-[var(--color-stone-100)]"
-                          />
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[13.5px] font-medium text-[var(--color-stone-900)] truncate">
-                              {villa.title}
-                            </span>
-                            <span className="text-[11px] text-[var(--color-stone-400)] tracking-[0.05em] uppercase">
-                              Villayı görüntüle →
-                            </span>
-                          </div>
-                        </Link>
-                      ))}
-                  </div>
-                )}
-              </div>
+              {/* SEARCH — paylaşılan VillaSearchBox. Anasayfada arama
+                 Hero içine taşındı → yalnız iç sayfalarda göster. */}
+              {!isHome && <VillaSearchBox variant="desktop" />}
 
               {/* Favorites shortcut (FAZ 36).
                  🛡️ FAZ 39C: variant prop kaldırıldı (dead). */}
@@ -354,86 +227,15 @@ export default function Header({
                sadece DOM konumu değiştirdi. Desktop branch'e dokunulmadı
                (`md:hidden` mobil-only). */}
             <div className="md:hidden flex items-center gap-2">
-              {/* MOBILE SEARCH — inline, header strip içinde.
-                 Dropdown: input'un altında absolute; sağa hizalı
-                 (right-0) — input dar viewport'un sağında olduğu
-                 için sol tarafa açılır. */}
-              <div
-                className="relative flex items-center bg-[var(--color-sand-50)] border border-[var(--color-stone-100)] rounded-full px-3 py-1.5 flex-1 min-w-0 max-w-[200px]"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Search
-                  size={14}
-                  className="text-[var(--color-stone-400)] shrink-0"
-                  aria-hidden
+              {/* MOBILE SEARCH — paylaşılan VillaSearchBox. Anasayfada
+                 arama Hero içine taşındı → yalnız iç sayfalarda göster.
+                 Sonuç tıklanınca drawer kapanır (onResultNavigate). */}
+              {!isHome && (
+                <VillaSearchBox
+                  variant="mobile"
+                  onResultNavigate={() => setOpen(false)}
                 />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onFocus={() => setOpenSearch(true)}
-                  placeholder="Villa ara..."
-                  className="!bg-transparent !border-0 !shadow-none outline-none text-[13px] pl-2 w-full min-w-0"
-                />
-
-                {/* DROPDOWN — desktop dropdown JSX (L272-321) mirror.
-                   State/effect/repository/debounce/outside-click
-                   handler AYNEN paylaşılıyor; tek farklar:
-                     - Container right-0 + w-[260px] sm:w-[300px]
-                       (dar input'tan sağa hizalı pop-up)
-                     - Link onClick → setOpenSearch + setSearch + setOpen
-                       (sonuç tıklanırsa drawer açıkken kapansın —
-                       drawer kapalıysa no-op; ekstra güvenlik). */}
-                {openSearch && search && (
-                  <div className="absolute top-full mt-2 right-0 w-[260px] sm:w-[300px] bg-white shadow-[0_24px_48px_-16px_rgb(27_26_23/0.22)] rounded-2xl border border-[var(--color-stone-100)] z-50 overflow-hidden">
-                    {loading && (
-                      <div className="p-4 text-sm text-[var(--color-stone-500)] flex items-center gap-2">
-                        <span className="w-3 h-3 border-2 border-[var(--brand-coral)] border-t-transparent rounded-full animate-spin" />
-                        Aranıyor...
-                      </div>
-                    )}
-
-                    {!loading && results.length === 0 && (
-                      <div className="p-5 text-center text-sm text-[var(--color-stone-400)]">
-                        <p className="font-medium text-[var(--color-stone-600)]">
-                          Sonuç bulunamadı
-                        </p>
-                        <p className="text-xs mt-1">
-                          Farklı bir arama denemeye ne dersin?
-                        </p>
-                      </div>
-                    )}
-
-                    {!loading &&
-                      results.map((villa) => (
-                        <Link
-                          key={villa.id}
-                          href={`/kiralik-villa/${villa.slug}`}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-sand-50)] transition border-b border-[var(--color-stone-100)] last:border-b-0"
-                          onClick={() => {
-                            setOpenSearch(false);
-                            setSearch("");
-                            setOpen(false);
-                          }}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={getImage(villa)}
-                            alt=""
-                            className="w-14 h-12 object-cover rounded-lg ring-1 ring-[var(--color-stone-100)]"
-                          />
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[13.5px] font-medium text-[var(--color-stone-900)] truncate">
-                              {villa.title}
-                            </span>
-                            <span className="text-[11px] text-[var(--color-stone-400)] tracking-[0.05em] uppercase">
-                              Villayı görüntüle →
-                            </span>
-                          </div>
-                        </Link>
-                      ))}
-                  </div>
-                )}
-              </div>
+              )}
 
               {/* HAMBURGER — davranış birebir korundu. */}
               <button

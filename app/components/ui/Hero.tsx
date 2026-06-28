@@ -8,7 +8,7 @@ import {
 } from "@/lib/hero.helpers";
 
 import HeroSearchPanel from "./hero/_components/HeroSearchPanel";
-import HeroTrustStrip from "./hero/_components/HeroTrustStrip";
+import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
 
 import type { HeroReviewStats } from "./hero/_types/hero";
 
@@ -81,23 +81,30 @@ export default function Hero({
       )}
 
       {/* ═══════════════════════════════════════════════════════════
-          DARK OVERLAY — okunabilirlik + premium hava
-          - Alt yarıda güçlü koyu gradient (Booking.com paterni)
-          - Üstte hafif vignette
-          DOM sırası önemli: Image'den SONRA → image üstünde paint olur.
+          WHITE SPLIT FADE — sol okunur açık alan → sağ villa canlı
+          - Horizontal: sol ~beyaz → orta yarı-saydam → sağ transparan
+          - Mobile'da daha hafif (fazla beyaz kaplamasın); lg'de güçlü
+          - Sağ taraf transparan → villa brightness bozulmaz
+          DOM sırası: Image'den SONRA → image üstünde paint olur.
           ═══════════════════════════════════════════════════════════ */}
       <div
         aria-hidden="true"
         className="
           absolute inset-0 pointer-events-none
-          bg-gradient-to-t from-black/70 via-black/30 to-black/10
+          bg-gradient-to-r
+          from-white/78 via-white/30 to-transparent
+          md:from-white/90 md:via-white/45
+          lg:from-white/95 lg:via-white/55
         "
       />
+      {/* RADIAL DEPTH — alt-sol köşede yumuşak beyaz yoğunluk:
+          koyu metin için contrast backing + premium derinlik.
+          Köşe-sınırlı → mobile'da görseli global beyazlatmaz. */}
       <div
         aria-hidden="true"
         className="
-          absolute inset-x-0 top-0 h-40 pointer-events-none
-          bg-gradient-to-b from-black/30 to-transparent
+          absolute inset-0 pointer-events-none
+          bg-[radial-gradient(115%_115%_at_0%_100%,rgba(255,255,255,0.55),transparent_58%)]
         "
       />
 
@@ -143,15 +150,16 @@ export default function Hero({
               font-display
               text-[32px] sm:text-[40px] md:text-[50px] lg:text-[60px]
               leading-[0.98] tracking-[-0.03em]
-              text-white
+              text-[var(--color-stone-900)]
               mt-5 md:mt-7
-              drop-shadow-[0_4px_24px_rgba(0,0,0,0.35)]
             "
           >
             {titleLines.map((line, i) => (
               <span
                 key={i}
-                className={i === 0 ? "block" : "block text-white/70"}
+                className={
+                  i === 0 ? "block" : "block text-[var(--brand-coral)]"
+                }
               >
                 {line}
               </span>
@@ -163,15 +171,28 @@ export default function Hero({
             <p
               className="
                 text-[15px] md:text-[16.5px] leading-[1.75]
-                text-white/85
+                text-[var(--color-stone-700)]
                 mt-6 md:mt-8
                 max-w-xl whitespace-pre-line
-                drop-shadow-[0_2px_12px_rgba(0,0,0,0.35)]
               "
             >
               {hero.subtitle}
             </p>
           )}
+
+          {/* ─── VİLLA ARA — Hero içi premium search (header'dan taşındı,
+              paylaşılan VillaSearchBox; anasayfada header search gizli) ─── */}
+          {/* 🛡️ STACKING FIX — `relative z-40`: HeroSearchPanel kökü
+              `isolate z-30` ile context kuruyor; bu wrapper z-auto kalsaydı
+              panel, autocomplete dropdown'ını örterdi. z-40 (>30) → dropdown
+              panel üstünde boyanır. Yalnız paint sırası; layout/spacing
+              değişmez (offset yok). */}
+          <div className="relative z-40 mt-7 md:mt-9">
+            <VillaSearchBox
+              variant="hero"
+              placeholder="Villa adı veya bölge ara"
+            />
+          </div>
 
           {/* CTA row — primary coral + secondary glass */}
           <div className="mt-8 md:mt-10 flex flex-wrap items-center gap-3">
@@ -202,14 +223,14 @@ export default function Hero({
               className="
                 group inline-flex items-center gap-2
                 px-5 py-3 rounded-full
-                border border-white/30 bg-white/10 backdrop-blur-md
-                text-white
+                border border-[var(--color-stone-300)] bg-white/70 backdrop-blur-md
+                text-[var(--color-stone-900)]
                 text-[13.5px] font-medium tracking-[0.02em]
-                hover:bg-white/20 hover:border-white/50
+                hover:bg-white hover:border-[var(--color-stone-400)]
                 hover:-translate-y-[1px]
                 transition-[transform,border-color,background-color] duration-300
                 motion-reduce:transition-none motion-reduce:hover:translate-y-0
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-stone-400)]/50
               "
             >
               {hero.secondaryCta?.text || "Bize ulaşın"}
@@ -225,14 +246,6 @@ export default function Hero({
          react-datepicker portalId="hero-datepicker-portal" hedefi. */}
       <div id="hero-datepicker-portal" />
     </section>
-
-    {/* 🛡️ TRUST STRIP — hero section ALTINA taşındı (hero görünür
-       yüksekliğini azaltmak için). Görünüm/responsive korunur: hero
-       content container ile AYNI max-w + px (full-bleed olmasın).
-       HeroTrustStrip iç stili (mt-14, grid, kart tonları) DEĞİŞMEDİ. */}
-    <div className="max-w-[1480px] mx-auto px-5 md:px-10 lg:px-16 pb-10 md:pb-14">
-      <HeroTrustStrip />
-    </div>
     </>
   );
 }

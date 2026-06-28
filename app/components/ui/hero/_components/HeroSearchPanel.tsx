@@ -163,11 +163,12 @@ export default function HeroSearchPanel() {
       className="
         relative isolate z-30
         mt-12 md:mt-16
-        bg-white/96 backdrop-blur-xl
-        border border-[var(--color-stone-100)]
-        rounded-[28px]
-        shadow-[0_32px_80px_-24px_rgba(27,26,23,0.22),0_8px_24px_-12px_rgba(27,26,23,0.10)]
-        p-2 md:p-2
+        bg-gradient-to-b from-white/92 to-white/[0.85] backdrop-blur-2xl
+        border-[3px] border-[var(--color-stone-900)]
+        rounded-2xl
+        shadow-[0_36px_90px_-28px_rgba(11,31,58,0.42),0_12px_30px_-16px_rgba(24,183,176,0.16),inset_0_1px_0_rgba(255,255,255,0.7)]
+        p-2 md:p-2.5
+        gap-1.5 md:gap-2
         flex flex-col md:flex-row items-stretch
         text-left
       "
@@ -176,8 +177,8 @@ export default function HeroSearchPanel() {
       <div
         aria-hidden="true"
         className="
-          pointer-events-none absolute inset-0 rounded-[28px]
-          ring-1 ring-inset ring-white/60
+          pointer-events-none absolute inset-0 rounded-2xl
+          ring-1 ring-inset ring-white/50
         "
       />
       {/* CATEGORY */}
@@ -189,19 +190,20 @@ export default function HeroSearchPanel() {
             setOpenRegion(false);
           }}
           className="
-            w-full px-4 py-3 rounded-2xl
-            hover:bg-[var(--color-sand-50)]
+            w-full px-4 py-3 rounded-xl
+            bg-white/40 border border-white/50
+            hover:bg-white/75 hover:border-[var(--color-champagne-500)]/35
             transition flex items-center gap-3 text-left
             focus:outline-none focus-visible:ring-2
-            focus-visible:ring-[var(--brand-coral)]/30
+            focus-visible:ring-[var(--color-champagne-500)]/30
           "
         >
           <span
             className="
               w-9 h-9 rounded-xl shrink-0
-              bg-[var(--brand-coral-tint)]
+              bg-[var(--color-champagne-50)]
               flex items-center justify-center
-              text-[var(--brand-coral)]
+              text-[var(--color-champagne-600)]
             "
             aria-hidden
           >
@@ -240,7 +242,7 @@ export default function HeroSearchPanel() {
                   className={`flex items-center gap-3 text-sm px-3 py-2.5 rounded-xl cursor-pointer transition ${
                     checked
                       ? "bg-[var(--brand-coral-tint)] text-[var(--color-stone-900)]"
-                      : "hover:bg-[var(--color-sand-50)] text-[var(--color-stone-700)]"
+                      : "hover:bg-[var(--color-champagne-50)] text-[var(--color-stone-700)]"
                   }`}
                 >
                   <input
@@ -260,7 +262,6 @@ export default function HeroSearchPanel() {
         )}
       </div>
 
-      <span className="hidden md:block w-px self-center h-9 bg-gradient-to-b from-transparent via-[var(--color-stone-100)] to-transparent" />
 
       {/* REGION */}
       <div ref={regRef} className="relative flex-1 min-w-0">
@@ -271,19 +272,20 @@ export default function HeroSearchPanel() {
             setOpenCat(false);
           }}
           className="
-            w-full px-4 py-3 rounded-2xl
-            hover:bg-[var(--color-sand-50)]
+            w-full px-4 py-3 rounded-xl
+            bg-white/40 border border-white/50
+            hover:bg-white/75 hover:border-[var(--color-champagne-500)]/35
             transition flex items-center gap-3 text-left
             focus:outline-none focus-visible:ring-2
-            focus-visible:ring-[var(--brand-coral)]/30
+            focus-visible:ring-[var(--color-champagne-500)]/30
           "
         >
           <span
             className="
               w-9 h-9 rounded-xl shrink-0
-              bg-[var(--brand-coral-tint)]
+              bg-[var(--color-champagne-50)]
               flex items-center justify-center
-              text-[var(--brand-coral)]
+              text-[var(--color-champagne-600)]
             "
             aria-hidden
           >
@@ -322,7 +324,7 @@ export default function HeroSearchPanel() {
                   className={`flex items-center gap-3 text-sm px-3 py-2.5 rounded-xl cursor-pointer transition ${
                     checked
                       ? "bg-[var(--brand-coral-tint)] text-[var(--color-stone-900)]"
-                      : "hover:bg-[var(--color-sand-50)] text-[var(--color-stone-700)]"
+                      : "hover:bg-[var(--color-champagne-50)] text-[var(--color-stone-700)]"
                   }`}
                 >
                   <input
@@ -342,10 +344,9 @@ export default function HeroSearchPanel() {
         )}
       </div>
 
-      <span className="hidden md:block w-px self-center h-9 bg-gradient-to-b from-transparent via-[var(--color-stone-100)] to-transparent" />
 
       {/* DATE */}
-      <div className="flex-1 min-w-0 px-4 py-3 hover:bg-[var(--color-sand-50)] rounded-2xl transition flex items-center gap-3">
+      <div className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white/40 border border-white/50 hover:bg-white/75 hover:border-[var(--color-champagne-500)]/35 transition flex items-center gap-3">
         <span
           className="
             w-9 h-9 rounded-xl shrink-0
@@ -391,10 +392,9 @@ export default function HeroSearchPanel() {
         </div>
       </div>
 
-      <span className="hidden md:block w-px self-center h-9 bg-gradient-to-b from-transparent via-[var(--color-stone-100)] to-transparent" />
 
       {/* GUESTS */}
-      <div className="px-4 py-3 hover:bg-[var(--color-sand-50)] rounded-2xl transition flex items-center gap-3">
+      <div className="px-4 py-3 rounded-xl bg-white/40 border border-white/50 hover:bg-white/75 hover:border-[var(--color-champagne-500)]/35 transition flex items-center gap-3">
         <span
           className="
             w-9 h-9 rounded-xl shrink-0
@@ -432,12 +432,12 @@ export default function HeroSearchPanel() {
         onClick={handleSearch}
         className="
           group inline-flex items-center justify-center gap-2
-          !rounded-2xl !px-7 md:!px-8 !py-4
+          !rounded-xl !px-7 md:!px-8 !py-4
           mt-1.5 md:mt-0 md:ml-1.5
           text-white font-medium text-[14px] tracking-[0.02em]
-          bg-gradient-to-br from-[var(--brand-coral)] to-[var(--brand-coral-deep)]
-          shadow-[0_18px_36px_-12px_rgba(255,101,63,0.55),0_4px_12px_-6px_rgba(255,101,63,0.4)]
-          hover:shadow-[0_22px_44px_-12px_rgba(255,101,63,0.65),0_6px_16px_-6px_rgba(255,101,63,0.5)]
+          bg-gradient-to-br from-[#f6a13a] via-[var(--brand-coral)] to-[var(--brand-coral-deep)]
+          shadow-[0_20px_44px_-12px_rgba(242,140,40,0.55),0_8px_20px_-8px_rgba(11,31,58,0.28),inset_0_1px_0_rgba(255,255,255,0.28)]
+          hover:shadow-[0_26px_54px_-12px_rgba(242,140,40,0.65),0_10px_24px_-8px_rgba(11,31,58,0.34),inset_0_1px_0_rgba(255,255,255,0.34)]
           hover:-translate-y-[1px]
           transition-[transform,box-shadow] duration-300
           motion-reduce:transition-none motion-reduce:hover:translate-y-0
