@@ -72,40 +72,10 @@ export default async function VillaList() {
            başlık + subtitle yapısı (CategoryCollection parity).
            Typography scale: section başlıkları orta boy; hero
            dominant kalır. */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 md:gap-10 mb-8 md:mb-12">
-          <div className="max-w-xl">
-            <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] leading-tight tracking-[-0.02em]">
-              En Çok Tercih Edilen{" "}
-              <span className="text-[var(--brand-coral)]">Villalar</span>
-            </h2>
-            <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-stone-500)] max-w-md">
-              Sizin İçin Özenle Seçilmiş Villalar
-            </p>
-          </div>
-          <a
-            href="/arama"
-            className="
-              group hidden md:inline-flex items-center gap-2
-              px-4 py-2 rounded-full
-              border border-[var(--color-stone-200)]
-              text-[12.5px] font-medium tracking-[0.02em]
-              text-[var(--color-stone-700)]
-              hover:border-[var(--brand-coral)] hover:text-[var(--color-stone-900)]
-              hover:bg-[var(--brand-coral-tint)]
-              transition-[color,background-color,border-color] duration-300
-              motion-reduce:transition-none
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/30
-              shrink-0
-            "
-          >
-            <span>Tüm Villaları Gör</span>
-            <span
-              aria-hidden="true"
-              className="text-[var(--color-stone-500)] group-hover:text-[var(--brand-coral)] transition-colors"
-            >
-              →
-            </span>
-          </a>
+        <div className="text-center mb-8 md:mb-12">
+          <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] leading-tight tracking-[-0.02em]">
+            Sizin için seçtiklerimiz
+          </h2>
         </div>
 
         {/* 🛡️ FAZ 39L — Grid spacing tightened (cards focus). */}
@@ -132,8 +102,8 @@ export default async function VillaList() {
           ))}
         </div>
 
-        {/* 🛡️ FAZ 39L — Mobile CTA: desktop ghost pill ile parity. */}
-        <div className="md:hidden mt-10 flex justify-center">
+        {/* 🛡️ CTA — grid altında, tüm ekranlarda centered (header'dan taşındı). */}
+        <div className="mt-9 md:mt-10 flex justify-center">
           <a
             href="/arama"
             className="

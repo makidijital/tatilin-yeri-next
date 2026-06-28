@@ -1,13 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight } from "lucide-react";
 
 import {
   getCachedVillaLocations,
   getCachedLocationVillaCounts,
 } from "@/lib/cache.helpers";
 import { getLocationCoverPublicUrl } from "@/lib/storage.helpers";
-import HorizontalCarousel from "@/app/components/villa/HorizontalCarousel";
 
 /* ===============================================================
    🛡️ LOCATION SHOWCASE — homepage premium editorial carousel
@@ -181,35 +179,18 @@ export default async function LocationCollection() {
           </Link>
         </div>
 
-        {/* HORIZONTAL CAROUSEL — arrows enabled (desktop only) */}
-        <div className="relative -mx-5 md:-mx-10 lg:-mx-16">
-          <div
-            aria-hidden="true"
-            className="hidden md:block pointer-events-none absolute inset-y-0 right-0 w-24 lg:w-32 bg-gradient-to-l from-white via-white/70 to-transparent z-10"
-          />
-          <HorizontalCarousel
-            ariaLabel="Bölgeler showcase"
-            showArrows
-          >
-            <ul
-              role="list"
-              className="flex flex-nowrap min-w-max gap-4 md:gap-5 lg:gap-6 px-5 md:px-10 lg:px-16 pb-4"
-            >
-              {items.map((item) => (
-                <li
-                  key={item.key}
-                  className="snap-start shrink-0 w-[78vw] max-w-[320px] md:w-[320px] md:max-w-none"
-                >
-                  <LocationCard item={item} />
-                </li>
-              ))}
-              <li
-                aria-hidden="true"
-                className="shrink-0 w-1 md:w-16 lg:w-24"
-              />
-            </ul>
-          </HorizontalCarousel>
-        </div>
+        {/* COMPACT REGION GRID — carousel kaldırıldı (modern kompakt grid).
+            Desktop 4 kolon · tablet/mobile 2 kolon · lg:4. */}
+        <ul
+          role="list"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
+        >
+          {items.map((item) => (
+            <li key={item.key}>
+              <LocationCard item={item} />
+            </li>
+          ))}
+        </ul>
 
         {/* 🛡️ FAZ 39M — Mobile CTA pill (CategoryCollection parity). */}
         <div className="md:hidden mt-7 flex justify-center">
@@ -252,54 +233,39 @@ function LocationCard({ item }: { item: Item }) {
   return (
     <Link
       href={href}
-      className="group relative block overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--color-sand-100)] via-[var(--color-sand-50)] to-[var(--color-sand-100)] aspect-[4/5] transition-transform duration-500 motion-reduce:transition-none hover:-translate-y-[2px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
+      className="group relative block overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--color-sand-100)] via-[var(--color-sand-50)] to-[var(--color-sand-100)] aspect-[4/5] shadow-[0_10px_26px_-16px_rgba(11,31,58,0.25)] hover:shadow-[0_22px_42px_-20px_rgba(11,31,58,0.35)] transition-[transform,box-shadow] duration-500 motion-reduce:transition-none hover:-translate-y-[3px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
     >
       {item.coverUrl ? (
         <Image
           src={item.coverUrl}
           alt={item.key}
           fill
-          sizes="(max-width: 768px) 78vw, 320px"
-          className="object-cover object-center transition-transform duration-[900ms] ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+          sizes="(max-width: 1024px) 50vw, 25vw"
+          className="object-cover object-center transition-transform duration-[900ms] ease-out group-hover:scale-[1.06] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
         />
       ) : (
-        /* SOFT PLACEHOLDER — serif initial, premium fallback */
-        <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
-          <div className="font-display text-[88px] md:text-[104px] leading-none text-[var(--color-stone-300)] tracking-[-0.03em]">
+        /* SOFT PLACEHOLDER — serif initial (compact) */
+        <div className="absolute inset-0 flex items-center justify-center select-none">
+          <div className="font-display text-[56px] md:text-[72px] leading-none text-[var(--color-stone-300)] tracking-[-0.03em]">
             {initial}
           </div>
-          <p className="mt-3 text-[10px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-400)]">
-            Görsel yakında
-          </p>
         </div>
       )}
 
-      {/* CINEMATIC GRADIENT — text legibility */}
+      {/* DARK BOTTOM GRADIENT — text legibility */}
       <div
         aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/55 via-black/20 to-transparent pointer-events-none"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/15 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 motion-reduce:transition-none"
+        className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/72 via-black/28 to-transparent pointer-events-none"
       />
 
-      {/* TEXT */}
-      <div className="absolute inset-x-0 bottom-0 p-5 md:p-6 flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="font-display text-[22px] md:text-[24px] leading-[1.1] text-white tracking-[-0.02em] line-clamp-2">
-            {item.key}
-          </h3>
-          <p className="text-[11px] tracking-[0.12em] uppercase font-medium text-white/75 mt-1.5 tabular-nums">
-            {item.count} villa
-          </p>
-        </div>
-        <span
-          aria-hidden="true"
-          className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm text-[var(--color-stone-900)] shadow-[0_2px_8px_-2px_rgb(27_26_23/0.18)] transition-transform duration-300 motion-reduce:transition-none group-hover:translate-x-0.5 group-hover:-translate-y-0.5 shrink-0"
-        >
-          <ArrowUpRight size={15} />
-        </span>
+      {/* TEXT — alt-sol: bölge adı (bold white) + villa sayısı */}
+      <div className="absolute inset-x-0 bottom-0 p-4">
+        <h3 className="font-display text-[16px] md:text-[18px] leading-[1.12] text-white tracking-[-0.015em] line-clamp-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
+          {item.key}
+        </h3>
+        <p className="text-[10.5px] tracking-[0.1em] uppercase font-medium text-white/80 mt-1 tabular-nums">
+          {item.count} villa
+        </p>
       </div>
     </Link>
   );

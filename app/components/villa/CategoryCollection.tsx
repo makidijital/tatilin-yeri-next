@@ -7,7 +7,6 @@ import {
   getCachedCategoryCovers,
 } from "@/lib/cache.helpers";
 import { getCategoryCoverPublicUrl } from "@/lib/storage.helpers";
-import HorizontalCarousel from "@/app/components/villa/HorizontalCarousel";
 
 /* ===============================================================
    🛡️ CATEGORY SHOWCASE — homepage premium editorial grid
@@ -106,105 +105,31 @@ export default async function CategoryCollection() {
              - Title 2-line; eski 72px → 40px lg (daha okunabilir)
              - Subtitle ayrı paragraf (stone-500 max-w-md)
              - CTA luxury ghost pill (coral hover) */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 md:gap-10 mb-8 md:mb-12">
-          <div className="max-w-xl">
-            <p className="text-[10.5px] tracking-[0.28em] uppercase font-medium inline-flex items-center text-[var(--brand-coral)]">
-              <span
-                aria-hidden="true"
-                className="inline-block w-6 h-px align-middle mr-3 bg-[var(--brand-coral)]/60"
-              />
-              Koleksiyonlar
-            </p>
-            {/* 🛡️ FAZ 39M — Normalized section title scale. */}
-            <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] mt-3 leading-tight tracking-[-0.02em]">
-              Tarzınıza uygun villalar.
-            </h2>
-            <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-stone-500)] max-w-md">
-              Akdeniz koleksiyonu — her seyahat tarzına özenle
-              seçilmiş kategoriler.
-            </p>
-          </div>
-          <Link
-            href="/arama"
-            className="
-              group hidden md:inline-flex items-center gap-2
-              px-4 py-2 rounded-full
-              border border-[var(--color-stone-200)]
-              text-[12.5px] font-medium tracking-[0.02em]
-              text-[var(--color-stone-700)]
-              hover:border-[var(--brand-coral)] hover:text-[var(--color-stone-900)]
-              hover:bg-[var(--brand-coral-tint)]
-              transition-[color,background-color,border-color] duration-300
-              motion-reduce:transition-none
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/30
-              shrink-0
-            "
-          >
-            <span>Tüm kategoriler</span>
-            <ArrowUpRight
-              size={13}
-              className="
-                transition-transform duration-300
-                motion-reduce:transition-none
-                group-hover:translate-x-[1px] group-hover:-translate-y-[1px]
-                text-[var(--color-stone-500)]
-                group-hover:text-[var(--brand-coral)]
-              "
-              aria-hidden
-              strokeWidth={1.75}
-            />
-          </Link>
+        <div className="text-center mb-8 md:mb-12">
+          {/* 🛡️ FAZ 39M — Normalized section title scale. */}
+          <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] leading-tight tracking-[-0.02em]">
+            Villa tiplerine göz atın
+          </h2>
+          <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-stone-500)] max-w-md mx-auto">
+            Yüzlerce seçenek arasından size en uygun villayı kolayca bulun.
+          </p>
         </div>
 
-        {/* ===========================================================
-           🛡️ HORIZONTAL LUXURY SHOWCASE — gerçek overflow
-           ===========================================================
-           İKİ KATMANLI YAPI (user-belirtilen pattern):
-             outer: overflow-x-auto + w-full (scroll viewport)
-             inner: flex flex-nowrap min-w-max gap (content width
-                    = sum(item widths) + gaps; viewport'tan büyük
-                    → gerçek horizontal overflow)
-           Tek katmanlı (flex + overflow aynı element'te) yapı bazı
-           parent context'lerinde min-width hesabını boğuyordu;
-           min-w-max açıkça "içerik kadar geniş ol" demek →
-           overflow garantilenir.
+        {/* COMPACT GRID — horizontal villa-type kartları (carousel kaldırıldı).
+            Desktop 3 kolon (içerik 2 satıra akar) · tablet 2 · mobile 1. */}
+        <ul
+          role="list"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 md:gap-4"
+        >
+          {items.map((item) => (
+            <li key={item.id}>
+              <CategoryCard item={item} />
+            </li>
+          ))}
+        </ul>
 
-           shrink-0: kartlar HİÇBİR breakpoint'te küçülmez/sıkışmaz.
-           snap-x mandatory + snap-start: her kart viewport'a hizalı
-           durur. HorizontalScroller client island wheel-to-horizontal
-           davranışı ekler (boundary'de native dikey scroll devreye
-           girer; user-trapping yok).
-           =========================================================== */}
-        <div className="relative -mx-5 md:-mx-10 lg:-mx-16">
-          {/* Sağ fade — desktop'ta görünür "kaydır" sinyali */}
-          <div
-            aria-hidden="true"
-            className="hidden md:block pointer-events-none absolute inset-y-0 right-0 w-24 lg:w-32 bg-gradient-to-l from-white via-white/70 to-transparent z-10"
-          />
-          <HorizontalCarousel ariaLabel="Kategoriler showcase">
-            <ul
-              role="list"
-              className="flex flex-nowrap min-w-max gap-4 md:gap-5 lg:gap-6 px-5 md:px-10 lg:px-16 pb-4"
-            >
-              {items.map((item) => (
-                <li
-                  key={item.id}
-                  className="snap-start shrink-0 w-[78vw] max-w-[320px] md:w-[320px] md:max-w-none"
-                >
-                  <CategoryCard item={item} />
-                </li>
-              ))}
-              {/* Sağ spacer — son kartın fade altında kalmaması için */}
-              <li
-                aria-hidden="true"
-                className="shrink-0 w-1 md:w-16 lg:w-24"
-              />
-            </ul>
-          </HorizontalCarousel>
-        </div>
-
-        {/* 🛡️ FAZ 39H — Mobile CTA matches desktop ghost pill. */}
-        <div className="md:hidden mt-7 flex justify-center">
+        {/* 🛡️ CTA — grid altında, tüm ekranlarda centered (header'dan taşındı). */}
+        <div className="mt-9 md:mt-10 flex justify-center">
           <Link
             href="/arama"
             className="
@@ -251,67 +176,32 @@ function CategoryCard({
     <Link
       href={href}
       className={
-        "group relative block overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--color-sand-100)] via-[var(--color-sand-50)] to-[var(--color-sand-100)] aspect-[4/5] transition-transform duration-500 motion-reduce:transition-none hover:-translate-y-[2px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40 " +
+        "group flex items-center gap-3.5 p-2.5 rounded-xl bg-white border border-[var(--color-stone-100)] shadow-[0_6px_18px_-14px_rgba(11,31,58,0.20)] hover:shadow-[0_14px_30px_-18px_rgba(11,31,58,0.30)] hover:-translate-y-[2px] hover:border-[var(--color-stone-200)] transition-[transform,box-shadow,border-color] duration-300 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40 " +
         className
       }
     >
-      {item.coverUrl ? (
-        <Image
-          src={item.coverUrl}
-          alt={item.name}
-          fill
-          /* responsive: mobile snap (78vw), tablet 1/2 col, desktop 1/4 col */
-          sizes="(max-width: 768px) 78vw, (max-width: 1024px) 33vw, 25vw"
-          className="object-cover object-center transition-transform duration-[900ms] ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-        />
-      ) : (
-        /* SOFT PLACEHOLDER — premium serif initial */
-        <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
-          <div className="font-display text-[88px] md:text-[104px] leading-none text-[var(--color-stone-300)] tracking-[-0.03em]">
+      {/* SOL — küçük thumbnail (fixed small, rounded-lg) */}
+      <div className="relative shrink-0 w-16 h-16 overflow-hidden rounded-lg bg-gradient-to-br from-[var(--color-sand-100)] via-[var(--color-sand-50)] to-[var(--color-sand-100)]">
+        {item.coverUrl ? (
+          <Image
+            src={item.coverUrl}
+            alt={item.name}
+            fill
+            sizes="64px"
+            className="object-cover object-center transition-transform duration-[700ms] ease-out group-hover:scale-[1.06] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+          />
+        ) : (
+          /* SOFT PLACEHOLDER — serif initial */
+          <span className="absolute inset-0 flex items-center justify-center select-none font-display text-[24px] leading-none text-[var(--color-stone-300)]">
             {initial}
-          </div>
-          <p className="mt-3 text-[10px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-400)]">
-            Görsel yakında
-          </p>
-        </div>
-      )}
-
-      {/* CINEMATIC GRADIENT — alt yarıdan koyu, text legibility */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/55 via-black/20 to-transparent pointer-events-none"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/15 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 motion-reduce:transition-none"
-      />
-
-      {/* TEXT — bottom-aligned editorial */}
-      <div className="absolute inset-x-0 bottom-0 p-5 md:p-6 flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="font-display text-[22px] md:text-[24px] leading-[1.1] text-white tracking-[-0.02em] line-clamp-2">
-            {item.name}
-          </h3>
-          <p className="text-[11px] tracking-[0.12em] uppercase font-medium text-white/75 mt-1.5 tabular-nums">
-            {item.count} villa
-          </p>
-        </div>
-        <span
-          aria-hidden="true"
-          className="
-            inline-flex items-center justify-center
-            w-9 h-9 rounded-full
-            bg-white/90 backdrop-blur-sm
-            text-[var(--color-stone-900)]
-            shadow-[0_2px_8px_-2px_rgb(27_26_23/0.18)]
-            transition-transform duration-300 motion-reduce:transition-none
-            group-hover:translate-x-0.5 group-hover:-translate-y-0.5
-            shrink-0
-          "
-        >
-          <ArrowUpRight size={15} />
-        </span>
+          </span>
+        )}
       </div>
+
+      {/* SAĞ — kategori adı (bold, dikey ortalı) — yalnızca isim */}
+      <h3 className="min-w-0 flex-1 font-display text-[15px] md:text-[16px] font-medium leading-[1.2] tracking-[-0.01em] text-[var(--color-stone-900)] line-clamp-2">
+        {item.name}
+      </h3>
     </Link>
   );
 }

@@ -108,6 +108,10 @@ export default async function Home() {
          FAQ varsa render edilir; boşsa hiç JSON-LD basılmaz. */}
       {faqs.length > 0 && <JsonLd data={buildFaqJsonLd(faqs)} />}
       <Hero content={heroContent} reviewStats={heroReviewStats} />
+      {/* 🛡️ "Kategori Keşfet" — Hero altı, VillaList üstü. Cached
+         helpers ile zero N+1, server-only render. Empty type'larda
+         null render → layout sessizce gizlenir. */}
+      <CategoryCollection />
       <VillaList />
       {/* 🛡️ Statik güven + dönüşüm bölümü — Villa listesi'nin altında
          (Koleksiyonlar ↓ Villa listesi ↓ Neden biz). brandName + phone
@@ -116,10 +120,6 @@ export default async function Home() {
         brandName={brandName}
         phone={settings?.phone ?? null}
       />
-      {/* 🛡️ "Kategori Keşfet" — Hero altı, VillaList üstü. Cached
-         helpers ile zero N+1, server-only render. Empty type'larda
-         null render → layout sessizce gizlenir. */}
-      <CategoryCollection />
       {/* 🛡️ "Bölgeler" — VillaList altı, Footer üstü. CategoryCollection
          ile aynı chip pattern; sadece veri kaynağı (locations) ve
          URL param (`regions=`) farklı. Empty location'larda null
