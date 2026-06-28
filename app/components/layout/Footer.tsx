@@ -117,13 +117,13 @@ function SocialLink({
         w-10 h-10 rounded-full
         border border-white/12 bg-white/[0.05]
         text-white/75
-        hover:border-[var(--brand-coral)]/50 hover:bg-[var(--brand-coral)]/15
+        hover:border-[var(--color-champagne-500)]/55 hover:bg-[var(--color-champagne-500)]/15
         hover:text-white
         transition-[color,background-color,border-color,transform]
         duration-300 motion-reduce:transition-none
         hover:scale-[1.05]
         focus:outline-none focus-visible:ring-2
-        focus-visible:ring-[var(--brand-coral)]/40
+        focus-visible:ring-[var(--color-champagne-500)]/40
       "
     >
       {children}
@@ -166,7 +166,7 @@ function ColumnTitle({ children }: { children: React.ReactNode }) {
     >
       <span
         aria-hidden
-        className="inline-block w-5 h-px bg-[var(--brand-coral)]/70"
+        className="inline-block w-5 h-px bg-[var(--color-champagne-500)]/70"
       />
       {children}
     </h4>
@@ -276,30 +276,29 @@ export default async function Footer() {
     <footer
       aria-label="Site altbilgisi"
       className="relative mt-20 md:mt-28 overflow-hidden text-white"
-      /* 🛡️ PREMIUM NAVY SURFACE — marka laciverti gradient.
-         Düz tek-renk yerine derinlikli 3-stop; coral accent ayrı
-         glow katmanlarında. */
+      /* 🌊 REBRAND — deep brand navy gradient (layered; flat değil).
+         Turkuaz + amber accent ayrı glow katmanlarında. */
       style={{
         background:
-          "linear-gradient(180deg, #0e2740 0%, #0a1f33 55%, #06121f 100%)",
+          "linear-gradient(180deg, #0b1f3a 0%, #081a30 55%, #050f1c 100%)",
       }}
     >
-      {/* Coral ambient glow — sağ üst, çok hafif (derinlik). */}
+      {/* Turkuaz ambient glow — sağ üst (derinlik). */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -top-40 right-[-140px] w-[620px] h-[420px] blur-3xl opacity-50"
         style={{
           background:
-            "radial-gradient(circle at center, rgba(255,101,63,0.20), transparent 70%)",
+            "radial-gradient(circle at center, rgba(24,183,176,0.20), transparent 70%)",
         }}
       />
-      {/* Sakin mavi nokta — sol alt, gradient'i kırar. */}
+      {/* Amber glow — sol alt, subtle highlight. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -bottom-28 left-[-120px] w-[520px] h-[360px] blur-3xl opacity-40"
         style={{
           background:
-            "radial-gradient(circle at center, rgba(70,150,210,0.18), transparent 70%)",
+            "radial-gradient(circle at center, rgba(242,140,40,0.16), transparent 70%)",
         }}
       />
       {/* Ultra-hafif grain/noise — feTurbulence SVG data-uri; asset
@@ -314,22 +313,72 @@ export default async function Footer() {
         }}
       />
 
-      <div className="relative max-w-7xl mx-auto px-5 md:px-10 lg:px-16 pt-16 md:pt-20 pb-8">
-        {/* ════════════════════════════════════════════════════
-            ÜST — MARKA SATIRI (logo + açıklama + sosyal)
-            Ferah, tek satır; alt grid'den ince çizgiyle ayrı.
-            ════════════════════════════════════════════════════ */}
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 pb-12 md:pb-14 border-b border-white/10">
-          <div className="space-y-5 max-w-lg">
+      <div className="relative max-w-7xl mx-auto px-5 md:px-10 lg:px-16 pb-10">
+        {/* ═══════════ SECTION 1 — TOP CTA BAND (footer'dan ayrı) ═══════════ */}
+        <div className="pt-14 md:pt-20">
+          <div className="relative overflow-hidden rounded-[28px] border border-white/12 bg-gradient-to-br from-white/[0.08] via-white/[0.035] to-transparent px-6 py-8 md:px-12 md:py-11 shadow-[0_30px_80px_-44px_rgba(0,0,0,0.75)]">
+            {/* iç turkuaz glow */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-24 left-1/3 w-80 h-56 blur-3xl opacity-40"
+              style={{
+                background:
+                  "radial-gradient(circle at center, rgba(24,183,176,0.22), transparent 70%)",
+              }}
+            />
+            <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-7">
+              <div className="max-w-xl">
+                <h2 className="font-display text-[26px] md:text-[34px] leading-[1.1] tracking-[-0.02em] text-white">
+                  Hayalinizdeki villayı birlikte bulalım
+                </h2>
+                <p className="mt-3 text-[14.5px] text-white/60 leading-relaxed">
+                  Tarih, bölge ve bütçenize en uygun seçkiyi uzman ekibimizle
+                  dakikalar içinde oluşturalım.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 shrink-0">
+                {phoneDigits && (
+                  <a
+                    href={`https://wa.me/${phoneDigits}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 h-12 px-6 rounded-full bg-[var(--color-champagne-500)] text-[#04231f] font-medium text-[13.5px] hover:bg-[var(--color-champagne-400)] transition-colors duration-300 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-300)]/50"
+                  >
+                    <WhatsappIcon width={16} height={16} aria-hidden />
+                    WhatsApp&apos;tan Yazın
+                  </a>
+                )}
+                <Link
+                  href="/teklif-al"
+                  className="group inline-flex items-center gap-2 h-12 px-6 rounded-full bg-[var(--brand-coral)] text-white font-medium text-[13.5px] hover:bg-[var(--brand-coral-deep)] transition-colors duration-300 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/50"
+                >
+                  Teklif Al
+                  <ArrowRight
+                    size={15}
+                    strokeWidth={1.75}
+                    aria-hidden
+                    className="transition-transform duration-300 motion-reduce:transition-none group-hover:translate-x-[2px]"
+                  />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ═══════════ SECTION 2 — MAIN FOOTER (asymmetric) ═══════════
+            LEFT (dominant): logo + brand statement + sosyal
+            RIGHT: grouped navigation (Kurumsal · Villalar · Bölgeler ·
+            Destek & İletişim). 4/8 split → klasik eşit kolonlardan farklı. */}
+        <div className="pt-14 md:pt-20 grid grid-cols-1 lg:grid-cols-12 gap-10 md:gap-12">
+          {/* LEFT — dominant brand block */}
+          <div className="lg:col-span-4 space-y-6">
             <Link
               href="/"
               className="font-display text-[24px] tracking-tight inline-flex items-center text-white"
             >
               {settings?.footer_logo || settings?.site_logo ? (
                 /* 🛡️ mig 048 — footer_logo varsa onu, yoksa site_logo'ya
-                   fallback. Koyu zemin için ayrı negatif logo desteği.
-                   🛡️ Aşama A — resolveAssetUrl normalize: FULL URL ve
-                   relative path için aynı render davranışı. */
+                   fallback. resolveAssetUrlVersioned normalize. */
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={
@@ -353,217 +402,202 @@ export default async function Footer() {
                 </>
               )}
             </Link>
-            <p className="text-[14.5px] text-white/60 leading-relaxed">
+            <p className="text-[14.5px] text-white/60 leading-relaxed max-w-sm">
               Akdeniz&apos;in seçkin villalarını premium bir deneyimle
-              keşfedin. Özel havuz, deniz manzarası ve butik konfor —
-              tek bir platformda.
+              keşfedin. Özel havuz, deniz manzarası ve butik konfor — tek bir
+              platformda.
             </p>
+
+            {/* Sosyal — settings'ten dinamik (mevcut API aynen) */}
+            <div className="flex items-center gap-2.5">
+              {settings?.instagram && (
+                <SocialLink href={settings.instagram} label="Instagram">
+                  <InstagramIcon width={15} height={15} aria-hidden />
+                </SocialLink>
+              )}
+              {settings?.facebook && (
+                <SocialLink href={settings.facebook} label="Facebook">
+                  <FacebookIcon width={15} height={15} aria-hidden />
+                </SocialLink>
+              )}
+              {settings?.youtube && (
+                <SocialLink href={settings.youtube} label="YouTube">
+                  <YoutubeIcon width={15} height={15} aria-hidden />
+                </SocialLink>
+              )}
+              {settings?.tiktok && (
+                <SocialLink href={settings.tiktok} label="TikTok">
+                  <TiktokIcon width={15} height={15} aria-hidden />
+                </SocialLink>
+              )}
+              {phoneDigits && (
+                <SocialLink
+                  href={`https://wa.me/${phoneDigits}`}
+                  label="WhatsApp"
+                >
+                  <WhatsappIcon width={15} height={15} aria-hidden />
+                </SocialLink>
+              )}
+            </div>
           </div>
 
-          {/* Sosyal — settings'ten dinamik (mevcut API aynen) */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            {settings?.instagram && (
-              <SocialLink href={settings.instagram} label="Instagram">
-                <InstagramIcon width={15} height={15} aria-hidden />
-              </SocialLink>
-            )}
-            {settings?.facebook && (
-              <SocialLink href={settings.facebook} label="Facebook">
-                <FacebookIcon width={15} height={15} aria-hidden />
-              </SocialLink>
-            )}
-            {settings?.youtube && (
-              <SocialLink href={settings.youtube} label="YouTube">
-                <YoutubeIcon width={15} height={15} aria-hidden />
-              </SocialLink>
-            )}
-            {settings?.tiktok && (
-              <SocialLink href={settings.tiktok} label="TikTok">
-                <TiktokIcon width={15} height={15} aria-hidden />
-              </SocialLink>
-            )}
-            {phoneDigits && (
-              <SocialLink
-                href={`https://wa.me/${phoneDigits}`}
-                label="WhatsApp"
-              >
-                <WhatsappIcon width={15} height={15} aria-hidden />
-              </SocialLink>
-            )}
-          </div>
-        </div>
+          {/* RIGHT — grouped navigation */}
+          <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+            {/* KURUMSAL (CMS-driven, dynamic) */}
+            <nav aria-label="Kurumsal">
+              <ColumnTitle>Kurumsal</ColumnTitle>
+              {corporatePages.length > 0 ? (
+                <ul className="space-y-2.5">
+                  {corporatePages.map((p) => (
+                    <li key={p.id}>
+                      <FooterLink href={`/p/${p.slug}`}>{p.title}</FooterLink>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-[13px] text-white/40 italic">Yakında.</p>
+              )}
+            </nav>
 
-        {/* ════════════════════════════════════════════════════
-            ORTA — 4 KOLONLU DENGELİ GRID
-            Kurumsal · Villa Kategorileri · Popüler Bölgeler · İletişim
-            ════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 md:gap-12 pt-12 md:pt-14">
-          {/* KURUMSAL (CMS-driven, dynamic) */}
-          <nav aria-label="Kurumsal">
-            <ColumnTitle>Kurumsal</ColumnTitle>
-            {corporatePages.length > 0 ? (
-              <ul className="space-y-2.5">
-                {corporatePages.map((p) => (
-                  <li key={p.id}>
-                    <FooterLink href={`/p/${p.slug}`}>{p.title}</FooterLink>
+            {/* VİLLA KATEGORİLERİ (dynamic villa_types) */}
+            <nav aria-label="Villa kategorileri">
+              <ColumnTitle>Villalar</ColumnTitle>
+              {villaTypes.length > 0 ? (
+                <ul className="space-y-2.5">
+                  {villaTypes.map((t) => (
+                    <li key={t.id}>
+                      <FooterLink href={taxonomyHref("villa-turleri", t)}>
+                        {t.name}
+                      </FooterLink>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <ul className="space-y-2.5">
+                  <li>
+                    <FooterLink href="/arama">Tüm kategoriler</FooterLink>
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-[13px] text-white/40 italic">Yakında.</p>
-            )}
-          </nav>
+                </ul>
+              )}
+            </nav>
 
-          {/* VİLLA KATEGORİLERİ (dynamic villa_types) */}
-          <nav aria-label="Villa kategorileri">
-            <ColumnTitle>Villa Kategorileri</ColumnTitle>
-            {villaTypes.length > 0 ? (
-              <ul className="space-y-2.5">
-                {villaTypes.map((t) => (
-                  <li key={t.id}>
-                    <FooterLink href={taxonomyHref("villa-turleri", t)}>
-                      {t.name}
+            {/* POPÜLER BÖLGELER (dynamic villa_locations) */}
+            <nav aria-label="Popüler bölgeler">
+              <ColumnTitle>Bölgeler</ColumnTitle>
+              {locations.length > 0 ? (
+                <ul className="space-y-2.5">
+                  {locations.map((loc) => (
+                    <li key={loc.id}>
+                      <FooterLink href={taxonomyHref("bolgeler", loc)}>
+                        {loc.name}
+                      </FooterLink>
+                    </li>
+                  ))}
+                  <li className="pt-2">
+                    <FooterLink href="/arama">
+                      <span className="text-[13px] text-[var(--color-champagne-300)] inline-flex items-center gap-1">
+                        Tüm bölgeler
+                        <ArrowRight size={12} strokeWidth={1.75} aria-hidden />
+                      </span>
                     </FooterLink>
                   </li>
-                ))}
+                </ul>
+              ) : (
+                <ul className="space-y-2.5">
+                  <li>
+                    <FooterLink href="/arama">Tüm bölgeleri keşfet</FooterLink>
+                  </li>
+                </ul>
+              )}
+            </nav>
+
+            {/* DESTEK & İLETİŞİM — phone/email/address (settings) */}
+            <div>
+              <ColumnTitle>Destek &amp; İletişim</ColumnTitle>
+              <ul className="space-y-3 text-[13.5px] text-white/65">
+                {settings?.phone && (
+                  <li className="flex items-center gap-2.5">
+                    <Phone
+                      size={14}
+                      strokeWidth={1.75}
+                      aria-hidden
+                      className="text-[var(--color-champagne-400)] shrink-0"
+                    />
+                    <a
+                      href={`tel:${settings.phone}`}
+                      className="hover:text-white transition-colors motion-reduce:transition-none"
+                    >
+                      {settings.phone}
+                    </a>
+                  </li>
+                )}
+                {settings?.email && (
+                  <li className="flex items-center gap-2.5">
+                    <Mail
+                      size={14}
+                      strokeWidth={1.75}
+                      aria-hidden
+                      className="text-[var(--color-champagne-400)] shrink-0"
+                    />
+                    <a
+                      href={`mailto:${settings.email}`}
+                      className="hover:text-white transition-colors motion-reduce:transition-none break-all"
+                    >
+                      {settings.email}
+                    </a>
+                  </li>
+                )}
+                {settings?.address && (
+                  <li className="flex items-start gap-2.5">
+                    <MapPin
+                      size={14}
+                      strokeWidth={1.75}
+                      aria-hidden
+                      className="text-[var(--color-champagne-400)] mt-0.5 shrink-0"
+                    />
+                    <span className="leading-relaxed">{settings.address}</span>
+                  </li>
+                )}
               </ul>
-            ) : (
-              <ul className="space-y-2.5">
+
+              {/* MÜŞTERİ İŞLEMLERİ — rezervasyon durum sorgulama */}
+              <ul className="space-y-2.5 mt-6 pt-6 border-t border-white/10">
                 <li>
-                  <FooterLink href="/arama">Tüm kategoriler</FooterLink>
-                </li>
-              </ul>
-            )}
-          </nav>
-
-          {/* POPÜLER BÖLGELER (dynamic villa_locations) */}
-          <nav aria-label="Popüler bölgeler">
-            <ColumnTitle>Popüler Bölgeler</ColumnTitle>
-            {locations.length > 0 ? (
-              <ul className="space-y-2.5">
-                {locations.map((loc) => (
-                  <li key={loc.id}>
-                    <FooterLink href={taxonomyHref("bolgeler", loc)}>
-                      {loc.name}
-                    </FooterLink>
-                  </li>
-                ))}
-                <li className="pt-2">
-                  <FooterLink href="/arama">
-                    <span className="text-[13px] text-[var(--brand-coral)] inline-flex items-center gap-1">
-                      Tüm bölgeler
-                      <ArrowRight size={12} strokeWidth={1.75} aria-hidden />
-                    </span>
+                  <FooterLink href="/rezervasyon-kontrol">
+                    Rezervasyon Sorgula
                   </FooterLink>
                 </li>
               </ul>
-            ) : (
-              <ul className="space-y-2.5">
-                <li>
-                  <FooterLink href="/arama">Tüm bölgeleri keşfet</FooterLink>
-                </li>
-              </ul>
-            )}
-          </nav>
-
-          {/* İLETİŞİM — phone/email/address (settings) */}
-          <div>
-            <ColumnTitle>İletişim</ColumnTitle>
-            <ul className="space-y-3 text-[13.5px] text-white/65">
-              {settings?.phone && (
-                <li className="flex items-center gap-2.5">
-                  <Phone
-                    size={14}
-                    strokeWidth={1.75}
-                    aria-hidden
-                    className="text-[var(--brand-coral)] shrink-0"
-                  />
-                  <a
-                    href={`tel:${settings.phone}`}
-                    className="hover:text-white transition-colors motion-reduce:transition-none"
-                  >
-                    {settings.phone}
-                  </a>
-                </li>
-              )}
-              {settings?.email && (
-                <li className="flex items-center gap-2.5">
-                  <Mail
-                    size={14}
-                    strokeWidth={1.75}
-                    aria-hidden
-                    className="text-[var(--brand-coral)] shrink-0"
-                  />
-                  <a
-                    href={`mailto:${settings.email}`}
-                    className="hover:text-white transition-colors motion-reduce:transition-none break-all"
-                  >
-                    {settings.email}
-                  </a>
-                </li>
-              )}
-              {settings?.address && (
-                <li className="flex items-start gap-2.5">
-                  <MapPin
-                    size={14}
-                    strokeWidth={1.75}
-                    aria-hidden
-                    className="text-[var(--brand-coral)] mt-0.5 shrink-0"
-                  />
-                  <span className="leading-relaxed">{settings.address}</span>
-                </li>
-              )}
-            </ul>
-
-            {/* MÜŞTERİ İŞLEMLERİ — rezervasyon durum sorgulama */}
-            <ul className="space-y-2.5 mt-6 pt-6 border-t border-white/10">
-              <li>
-                <FooterLink href="/rezervasyon-kontrol">
-                  Rezervasyon Sorgula
-                </FooterLink>
-              </li>
-            </ul>
+            </div>
           </div>
         </div>
 
-        {/* ════════════════════════════════════════════════════
-            ALT GÜVEN ŞERİDİ — tek premium card
-            TÜRSAB · Güvenli Rezervasyon · Güvenli Ödeme ·
-            En İyi Fiyat Garantisi · Payment Methods görseli
-            ════════════════════════════════════════════════════ */}
-        <div className="mt-12 md:mt-14 rounded-3xl border border-white/10 bg-white/[0.04] shadow-[0_18px_44px_-24px_rgba(0,0,0,0.6)] px-5 py-5 md:px-7 md:py-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-            {/* Güven öğeleri */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center px-3 py-1.5 bg-white/[0.05]">
-                <Image
-                  src="/brand/trust/tursab.png"
-                  alt="TÜRSAB üyesi"
-                  width={290}
-                  height={132}
-                  className="w-auto object-contain opacity-90"
-                />
-              </span>
-            </div>
-
-            {/* Payment methods görseli */}
+        {/* ═══════════ SECTION 3 — MINIMAL BOTTOM BAR ═══════════ */}
+        <div className="mt-14 md:mt-16 pt-7 border-t border-white/10">
+          {/* trust + payment badges */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-7">
+            <span className="inline-flex items-center px-3 py-1.5 bg-white/[0.05] rounded-xl">
+              <Image
+                src="/brand/trust/tursab.png"
+                alt="TÜRSAB üyesi"
+                width={290}
+                height={132}
+                className="h-9 w-auto object-contain opacity-90"
+              />
+            </span>
             <span className="inline-flex items-center rounded-full px-3 py-1.5 bg-white/[0.05] border border-white/10 shrink-0">
               <Image
                 src="/brand/trust/payment-methods.png"
                 alt="Visa, Mastercard ve Troy ödeme yöntemleri"
                 width={1400}
                 height={400}
-                className="h-10 w-auto object-contain"
+                className="h-9 w-auto object-contain"
               />
             </span>
           </div>
-        </div>
 
-        {/* ════════════════════════════════════════════════════
-            EN ALT BAR — copyright + lokasyon + developer credit
-            ════════════════════════════════════════════════════ */}
-        <div className="mt-10 pt-6 border-t border-white/10">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-[12px] text-white/50">
+          {/* copyright (sol) + lokasyon + developer credit */}
+          <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-[12px] text-white/50">
             <p>
               {settings?.footer_copyright
                 ? settings.footer_copyright
@@ -606,11 +640,6 @@ export default async function Footer() {
                 alt="Maki Dijital"
                 width={1254}
                 height={1254}
-                /* 🛡️ Boyut fix: kare logo (1254×1254, içerik %92 dolu —
-                   PNG boşluğu yok) eski h-[26px]'de 26×26px ile küçük
-                   kalıyordu. h-10 md:h-11 (40/44px, ~%55-69 büyük) →
-                   desktop premium, mobilde alt bar flex-col stack
-                   olduğu için taşma yok. */
                 className="h-10 md:h-11 w-auto object-contain opacity-75 group-hover:opacity-100 transition-opacity duration-300 motion-reduce:transition-none"
               />
             </a>

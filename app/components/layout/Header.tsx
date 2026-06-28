@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Menu, X, ChevronDown, Heart, Sparkles } from "lucide-react";
+import { Menu, X, ChevronDown, Heart } from "lucide-react";
 import { usePathname } from "next/navigation";
 import TopBar from "./TopBar";
 /* 🛡️ FAZ 36 — Favorites shortcut (localStorage badge counter) */
@@ -201,21 +201,6 @@ export default function Header({
               {/* Favorites shortcut (FAZ 36).
                  🛡️ FAZ 39C: variant prop kaldırıldı (dead). */}
               <HeaderFavoritesLink />
-
-              {/* 🛡️ FAZ 39C — Desktop CTA unified to .btn-primary
-                 (luxury coral system). Padding override `!py-2.5`
-                 ile header height'a hizalı; aksi takdirde default
-                 12px padding header bar yüksekliğini değiştirirdi.
-                 🛡️ FAZ 40 — CTA "Villaları keşfet" → "Teklif Al"
-                 (concierge focus); href /arama → /teklif-al; Sparkles
-                 icon eklendi (luxury danışman hissi). */}
-              <Link
-                href="/teklif-al"
-                className="btn-primary !py-2.5 text-[13px]"
-              >
-                <Sparkles size={14} aria-hidden strokeWidth={1.75} />
-                Teklif Al
-              </Link>
             </div>
 
             {/* 🛡️ MOBILE ACTIONS — search input + hamburger toggle.
@@ -319,14 +304,6 @@ export default function Header({
               Favorilerim
             </Link>
 
-            {/* 🛡️ FAZ 40 — Mobile CTA: concierge focus (Teklif Al). */}
-            <Link
-              href="/teklif-al"
-              className="btn-primary w-full !py-3 mt-2"
-            >
-              <Sparkles size={15} aria-hidden strokeWidth={1.75} />
-              Teklif Al
-            </Link>
           </div>
         </div>
       </header>
