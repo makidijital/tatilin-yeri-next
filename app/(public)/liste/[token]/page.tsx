@@ -259,7 +259,7 @@ export default async function SharedVillaListPage({
         {/* ════════ VILLA GRID ════════ */}
         <section className="mt-12 md:mt-16">
           <div className="
-            grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3
+            grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2
             gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16
           ">
             {sorted.map((v) => {

@@ -309,7 +309,7 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
                       {SORT_DROPDOWN_CLOSE_SCRIPT}
                     </Script>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
                       {/* 🛡️ Faz 9 hardening: `(villa: any)` → `VillaDTO`.
                          🛡️ SCALE HARDENING: `villas` yerine `villasOnPage`
                          (PAGE_SIZE'la dilimlenmiş). Tüm 1500 villa

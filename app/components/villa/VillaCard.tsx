@@ -613,9 +613,11 @@ export default function VillaCard({
       <article
         className={
           "relative overflow-hidden bg-white " +
-          "rounded-[20px] shadow-[0_8px_20px_-14px_rgba(27,26,23,0.18)] " +
-          "group-hover:shadow-[0_20px_36px_-18px_rgba(27,26,23,0.28)] " +
-          "transition-[box-shadow,transform] duration-400 motion-reduce:transition-none " +
+          "rounded-2xl border border-[var(--color-stone-100)] " +
+          "shadow-[0_10px_26px_-16px_rgba(11,31,58,0.20)] " +
+          "group-hover:shadow-[0_24px_44px_-20px_rgba(11,31,58,0.30)] " +
+          "group-hover:border-[var(--color-stone-200)] " +
+          "transition-[box-shadow,transform,border-color] duration-400 motion-reduce:transition-none " +
           "group-hover:-translate-y-[2px]"
         }
       >
@@ -667,10 +669,10 @@ export default function VillaCard({
 
           {/* BADGE — glass pill (kategori/lightning) */}
           {badge && (
-            <span className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-sm text-[var(--color-stone-900)] text-[10px] tracking-[0.16em] uppercase font-medium px-2.5 py-1 rounded-full shadow-[0_4px_12px_-4px_rgb(27_26_23/0.30)] ring-1 ring-white/40">
+            <span className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 bg-emerald-500 text-white text-[10px] tracking-[0.16em] uppercase font-medium px-2.5 py-1 rounded-full shadow-[0_4px_12px_-4px_rgba(16,122,87,0.45)] ring-1 ring-white/20">
               <span
                 aria-hidden="true"
-                className="inline-block w-1 h-1 rounded-full bg-[var(--brand-coral)]"
+                className="inline-block w-1 h-1 rounded-full bg-white/90"
               />
               {badge}
             </span>
@@ -682,54 +684,31 @@ export default function VillaCard({
 
         {/* ── CONTENT AREA — kart altı kompakt blok ── */}
         <div className="p-3.5 md:p-4">
-          {/* ROW 1 — title (sol) + price (sağ) */}
-          <div className="flex items-start justify-between gap-3">
+          {/* TITLE + LOCATION — tek satır: villa adı (sol) + bölge (sağ).
+              justify-between + items-center; uzun isimlerde title truncate,
+              uzun bölgede location max-w + truncate → layout wrap-safe. */}
+          <div className="flex items-center justify-between gap-3">
             <h3
               className={
-                "min-w-0 font-display text-[16px] md:text-[17px] " +
-                "leading-[1.15] tracking-[-0.018em] text-[var(--color-stone-900)] " +
-                "line-clamp-2 " +
+                "min-w-0 flex-1 truncate " +
+                "font-display text-[17px] md:text-[18px] " +
+                "leading-[1.15] tracking-[-0.02em] text-[var(--color-stone-900)] " +
                 "group-hover:text-[var(--color-stone-800)] " +
                 "transition-colors motion-reduce:transition-none"
               }
             >
               {title}
             </h3>
-            <div className="shrink-0 text-right">
-              {stayTotal !== null ? (
-                <>
-                  <div className="font-display text-[15px] md:text-[16px] text-[var(--color-stone-900)] tracking-[-0.012em] tabular-nums leading-none">
-                    {formatCurrency(stayTotal, currency)}
-                  </div>
-                  <div className="mt-1 text-[10px] tracking-[0.06em] uppercase text-[var(--color-stone-500)] tabular-nums">
-                    {stayNights} gece{hasCleaning ? " · Temizlik dahil" : ""}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="font-display text-[15px] md:text-[16px] text-[var(--color-stone-900)] tracking-[-0.012em] tabular-nums leading-none">
-                    {price ? formatCurrency(convertedPrice, currency) : "Fiyat sorunuz"}
-                  </div>
-                  {price ? (
-                    <div className="mt-1 text-[10px] tracking-[0.06em] uppercase text-[var(--color-stone-500)]">
-                      / gece
-                    </div>
-                  ) : null}
-                </>
-              )}
-            </div>
+            <p className="shrink-0 max-w-[45%] inline-flex items-center gap-1 text-[11.5px] text-[var(--color-stone-500)]">
+              <MapPin
+                size={12}
+                className="text-[var(--color-stone-400)] shrink-0"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              <span className="truncate">{location || "Lokasyon yok"}</span>
+            </p>
           </div>
-
-          {/* ROW 2 — location */}
-          <p className="mt-2 flex items-center gap-1.5 text-[12px] text-[var(--color-stone-500)] min-w-0">
-            <MapPin
-              size={12}
-              className="text-[var(--color-stone-400)] shrink-0"
-              strokeWidth={1.75}
-              aria-hidden
-            />
-            <span className="truncate">{location || "Lokasyon yok"}</span>
-          </p>
 
           {/* ROW 3 — review meta (opsiyonel, kompakt) */}
           {typeof reviewCount === "number" && reviewCount > 0 &&
@@ -755,78 +734,93 @@ export default function VillaCard({
               </div>
             )}
 
-          {/* ROW 4 — amenity tile grid (kompakt, dikey hizalı).
-              3-kolonlu grid: her kutu kendi içinde center-aligned
-              (icon üst, sayı orta, etiket alt). Tonlar curation
-              AmenityMini ile birebir aynı: yatak coral, banyo green,
-              kişi blue. Kart kompakt olsa bile kapasite bilgisi
-              ilk bakışta görünür kalır.
-              Yükseklik ~76-82px → mevcut h-24 (96px) tile'lardan
-              daha kısa ama bilgi vurgusu daha güçlü (sayı + etiket
-              birlikte ortalı). */}
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <div
-              className="rounded-xl bg-[#FFF1EB] px-2 py-2.5 flex flex-col items-center justify-center text-center"
-              aria-label={`${bedrooms} yatak odası`}
-            >
-              <BedDouble size={16} strokeWidth={1.6} className="text-[#c84a20]" aria-hidden />
-              <span className="mt-1 font-display text-[18px] leading-none tabular-nums font-semibold text-[#7a2c12]">
-                {bedrooms}
-              </span>
-              <span className="mt-1 text-[10px] tracking-[0.04em] font-medium leading-tight text-[#c25a30]">
-                Yatak Odası
-              </span>
-            </div>
-            <div
-              className="rounded-xl bg-[#EEF8F0] px-2 py-2.5 flex flex-col items-center justify-center text-center"
-              aria-label={`${bathrooms} banyo`}
-            >
-              <Bath size={16} strokeWidth={1.6} className="text-[#1f7a4d]" aria-hidden />
-              <span className="mt-1 font-display text-[18px] leading-none tabular-nums font-semibold text-[#0f4429]">
-                {bathrooms}
-              </span>
-              <span className="mt-1 text-[10px] tracking-[0.04em] font-medium leading-tight text-[#36805a]">
-                Banyo
-              </span>
-            </div>
-            <div
-              className="rounded-xl bg-[#EEF4FF] px-2 py-2.5 flex flex-col items-center justify-center text-center"
+          {/* Subtle inset divider — üst bilgi bloğu (ad/bölge) ↔ amenities
+              ayrımı; premium minimal, full-width değil (mx-1 inset). */}
+          <div aria-hidden="true" className="mt-3.5 mx-1 h-px bg-[var(--color-stone-100)]" />
+
+          {/* AMENITIES — inline icon+text satır (referans tasarım dili).
+              Aynı veri (guests / bedrooms / bathrooms); pastel tile grid
+              yerine tek satır temiz amenity row. */}
+          <div className="mt-3.5 flex items-center justify-center gap-x-4 gap-y-1.5 flex-wrap text-[12.5px] text-[var(--color-stone-700)]">
+            <span
+              className="inline-flex items-center gap-1.5"
               aria-label={`${guests} kişi kapasitesi`}
             >
-              <Users size={16} strokeWidth={1.6} className="text-[#1d6492]" aria-hidden />
-              <span className="mt-1 font-display text-[18px] leading-none tabular-nums font-semibold text-[#0e3a59]">
-                {guests}
-              </span>
-              <span className="mt-1 text-[10px] tracking-[0.04em] font-medium leading-tight text-[#356f96]">
-                Kişi
-              </span>
-            </div>
+              <Users size={15} strokeWidth={1.6} className="text-emerald-600 shrink-0" aria-hidden />
+              <span className="tabular-nums">{guests} Kişi</span>
+            </span>
+            <span
+              className="inline-flex items-center gap-1.5"
+              aria-label={`${bedrooms} yatak odası`}
+            >
+              <BedDouble size={15} strokeWidth={1.6} className="text-emerald-600 shrink-0" aria-hidden />
+              <span className="tabular-nums">{bedrooms} Yatak Odası</span>
+            </span>
+            <span
+              className="inline-flex items-center gap-1.5"
+              aria-label={`${bathrooms} banyo`}
+            >
+              <Bath size={15} strokeWidth={1.6} className="text-emerald-600 shrink-0" aria-hidden />
+              <span className="tabular-nums">{bathrooms} Banyo</span>
+            </span>
           </div>
 
-          {/* ROW 5 — BOOKING CTA (kompakt; curation ile aynı işlev,
-              mevcut handler birebir aynı). h-9 + text-[11px] →
-              card altında ince bar; modal lazy mount KORUNDU. */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsBookingOpen(true);
-            }}
-            aria-label="Müsaitlik ve tarih seçimi modalını aç"
-            className={
-              "mt-3 w-full inline-flex items-center justify-center gap-2 " +
-              "h-9 rounded-xl " +
-              "bg-[var(--color-stone-900)] text-white uppercase font-medium " +
-              "text-[11px] tracking-[0.08em] " +
-              "hover:bg-[var(--color-stone-800)] " +
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40 " +
-              "transition-colors duration-200 motion-reduce:transition-none"
-            }
-          >
-            <CalendarRange size={13} strokeWidth={1.75} aria-hidden />
-            Müsaitlik / Tarih Seç
-          </button>
+          {/* Divider — content ile bottom row ayrımı */}
+          <div aria-hidden="true" className="mt-3.5 h-px bg-[var(--color-stone-100)]" />
+
+          {/* BOTTOM ROW — price (sol) + booking CTA (sağ).
+              🛡️ Booking trigger onClick / aria-label / görünür label +
+              lazy modal mantığı AYNEN; yalnız konum + stil değişti.
+              Fiyat hesabı (stayTotal / convertedPrice branch) title
+              satırından buraya BİREBİR taşındı — yeni hesap YOK. */}
+          <div className="mt-3.5 flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              {stayTotal !== null ? (
+                <>
+                  <div className="font-display text-[18px] md:text-[19px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
+                    {formatCurrency(stayTotal, currency)}
+                  </div>
+                  <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)] tabular-nums">
+                    {stayNights} gece{hasCleaning ? " · Temizlik dahil" : ""}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="font-display text-[18px] md:text-[19px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
+                    {price ? formatCurrency(convertedPrice, currency) : "Fiyat sorunuz"}
+                  </div>
+                  {price ? (
+                    <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)]">
+                      / gece
+                    </div>
+                  ) : null}
+                </>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsBookingOpen(true);
+              }}
+              aria-label="Müsaitlik ve tarih seçimi modalını aç"
+              className={
+                "shrink-0 inline-flex items-center justify-center gap-1.5 whitespace-nowrap " +
+                "h-9 px-3.5 rounded-xl " +
+                "border border-[var(--brand-coral)]/35 " +
+                "bg-[var(--brand-coral-tint)] text-[var(--brand-coral-deep)] " +
+                "uppercase font-medium text-[11px] tracking-[0.06em] " +
+                "hover:bg-[var(--brand-coral)] hover:text-white hover:border-[var(--brand-coral)] " +
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/40 " +
+                "transition-colors duration-200 motion-reduce:transition-none"
+              }
+            >
+              <CalendarRange size={13} strokeWidth={1.75} aria-hidden />
+              Müsaitlik / Tarih Seç
+            </button>
+          </div>
           {reserveBlock}
         </div>
       </article>
