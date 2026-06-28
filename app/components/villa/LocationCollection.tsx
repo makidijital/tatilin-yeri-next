@@ -137,46 +137,13 @@ export default async function LocationCollection() {
     >
       <div className="max-w-[1280px] mx-auto">
         {/* 🛡️ FAZ 39M — Normalized section header (CategoryCollection parity). */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 md:gap-10 mb-8 md:mb-12">
-          <div className="max-w-xl">
-            <p className="text-[10.5px] tracking-[0.28em] uppercase font-medium inline-flex items-center text-[var(--brand-coral)]">
-              <span
-                aria-hidden="true"
-                className="inline-block w-6 h-px align-middle mr-3 bg-[var(--brand-coral)]/60"
-              />
-              Bölgeler
-            </p>
-            <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] mt-3 leading-tight tracking-[-0.02em]">
-              Bölgeye göre keşfedin.
-            </h2>
-            <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-stone-500)] max-w-md">
-              Akdeniz koylarında özenle seçilmiş bölgeler.
-            </p>
-          </div>
-          <Link
-            href="/arama"
-            className="
-              group hidden md:inline-flex items-center gap-2
-              px-4 py-2 rounded-full
-              border border-[var(--color-stone-200)]
-              text-[12.5px] font-medium tracking-[0.02em]
-              text-[var(--color-stone-700)]
-              hover:border-[var(--brand-coral)] hover:text-[var(--color-stone-900)]
-              hover:bg-[var(--brand-coral-tint)]
-              transition-[color,background-color,border-color] duration-300
-              motion-reduce:transition-none
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/30
-              shrink-0
-            "
-          >
-            <span>Tüm bölgeler</span>
-            <span
-              aria-hidden="true"
-              className="text-[var(--color-stone-500)] group-hover:text-[var(--brand-coral)] transition-colors"
-            >
-              →
-            </span>
-          </Link>
+        <div className="text-center mb-8 md:mb-12">
+          <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] leading-tight tracking-[-0.02em]">
+            Villa Kiralama Bölgeleri
+          </h2>
+          <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-stone-500)] max-w-md mx-auto">
+            Özenle seçilmiş bölgeler
+          </p>
         </div>
 
         {/* COMPACT REGION GRID — carousel kaldırıldı (modern kompakt grid).
@@ -192,8 +159,8 @@ export default async function LocationCollection() {
           ))}
         </ul>
 
-        {/* 🛡️ FAZ 39M — Mobile CTA pill (CategoryCollection parity). */}
-        <div className="md:hidden mt-7 flex justify-center">
+        {/* 🛡️ CTA — grid altında, tüm ekranlarda centered (header'dan taşındı). */}
+        <div className="mt-9 md:mt-10 flex justify-center">
           <Link
             href="/arama"
             className="

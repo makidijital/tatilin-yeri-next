@@ -7,9 +7,6 @@ import VillaList from "@/app/components/villa/VillaList";
 import FaqSection from "@/app/components/ui/FaqSection";
 /* 🛡️ FAZ 34 — Homepage testimonial section (approved reviews) */
 import HomepageReviewsSection from "@/app/components/home/HomepageReviewsSection";
-/* 🛡️ Statik güven + dönüşüm bandı (CMS/DB yok). brandName + phone
-   homepage'in zaten elindeki settings'ten prop olarak geçer. */
-import WhyUsSection from "@/app/components/home/WhyUsSection";
 /* 🛡️ Kısa Süreli Tarihler — takvimdeki iç boşluklar (053/054).
    Salt-okuma; boş veride null döner. Diğer section'ları etkilemez. */
 import ShortGapsSection from "@/app/components/home/ShortGapsSection";
@@ -113,13 +110,6 @@ export default async function Home() {
          null render → layout sessizce gizlenir. */}
       <CategoryCollection />
       <VillaList />
-      {/* 🛡️ Statik güven + dönüşüm bölümü — Villa listesi'nin altında
-         (Koleksiyonlar ↓ Villa listesi ↓ Neden biz). brandName + phone
-         mevcut settings'ten geçer (yeni veri kaynağı YOK). */}
-      <WhyUsSection
-        brandName={brandName}
-        phone={settings?.phone ?? null}
-      />
       {/* 🛡️ "Bölgeler" — VillaList altı, Footer üstü. CategoryCollection
          ile aynı chip pattern; sadece veri kaynağı (locations) ve
          URL param (`regions=`) farklı. Empty location'larda null
