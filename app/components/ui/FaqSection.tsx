@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Minus, Sparkles } from "lucide-react";
+import { Plus, Minus, HelpCircle } from "lucide-react";
 
 /* ===============================================================
    🛡️ FaqSection — Luxury hospitality accordion (Faz 25)
@@ -53,110 +53,115 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
         className="absolute inset-0 pointer-events-none overflow-hidden"
         style={{
           background:
-            "radial-gradient(ellipse 70% 50% at 50% 0%, rgb(34 211 238 / 0.05) 0%, transparent 60%), radial-gradient(ellipse 50% 35% at 50% 100%, rgb(255 138 85 / 0.04) 0%, transparent 60%)",
+            "radial-gradient(ellipse 70% 50% at 50% 0%, rgb(52 197 189 / 0.05) 0%, transparent 60%), radial-gradient(ellipse 50% 35% at 50% 100%, rgb(242 140 40 / 0.04) 0%, transparent 60%)",
         }}
       />
 
-      <div className="relative max-w-3xl mx-auto">
-        {/* 🛡️ FAZ 39M — Normalized section header. */}
-        <div className="text-center mb-8 md:mb-12">
-          <p className="text-[10.5px] tracking-[0.28em] uppercase font-medium inline-flex items-center gap-2 text-[var(--brand-coral)]">
-            <Sparkles
-              size={11}
-              className="text-[var(--brand-coral)]"
+      <div className="relative max-w-[1280px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+        {/* ═══ LEFT — decorative info panel (navy + turquoise) ═══ */}
+        <div className="lg:col-span-4">
+          <div className="relative overflow-hidden rounded-3xl p-7 md:p-9 bg-gradient-to-br from-[#0B1F3A] to-[#132A46] border border-white/10 shadow-[0_28px_64px_-32px_rgba(11,31,58,0.6)] lg:sticky lg:top-24">
+            <div
               aria-hidden
+              className="pointer-events-none absolute -top-20 -right-16 w-64 h-64 blur-3xl opacity-50"
+              style={{
+                background:
+                  "radial-gradient(circle at center, rgba(24,183,176,0.30), transparent 70%)",
+              }}
             />
-            Yardım Merkezi
-          </p>
-          <h2
-            id="faq-heading"
-            className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] mt-3 leading-tight tracking-[-0.02em]"
-          >
-            Sık sorulan sorular.
-          </h2>
-          <p className="text-[14px] text-[var(--color-stone-500)] mt-3 max-w-md mx-auto leading-relaxed">
-            Tatil planlamadan rezervasyona, ödemeden konaklamaya — en
-            çok merak edilenleri sizin için derledik.
-          </p>
+            <span className="relative inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--color-champagne-500)]/15 text-[var(--color-champagne-300)] ring-1 ring-inset ring-[var(--color-champagne-500)]/25">
+              <HelpCircle size={22} strokeWidth={1.75} aria-hidden />
+            </span>
+            <h2
+              id="faq-heading"
+              className="relative mt-6 font-display font-medium text-[24px] md:text-[28px] text-white leading-tight tracking-[-0.02em]"
+            >
+              Sıkça Sorulan Sorular
+            </h2>
+            <p className="relative mt-3 text-[14.5px] leading-relaxed text-white/65">
+              Misafirlerimizin en çok merak ettiği sorular.
+            </p>
+          </div>
         </div>
 
-        {/* ACCORDION */}
-        <div className="space-y-3 md:space-y-3.5">
-          {faqs.map((faq, idx) => {
-            const isOpen = openIndex === idx;
-            return (
-              <article
-                key={faq.id}
-                className={`
-                  rounded-2xl bg-white
-                  transition-all duration-300 motion-reduce:transition-none
-                  ${
-                    isOpen
-                      ? "border border-[var(--color-champagne-300)] shadow-[0_12px_32px_-16px_rgb(6_182_212_/_0.28)]"
-                      : "border border-[var(--color-stone-100)] hover:border-[var(--color-champagne-300)] hover:shadow-[0_8px_20px_-12px_rgb(27_26_23/0.08)]"
-                  }
-                `}
-              >
-                <button
-                  type="button"
-                  onClick={() => setOpenIndex(isOpen ? null : idx)}
-                  aria-expanded={isOpen}
-                  aria-controls={`faq-panel-${idx}`}
-                  id={`faq-button-${idx}`}
-                  className="
-                    w-full flex items-start gap-4
-                    px-5 py-4 md:px-6 md:py-5
-                    text-left
-                    focus:outline-none focus-visible:ring-2
-                    focus-visible:ring-[var(--color-champagne-500)]/40
-                    rounded-2xl
-                  "
-                >
-                  <span
-                    className={`
-                      w-8 h-8 shrink-0 rounded-full
-                      flex items-center justify-center
-                      transition-colors motion-reduce:transition-none
-                      ${
-                        isOpen
-                          ? "bg-[var(--color-champagne-500)] text-white"
-                          : "bg-[var(--color-sand-50)] border border-[var(--color-stone-100)] text-[var(--color-champagne-600)]"
-                      }
-                    `}
-                    aria-hidden
-                  >
-                    {isOpen ? <Minus size={14} /> : <Plus size={14} />}
-                  </span>
-                  <span className="flex-1 min-w-0 font-display text-[16px] md:text-[18px] text-[var(--color-stone-900)] leading-snug tracking-[-0.015em] mt-1">
-                    {faq.question}
-                  </span>
-                </button>
-
-                {/* 🛡️ Smooth height animation — CSS grid-rows trick:
-                       grid-rows-[0fr] → [1fr] auto height animate
-                       without measuring (no layout-thrash).
-                       Inside an overflow-hidden wrapper. */}
-                <div
-                  id={`faq-panel-${idx}`}
-                  role="region"
-                  aria-labelledby={`faq-button-${idx}`}
+        {/* ═══ RIGHT — accordion (logic AYNEN; yalnız restyle) ═══ */}
+        <div className="lg:col-span-8">
+          <div className="space-y-3 md:space-y-3.5">
+            {faqs.map((faq, idx) => {
+              const isOpen = openIndex === idx;
+              return (
+                <article
+                  key={faq.id}
                   className={`
-                    grid transition-[grid-template-rows] duration-300 ease-out
-                    motion-reduce:transition-none
-                    ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}
+                    rounded-2xl bg-white
+                    transition-all duration-300 motion-reduce:transition-none
+                    ${
+                      isOpen
+                        ? "border border-[var(--color-champagne-500)]/55 shadow-[0_20px_44px_-22px_rgba(24,183,176,0.30)]"
+                        : "border border-[var(--color-stone-100)] shadow-[0_8px_22px_-16px_rgba(11,31,58,0.18)] hover:border-[var(--color-champagne-400)]/50 hover:shadow-[0_16px_32px_-20px_rgba(11,31,58,0.26)]"
+                    }
                   `}
                 >
-                  <div className="overflow-hidden">
-                    <div className="px-5 md:px-6 pb-5 md:pb-6 pl-[68px] md:pl-[76px]">
-                      <p className="text-[14px] md:text-[15px] text-[var(--color-stone-600)] leading-[1.75] whitespace-pre-line">
-                        {faq.answer}
-                      </p>
+                  <button
+                    type="button"
+                    onClick={() => setOpenIndex(isOpen ? null : idx)}
+                    aria-expanded={isOpen}
+                    aria-controls={`faq-panel-${idx}`}
+                    id={`faq-button-${idx}`}
+                    className="
+                      group w-full flex items-start gap-4
+                      px-5 py-4 md:px-6 md:py-5
+                      text-left
+                      focus:outline-none focus-visible:ring-2
+                      focus-visible:ring-[var(--color-champagne-500)]/40
+                      rounded-2xl
+                    "
+                  >
+                    <span
+                      className={`
+                        w-8 h-8 shrink-0 rounded-full
+                        flex items-center justify-center
+                        transition-[background-color,color,transform] duration-300
+                        motion-reduce:transition-none group-hover:scale-110
+                        ${
+                          isOpen
+                            ? "bg-[var(--color-champagne-500)] text-white"
+                            : "bg-[var(--color-champagne-50)] border border-[var(--color-champagne-500)]/20 text-[var(--color-champagne-600)]"
+                        }
+                      `}
+                      aria-hidden
+                    >
+                      {isOpen ? <Minus size={14} /> : <Plus size={14} />}
+                    </span>
+                    <span className="flex-1 min-w-0 font-display text-[16px] md:text-[18px] text-[var(--color-stone-900)] leading-snug tracking-[-0.015em] mt-1">
+                      {faq.question}
+                    </span>
+                  </button>
+
+                  {/* 🛡️ Smooth height animation — CSS grid-rows trick
+                         (grid-rows-[0fr]→[1fr]); layout-thrash yok. AYNEN. */}
+                  <div
+                    id={`faq-panel-${idx}`}
+                    role="region"
+                    aria-labelledby={`faq-button-${idx}`}
+                    className={`
+                      grid transition-[grid-template-rows] duration-300 ease-out
+                      motion-reduce:transition-none
+                      ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}
+                    `}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="px-5 md:px-6 pb-5 md:pb-6 pl-[68px] md:pl-[76px]">
+                        <p className="text-[14px] md:text-[15px] text-[var(--color-stone-600)] leading-[1.75] whitespace-pre-line">
+                          {faq.answer}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </article>
-            );
-          })}
+                </article>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>

@@ -31,6 +31,10 @@ export type CarouselReview = {
   comment: string;
   guest_name: string;
   created_at: string | null;
+  /** Yorum yapılan villanın adı + cover URL (mevcut review datasından;
+   *  yeni fetch yok). cover_image zaten resolve edilmiş absolute URL. */
+  villaTitle: string;
+  villaCover: string | null;
 };
 
 type Props = {
@@ -171,8 +175,43 @@ function ReviewCard({ review }: { review: CarouselReview }) {
         px-6 py-7 md:px-7 md:py-8
       "
     >
-      {/* ⭐ STARS — üstte */}
-      <StarRow value={rating} />
+      {/* TOP — villa thumbnail (sol) + villa adı + compact rating (sağ) */}
+      <div className="flex items-center gap-3.5">
+        <div className="relative shrink-0 w-14 h-14 overflow-hidden rounded-lg bg-gradient-to-br from-[var(--color-sand-100)] via-[var(--color-sand-50)] to-[var(--color-sand-100)]">
+          {review.villaCover ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={review.villaCover}
+              alt={review.villaTitle}
+              className="w-full h-full object-cover object-center"
+            />
+          ) : (
+            <span className="absolute inset-0 flex items-center justify-center select-none font-display text-[20px] text-[var(--color-stone-300)]">
+              {(review.villaTitle?.[0] || "·").toUpperCase()}
+            </span>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-display font-medium text-[15px] text-[var(--color-stone-900)] tracking-[-0.01em] truncate">
+            {review.villaTitle}
+          </p>
+          <span
+            className="mt-1 inline-flex items-center gap-1 text-[12.5px]"
+            aria-label={`${rating} / 5 puan`}
+          >
+            <Star
+              size={13}
+              className="text-amber-500"
+              fill="currentColor"
+              strokeWidth={1.5}
+              aria-hidden
+            />
+            <span className="font-medium text-[var(--color-stone-800)] tabular-nums">
+              {rating}
+            </span>
+          </span>
+        </div>
+      </div>
 
       {/* YORUM — ortada (flex-1); Devamını Oku ile genişler.
          line-clamp-5 utility projede yok → 5-satır clamp inline
@@ -251,25 +290,6 @@ function Avatar({ name }: { name: string }) {
       aria-hidden
     >
       {initials}
-    </span>
-  );
-}
-
-function StarRow({ value }: { value: number }) {
-  return (
-    <span
-      className="inline-flex items-center gap-0.5 text-amber-500"
-      aria-label={`${value} / 5`}
-    >
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Star
-          key={i}
-          size={15}
-          fill={i <= value ? "currentColor" : "none"}
-          className={i <= value ? "" : "text-[var(--color-stone-300)]"}
-          strokeWidth={1.5}
-        />
-      ))}
     </span>
   );
 }

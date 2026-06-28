@@ -118,16 +118,13 @@ export default async function Home() {
       {/* 🛡️ "Kısa Süreli Tarihler" — takvimdeki dolu-boş-dolu iç boşluklar.
          Veri yoksa component null döner; layout etkilenmez. */}
       <ShortGapsSection />
-      {/* 🛡️ FAZ 34 — "Misafir Deneyimleri" testimonial section.
-         LocationCollection ile FaqSection arasında doğal trust-building
-         akışı: villa keşfi → sosyal kanıt → SSS. Approved review yoksa
-         component kendi içinde null döner; CLS yok, layout etkilenmez.
-         Cache tag "villa-reviews" — admin moderation invalidate eder. */}
-      <HomepageReviewsSection />
-      {/* 🛡️ FAZ 25 — Global SSS section, footer üstü.
-         FAQ tablosu boşsa component kendi içinde null döner;
-         homepage layout etkilenmez. */}
+      {/* 🛡️ FAZ 25 — Global SSS section (testimonials ÜSTÜNE taşındı).
+         FAQ tablosu boşsa component kendi içinde null döner; layout
+         etkilenmez. */}
       <FaqSection faqs={faqs} />
+      {/* 🛡️ FAZ 34 — "Misafir Yorumları" testimonial section. Approved
+         review yoksa component null döner; CLS yok, layout etkilenmez. */}
+      <HomepageReviewsSection />
     </>
   );
 }
