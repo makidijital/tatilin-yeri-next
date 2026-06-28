@@ -465,9 +465,9 @@ export default async function PrivateVillaDetail({
 
             {/* PRICES */}
             <section>
-              <p className="eyebrow mb-4 flex items-center gap-2">
+              <h2 className="eyebrow mb-4 flex items-center gap-2">
                 <Wallet size={11} /> Sezon Fiyatları
-              </p>
+              </h2>
               {prices.length === 0 ? (
                 <p className="text-[var(--color-stone-400)] text-sm italic">
                   Fiyat bilgisi yok
@@ -493,9 +493,9 @@ export default async function PrivateVillaDetail({
 
             {/* DISTANCES */}
             <section>
-              <p className="eyebrow mb-4 flex items-center gap-2">
+              <h2 className="eyebrow mb-4 flex items-center gap-2">
                 <Map size={11} /> Yakındaki Noktalar
-              </p>
+              </h2>
               {distances.length === 0 ? (
                 <p className="text-[var(--color-stone-400)] text-sm italic">
                   Bilgi yok

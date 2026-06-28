@@ -33,12 +33,12 @@ export default function AccommodationLayout({
 
   return (
     <section>
-      <p className="eyebrow mb-4 flex items-center gap-2">
-        <BedDouble size={11} /> Konaklama Düzeni
-      </p>
+      <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em] mb-4">
+        Konaklama Düzeni
+      </h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-        {/* YATAK ODALARI */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 md:gap-4">
+        {/* YATAK ODALARI — luxury suite kartları */}
         {bedrooms.map((room, i) => {
           const bedSummary = room.beds
             .map((b) => `${bedLabel(b.type)} × ${b.count}`)
@@ -46,40 +46,36 @@ export default function AccommodationLayout({
           return (
             <div
               key={`bed-${i}`}
-              className="rounded-2xl border border-[var(--color-stone-100)] bg-white px-4 py-3.5 md:px-5 md:py-4 hover:border-[var(--color-stone-200)] hover:shadow-[0_8px_20px_-12px_rgb(27_26_23/0.08)] transition-colors motion-reduce:transition-none flex items-start gap-3"
+              className="group rounded-3xl border border-[var(--color-stone-100)] bg-white px-5 py-5 md:px-6 md:py-6 shadow-[0_6px_18px_-14px_rgba(11,31,58,0.18)] hover:-translate-y-0.5 hover:border-[var(--color-champagne-300)] hover:shadow-[0_16px_34px_-18px_rgba(11,31,58,0.2)] transition-[transform,box-shadow,border-color] duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             >
-              <span className="w-9 h-9 shrink-0 rounded-xl border border-[var(--color-stone-100)] bg-[var(--color-sand-50)] text-[var(--color-stone-700)] flex items-center justify-center">
-                <BedDouble size={16} />
+              <span className="w-10 h-10 rounded-2xl border border-[var(--color-stone-100)] bg-[var(--color-sand-50)] text-[var(--color-stone-600)] flex items-center justify-center">
+                <BedDouble size={17} strokeWidth={1.75} />
               </span>
-              <div className="min-w-0 flex-1">
-                <p className="font-display text-[15px] md:text-[16px] text-[var(--color-stone-900)] tracking-[-0.01em] truncate">
-                  {room.name || `${i + 1}. Yatak Odası`}
-                </p>
-                <p className="text-[12.5px] text-[var(--color-stone-500)] mt-0.5 leading-relaxed">
-                  {bedSummary || "Detay belirtilmedi"}
-                </p>
-              </div>
+              <p className="font-display text-[16px] md:text-[17px] text-[var(--color-stone-900)] tracking-[-0.015em] mt-4 truncate">
+                {room.name || `${i + 1}. Yatak Odası`}
+              </p>
+              <p className="text-[13px] text-[var(--color-stone-500)] mt-1.5 leading-relaxed">
+                {bedSummary || "Detay belirtilmedi"}
+              </p>
             </div>
           );
         })}
 
-        {/* BANYOLAR */}
+        {/* BANYOLAR — luxury suite kartları */}
         {bathrooms.map((b, i) => (
           <div
             key={`bath-${i}`}
-            className="rounded-2xl border border-[var(--color-stone-100)] bg-white px-4 py-3.5 md:px-5 md:py-4 hover:border-[var(--color-stone-200)] hover:shadow-[0_8px_20px_-12px_rgb(27_26_23/0.08)] transition-colors motion-reduce:transition-none flex items-start gap-3"
+            className="group rounded-3xl border border-[var(--color-stone-100)] bg-white px-5 py-5 md:px-6 md:py-6 shadow-[0_6px_18px_-14px_rgba(11,31,58,0.18)] hover:-translate-y-0.5 hover:border-[var(--color-champagne-300)] hover:shadow-[0_16px_34px_-18px_rgba(11,31,58,0.2)] transition-[transform,box-shadow,border-color] duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
-            <span className="w-9 h-9 shrink-0 rounded-xl border border-[var(--color-stone-100)] bg-[var(--color-sand-50)] text-[var(--color-stone-700)] flex items-center justify-center">
-              <Bath size={16} />
+            <span className="w-10 h-10 rounded-2xl border border-[var(--color-stone-100)] bg-[var(--color-sand-50)] text-[var(--color-stone-600)] flex items-center justify-center">
+              <Bath size={17} strokeWidth={1.75} />
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-display text-[15px] md:text-[16px] text-[var(--color-stone-900)] tracking-[-0.01em] truncate">
-                {b.name || `${i + 1}. Banyo`}
-              </p>
-              <p className="text-[12.5px] text-[var(--color-stone-500)] mt-0.5 leading-relaxed">
-                {bathroomLabel(b.type)}
-              </p>
-            </div>
+            <p className="font-display text-[16px] md:text-[17px] text-[var(--color-stone-900)] tracking-[-0.015em] mt-4 truncate">
+              {b.name || `${i + 1}. Banyo`}
+            </p>
+            <p className="text-[13px] text-[var(--color-stone-500)] mt-1.5 leading-relaxed">
+              {bathroomLabel(b.type)}
+            </p>
           </div>
         ))}
       </div>

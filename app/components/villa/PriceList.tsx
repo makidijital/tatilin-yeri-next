@@ -85,13 +85,22 @@ export default function PriceList({
           <div
             key={p.id}
             className="
-              rounded-2xl border border-[var(--color-stone-100)] bg-white
-              px-5 py-5 md:px-7 md:py-6
-              hover:border-[var(--color-champagne-300)]
-              hover:shadow-[0_8px_20px_-12px_rgb(27_26_23/0.08)]
-              transition-colors motion-reduce:transition-none
+              group relative overflow-hidden
+              rounded-3xl border border-[var(--color-stone-100)]
+              bg-gradient-to-br from-[var(--color-sand-50)]/70 via-white to-white
+              px-5 py-4 md:px-6 md:py-5
+              shadow-[0_6px_18px_-14px_rgba(11,31,58,0.18)]
+              hover:-translate-y-0.5 hover:border-[var(--color-champagne-300)]
+              hover:shadow-[0_16px_34px_-18px_rgba(11,31,58,0.22)]
+              transition-[transform,box-shadow,border-color] duration-300
+              motion-reduce:transition-none motion-reduce:hover:translate-y-0
             "
           >
+            {/* TOP ACCENT BAR — subtle premium detail */}
+            <span
+              aria-hidden
+              className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[var(--color-champagne-400)] via-[var(--brand-coral)] to-[var(--color-champagne-400)] opacity-70"
+            />
             <div
               className="
                 flex flex-col gap-4
@@ -142,13 +151,13 @@ export default function PriceList({
               {/* RIGHT — büyük fiyat + caption */}
               <div className="md:text-right md:shrink-0">
                 <p
-                  className="font-display text-[28px] md:text-[32px] text-[var(--color-stone-900)] tracking-[-0.02em] leading-none"
+                  className="font-display text-xl md:text-[22px] text-[var(--color-stone-900)] tracking-[-0.02em] leading-none"
                   style={{ fontVariantNumeric: "tabular-nums" }}
                 >
                   {formatCurrency(convertedPrice, currency)}
                 </p>
                 <p
-                  className="text-[10px] tracking-[0.18em] uppercase text-[var(--color-stone-300)] font-medium mt-2"
+                  className="text-[9.5px] tracking-[0.18em] uppercase text-[var(--color-stone-400)] font-medium mt-1.5"
                   aria-hidden
                 >
                   Gecelik
