@@ -35,7 +35,7 @@ import {
   Calendar,
   Users,
   ChevronDown,
-  Sparkles,
+  Check,
 } from "lucide-react";
 
 import { type VillaPriceEmbed } from "@/lib/villa-row.types";
@@ -168,29 +168,41 @@ export default function BookingSidebar({
     <div
       className="
         rounded-3xl border border-[var(--color-stone-100)]
-        bg-white p-5 md:p-6
-        shadow-[0_24px_48px_-16px_rgb(27_26_23/0.16)]
+        bg-gradient-to-b from-white to-[var(--color-sand-50)]/45
+        p-5 md:p-6
+        shadow-[0_28px_60px_-24px_rgba(11,31,58,0.22),0_8px_24px_-18px_rgba(11,31,58,0.12)]
         space-y-5
       "
     >
       {/* PRICE HEAD */}
-      <div className="flex items-end justify-between pb-5 border-b border-[var(--color-stone-100)]">
-        <div>
-          <p className="text-[10.5px] tracking-[0.16em] uppercase font-semibold text-[var(--color-stone-400)]">
-            Başlangıç
-          </p>
-          <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="font-display text-3xl text-[var(--color-stone-900)] tracking-[-0.02em]">
-              {startingPrice}
-            </span>
-            <span className="text-[var(--color-stone-500)] text-sm">
-              / gece
-            </span>
-          </div>
+      <div className="pb-5 border-b border-[var(--color-stone-100)]">
+        <p className="text-[10.5px] tracking-[0.16em] uppercase font-semibold text-[var(--color-stone-400)]">
+          Başlangıç
+        </p>
+        <div className="flex items-baseline gap-1.5 mt-1.5">
+          <span className="font-display text-[34px] md:text-4xl text-[var(--color-stone-900)] tracking-[-0.03em] leading-none">
+            {startingPrice}
+          </span>
+          <span className="text-[var(--color-stone-500)] text-sm font-medium">
+            / gece
+          </span>
         </div>
-        <span className="hidden sm:inline-flex items-center gap-1 text-[11px] tracking-[0.06em] uppercase font-medium text-[var(--color-champagne-600)] bg-[var(--color-sand-100)] rounded-full px-2.5 py-1">
-          <Sparkles size={11} />
-          Premium
+      </div>
+
+      {/* MICRO TRUST ROW — Premium/viewers rozetleri kaldırıldı,
+          görsel denge için subtle güven satırı. Salt-sunum. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] font-medium text-[var(--color-stone-500)] -mt-1">
+        <span className="inline-flex items-center gap-1">
+          <Check size={12} className="text-emerald-500" aria-hidden />
+          Güvenli Rezervasyon
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Check size={12} className="text-emerald-500" aria-hidden />
+          Anında Onay
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Check size={12} className="text-emerald-500" aria-hidden />
+          Destek Ekibi
         </span>
       </div>
 
@@ -203,11 +215,13 @@ export default function BookingSidebar({
             setOpenCalendar(true);
           }}
           className="
-            border border-[var(--color-stone-100)] rounded-xl
-            px-4 py-3
+            border border-[var(--color-stone-100)] rounded-2xl
+            px-4 py-3.5
             flex items-center gap-3
-            hover:border-[var(--color-champagne-500)] transition cursor-pointer
-            bg-white
+            bg-[var(--color-sand-50)]/40
+            hover:bg-white hover:border-[var(--color-champagne-400)]
+            hover:shadow-[0_6px_18px_-12px_rgba(11,31,58,0.15)]
+            transition-all duration-200 motion-reduce:transition-none cursor-pointer
           "
         >
           <Calendar size={16} className="text-[var(--color-champagne-500)]" />
@@ -258,11 +272,13 @@ export default function BookingSidebar({
         <div
           onClick={() => setOpenGuests(!openGuests)}
           className="
-            border border-[var(--color-stone-100)] rounded-xl
-            px-4 py-3
+            border border-[var(--color-stone-100)] rounded-2xl
+            px-4 py-3.5
             flex items-center gap-3
-            hover:border-[var(--color-champagne-500)] transition cursor-pointer
-            bg-white
+            bg-[var(--color-sand-50)]/40
+            hover:bg-white hover:border-[var(--color-champagne-400)]
+            hover:shadow-[0_6px_18px_-12px_rgba(11,31,58,0.15)]
+            transition-all duration-200 motion-reduce:transition-none cursor-pointer
           "
         >
           <Users size={16} className="text-[var(--color-champagne-500)]" />
@@ -367,8 +383,10 @@ export default function BookingSidebar({
       <button
         onClick={handleReservation}
         disabled={!minimumStayValid}
-        className={`btn-primary w-full !py-3.5 !text-sm ${
-          !minimumStayValid ? "!opacity-50 !cursor-not-allowed" : ""
+        className={`btn-primary w-full !py-4 !text-sm !rounded-2xl transition-all duration-200 motion-reduce:transition-none ${
+          !minimumStayValid
+            ? "!opacity-50 !cursor-not-allowed"
+            : "shadow-[0_18px_36px_-12px_rgba(242,140,40,0.5)] hover:shadow-[0_22px_44px_-12px_rgba(242,140,40,0.6)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
         }`}
       >
         Rezervasyon Yap

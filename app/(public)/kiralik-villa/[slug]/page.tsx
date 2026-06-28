@@ -99,7 +99,6 @@ import {
    ile mount sonrası random sayı set eder; SSR'da DOM'a hiçbir şey
    eklemez). Engine / pricing / availability / reservation flow ile
    ZERO etkileşim. */
-import VillaViewersIndicator from "@/app/components/villa/VillaViewersIndicator";
 
 /* 🛡️ FAZ 56H-B/C — External iCal availability arrays.
    Server-side service-role fetch (RLS authenticated-only).
@@ -408,6 +407,7 @@ export default async function VillaDetail({
           guests={villa.guests}
           bedrooms={villa.bedrooms}
           bathrooms={villa.bathrooms}
+          tourismDocumentNumber={villa.tourism_document_number}
           videos={youtubeVideos}
           actions={<FavoriteButton villaId={villa.id} variant="icon" />}
         />
@@ -463,7 +463,7 @@ export default async function VillaDetail({
                 <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
                   Takvim
                 </h2>
-                <div className="card-premium mt-5 overflow-x-auto">
+                <div className="mt-5 overflow-x-auto">
                   <AvailabilityInlineCalendar
                     villaId={villa.id}
                     prices={prices}
@@ -856,25 +856,6 @@ export default async function VillaDetail({
         {/* RIGHT (sidebar) */}
         <aside id="booking-sidebar" className="lg:col-span-1">
           <div className="lg:sticky lg:top-32">
-            {/* ════════════════════════════════════════════════════
-                🛡️ SOFT SOCIAL PROOF — "X kişi inceliyor"
-                ════════════════════════════════════════════════════
-                Client-only, hydration-safe. SSR'da hiçbir şey render
-                etmez (DOM'a değmez), client mount sonrası random
-                sayı (3-18) ile pulse pill görünür.
-
-                BookingSidebar'ın HEMEN ÜSTÜ — Booking.com/Airbnb
-                urgency pattern (CTA'nın hemen üstünde social cue).
-                Sticky container içinde olduğu için scroll'da
-                BookingSidebar ile birlikte takip eder.
-
-                ENGINE/BOOKING/PRICING/AVAILABILITY/SELECTION/
-                RESERVATION FLOW ile SIFIR etkileşim. Salt-sunum.
-                ──────────────────────────────────────────────────── */}
-            <div className="mb-3">
-              <VillaViewersIndicator />
-            </div>
-
             <BookingSidebar
               villaSlug={villa.slug}
               villaId={villa.id}
@@ -893,93 +874,6 @@ export default async function VillaDetail({
               initialStart={hasInitialRange ? initialStart : undefined}
               initialEnd={hasInitialRange ? initialEnd : undefined}
             />
-
-            {/* ════════════════════════════════════════════════════
-                🛡️ FAZ 24 — TOURISM DOCUMENT TRUST CARD
-                ════════════════════════════════════════════════════
-                Conditional render: villa.tourism_document_number
-                null/boş ise HİÇ render edilmez (DOM'a bile girmez).
-
-                LOKASYON: BookingSidebar altında, AYNI sticky container
-                içinde → "Rezervasyon Yap" kararı veren kullanıcı resmi
-                turizm belgesi olduğunu booking widget'ı ile aynı anda
-                görür (hospitality booking pattern: Airbnb Luxe / Plum
-                Guide "Verified property" badge).
-
-                SSR-SAFE: server component JSX gate; render olunca/
-                olmayınca client'ta diff yok → hidrasyon mismatch yok.
-
-                LAYOUT SHIFT: sıfır — değer SSR'da değerlendirilir,
-                client'ta zaten render edilmiş HTML hidrate olur.
-
-                MOBILE: aside `lg:sticky lg:top-32` yalnız lg+ aktif;
-                mobil viewport'ta sticky kapalı, BookingSidebar +
-                trust card natural flow ile alt-alta.
-
-                DOKUNULMAYAN: BookingSidebar prop signature, sticky
-                container, hiçbir parent layout. Sadece kardeş JSX node.
-                ──────────────────────────────────────────────────── */}
-            {villa.tourism_document_number && (
-              <div
-                className="
-                  mt-4 rounded-2xl border border-[var(--color-stone-100)] bg-white
-                  px-4 py-3.5 md:px-5 md:py-4
-                  hover:border-[var(--color-champagne-300)]
-                  hover:shadow-[0_8px_20px_-12px_rgb(27_26_23/0.08)]
-                  transition-colors motion-reduce:transition-none
-                "
-              >
-                <div className="flex items-start gap-3">
-                  <span
-                    className="
-                      w-16 h-16 shrink-0 rounded-xl
-                      bg-[var(--color-sand-50)] border border-[var(--color-stone-100)]
-                      flex items-center justify-center
-                      text-[var(--color-champagne-600)]
-                    "
-                    aria-hidden
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/brand/trust/turizm-bakanligi.svg"
-                      alt=""
-                      aria-hidden
-                      className="w-12 h-12 object-contain"
-                    />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10.5px] tracking-[0.18em] uppercase font-medium text-[var(--color-stone-500)]">
-                      T.C. Kültür ve Turizm Bakanlığı
-                    </p>
-                    {/* Büyük belge no — select-all kopyalanabilir; break-all
-                        overflow-safe; tabular-nums premium görünüm. */}
-                    <p
-                      className="
-                        font-display text-[18px] md:text-[20px]
-                        text-[var(--color-stone-900)] mt-1 tracking-[-0.01em]
-                        select-all break-all
-                      "
-                      style={{ fontVariantNumeric: "tabular-nums" }}
-                    >
-                      {villa.tourism_document_number}
-                    </p>
-                    {/* Belgeyi Görüntüle — KTB konut belge sorgu (yeni sekme).
-                        URL belge no'dan dinamik üretilir. */}
-                    <a
-                      href={`https://vatandas.ktb.gov.tr/konut-belge/${encodeURIComponent(
-                        villa.tourism_document_number
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 mt-1.5 text-[12px] font-medium text-[var(--color-champagne-700)] hover:underline"
-                    >
-                      Belgeyi Görüntüle
-                      <ExternalLink size={12} />
-                    </a>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </aside>
       </div>

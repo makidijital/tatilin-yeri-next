@@ -6,12 +6,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import {
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  Sparkles,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { convertPrice, formatCurrency } from "@/lib/currency";
 import { useCurrency } from "@/app/context/CurrencyContext";
@@ -240,101 +235,54 @@ export default function AvailabilityInlineCalendar({
 
   /* Responsive month count — admin pattern'iyle aynı: 1/2/3 col. */
   const visibleMonths = useMemo(
-    () => getVisibleMonths(currentMonth, 3),
+    () => getVisibleMonths(currentMonth, 2),
     [currentMonth]
   );
   const todayKey = new Date().toDateString();
 
   return (
-    <div className="select-none p-3 md:p-4">
+    <div className="select-none">
       {/* ─────────────────────────────────────────────
-          Premium nav header — prev / today / next + range label
+          Minimal floating nav — yalnız sol/sağ ok (sağa yaslı).
+          Eski header bar YOK; sadece ay gezinme.
           ───────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              setCurrentMonth(
-                (m) => new Date(m.getFullYear(), m.getMonth() - 1, 1)
-              )
-            }
-            className="w-8 h-8 rounded-full border border-[var(--color-stone-200)] flex items-center justify-center hover:bg-[var(--color-sand-50)] hover:border-[var(--color-stone-300)] transition motion-reduce:transition-none"
-            aria-label="Önceki ay"
-          >
-            <ChevronLeft size={16} className="text-[var(--color-stone-700)]" />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const t = new Date();
-              setCurrentMonth(new Date(t.getFullYear(), t.getMonth(), 1));
-            }}
-            className="px-3 py-1.5 rounded-full text-[11px] tracking-[0.14em] uppercase font-medium text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)] transition motion-reduce:transition-none"
-          >
-            Bugün
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              setCurrentMonth(
-                (m) => new Date(m.getFullYear(), m.getMonth() + 1, 1)
-              )
-            }
-            className="w-8 h-8 rounded-full border border-[var(--color-stone-200)] flex items-center justify-center hover:bg-[var(--color-sand-50)] hover:border-[var(--color-stone-300)] transition motion-reduce:transition-none"
-            aria-label="Sonraki ay"
-          >
-            <ChevronRight size={16} className="text-[var(--color-stone-700)]" />
-          </button>
-          <h3 className="font-display text-[13px] text-[var(--color-stone-900)] tracking-[-0.015em] ml-2 capitalize">
-            {visibleMonths[0].toLocaleDateString("tr-TR", { month: "short" })}
-            <span className="text-[var(--color-stone-400)] mx-1">→</span>
-            {visibleMonths[visibleMonths.length - 1].toLocaleDateString(
-              "tr-TR",
-              { month: "short", year: "numeric" }
-            )}
-          </h3>
-        </div>
-
-        {/* Legend — public-friendly labels */}
-        <div className="hidden md:flex items-center gap-3 text-[11px] text-[var(--color-stone-500)] flex-wrap">
-          <LegendSwatch
-            label="Onaylı"
-            style={{ background: "rgba(239,68,68,0.4)" }}
-          />
-          <LegendSwatch
-            label="Beklemede"
-            style={{ background: "#facc15" }}
-          />
-          <LegendSwatch
-            label="Müsait"
-            style={{
-              background: "white",
-              border: "1px solid var(--color-stone-200)",
-            }}
-          />
-        </div>
+      <div className="flex justify-end gap-2 mb-3">
+        <button
+          type="button"
+          onClick={() =>
+            setCurrentMonth(
+              (m) => new Date(m.getFullYear(), m.getMonth() - 1, 1)
+            )
+          }
+          className="w-9 h-9 rounded-full bg-white border border-[var(--color-stone-100)] shadow-[0_4px_12px_-6px_rgba(11,31,58,0.2)] flex items-center justify-center text-[var(--color-stone-800)] hover:-translate-y-0.5 hover:border-[var(--color-stone-200)] hover:shadow-[0_8px_18px_-8px_rgba(11,31,58,0.25)] transition-[transform,box-shadow,border-color] duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+          aria-label="Önceki ay"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            setCurrentMonth(
+              (m) => new Date(m.getFullYear(), m.getMonth() + 1, 1)
+            )
+          }
+          className="w-9 h-9 rounded-full bg-white border border-[var(--color-stone-100)] shadow-[0_4px_12px_-6px_rgba(11,31,58,0.2)] flex items-center justify-center text-[var(--color-stone-800)] hover:-translate-y-0.5 hover:border-[var(--color-stone-200)] hover:shadow-[0_8px_18px_-8px_rgba(11,31,58,0.25)] transition-[transform,box-shadow,border-color] duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+          aria-label="Sonraki ay"
+        >
+          <ChevronRight size={16} />
+        </button>
       </div>
 
-      <p className="text-[11px] text-[var(--color-stone-500)] mb-3 flex items-center gap-1.5">
-        <Sparkles
-          size={11}
-          className="text-[var(--color-champagne-600)]"
-        />
-        Tarihlere göre güncel müsaitlik ve gecelik fiyat. Rezervasyon
-        için sağdaki <Calendar size={11} className="-mt-px" /> bölümünü kullanın.
-      </p>
-
       {/* ─────────────────────────────────────────────
-          Multi-month grid — admin parity: 1 / 2 / 3 col
+          Multi-month grid — clean: mobile 1 col / desktop 2 col
           ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         {visibleMonths.map((viewMonth, monthIdx) => {
           const cells = buildMonthGrid(viewMonth);
           return (
             <div
               key={`${viewMonth.getFullYear()}-${viewMonth.getMonth()}`}
-              className="rounded-xl border border-[var(--color-sand-100)] bg-white/40 px-2 py-2.5"
+              className="rounded-2xl border border-[var(--color-stone-100)] bg-white px-3 py-3.5 md:px-4 md:py-4 shadow-[0_6px_18px_-14px_rgba(11,31,58,0.15)]"
             >
               <div className="px-1 mb-1.5">
                 <span className="font-display text-[12px] font-semibold text-[var(--color-stone-800)] tracking-[-0.01em] capitalize">
@@ -459,23 +407,5 @@ export default function AvailabilityInlineCalendar({
         })}
       </div>
     </div>
-  );
-}
-
-/* ---------------------------------------------------------------
-   LEGEND SWATCH — küçük renkli kare + etiket
---------------------------------------------------------------- */
-function LegendSwatch({
-  label,
-  style,
-}: {
-  label: string;
-  style: CSSProperties;
-}) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className="inline-block w-3 h-3 rounded-md" style={style} />
-      {label}
-    </span>
   );
 }

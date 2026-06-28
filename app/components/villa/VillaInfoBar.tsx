@@ -52,6 +52,9 @@ type Props = {
   guests: number;
   bedrooms: number;
   bathrooms: number;
+  /* T.C. Kültür ve Turizm Bakanlığı belge no — opsiyonel ham text.
+     null/boş → certificate card render edilmez. */
+  tourismDocumentNumber?: string | null;
   /* Video listesi — boş array veya undefined → CTA görünmez. */
   videos?: VillaYouTubeVideo[] | null;
   /* 🛡️ Action slot — Favori/Paylaş gibi caller-controlled aksiyonlar.
@@ -67,45 +70,38 @@ export default function VillaInfoBar({
   guests,
   bedrooms,
   bathrooms,
+  tourismDocumentNumber,
   videos,
   actions,
 }: Props) {
   const [videoOpen, setVideoOpen] = useState(false);
   const safeVideos = videos ?? [];
   const hasVideo = safeVideos.length > 0;
+  const certificateNo = tourismDocumentNumber?.trim() || "";
+  const hasCertificate = certificateNo.length > 0;
 
   return (
     <>
       <div
         className="
-          rounded-3xl bg-white
+          rounded-3xl
           border border-[var(--color-stone-100)]
-          shadow-[0_8px_24px_-12px_rgb(27_26_23/0.08)]
-          px-5 py-4 md:px-6 md:py-5
+          bg-gradient-to-br from-white via-white to-[var(--color-sand-50)]/55
+          shadow-[0_12px_34px_-18px_rgba(11,31,58,0.16)]
+          px-5 py-5 md:px-7 md:py-6
         "
       >
-        {/* 3-BÖLME EDITORIAL LAYOUT
-            ────────────────────────────────────────────────
-            Desktop: SOL (villa info) │ ORTA (info pills) │ SAĞ (actions)
-            Mobile : column stack — her bölme tam genişlik satır
-
-            Pill'ler ve action'lar görsel olarak ayrılır:
-            actions area kendi flex container'ında, desktop'ta sol
-            kenarda hairline border + padding-left "premium controls"
-            hissi verir. */}
-        <div
-          className="
-            flex flex-col gap-4
-            md:flex-row md:items-center md:justify-between md:gap-6
-          "
-        >
+        {/* ─────────────────────────────────────────────
+            ÜST SATIR — villa adı + bölge (sol) │ aksiyonlar (sağ)
+            ───────────────────────────────────────────── */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           {/* SOL — villa adı + lokasyon */}
-          <div className="min-w-0 md:flex-1">
+          <div className="min-w-0 flex-1">
             <h1
               className="
-                font-display text-2xl md:text-3xl font-bold
+                font-display text-2xl md:text-[32px] font-bold
                 text-[var(--color-stone-900)]
-                tracking-[-0.02em]
+                tracking-[-0.025em] leading-[1.1]
                 line-clamp-2
               "
             >
@@ -114,14 +110,14 @@ export default function VillaInfoBar({
             {location && (
               <p
                 className="
-                  mt-1 inline-flex items-center gap-1.5
+                  mt-2 inline-flex items-center gap-1.5
                   text-sm text-[var(--color-stone-500)]
                 "
               >
                 <MapPin
                   size={13}
                   strokeWidth={1.8}
-                  className="text-[var(--color-stone-400)] shrink-0"
+                  className="text-[var(--color-champagne-600)] shrink-0"
                   aria-hidden
                 />
                 <span className="truncate">{location}</span>
@@ -129,42 +125,11 @@ export default function VillaInfoBar({
             )}
           </div>
 
-          {/* ORTA — info pills (equal-height) */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {guests > 0 && (
-              <InfoPill icon={<Users size={13} strokeWidth={1.8} />}>
-                {guests} Kişi
-              </InfoPill>
-            )}
-            {bedrooms > 0 && (
-              <InfoPill icon={<BedDouble size={13} strokeWidth={1.8} />}>
-                {bedrooms} Yatak Odası
-              </InfoPill>
-            )}
-            {bathrooms > 0 && (
-              <InfoPill icon={<Bath size={13} strokeWidth={1.8} />}>
-                {bathrooms} Banyo
-              </InfoPill>
-            )}
-          </div>
-
-          {/* SAĞ — actions area (favori + video CTA).
-              Desktop: sol kenarda subtle hairline border + pl-5
-                       → "premium controls" görsel ayrımı.
-              Mobile: tam genişlik satır, border yok (kalabalık olmasın). */}
+          {/* SAĞ — aksiyonlar (video CTA + favori floating).
+              Action slot caller-controlled (FavoriteButton); logic'e
+              ASLA dokunulmaz, yalnız DOM konum. */}
           {(actions || hasVideo) && (
-            <div
-              className="
-                flex items-center gap-3 shrink-0
-                md:pl-5 md:border-l md:border-[var(--color-stone-200)]/70
-              "
-            >
-              {/* 🛡️ Action slot — caller-controlled (FavoriteButton).
-                  Secondary/glass görünüm caller'ın variant kontrolünde
-                  (FavoriteButton variant="detail"). InfoBar logic'e ASLA
-                  dokunmaz; sadece DOM konum. */}
-              {actions}
-
+            <div className="flex items-center gap-2.5 shrink-0">
               {hasVideo && (
                 <button
                   type="button"
@@ -207,9 +172,43 @@ export default function VillaInfoBar({
                   <span className="whitespace-nowrap">Villa Videosu</span>
                 </button>
               )}
+              {actions}
             </div>
           )}
         </div>
+
+        {/* ─────────────────────────────────────────────
+            ALT SATIR — 3 stat mini-card (Kişi / Yatak / Banyo)
+            flex-1 ile eşit genişlik; >0 olmayan render edilmez.
+            ───────────────────────────────────────────── */}
+        {(guests > 0 || bedrooms > 0 || bathrooms > 0 || hasCertificate) && (
+          <div className="mt-5 md:mt-6 flex flex-wrap gap-2.5 md:gap-3">
+            {guests > 0 && (
+              <StatCard
+                icon={<Users size={16} strokeWidth={1.8} />}
+                value={guests}
+                label="Kişi"
+              />
+            )}
+            {bedrooms > 0 && (
+              <StatCard
+                icon={<BedDouble size={16} strokeWidth={1.8} />}
+                value={bedrooms}
+                label="Yatak Odası"
+              />
+            )}
+            {bathrooms > 0 && (
+              <StatCard
+                icon={<Bath size={16} strokeWidth={1.8} />}
+                value={bathrooms}
+                label="Banyo"
+              />
+            )}
+            {hasCertificate && (
+              <CertificateCard documentNumber={certificateNo} />
+            )}
+          </div>
+        )}
       </div>
 
       {/* VIDEO MODAL — local state. isOpen=false iken iframe yok. */}
@@ -226,37 +225,104 @@ export default function VillaInfoBar({
 }
 
 /* ───────────────────────────────────────────────────────────────
-   InfoPill — temiz light pill (sand/stone tonu)
-   Tasarım: bg-stone-50/sand, border-stone-100, text-stone-700,
-   rounded-full, küçük icon + label.
+   StatCard — premium mini stat kart (Kişi / Yatak Odası / Banyo)
+   Tasarım: rounded-2xl, soft border, glass beyaz zemin, subtle
+   shadow; sol champagne-accent ikon, sağ value (bold) + label (muted).
+   flex-1 → satırda eşit genişlik dağılımı.
 ─────────────────────────────────────────────────────────────── */
-function InfoPill({
+function StatCard({
   icon,
-  children,
+  value,
+  label,
 }: {
   icon: React.ReactNode;
-  children: React.ReactNode;
+  value: number;
+  label: string;
 }) {
   return (
-    <span
+    <div
       className="
-        inline-flex items-center gap-1.5
-        h-8 px-3
-        rounded-full
-        bg-[var(--color-sand-50)]
+        flex-1 basis-[8rem]
+        flex items-center gap-2.5 md:gap-3
+        rounded-2xl
         border border-[var(--color-stone-100)]
-        text-[var(--color-stone-700)]
-        text-[12.5px] font-medium tracking-wide
-        leading-none
+        bg-white/70 backdrop-blur-sm
+        shadow-[0_4px_14px_-10px_rgba(11,31,58,0.18)]
+        px-3 py-3 md:px-4 md:py-3.5
       "
     >
       <span
         aria-hidden
-        className="text-[var(--color-champagne-600)] inline-flex items-center"
+        className="
+          w-9 h-9 shrink-0 rounded-xl
+          bg-[var(--color-sand-50)] border border-[var(--color-stone-100)]
+          text-[var(--color-champagne-600)]
+          inline-flex items-center justify-center
+        "
       >
         {icon}
       </span>
-      <span className="whitespace-nowrap">{children}</span>
-    </span>
+      <div className="min-w-0 leading-tight">
+        <p className="font-display text-[17px] md:text-[18px] text-[var(--color-stone-900)] tracking-[-0.01em] tabular-nums">
+          {value}
+        </p>
+        <p className="text-[11.5px] text-[var(--color-stone-500)] leading-snug">
+          {label}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────
+   CertificateCard — T.C. Kültür ve Turizm Bakanlığı belge kartı.
+   StatCard ile aynı görsel dil; ayırt edici soft-green shield accent.
+   Belge no varsa muted subtext olarak gösterilir.
+─────────────────────────────────────────────────────────────── */
+function CertificateCard({
+  documentNumber,
+}: {
+  documentNumber?: string | null;
+}) {
+  const num = documentNumber?.trim() || "";
+  return (
+    <div
+      className="
+        flex-1 basis-[8rem]
+        flex items-center gap-2.5 md:gap-3
+        rounded-2xl
+        border border-[var(--color-stone-100)]
+        bg-white/70 backdrop-blur-sm
+        shadow-[0_4px_14px_-10px_rgba(11,31,58,0.18)]
+        px-3 py-3 md:px-4 md:py-3.5
+      "
+    >
+      <span
+        aria-hidden
+        className="
+          w-9 h-9 shrink-0 rounded-xl
+          bg-[var(--color-sand-50)] border border-[var(--color-stone-100)]
+          inline-flex items-center justify-center overflow-hidden
+        "
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/trust/turizm-bakanligi.svg"
+          alt=""
+          aria-hidden
+          className="w-6 h-6 object-contain"
+        />
+      </span>
+      <div className="min-w-0 leading-tight">
+        <p className="font-display text-[14px] md:text-[15px] text-[var(--color-stone-900)] tracking-[-0.01em]">
+          Bakanlık Belgeli
+        </p>
+        {num && (
+          <p className="text-[11.5px] text-[var(--color-stone-500)] leading-snug truncate">
+            Belge No: {num}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
