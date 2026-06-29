@@ -66,7 +66,7 @@ export default async function ShortGapsSection() {
   if (months.length === 0) return null;
 
   return (
-    <section className="px-5 md:px-10 lg:px-16 pt-14 md:pt-20 pb-14 md:pb-20 bg-gradient-to-b from-[#f5f7fa] to-[#e8eef6]">
+    <section id="kisa-sureli-firsatlar" className="scroll-mt-24 md:scroll-mt-28 px-5 md:px-10 lg:px-16 pt-14 md:pt-20 pb-14 md:pb-20 bg-gradient-to-b from-[#f5f7fa] to-[#e8eef6]">
       <div className="max-w-[1280px] mx-auto">
         <div className="text-center mb-8 md:mb-12">
           <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] leading-tight tracking-[-0.02em]">
@@ -78,10 +78,10 @@ export default async function ShortGapsSection() {
           {months.map((m) => (
             <div
               key={m.bucketMonth}
-              className="rounded-2xl border border-white/10 p-5 bg-gradient-to-br from-[#0B1F3A] to-[#132A46] shadow-[0_18px_40px_-22px_rgba(11,31,58,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_26px_52px_-22px_rgba(11,31,58,0.65),0_0_0_1px_rgba(242,140,40,0.25),0_12px_30px_-12px_rgba(242,140,40,0.22)] hover:-translate-y-[3px] hover:border-[var(--brand-coral)]/30 transition-[transform,box-shadow,border-color] duration-300 motion-reduce:transition-none"
+              className="rounded-2xl border border-white/10 p-5 bg-gradient-to-br from-[#0B1F3A] to-[#132A46] shadow-[0_18px_40px_-22px_rgba(11,31,58,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_26px_52px_-22px_rgba(11,31,58,0.65),0_0_0_1px_rgba(2, 170, 229,0.25),0_12px_30px_-12px_rgba(2, 170, 229,0.22)] hover:-translate-y-[3px] hover:border-[var(--brand-coral)]/30 transition-[transform,box-shadow,border-color] duration-300 motion-reduce:transition-none"
             >
               <div className="flex items-center gap-2.5 mb-4">
-                <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--brand-coral)] to-[var(--brand-coral-deep)] text-white shadow-[0_6px_16px_-6px_rgba(242,140,40,0.5)] shrink-0">
+                <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--brand-coral)] to-[var(--brand-coral-deep)] text-white shadow-[0_6px_16px_-6px_rgba(2, 170, 229,0.5)] shrink-0">
                   <CalendarRange className="w-4 h-4" />
                 </span>
                 <h3 className="font-display font-medium text-[16px] text-white tracking-[-0.01em]">

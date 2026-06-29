@@ -9,6 +9,8 @@ import {
 } from "@/app/services/settings.service";
 import { useNotify } from "@/app/components/admin/notifications/NotificationProvider";
 import { revalidateSettings } from "@/app/services/revalidate.actions";
+/* 🔗 CTA placeholder default'ları Hero fallback'i ile TEK source-of-truth. */
+import { HERO_CTA_DEFAULTS } from "@/lib/hero.helpers";
 
 import {
   SettingsSection,
@@ -80,10 +82,21 @@ export default function SettingsGeneralPage() {
   const [heroSubtitle, setHeroSubtitle] = useState("");
   const [heroBg, setHeroBg] = useState<string | null>(null);
   const [heroOverlay, setHeroOverlay] = useState<number | "">(1);
-  const [heroPrimaryText, setHeroPrimaryText] = useState("");
-  const [heroPrimaryHref, setHeroPrimaryHref] = useState("");
-  const [heroSecondaryText, setHeroSecondaryText] = useState("");
-  const [heroSecondaryHref, setHeroSecondaryHref] = useState("");
+  /* 🔗 Initial value = Hero fallback default'u (DB yüklenene kadar VE
+     settings row hiç yoksa input default gösterir). HERO_CTA_DEFAULTS
+     tek source-of-truth. */
+  const [heroPrimaryText, setHeroPrimaryText] = useState<string>(
+    HERO_CTA_DEFAULTS.primary.text
+  );
+  const [heroPrimaryHref, setHeroPrimaryHref] = useState<string>(
+    HERO_CTA_DEFAULTS.primary.href
+  );
+  const [heroSecondaryText, setHeroSecondaryText] = useState<string>(
+    HERO_CTA_DEFAULTS.secondary.text
+  );
+  const [heroSecondaryHref, setHeroSecondaryHref] = useState<string>(
+    HERO_CTA_DEFAULTS.secondary.href
+  );
   const [heroBadge, setHeroBadge] = useState("");
 
   const [loading, setLoading] = useState(true);
@@ -115,10 +128,13 @@ export default function SettingsGeneralPage() {
       setHeroSubtitle(s.hero_subtitle || "");
       setHeroBg(s.hero_background_image || null);
       setHeroOverlay(typeof s.hero_overlay_opacity === "number" ? s.hero_overlay_opacity : 1);
-      setHeroPrimaryText(s.hero_primary_cta_text || "");
-      setHeroPrimaryHref(s.hero_primary_cta_href || "");
-      setHeroSecondaryText(s.hero_secondary_cta_text || "");
-      setHeroSecondaryHref(s.hero_secondary_cta_href || "");
+      /* 🔗 DB null/boş → Hero fallback'i ile aynı default değer input'a
+         yüklenir (placeholder değil, gerçek value). Tek source-of-truth:
+         HERO_CTA_DEFAULTS (lib/hero.helpers.ts). */
+      setHeroPrimaryText(s.hero_primary_cta_text || HERO_CTA_DEFAULTS.primary.text);
+      setHeroPrimaryHref(s.hero_primary_cta_href || HERO_CTA_DEFAULTS.primary.href);
+      setHeroSecondaryText(s.hero_secondary_cta_text || HERO_CTA_DEFAULTS.secondary.text);
+      setHeroSecondaryHref(s.hero_secondary_cta_href || HERO_CTA_DEFAULTS.secondary.href);
       setHeroBadge(s.hero_badge_text || "");
       setLoading(false);
     });
@@ -386,28 +402,28 @@ export default function SettingsGeneralPage() {
               label="Primary CTA metni"
               value={heroPrimaryText}
               onChange={setHeroPrimaryText}
-              placeholder="Villaları keşfet"
+              placeholder={HERO_CTA_DEFAULTS.primary.text}
               disabled={loading || !heroEnabled}
             />
             <TextField
               label="Primary CTA linki"
               value={heroPrimaryHref}
               onChange={setHeroPrimaryHref}
-              placeholder="/kiralik-villalar"
+              placeholder={HERO_CTA_DEFAULTS.primary.href}
               disabled={loading || !heroEnabled}
             />
             <TextField
               label="Secondary CTA metni"
               value={heroSecondaryText}
               onChange={setHeroSecondaryText}
-              placeholder="Hakkımızda"
+              placeholder={HERO_CTA_DEFAULTS.secondary.text}
               disabled={loading || !heroEnabled}
             />
             <TextField
               label="Secondary CTA linki"
               value={heroSecondaryHref}
               onChange={setHeroSecondaryHref}
-              placeholder="/p/hakkimizda"
+              placeholder={HERO_CTA_DEFAULTS.secondary.href}
               disabled={loading || !heroEnabled}
             />
           </div>

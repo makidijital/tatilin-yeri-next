@@ -289,7 +289,7 @@ export default async function Footer() {
         className="pointer-events-none absolute -top-40 right-[-140px] w-[620px] h-[420px] blur-3xl opacity-50"
         style={{
           background:
-            "radial-gradient(circle at center, rgba(24,183,176,0.20), transparent 70%)",
+            "radial-gradient(circle at center, rgba(2, 170, 229,0.20), transparent 70%)",
         }}
       />
       {/* Amber glow — sol alt, subtle highlight. */}
@@ -298,7 +298,7 @@ export default async function Footer() {
         className="pointer-events-none absolute -bottom-28 left-[-120px] w-[520px] h-[360px] blur-3xl opacity-40"
         style={{
           background:
-            "radial-gradient(circle at center, rgba(242,140,40,0.16), transparent 70%)",
+            "radial-gradient(circle at center, rgba(2, 170, 229,0.16), transparent 70%)",
         }}
       />
       {/* Ultra-hafif grain/noise — feTurbulence SVG data-uri; asset
@@ -323,7 +323,7 @@ export default async function Footer() {
               className="pointer-events-none absolute -top-24 left-1/3 w-80 h-56 blur-3xl opacity-40"
               style={{
                 background:
-                  "radial-gradient(circle at center, rgba(24,183,176,0.22), transparent 70%)",
+                  "radial-gradient(circle at center, rgba(2, 170, 229,0.22), transparent 70%)",
               }}
             />
             <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-7">

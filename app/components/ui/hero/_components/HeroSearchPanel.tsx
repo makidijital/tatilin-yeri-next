@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
    menuRepository. `db` barrel client-safe (isomorphic); aynı anon
    RLS context + birebir aynı SELECT shape (id, name, slug). */
 import { menuRepository } from "@/lib/db/menu.repository";
+/* 🔎 Floating villa-adı arama — mevcut paylaşılan canlı arama component'i
+   (debounce + searchByTitle + autocomplete dropdown). Kendi navigation
+   logic'i var; burada yalnız tüketilir. */
+import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
 
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -51,6 +55,12 @@ registerLocale("tr", tr);
      - handleSearch (delegates to buildHeroSearchParams + router.push)
      - dateLabel (delegates to buildHeroDateLabel)
 
+   🔎 EK — Panelin üst kenarına yarı binen ortalanmış villa-adı arama
+   input'u eklendi (VillaSearchBox hero variant, kendi canlı arama +
+   navigation logic'i ile). Bu input filtre submit butonundan TAMAMEN
+   BAĞIMSIZ; salt görsel/UX ek. Filtre bar (CATEGORY → REGION → DATE →
+   GUESTS → "Villa bul" CTA) ve handleSearch/router.push AYNEN korundu.
+
    ⚠️ KESIN KURAL:
      - useRouter() çağrısı bu component içinde (HEro shell'den prop
        geçmez); encapsulation tam.
@@ -63,11 +73,8 @@ registerLocale("tr", tr);
        end] = dates; ... }` — `any` tipi BYTE-IDENTICAL korundu
        (DatePicker selectsRange tipi loose). Burada typed yapmak
        potansiyel selectsRange semantic'i etkileyebilir → skip.
-     - 4 alan sırası: CATEGORY → REGION → DATE → GUESTS → SEARCH
-       AYNEN.
-     - 3 divider span (md:block w-px self-center h-9 ...) AYNEN.
-     - Coral CTA gradient + multi-stop shadow AYNEN.
-     - Tüm Tailwind class sırası BYTE-IDENTICAL.
+     - 4 alan sırası: CATEGORY → REGION → DATE → GUESTS → SEARCH AYNEN.
+     - DatePicker / dropdown / outside-click davranışı AYNEN.
      - registerLocale("tr", tr) module-level çağrı korundu.
 =============================================================== */
 
@@ -159,20 +166,30 @@ export default function HeroSearchPanel() {
           - İnce top highlight (white inner ring)
           - Coral CTA gradient + elevated shadow
         ═══════════════════════════════════════════════════════ */
-    <div
-      className="
-        relative isolate z-30
-        mt-12 md:mt-16
-        bg-gradient-to-b from-white/92 to-white/[0.85] backdrop-blur-2xl
-        border-[3px] border-[var(--color-stone-900)]
-        rounded-2xl
-        shadow-[0_36px_90px_-28px_rgba(11,31,58,0.42),0_12px_30px_-16px_rgba(24,183,176,0.16),inset_0_1px_0_rgba(255,255,255,0.7)]
-        p-2 md:p-2.5
-        gap-1.5 md:gap-2
-        flex flex-col md:flex-row items-stretch
-        text-left
-      "
-    >
+    <div className="relative mt-12 md:mt-16">
+      {/* ═══════════════════════════════════════════════════════
+          🔎 FLOATING VILLA-ADI ARAMA — panelin üst kenarına yarı
+          binen, ortalanmış premium pill. Mevcut VillaSearchBox
+          (hero variant) → canlı arama + autocomplete + navigation.
+          Filtre alanları / filtre logic'i ile SIFIR etkileşim.
+          ═══════════════════════════════════════════════════════ */}
+      <div className="absolute left-1/2 -translate-x-1/2 -top-7 z-40 w-[min(90vw,400px)]">
+        <VillaSearchBox variant="hero" placeholder="Villa adı ile ara..." />
+      </div>
+
+      <div
+        className="
+          relative isolate z-30
+          bg-gradient-to-b from-white/92 to-white/[0.85] backdrop-blur-2xl
+          border-[3px] border-[var(--color-stone-900)]
+          rounded-2xl
+          shadow-[0_36px_90px_-28px_rgba(11,31,58,0.42),0_12px_30px_-16px_rgba(2, 170, 229,0.16),inset_0_1px_0_rgba(255,255,255,0.7)]
+          px-2 md:px-2.5 pb-2 md:pb-2.5 pt-10 md:pt-11
+          gap-1.5 md:gap-2
+          flex flex-col md:flex-row items-stretch
+          text-left
+        "
+      >
       {/* Inner highlight — premium top edge */}
       <div
         aria-hidden="true"
@@ -425,9 +442,9 @@ export default function HeroSearchPanel() {
         </div>
       </div>
 
-      {/* SEARCH CTA — coral primary, elevated, hover lift.
-         Gradient (brand-coral → coral-deep) + multi-stop shadow
-         stack → premium concierge button. */}
+      {/* SEARCH CTA — filtre submit (handleSearch → /arama). Turkuaz
+         gradient + multi-stop shadow stack → premium concierge button.
+         Floating villa-adı input'tan BAĞIMSIZ; filtre akışını tetikler. */}
       <button
         onClick={handleSearch}
         className="
@@ -435,9 +452,9 @@ export default function HeroSearchPanel() {
           !rounded-xl !px-7 md:!px-8 !py-4
           mt-1.5 md:mt-0 md:ml-1.5
           text-white font-medium text-[14px] tracking-[0.02em]
-          bg-gradient-to-br from-[#f6a13a] via-[var(--brand-coral)] to-[var(--brand-coral-deep)]
-          shadow-[0_20px_44px_-12px_rgba(242,140,40,0.55),0_8px_20px_-8px_rgba(11,31,58,0.28),inset_0_1px_0_rgba(255,255,255,0.28)]
-          hover:shadow-[0_26px_54px_-12px_rgba(242,140,40,0.65),0_10px_24px_-8px_rgba(11,31,58,0.34),inset_0_1px_0_rgba(255,255,255,0.34)]
+          bg-gradient-to-br from-[#1fb2ec] via-[var(--brand-coral)] to-[var(--brand-coral-deep)]
+          shadow-[0_20px_44px_-12px_rgba(2, 170, 229,0.55),0_8px_20px_-8px_rgba(11,31,58,0.28),inset_0_1px_0_rgba(255,255,255,0.28)]
+          hover:shadow-[0_26px_54px_-12px_rgba(2, 170, 229,0.65),0_10px_24px_-8px_rgba(11,31,58,0.34),inset_0_1px_0_rgba(255,255,255,0.34)]
           hover:-translate-y-[1px]
           transition-[transform,box-shadow] duration-300
           motion-reduce:transition-none motion-reduce:hover:translate-y-0
@@ -457,6 +474,8 @@ export default function HeroSearchPanel() {
         />
         <span>Villa bul</span>
       </button>
+
+      </div>
     </div>
   );
 }

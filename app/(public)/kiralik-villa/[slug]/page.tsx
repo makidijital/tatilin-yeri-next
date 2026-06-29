@@ -513,7 +513,7 @@ export default async function VillaDetail({
                             className="pointer-events-none absolute -top-10 -right-8 w-28 h-28 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                             style={{
                               background:
-                                "radial-gradient(circle, rgba(24,183,176,0.25), transparent 70%)",
+                                "radial-gradient(circle, rgba(2, 170, 229,0.25), transparent 70%)",
                             }}
                           />
                           <span className="relative w-9 h-9 shrink-0 rounded-xl bg-white/[0.06] ring-1 ring-inset ring-white/10 text-[var(--color-champagne-300)] flex items-center justify-center">

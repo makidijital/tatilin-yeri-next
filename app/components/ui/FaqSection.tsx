@@ -41,8 +41,10 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
 
   return (
     <section
+      id="sss"
       aria-labelledby="faq-heading"
       className="
+        scroll-mt-24 md:scroll-mt-28
         relative px-5 md:px-10 lg:px-16 py-14 md:py-20
         border-t border-[var(--color-stone-100)]
       "
@@ -53,7 +55,7 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
         className="absolute inset-0 pointer-events-none overflow-hidden"
         style={{
           background:
-            "radial-gradient(ellipse 70% 50% at 50% 0%, rgb(52 197 189 / 0.05) 0%, transparent 60%), radial-gradient(ellipse 50% 35% at 50% 100%, rgb(242 140 40 / 0.04) 0%, transparent 60%)",
+            "radial-gradient(ellipse 70% 50% at 50% 0%, rgb(2 170 229 / 0.05) 0%, transparent 60%), radial-gradient(ellipse 50% 35% at 50% 100%, rgb(2 170 229 / 0.04) 0%, transparent 60%)",
         }}
       />
 
@@ -66,7 +68,7 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
               className="pointer-events-none absolute -top-20 -right-16 w-64 h-64 blur-3xl opacity-50"
               style={{
                 background:
-                  "radial-gradient(circle at center, rgba(24,183,176,0.30), transparent 70%)",
+                  "radial-gradient(circle at center, rgba(2, 170, 229,0.30), transparent 70%)",
               }}
             />
             <span className="relative inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--color-champagne-500)]/15 text-[var(--color-champagne-300)] ring-1 ring-inset ring-[var(--color-champagne-500)]/25">
@@ -97,7 +99,7 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
                     transition-all duration-300 motion-reduce:transition-none
                     ${
                       isOpen
-                        ? "border border-[var(--color-champagne-500)]/55 shadow-[0_20px_44px_-22px_rgba(24,183,176,0.30)]"
+                        ? "border border-[var(--color-champagne-500)]/55 shadow-[0_20px_44px_-22px_rgba(2, 170, 229,0.30)]"
                         : "border border-[var(--color-stone-100)] shadow-[0_8px_22px_-16px_rgba(11,31,58,0.18)] hover:border-[var(--color-champagne-400)]/50 hover:shadow-[0_16px_32px_-20px_rgba(11,31,58,0.26)]"
                     }
                   `}

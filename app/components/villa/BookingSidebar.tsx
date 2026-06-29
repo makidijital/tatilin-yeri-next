@@ -386,7 +386,7 @@ export default function BookingSidebar({
         className={`btn-primary w-full !py-4 !text-sm !rounded-2xl transition-all duration-200 motion-reduce:transition-none ${
           !minimumStayValid
             ? "!opacity-50 !cursor-not-allowed"
-            : "shadow-[0_18px_36px_-12px_rgba(242,140,40,0.5)] hover:shadow-[0_22px_44px_-12px_rgba(242,140,40,0.6)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
+            : "shadow-[0_18px_36px_-12px_rgba(2, 170, 229,0.5)] hover:shadow-[0_22px_44px_-12px_rgba(2, 170, 229,0.6)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
         }`}
       >
         Rezervasyon Yap

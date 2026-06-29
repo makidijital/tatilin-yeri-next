@@ -1,14 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ArrowUpRight } from "lucide-react";
 
 import {
   resolveHeroContent,
+  HERO_CTA_DEFAULTS,
   type HeroContent,
 } from "@/lib/hero.helpers";
 
 import HeroSearchPanel from "./hero/_components/HeroSearchPanel";
-import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
 
 import type { HeroReviewStats } from "./hero/_types/hero";
 
@@ -37,6 +38,61 @@ import type { HeroReviewStats } from "./hero/_types/hero";
 
 /** Re-export caller path stability. */
 export type { HeroReviewStats };
+
+/* ===============================================================
+   HeroCta — admin-driven CTA link, akıllı href yönlendirme.
+   Buton TEXT + LINK admin settings'ten gelir (hero.primaryCta /
+   secondaryCta). Link tipi href'ten türetilir:
+     - `#...`            → aynı sayfa smooth scroll (globals:
+                            html{scroll-behavior:smooth} + section
+                            scroll-mt offset). Plain <a>.
+     - `http(s)://...`   → harici, yeni sekme (target=_blank).
+     - `mailto:` / `tel:`→ harici protocol, plain <a>.
+     - `/...` (diğer)    → dahili route, next/link <Link>.
+   Stil/içerik caller'dan (className + children) gelir; bu helper
+   yalnız doğru elementi seçer. Hero layout/stiline dokunmaz.
+   =============================================================== */
+function HeroCta({
+  href,
+  className,
+  children,
+}: {
+  href: string;
+  className: string;
+  children: ReactNode;
+}) {
+  if (href.startsWith("#")) {
+    return (
+      <a href={href} className={className}>
+        {children}
+      </a>
+    );
+  }
+  if (/^https?:\/\//i.test(href)) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+      >
+        {children}
+      </a>
+    );
+  }
+  if (href.startsWith("mailto:") || href.startsWith("tel:")) {
+    return (
+      <a href={href} className={className}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  );
+}
 
 export default function Hero({
   content,
@@ -180,24 +236,17 @@ export default function Hero({
             </p>
           )}
 
-          {/* ─── VİLLA ARA — Hero içi premium search (header'dan taşındı,
-              paylaşılan VillaSearchBox; anasayfada header search gizli) ─── */}
-          {/* 🛡️ STACKING FIX — `relative z-40`: HeroSearchPanel kökü
-              `isolate z-30` ile context kuruyor; bu wrapper z-auto kalsaydı
-              panel, autocomplete dropdown'ını örterdi. z-40 (>30) → dropdown
-              panel üstünde boyanır. Yalnız paint sırası; layout/spacing
-              değişmez (offset yok). */}
-          <div className="relative z-40 mt-7 md:mt-9">
-            <VillaSearchBox
-              variant="hero"
-              placeholder="Villa adı veya bölge ara"
-            />
-          </div>
+          {/* 🔎 Villa adı arama → HeroSearchPanel'in üst kenarına yarı binen
+              floating input olarak taşındı (duplicate kaldırıldı). Eski
+              Hero içi inline VillaSearchBox burada render edilmez. */}
 
-          {/* CTA row — primary coral + secondary glass */}
+          {/* CTA row — admin-driven (hero.primaryCta / secondaryCta).
+             Text + link admin settings'ten; href tipine göre akıllı
+             yönlendirme (HeroCta: #anchor smooth scroll / dahili route /
+             harici yeni sekme). Admin boşsa yeni scroll-CTA fallback'leri. */}
           <div className="mt-8 md:mt-10 flex flex-wrap items-center gap-3">
-            <Link
-              href={hero.primaryCta?.href || "/arama"}
+            <HeroCta
+              href={hero.primaryCta?.href || HERO_CTA_DEFAULTS.primary.href}
               className="
                 group inline-flex items-center gap-2
                 px-6 py-3 rounded-full
@@ -211,15 +260,15 @@ export default function Hero({
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/40
               "
             >
-              {hero.primaryCta?.text || "Villaları keşfet"}
+              {hero.primaryCta?.text || HERO_CTA_DEFAULTS.primary.text}
               <ArrowUpRight
                 size={15}
                 className="transition-transform duration-300 motion-reduce:transition-none group-hover:translate-x-[1px] group-hover:-translate-y-[1px]"
                 aria-hidden
               />
-            </Link>
-            <Link
-              href={hero.secondaryCta?.href || "/iletisim"}
+            </HeroCta>
+            <HeroCta
+              href={hero.secondaryCta?.href || HERO_CTA_DEFAULTS.secondary.href}
               className="
                 group inline-flex items-center gap-2
                 px-5 py-3 rounded-full
@@ -233,8 +282,8 @@ export default function Hero({
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-stone-400)]/50
               "
             >
-              {hero.secondaryCta?.text || "Bize ulaşın"}
-            </Link>
+              {hero.secondaryCta?.text || HERO_CTA_DEFAULTS.secondary.text}
+            </HeroCta>
           </div>
         </div>
 

@@ -38,6 +38,15 @@ export const HERO_DEFAULTS = {
   overlayOpacity: 1,
 } as const;
 
+/** 🔗 HERO CTA DEFAULTS — TEK SOURCE OF TRUTH.
+    Admin'de CTA alanları boş/null iken hem Hero frontend fallback'i
+    HEM admin form placeholder'ı bu değerleri kullanır (birebir aynı).
+    Buradaki tek değişiklik her iki tarafı da senkron günceller. */
+export const HERO_CTA_DEFAULTS = {
+  primary: { text: "Kısa Süreli Fırsatlar", href: "#kisa-sureli-firsatlar" },
+  secondary: { text: "Sıkça Sorulan Sorular", href: "#sss" },
+} as const;
+
 /** Frontend Hero'nun beklediği şekil — resolveHeroContent çıktısı. */
 export type HeroContent = {
   enabled: boolean;
