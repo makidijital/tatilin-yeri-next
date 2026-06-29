@@ -361,6 +361,145 @@ export const getCachedHomepageCollectionVillas = unstable_cache(
   { tags: ["homepage", "villa-reviews"], revalidate: 600 }
 );
 
+/* ===============================================================
+   🛡️ DISCOUNT COLLECTION (migration 062) — "İndirimli Koleksiyon"
+   ===============================================================
+   getCachedHomepageCollectionVillas'ın BİREBİR klonu; tek fark
+   tablo (`discount_collections`) ve tag ("discount"). Aynı
+   HomepageCollectionVilla shape'i döner → VillaCard/section reuse.
+   Admin discount CRUD sonrası revalidateDiscount() invalidate eder.
+=============================================================== */
+export const getCachedDiscountCollectionVillas = unstable_cache(
+  async (): Promise<HomepageCollectionVilla[]> => {
+    const statsPromise = getVillaReviewStatsBatch();
+    const { data, error } = await supabase
+      .from("discount_collections")
+      .select(
+        `
+        id,
+        sort_order,
+        is_active,
+        custom_title,
+        custom_cover_image,
+        villa:villa_id (
+          id,
+          slug,
+          title,
+          badge,
+          bedrooms,
+          bathrooms,
+          guests,
+          is_active,
+          deleted_at,
+          location:villa_locations(name),
+          villa_images (
+            image_url,
+            is_cover,
+            sort_order
+          ),
+          villa_prices (
+            price,
+            currency,
+            start_date
+          )
+        )
+      `
+      )
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+
+    if (error) {
+      console.error("[cache.discountCollection] FAILED", error.message);
+      return [];
+    }
+
+    type Row = {
+      id: string;
+      sort_order: number;
+      is_active: boolean;
+      custom_title: string | null;
+      custom_cover_image: string | null;
+      villa: {
+        id: string;
+        slug: string | null;
+        title: string | null;
+        badge: string | null;
+        bedrooms: number | null;
+        bathrooms: number | null;
+        guests: number | null;
+        is_active: boolean | null;
+        deleted_at: string | null;
+        location: { name: string } | null;
+        villa_images: Array<{
+          image_url: string | null;
+          is_cover: boolean | null;
+          sort_order: number | null;
+        }> | null;
+        villa_prices: Array<{
+          price: number | null;
+          currency: string | null;
+          start_date: string | null;
+        }> | null;
+      } | null;
+    };
+
+    const rows = (data || []) as unknown as Row[];
+    const statsMap = await statsPromise;
+
+    const result: HomepageCollectionVilla[] = [];
+    for (const r of rows) {
+      const v = r.villa;
+      if (!v || !v.id) continue;
+      if (v.is_active === false || v.deleted_at != null) continue;
+
+      const rawImages = Array.isArray(v.villa_images) ? v.villa_images : [];
+      const sortedImages = [...rawImages].sort((a, b) => {
+        if (a?.is_cover) return -1;
+        if (b?.is_cover) return 1;
+        return (a?.sort_order ?? 0) - (b?.sort_order ?? 0);
+      });
+      const images = sortedImages
+        .map((i) => resolveVillaImageUrl(i?.image_url))
+        .filter(
+          (u): u is string =>
+            typeof u === "string" && u.trim().length > 0
+        );
+
+      const rawPrices = Array.isArray(v.villa_prices) ? v.villa_prices : [];
+      const firstPrice = rawPrices[0];
+
+      const s = statsMap[v.id];
+      const hasReviews = !!s && s.count > 0;
+
+      result.push({
+        id: v.id,
+        slug: String(v.slug || ""),
+        title: String(v.title || ""),
+        display_title:
+          (r.custom_title && r.custom_title.trim()) ||
+          String(v.title || ""),
+        location: v.location?.name || "",
+        price:
+          firstPrice && firstPrice.price !== null
+            ? Number(firstPrice.price)
+            : null,
+        currency: firstPrice?.currency || "TRY",
+        badge: v.badge,
+        bedrooms: v.bedrooms ?? 1,
+        bathrooms: v.bathrooms ?? 1,
+        guests: v.guests ?? 2,
+        images,
+        cover_override_path: r.custom_cover_image,
+        review_average: hasReviews ? s.average : undefined,
+        review_count: hasReviews ? s.count : undefined,
+      });
+    }
+    return result;
+  },
+  ["discount-collection:get"],
+  { tags: ["discount", "villa-reviews"], revalidate: 600 }
+);
+
 /** Villa locations — read-only taxonomy. Tag: "taxonomy". Admin
     location ekle/sil az sıklıkta; TTL ile kendiliğinden eskirme OK.
     🛡️ slug field (migration 009): SEO-friendly URL kontratı için
@@ -381,7 +520,10 @@ export const getCachedVillaLocations = unstable_cache(
       console.error("[cache.villaLocations] FAILED", error.message);
       return [];
     }
-    return (data || []) as Array<{
+    /* 🛡️ cover_v — bkz. getCachedVillaTypes; cover URL cache-bust token'ı
+       (deterministik path overwrite → URL değişmez → CDN stale fix). */
+    const coverV = Date.now();
+    return ((data || []) as Array<{
       id: string;
       name: string;
       slug: string | null;
@@ -391,7 +533,7 @@ export const getCachedVillaLocations = unstable_cache(
       show_in_filter?: boolean | null;
       /** Migration 050 — filtrede listeleneceği grup başlığı. */
       filter_group_name?: string | null;
-    }>;
+    }>).map((r) => ({ ...r, cover_v: coverV }));
   },
   ["villa-locations:get"],
   { tags: ["taxonomy"], revalidate: 3600 }
@@ -599,7 +741,14 @@ export const getCachedVillaTypes = unstable_cache(
       console.error("[cache.villaTypes] FAILED", error.message);
       return [];
     }
-    return (data || []) as Array<{
+    /* 🛡️ cover_v — cache build timestamp. Cover deterministik path'e
+       overwrite edildiği için URL değişmez; bu token cover URL'ine
+       `?v=` olarak eklenir (appendAssetVersion). revalidateTaxonomy
+       (admin cover upload sonrası) bu cache'i invalidate → rebuild →
+       yeni cover_v → public cover anında fresh. Cache hit'te sabit
+       (gereksiz refetch yok). */
+    const coverV = Date.now();
+    return ((data || []) as Array<{
       id: string;
       name: string;
       slug: string | null;
@@ -609,7 +758,7 @@ export const getCachedVillaTypes = unstable_cache(
       /** Migration 061 — homepage kategori slider gösterimi. Migration
        *  öncesi undefined olabilir (deploy-safe); `!== false` → görünür. */
       show_on_homepage?: boolean | null;
-    }>;
+    }>).map((r) => ({ ...r, cover_v: coverV }));
   },
   ["villa-types:get"],
   { tags: ["taxonomy"], revalidate: 3600 }

@@ -6,7 +6,10 @@ import {
   getCachedVillaTypes,
   getCachedCategoryCovers,
 } from "@/lib/cache.helpers";
-import { getCategoryCoverPublicUrl } from "@/lib/storage.helpers";
+import {
+  getCategoryCoverPublicUrl,
+  appendAssetVersion,
+} from "@/lib/storage.helpers";
 
 /* ===============================================================
    🛡️ CATEGORY SHOWCASE — homepage premium editorial grid
@@ -68,9 +71,16 @@ export default async function CategoryCollection() {
           ? rawSlug.trim()
           : null;
 
-      /* 3-tier image priority: admin upload → villa fallback → null */
-      const adminCover = getCategoryCoverPublicUrl(
-        (t as { cover_image?: string | null }).cover_image
+      /* 3-tier image priority: admin upload → villa fallback → null.
+         🛡️ adminCover deterministik path'e overwrite edilir → URL
+         değişmez → CDN stale. cover_v (taxonomy cache build token) ile
+         `?v=` cache-bust: upload → revalidateTaxonomy → rebuild → yeni
+         token → anında fresh. */
+      const adminCover = appendAssetVersion(
+        getCategoryCoverPublicUrl(
+          (t as { cover_image?: string | null }).cover_image
+        ),
+        (t as { cover_v?: number }).cover_v
       );
       const fallbackCover = covers[tid]?.coverImageUrl ?? null;
       const coverUrl = adminCover || fallbackCover;

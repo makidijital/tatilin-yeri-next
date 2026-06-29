@@ -222,6 +222,38 @@ export function resolveAssetUrlVersioned(
 }
 
 /* ===============================================================
+   🛡️ appendAssetVersion — hazır URL'e cache-bust `?v=` ekler.
+   ===============================================================
+   `resolveAssetUrlVersioned` relative path'ten URL üretir; bu sibling
+   ZATEN üretilmiş bir public URL alır (örn. getCategoryCoverPublicUrl /
+   getLocationCoverPublicUrl çıktısı) ve `?v=<cacheKey>` ekler.
+
+   GEREKÇE: kategori/bölge cover'ları deterministik path'e (slug.webp)
+   overwrite edilir → URL değişmez → CDN/browser eski görseli
+   max-age=3600 boyunca servis eder. cacheKey değişince URL değişir →
+   anında fresh fetch. cacheKey = taxonomy cache build timestamp
+   (revalidateTaxonomy upload sonrası invalidate → rebuild → yeni token).
+
+   DAVRANIŞ:
+     - url yok/boş     → null
+     - cacheKey yok/boş → url (bust YOK)
+     - cacheKey var     → `<url>?v=<encoded>` (query varsa &)
+   =============================================================== */
+export function appendAssetVersion(
+  url: string | null | undefined,
+  cacheKey?: string | number | null
+): string | null {
+  if (!url || typeof url !== "string" || url.trim().length === 0) {
+    return null;
+  }
+  if (cacheKey === undefined || cacheKey === null || cacheKey === "") {
+    return url;
+  }
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}v=${encodeURIComponent(String(cacheKey))}`;
+}
+
+/* ===============================================================
    🛡️ RESOLVE VILLA IMAGE URL — villa-images bucket için
    ===============================================================
    `villa_images.image_url` alanı VILLA_IMAGES bucket'ında dosyaları

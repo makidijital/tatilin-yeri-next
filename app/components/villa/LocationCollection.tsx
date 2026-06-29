@@ -5,7 +5,10 @@ import {
   getCachedVillaLocations,
   getCachedLocationVillaCounts,
 } from "@/lib/cache.helpers";
-import { getLocationCoverPublicUrl } from "@/lib/storage.helpers";
+import {
+  getLocationCoverPublicUrl,
+  appendAssetVersion,
+} from "@/lib/storage.helpers";
 
 /* ===============================================================
    🛡️ LOCATION SHOWCASE — homepage premium editorial carousel
@@ -97,8 +100,14 @@ export default async function LocationCollection() {
       typeof rawSlug === "string" && rawSlug.trim().length > 0
         ? rawSlug.trim()
         : lid;
-    const cover = getLocationCoverPublicUrl(
-      (l as { cover_image?: string | null }).cover_image
+    /* 🛡️ cover_v cache-bust — deterministik path overwrite → URL
+       değişmez → CDN stale. revalidateTaxonomy rebuild → yeni token →
+       anında fresh. (bkz. storage.helpers > appendAssetVersion). */
+    const cover = appendAssetVersion(
+      getLocationCoverPublicUrl(
+        (l as { cover_image?: string | null }).cover_image
+      ),
+      (l as { cover_v?: number }).cover_v
     );
 
     const g =

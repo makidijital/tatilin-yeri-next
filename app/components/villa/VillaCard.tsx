@@ -91,7 +91,7 @@ type Props = {
        FavoriteButton + booking trigger HIDE, küçük spacing/tipografi,
        daha sıkı image aspect. Logic (pricing/data/image selection)
        AYNEN — sadece presentation katmanı koşullu. */
-  variant?: "default" | "curation";
+  variant?: "default" | "curation" | "discount";
   /* 🛡️ OPSİYONEL — "Müsaitlik / Tarih Seç" butonunun HEMEN ALTINA gap
      bilgi alanı (açık yeşil) + tam genişlik "Hemen Rezervasyon Yap" CTA
      için VERİ. Verilmezse HİÇBİR ŞEY render edilmez → /arama, homepage ve
@@ -128,6 +128,9 @@ export default function VillaCard({
   /* Compact variant flag — curation flow için presentation density.
      Logic (price/state/handlers/modal) hiç dokunulmaz. */
   const isCuration = variant === "curation";
+  /* 🛡️ Discount variant — default editorial layout + İndirimli badge +
+     soft coral/turquoise accent. Logic (pricing/data/handlers) AYNEN. */
+  const isDiscount = variant === "discount";
   /* Cover image: ilk geçerli URL'i seç.
      Supabase'den null/empty değerler gelebileceği için filter. */
   const cover = (images || []).find(
@@ -618,7 +621,10 @@ export default function VillaCard({
           "group-hover:shadow-[0_24px_44px_-20px_rgba(11,31,58,0.30)] " +
           "group-hover:border-[var(--color-stone-200)] " +
           "transition-[box-shadow,transform,border-color] duration-400 motion-reduce:transition-none " +
-          "group-hover:-translate-y-[2px]"
+          "group-hover:-translate-y-[2px] " +
+          (isDiscount
+            ? "ring-2 ring-[#ff7a59]/30 shadow-[0_16px_38px_-16px_rgba(255,122,89,0.38)] "
+            : "")
         }
       >
         {/* ── IMAGE BLOCK — aspect-[16/10] (kompakt yatay) ── */}
@@ -667,8 +673,20 @@ export default function VillaCard({
             className="absolute inset-0 ring-1 ring-inset ring-white/15 pointer-events-none"
           />
 
-          {/* BADGE — glass pill (kategori/lightning) */}
-          {badge && (
+          {/* DISCOUNT BADGE — soft coral→turquoise blend (premium, lüks). */}
+          {isDiscount && (
+            <span className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 bg-gradient-to-r from-[#ff7a59] to-[#00bc7d] text-white text-[10px] tracking-[0.16em] uppercase font-semibold px-2.5 py-1 rounded-full shadow-[0_4px_14px_-4px_rgba(255,122,89,0.5)] ring-1 ring-white/25">
+              <span
+                aria-hidden="true"
+                className="inline-block w-1 h-1 rounded-full bg-white/90"
+              />
+              İndirimli
+            </span>
+          )}
+
+          {/* BADGE — glass pill (kategori/lightning). Discount kartta
+              gizlenir → İndirimli badge ile çakışmasın. */}
+          {badge && !isDiscount && (
             <span className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 bg-emerald-500 text-white text-[10px] tracking-[0.16em] uppercase font-medium px-2.5 py-1 rounded-full shadow-[0_4px_12px_-4px_rgba(16,122,87,0.45)] ring-1 ring-white/20">
               <span
                 aria-hidden="true"
@@ -741,26 +759,32 @@ export default function VillaCard({
           {/* AMENITIES — inline icon+text satır (referans tasarım dili).
               Aynı veri (guests / bedrooms / bathrooms); pastel tile grid
               yerine tek satır temiz amenity row. */}
-          <div className="mt-3.5 flex items-center justify-center gap-x-4 gap-y-1.5 flex-wrap text-[12.5px] text-[var(--color-stone-700)]">
+          <div className="mt-3.5 flex items-center justify-center gap-x-4 gap-y-1.5 flex-wrap text-[12.5px] font-medium text-[var(--color-stone-800)]">
             <span
               className="inline-flex items-center gap-1.5"
               aria-label={`${guests} kişi kapasitesi`}
             >
-              <Users size={15} strokeWidth={1.6} className="text-emerald-600 shrink-0" aria-hidden />
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-[#00bc7d]/12 text-[#00bc7d] shrink-0" aria-hidden>
+                <Users size={17} strokeWidth={2.2} />
+              </span>
               <span className="tabular-nums">{guests} Kişi</span>
             </span>
             <span
               className="inline-flex items-center gap-1.5"
               aria-label={`${bedrooms} yatak odası`}
             >
-              <BedDouble size={15} strokeWidth={1.6} className="text-emerald-600 shrink-0" aria-hidden />
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-[#00bc7d]/12 text-[#00bc7d] shrink-0" aria-hidden>
+                <BedDouble size={17} strokeWidth={2.2} />
+              </span>
               <span className="tabular-nums">{bedrooms} Yatak Odası</span>
             </span>
             <span
               className="inline-flex items-center gap-1.5"
               aria-label={`${bathrooms} banyo`}
             >
-              <Bath size={15} strokeWidth={1.6} className="text-emerald-600 shrink-0" aria-hidden />
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-[#00bc7d]/12 text-[#00bc7d] shrink-0" aria-hidden>
+                <Bath size={17} strokeWidth={2.2} />
+              </span>
               <span className="tabular-nums">{bathrooms} Banyo</span>
             </span>
           </div>

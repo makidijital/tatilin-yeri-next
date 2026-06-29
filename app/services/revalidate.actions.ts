@@ -53,6 +53,13 @@ export async function revalidateHomepage(): Promise<void> {
   revalidateTag("homepage", "max");
 }
 
+/* 🛡️ İndirimli Koleksiyon (migration 062). Admin discount_collections
+   CRUD sonrası çağrılır. DiscountCollection section'ı getCachedDiscount
+   CollectionVillas (tag "discount") ile beslenir. "homepage"den AYRI. */
+export async function revalidateDiscount(): Promise<void> {
+  revalidateTag("discount", "max");
+}
+
 /* 🛡️ Global SSS (Faz 25). Admin /maki-admin/faqs sayfasında
    replaceFaqs sonrası çağrılır. Homepage FAQ section'ı bu tag'i
    kullanan getCachedFaqs ile beslenir. */

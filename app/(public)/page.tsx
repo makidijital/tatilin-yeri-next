@@ -4,6 +4,9 @@ import Hero from "@/app/components/ui/Hero";
 import CategoryCollection from "@/app/components/villa/CategoryCollection";
 import LocationCollection from "@/app/components/villa/LocationCollection";
 import VillaList from "@/app/components/villa/VillaList";
+/* 🛡️ İndirimli Koleksiyon (migration 062) — VillaList paraleli, AYRI
+   section. Enabled + aktif villa yoksa null döner; diğerlerini etkilemez. */
+import DiscountCollection from "@/app/components/home/DiscountCollection";
 import FaqSection from "@/app/components/ui/FaqSection";
 /* 🛡️ FAZ 34 — Homepage testimonial section (approved reviews) */
 import HomepageReviewsSection from "@/app/components/home/HomepageReviewsSection";
@@ -109,6 +112,9 @@ export default async function Home() {
          helpers ile zero N+1, server-only render. Empty type'larda
          null render → layout sessizce gizlenir. */}
       <CategoryCollection />
+      {/* 🛡️ "İndirimli Koleksiyon" — küratörlü fırsat villaları. Enabled
+         + aktif villa yoksa null döner; Homepage Collection'ın ÜSTÜNDE. */}
+      <DiscountCollection />
       <VillaList />
       {/* 🛡️ "Bölgeler" — VillaList altı, Footer üstü. CategoryCollection
          ile aynı chip pattern; sadece veri kaynağı (locations) ve

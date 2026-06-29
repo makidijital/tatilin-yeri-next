@@ -353,6 +353,14 @@ export const SIDEBAR_PERMISSIONS: PermissionItem[] = [
     label: "Anasayfa Koleksiyon",
     group: "İçerik",
   },
+  {
+    /* 🛡️ migration 062/064 — İndirimli Koleksiyon. homepage_collection
+       paterni; ayrı/bağımsız grant edilebilir key (Users page grid'inde
+       görünür). Mevcut admin'lere migration 064 backfill eder. */
+    key: "discount_collection",
+    label: "İndirimli Koleksiyon",
+    group: "İçerik",
+  },
   { key: "messages", label: "Mesajlar", group: "İçerik" },
   /* 🛡️ FAZ 25B — Global SSS (Faz 25 register fix).
      Sidebar item ve admin_users.sidebar_permissions DB değeri

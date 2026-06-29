@@ -38,6 +38,7 @@ import {
   Wallet,
   Share2,
   ArrowDownUp,
+  Tag,
 } from "lucide-react";
 
 import {
@@ -228,6 +229,15 @@ const menuGroups: MenuGroup[] = [
         href: "/maki-admin/homepage-collection",
         icon: Home,
         permissionKey: "homepage_collection",
+      },
+      {
+        /* 🛡️ İndirimli Koleksiyon (migration 062) — homepage_collection
+           paterni. Kendi bağımsız permission key'i (Users grid'inde ayrı
+           seçilebilir); mevcut admin'lere migration 064 backfill eder. */
+        name: "İndirimli Koleksiyon",
+        href: "/maki-admin/discount-collection",
+        icon: Tag,
+        permissionKey: "discount_collection",
       },
       {
         name: "Mesajlar",
