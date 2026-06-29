@@ -222,17 +222,22 @@ export default function Header({
                 />
               )}
 
-              {/* HAMBURGER — davranış birebir korundu. */}
+              {/* HAMBURGER — davranış birebir korundu; görünür "Menü"
+                 etiketi eklendi (mobil kullanılabilirlik). */}
               <button
                 onClick={() => setOpen(!open)}
                 aria-label="Menüyü aç"
                 className="
-                  p-2 rounded-full shrink-0
+                  inline-flex items-center gap-1.5 shrink-0
+                  pl-3 pr-2.5 py-2 rounded-full
                   text-[var(--color-stone-900)]
                   hover:bg-[var(--color-sand-50)]
                   transition-colors motion-reduce:transition-none
                 "
               >
+                <span className="text-[12px] font-medium tracking-[0.08em] uppercase">
+                  Menü
+                </span>
                 {open ? <X size={22} /> : <Menu size={22} />}
               </button>
             </div>
