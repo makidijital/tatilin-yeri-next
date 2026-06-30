@@ -1,9 +1,7 @@
-import { supabase } from "@/lib/supabase";
+import { exchangeRateRepository } from "@/lib/db/exchange-rate.repository";
 
 export async function getExchangeRates() {
-  const { data, error } = await supabase
-    .from("exchange_rates")
-    .select("*");
+  const { data, error } = await exchangeRateRepository.findAll();
 
   if (error) {
     console.error(error);
@@ -40,9 +38,7 @@ export type ExchangeRatesMap = {
 };
 
 export async function getExchangeRatesMap(): Promise<ExchangeRatesMap> {
-  const { data, error } = await supabase
-    .from("exchange_rates")
-    .select("code, rate, updated_at");
+  const { data, error } = await exchangeRateRepository.findCodeRateUpdated();
 
   if (error) {
     console.error("[exchangeRate.getMap] FAILED", error.message);

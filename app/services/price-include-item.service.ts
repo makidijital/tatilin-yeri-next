@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { priceIncludeItemRepository } from "@/lib/db/price-include-item.repository";
 
 /* ===============================================================
    🔥 PRICE INCLUDE ITEMS — MASTER CRUD
@@ -29,10 +29,7 @@ export type PriceIncludeItem = {
 export async function getPriceIncludeItems(): Promise<
   PriceIncludeItem[]
 > {
-  const { data, error } = await supabase
-    .from("price_include_items")
-    .select("id, title")
-    .order("created_at", { ascending: false });
+  const { data, error } = await priceIncludeItemRepository.findAll();
 
   if (error) {
     console.error(
@@ -54,15 +51,8 @@ export async function getPriceIncludeItemsByVilla(
 ): Promise<PriceIncludeItem[]> {
   if (!villaId) return [];
 
-  const { data, error } = await supabase
-    .from("villa_price_include_relations")
-    .select(`
-      price_include_items (
-        id,
-        title
-      )
-    `)
-    .eq("villa_id", villaId);
+  const { data, error } =
+    await priceIncludeItemRepository.findIncludesByVilla(villaId);
 
   if (error) {
     console.error(
@@ -93,11 +83,9 @@ export async function addPriceIncludeItem(
 
   if (!trimmed) return false;
 
-  const { error } = await supabase
-    .from("price_include_items")
-    .insert({
-      title: trimmed,
-    });
+  const { error } = await priceIncludeItemRepository.insert({
+    title: trimmed,
+  });
 
   if (error) {
     console.error(
@@ -120,12 +108,9 @@ export async function updatePriceIncludeItem(
 
   if (!id || !trimmed) return false;
 
-  const { error } = await supabase
-    .from("price_include_items")
-    .update({
-      title: trimmed,
-    })
-    .eq("id", id);
+  const { error } = await priceIncludeItemRepository.updateById(id, {
+    title: trimmed,
+  });
 
   if (error) {
     console.error(
@@ -146,10 +131,8 @@ export async function deletePriceIncludeItem(
   if (!id) return false;
 
   // 🔥 önce relation temizle
-  const { error: relErr } = await supabase
-    .from("villa_price_include_relations")
-    .delete()
-    .eq("include_id", id);
+  const { error: relErr } =
+    await priceIncludeItemRepository.deleteRelationsByIncludeId(id);
 
   if (relErr) {
     console.error(
@@ -161,10 +144,7 @@ export async function deletePriceIncludeItem(
   }
 
   // 🔥 sonra master kaydı sil
-  const { error } = await supabase
-    .from("price_include_items")
-    .delete()
-    .eq("id", id);
+  const { error } = await priceIncludeItemRepository.deleteById(id);
 
   if (error) {
     console.error(

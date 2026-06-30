@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { ruleItemRepository } from "@/lib/db/rule-item.repository";
 
 /* ===============================================================
    🔥 RULE ITEMS — MASTER CRUD
@@ -18,10 +18,7 @@ export type RuleItem = {
 
 // 📦 TÜM KURALLAR
 export async function getRuleItems(): Promise<RuleItem[]> {
-  const { data, error } = await supabase
-    .from("rule_items")
-    .select("id, title")
-    .order("created_at", { ascending: false });
+  const { data, error } = await ruleItemRepository.findAll();
 
   if (error) {
     console.error("❌ getRuleItems:", error.message);
@@ -39,15 +36,7 @@ export async function getRuleItemsByVilla(
 ): Promise<RuleItem[]> {
   if (!villaId) return [];
 
-  const { data, error } = await supabase
-    .from("villa_rule_relations")
-    .select(`
-      rule_items (
-        id,
-        title
-      )
-    `)
-    .eq("villa_id", villaId);
+  const { data, error } = await ruleItemRepository.findRulesByVilla(villaId);
 
   if (error) {
     console.error("❌ getRuleItemsByVilla:", error.message);
@@ -71,9 +60,7 @@ export async function addRuleItem(title: string): Promise<boolean> {
   const trimmed = (title || "").trim();
   if (!trimmed) return false;
 
-  const { error } = await supabase
-    .from("rule_items")
-    .insert({ title: trimmed });
+  const { error } = await ruleItemRepository.insert({ title: trimmed });
 
   if (error) {
     console.error("❌ addRuleItem:", error.message);
@@ -91,10 +78,9 @@ export async function updateRuleItem(
   const trimmed = (title || "").trim();
   if (!id || !trimmed) return false;
 
-  const { error } = await supabase
-    .from("rule_items")
-    .update({ title: trimmed })
-    .eq("id", id);
+  const { error } = await ruleItemRepository.updateById(id, {
+    title: trimmed,
+  });
 
   if (error) {
     console.error("❌ updateRuleItem:", error.message);
@@ -111,20 +97,16 @@ export async function deleteRuleItem(
   if (!id) return false;
 
   // 🔥 önce relation'ları temizle
-  const { error: relErr } = await supabase
-    .from("villa_rule_relations")
-    .delete()
-    .eq("rule_id", id);
+  const { error: relErr } = await ruleItemRepository.deleteRelationsByRuleId(
+    id
+  );
 
   if (relErr) {
     console.error("❌ rule relation delete:", relErr.message);
   }
 
   // 🔥 master'ı sil
-  const { error } = await supabase
-    .from("rule_items")
-    .delete()
-    .eq("id", id);
+  const { error } = await ruleItemRepository.deleteById(id);
 
   if (error) {
     console.error("❌ deleteRuleItem:", error.message);

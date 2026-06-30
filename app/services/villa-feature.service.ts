@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { villaFeatureRepository } from "@/lib/db/villa-feature.repository";
 
 /* ================= TYPES ================= */
 
@@ -11,10 +11,7 @@ export type Feature = {
 
 // 📦 TÜM FEATURE'LAR
 export async function getVillaFeatures(): Promise<Feature[]> {
-  const { data, error } = await supabase
-    .from("villa_features")
-    .select("id, name")
-    .order("created_at", { ascending: false });
+  const { data, error } = await villaFeatureRepository.findAll();
 
   if (error) {
     console.error("❌ getVillaFeatures:", error.message);
@@ -30,15 +27,9 @@ export async function getVillaFeatures(): Promise<Feature[]> {
 export async function getVillaFeaturesByVilla(
   villaId: string
 ): Promise<Feature[]> {
-  const { data, error } = await supabase
-    .from("villa_feature_relations")
-    .select(`
-      villa_features (
-        id,
-        name
-      )
-    `)
-    .eq("villa_id", villaId);
+  const { data, error } = await villaFeatureRepository.findFeaturesByVilla(
+    villaId
+  );
 
   if (error) {
     console.error("❌ getVillaFeaturesByVilla:", error.message);
@@ -62,9 +53,7 @@ export async function getVillaFeaturesByVilla(
 
 // ➕ ADD
 export async function addVillaFeature(name: string): Promise<boolean> {
-  const { error } = await supabase
-    .from("villa_features")
-    .insert({ name });
+  const { error } = await villaFeatureRepository.insert({ name });
 
   if (error) {
     console.error("❌ addVillaFeature:", error.message);
@@ -79,10 +68,7 @@ export async function updateVillaFeature(
   id: string,
   name: string
 ): Promise<boolean> {
-  const { error } = await supabase
-    .from("villa_features")
-    .update({ name })
-    .eq("id", id);
+  const { error } = await villaFeatureRepository.updateById(id, { name });
 
   if (error) {
     console.error("❌ updateVillaFeature:", error.message);
@@ -97,20 +83,15 @@ export async function deleteVillaFeature(
   id: string
 ): Promise<boolean> {
   // 🔥 relation temizle
-  const { error: relationError } = await supabase
-    .from("villa_feature_relations")
-    .delete()
-    .eq("feature_id", id);
+  const { error: relationError } =
+    await villaFeatureRepository.deleteRelationsByFeatureId(id);
 
   if (relationError) {
     console.error("❌ relation delete:", relationError.message);
   }
 
   // 🔥 feature sil
-  const { error } = await supabase
-    .from("villa_features")
-    .delete()
-    .eq("id", id);
+  const { error } = await villaFeatureRepository.deleteById(id);
 
   if (error) {
     console.error("❌ deleteVillaFeature:", error.message);

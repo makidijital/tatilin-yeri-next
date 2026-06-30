@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { contactMessageRepository } from "@/lib/db/contact-message.repository";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ContactMessageRow } from "@/types/database";
 
@@ -32,7 +32,6 @@ export async function createContactMessage(
   input: ContactMessageInput,
   deps?: { client?: SupabaseClient }
 ): Promise<{ ok: boolean; error?: string }> {
-  const client = deps?.client ?? supabase;
   const payload = {
     full_name: input.full_name.trim(),
     phone: input.phone?.trim() || null,
@@ -41,9 +40,10 @@ export async function createContactMessage(
     source_page: input.source_page?.trim() || null,
     is_read: false,
   };
-  const { error } = await client
-    .from("contact_messages")
-    .insert(payload);
+  const { error } = await contactMessageRepository.create(
+    payload,
+    deps?.client
+  );
   if (error) {
     console.error("❌ createContactMessage error:", error.message);
     return { ok: false, error: error.message };
@@ -55,14 +55,9 @@ export async function createContactMessage(
 export async function listMessages(opts?: {
   includeArchived?: boolean;
 }): Promise<ContactMessageRow[]> {
-  let q = supabase
-    .from("contact_messages")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (!opts?.includeArchived) {
-    q = q.is("archived_at", null);
-  }
-  const { data, error } = await q;
+  const { data, error } = await contactMessageRepository.findAll(
+    opts?.includeArchived
+  );
   if (error) {
     console.error("❌ listMessages error:", error.message);
     return [];
@@ -75,10 +70,9 @@ export async function markAsRead(
   id: string,
   isRead: boolean
 ): Promise<boolean> {
-  const { error } = await supabase
-    .from("contact_messages")
-    .update({ is_read: isRead })
-    .eq("id", id);
+  const { error } = await contactMessageRepository.updateById(id, {
+    is_read: isRead,
+  });
   if (error) {
     console.error("❌ markAsRead error:", error.message);
     return false;
@@ -91,10 +85,9 @@ export async function archiveMessage(
   id: string,
   archived: boolean
 ): Promise<boolean> {
-  const { error } = await supabase
-    .from("contact_messages")
-    .update({ archived_at: archived ? new Date().toISOString() : null })
-    .eq("id", id);
+  const { error } = await contactMessageRepository.updateById(id, {
+    archived_at: archived ? new Date().toISOString() : null,
+  });
   if (error) {
     console.error("❌ archiveMessage error:", error.message);
     return false;

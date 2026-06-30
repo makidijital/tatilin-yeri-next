@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { offerRequestRepository } from "@/lib/db/offer-request.repository";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   OfferRequestRow,
@@ -76,7 +76,6 @@ export async function createOfferRequest(
   input: CreateOfferRequestInput,
   deps?: { client?: SupabaseClient }
 ): Promise<OfferRequestResultWithId> {
-  const client = deps?.client ?? supabase;
   const fullName = sanitize(input.full_name);
   if (fullName.length < 2 || fullName.length > MAX_NAME) {
     return { ok: false, error: "Lütfen geçerli bir ad soyad girin." };
@@ -140,13 +139,10 @@ export async function createOfferRequest(
      değer payload'tan farklıysa (örn. kolon yok, default override, vs.)
      console'a net bir uyumsuzluk raporu düşür. Production'da side-effect
      yok — sadece anormal durumda log. */
-  const { data, error } = await client
-    .from("offer_requests")
-    .insert(insertPayload)
-    .select(
-      "id, adults, children, region_tokens, villa_type_tokens, feature_tokens, budget_min, budget_max"
-    )
-    .single();
+  const { data, error } = await offerRequestRepository.create(
+    insertPayload,
+    deps?.client
+  );
 
   if (error || !data) {
     console.error("[offerRequest.create] FAILED", {
@@ -217,10 +213,7 @@ export async function createOfferRequest(
    ADMIN READ — listing
 =============================================================== */
 export async function getOfferRequests(): Promise<OfferRequestRow[]> {
-  const { data, error } = await supabase
-    .from("offer_requests")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const { data, error } = await offerRequestRepository.findAll();
 
   if (error) {
     console.error("[offerRequest.list] FAILED", error.message);
@@ -233,11 +226,7 @@ export async function getOfferRequestById(
   id: string
 ): Promise<OfferRequestRow | null> {
   if (!id) return null;
-  const { data, error } = await supabase
-    .from("offer_requests")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await offerRequestRepository.findById(id);
   if (error) {
     console.error("[offerRequest.getById] FAILED", error.message);
     return null;
@@ -263,10 +252,10 @@ export async function updateOfferRequestStatus(
   if (!VALID_STATUSES.includes(status)) {
     return { ok: false, error: "Geçersiz durum" };
   }
-  const { error } = await supabase
-    .from("offer_requests")
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", id);
+  const { error } = await offerRequestRepository.updateById(id, {
+    status,
+    updated_at: new Date().toISOString(),
+  });
   if (error) {
     console.error("[offerRequest.updateStatus] FAILED", error.message);
     return { ok: false, error: error.message };
@@ -278,10 +267,7 @@ export async function deleteOfferRequest(
   id: string
 ): Promise<OfferRequestResult> {
   if (!id) return { ok: false, error: "ID gerekli" };
-  const { error } = await supabase
-    .from("offer_requests")
-    .delete()
-    .eq("id", id);
+  const { error } = await offerRequestRepository.deleteById(id);
   if (error) {
     console.error("[offerRequest.delete] FAILED", error.message);
     return { ok: false, error: error.message };

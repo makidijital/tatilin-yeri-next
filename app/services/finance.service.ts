@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { financeRepository } from "@/lib/db/finance.repository";
 
 /* ===============================================================
    🛡️ FINANCE SERVICE — read-only aggregation layer
@@ -130,17 +130,10 @@ export async function getFinanceKpiSnapshot(
 ): Promise<FinanceKpiSnapshot> {
   const sinceISO = rangeStartISO(preset);
 
-  let query = supabase
-    .from("reservations")
-    .select("status, total_price_try, reservation_commission_amount")
-    .in("status", FINANCE_BLOCKING_STATUSES);
-
-  if (sinceISO) {
-    /* Aynı query üzerinde koşullu filter; duplicate query oluşmaz. */
-    query = query.gte("created_at", sinceISO);
-  }
-
-  const { data, error } = await query;
+  const { data, error } = await financeRepository.findReservationsForKpi(
+    FINANCE_BLOCKING_STATUSES,
+    sinceISO
+  );
 
   if (error) {
     console.error("[finance.kpi] FAILED", {

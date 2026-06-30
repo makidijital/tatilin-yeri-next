@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { paymentAccountRepository } from "@/lib/db/payment-account.repository.server";
 import type { PaymentAccount } from "@/lib/payment-account.helper";
 
 /* ===============================================================
@@ -14,9 +14,10 @@ import type { PaymentAccount } from "@/lib/payment-account.helper";
    GÜVENLİK SINIRI:
      • `import "server-only"` direktifi — bu dosya CLIENT bundle'a
        sızarsa Next.js BUILD HATA verir. Defansif net guard.
-     • `getSupabaseAdmin()` SUPABASE_SERVICE_ROLE_KEY okur — yalnız
-       server runtime'da (Node/edge route handler). NEXT_PUBLIC_
-       prefix yok → client bundle'da expose YOK.
+     • Veri erişimi paymentAccountRepository (→ dbAdmin, service-role,
+       SUPABASE_SERVICE_ROLE_KEY) üzerinden — yalnız server runtime'da
+       (Node/edge route handler). NEXT_PUBLIC_ prefix yok → client
+       bundle'da expose YOK. (Phase 1 repo consolidation; davranış AYNEN.)
 
    CALLER:
      • app/api/mail/bank-transfer-payment/route.ts (server)
@@ -43,14 +44,8 @@ import type { PaymentAccount } from "@/lib/payment-account.helper";
 ---------------------------------------------- */
 export async function getActivePaymentAccount(): Promise<PaymentAccount | null> {
   try {
-    const supabase = getSupabaseAdmin();
-    const { data, error, status } = await supabase
-      .from("payment_accounts")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const { data, error, status } =
+      await paymentAccountRepository.findActive();
 
     if (error) {
       console.error("[payment_account.server.getActive] FAILED", {

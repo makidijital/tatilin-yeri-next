@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { slugifyTr } from "@/lib/slug";
 
 /* ===============================================================
@@ -16,10 +16,7 @@ import { slugifyTr } from "@/lib/slug";
 
 // 📦 GET
 export async function getVillaTypes() {
-  const { data, error } = await supabase
-    .from("villa_types")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const { data, error } = await villaTypeRepository.findAll();
 
   if (error) {
     console.error("❌ getVillaTypes error:", error.message);
@@ -32,9 +29,7 @@ export async function getVillaTypes() {
 // ➕ ADD
 export async function addVillaType(name: string, slug?: string | null) {
   const finalSlug = (slug && slug.trim()) || slugifyTr(name) || null;
-  const { error } = await supabase
-    .from("villa_types")
-    .insert({ name, slug: finalSlug });
+  const { error } = await villaTypeRepository.insert({ name, slug: finalSlug });
 
   if (error) {
     console.error("❌ addVillaType error:", error.message);
@@ -57,10 +52,10 @@ export async function updateVillaType(
       ? slug.trim() || null
       : slugifyTr(name) || null;
 
-  const { error } = await supabase
-    .from("villa_types")
-    .update({ name, slug: finalSlug })
-    .eq("id", id);
+  const { error } = await villaTypeRepository.updateById(id, {
+    name,
+    slug: finalSlug,
+  });
 
   if (error) {
     console.error("❌ updateVillaType error:", error.message);
@@ -84,10 +79,9 @@ export async function setVillaTypeCover(
   id: string,
   path: string | null
 ): Promise<boolean> {
-  const { error } = await supabase
-    .from("villa_types")
-    .update({ cover_image: path })
-    .eq("id", id);
+  const { error } = await villaTypeRepository.updateById(id, {
+    cover_image: path,
+  });
 
   if (error) {
     console.error("❌ setVillaTypeCover error:", error.message);
@@ -103,10 +97,9 @@ export async function setVillaTypeHomepage(
   id: string,
   show: boolean
 ): Promise<boolean> {
-  const { error } = await supabase
-    .from("villa_types")
-    .update({ show_on_homepage: show })
-    .eq("id", id);
+  const { error } = await villaTypeRepository.updateById(id, {
+    show_on_homepage: show,
+  });
 
   if (error) {
     console.error("❌ setVillaTypeHomepage error:", error.message);
@@ -118,15 +111,9 @@ export async function setVillaTypeHomepage(
 // ❌ DELETE (relation varsa önce temizler)
 export async function deleteVillaType(id: string) {
   // 🔥 önce relation sil (çok önemli)
-  await supabase
-    .from("villa_type_relations")
-    .delete()
-    .eq("type_id", id);
+  await villaTypeRepository.deleteRelationsByTypeId(id);
 
-  const { error } = await supabase
-    .from("villa_types")
-    .delete()
-    .eq("id", id);
+  const { error } = await villaTypeRepository.deleteById(id);
 
   if (error) {
     console.error("❌ deleteVillaType error:", error.message);

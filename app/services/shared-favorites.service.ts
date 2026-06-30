@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { sharedFavoritesRepository } from "@/lib/db/shared-favorites.repository";
 
 import { getVillasByIds, type VillaDTO } from "./villa.service";
 
@@ -122,13 +122,11 @@ export async function createSharedFavoritesList(
     const expiresAtIso = new Date(
       Date.now() + 7 * 24 * 60 * 60 * 1000
     ).toISOString();
-    const { error } = await supabase
-      .from("shared_favorite_lists")
-      .insert({
-        token,
-        villa_ids: cleaned,
-        expires_at: expiresAtIso,
-      });
+    const { error } = await sharedFavoritesRepository.create({
+      token,
+      villa_ids: cleaned,
+      expires_at: expiresAtIso,
+    });
 
     if (error) {
       const code = (error as { code?: string }).code;
@@ -168,11 +166,7 @@ export async function getSharedFavoritesList(
 ): Promise<SharedListData | null> {
   if (typeof token !== "string" || token.trim().length === 0) return null;
 
-  const { data, error } = await supabase
-    .from("shared_favorite_lists")
-    .select("token, villa_ids, created_at, expires_at")
-    .eq("token", token)
-    .maybeSingle();
+  const { data, error } = await sharedFavoritesRepository.findByToken(token);
 
   if (error) {
     console.error("[sharedFavorites.get] FAILED", error.message);
