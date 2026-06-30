@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { dbAdmin } from "@/lib/db/server";
+import { blogServerRepository } from "@/lib/db/blog.repository.server";
 import { sanitizeHtml } from "@/lib/html-sanitize";
 import { removeServer } from "@/lib/storage/server";
 import { STORAGE_BUCKETS } from "@/lib/storage";
@@ -39,11 +39,7 @@ export async function GET(
     );
   }
   const { id } = await params;
-  const { data, error } = await dbAdmin
-    .from("blog_posts")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await blogServerRepository.findById(id);
 
   if (error) {
     console.error("[admin.blog.get] FAILED", error.message);
@@ -118,11 +114,9 @@ export async function PATCH(
   if (typeof body.is_active === "boolean") {
     patch.is_active = body.is_active;
     if (body.is_active) {
-      const { data: existing } = await dbAdmin
-        .from("blog_posts")
-        .select("published_at")
-        .eq("id", id)
-        .maybeSingle();
+      const { data: existing } = await blogServerRepository.findPublishedAt(
+        id
+      );
       if (existing && !existing.published_at) {
         patch.published_at = new Date().toISOString();
       }
@@ -139,10 +133,7 @@ export async function PATCH(
     );
   }
 
-  const { error } = await dbAdmin
-    .from("blog_posts")
-    .update(patch)
-    .eq("id", id);
+  const { error } = await blogServerRepository.updateById(id, patch);
 
   if (error) {
     console.error("[admin.blog.patch] FAILED", error.message);
@@ -178,11 +169,7 @@ export async function DELETE(
      varsa R2'den sil (mevcut removeServer; pages DELETE deseni).
      Best-effort: silme hatası blog silmeyi bloklamaz. */
   try {
-    const { data: row } = await dbAdmin
-      .from("blog_posts")
-      .select("cover_image")
-      .eq("id", id)
-      .maybeSingle();
+    const { data: row } = await blogServerRepository.findCoverImage(id);
     const coverPath = str(row?.cover_image);
     if (coverPath) {
       const rm = await removeServer(STORAGE_BUCKETS.SITE_ASSETS, [coverPath]);
@@ -197,7 +184,7 @@ export async function DELETE(
     );
   }
 
-  const { error } = await dbAdmin.from("blog_posts").delete().eq("id", id);
+  const { error } = await blogServerRepository.deleteById(id);
   if (error) {
     console.error("[admin.blog.delete] FAILED", error.message);
     return NextResponse.json(

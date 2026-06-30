@@ -33,6 +33,51 @@ export const homepageRepository = {
       .order("sort_order", { ascending: true });
   },
 
+  /** PUBLIC CARDS — yalnız aktif (is_active=true); embedded villa +
+   *  location + images + prices; sort_order ASC. cache.helpers >
+   *  getCachedHomepageCollectionVillas delege. `findAllForAdmin`'den
+   *  FARKLI: public is_active filter + ZENGİN embed (badge/bedrooms/
+   *  bathrooms/guests/location/villa_prices). Embedded select string +
+   *  .eq + order BİREBİR cache.helpers'tan kopyalandı; visibility filter
+   *  / image sort / firstPrice / review-merge mapping caller'da KALIR. */
+  async findActivePublicCards() {
+    return await db
+      .from("homepage_collections")
+      .select(
+        `
+        id,
+        sort_order,
+        is_active,
+        custom_title,
+        custom_cover_image,
+        villa:villa_id (
+          id,
+          slug,
+          title,
+          badge,
+          bedrooms,
+          bathrooms,
+          guests,
+          is_active,
+          deleted_at,
+          location:villa_locations(name),
+          villa_images (
+            image_url,
+            is_cover,
+            sort_order
+          ),
+          villa_prices (
+            price,
+            currency,
+            start_date
+          )
+        )
+      `
+      )
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+  },
+
   /** Add helper'ı için max sort_order. */
   async findMaxSortOrder() {
     return await db

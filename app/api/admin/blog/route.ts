@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { dbAdmin } from "@/lib/db/server";
+import { blogServerRepository } from "@/lib/db/blog.repository.server";
 import { sanitizeHtml } from "@/lib/html-sanitize";
 
 /* ===============================================================
@@ -29,12 +29,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { data, error } = await dbAdmin
-    .from("blog_posts")
-    .select(
-      "id, title, slug, is_active, published_at, category, created_at, updated_at"
-    )
-    .order("created_at", { ascending: false });
+  const { data, error } = await blogServerRepository.listAll();
 
   if (error) {
     console.error("[admin.blog.list] FAILED", error.message);
@@ -112,11 +107,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     published_at: isActive ? new Date().toISOString() : null,
   };
 
-  const { data, error } = await dbAdmin
-    .from("blog_posts")
-    .insert(payload)
-    .select("id")
-    .single();
+  const { data, error } = await blogServerRepository.insert(payload);
 
   if (error) {
     console.error("[admin.blog.insert] FAILED", error.message);

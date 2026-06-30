@@ -1,7 +1,11 @@
 import { unstable_cache } from "next/cache";
-import { supabase } from "@/lib/supabase";
 
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+import { villaRepository } from "@/lib/db/villa.repository";
+import { villaTypeRepository } from "@/lib/db/villa-type.repository";
+import { villaLocationRepository } from "@/lib/db/villa-location.repository";
+import { homepageRepository } from "@/lib/db/homepage.repository";
+import { discountRepository } from "@/lib/db/discount.repository";
 import { getPublicSettings } from "@/app/services/settings.service";
 import { getMenu } from "@/app/services/menu.service";
 import { getVillas } from "@/app/services/villa.service";
@@ -215,41 +219,7 @@ export const getCachedHomepageCollectionVillas = unstable_cache(
        villa listesi ile Promise.all içinde çalıştırılır → net latency
        max(collectionQuery, statsQuery). */
     const statsPromise = getVillaReviewStatsBatch();
-    const { data, error } = await supabase
-      .from("homepage_collections")
-      .select(
-        `
-        id,
-        sort_order,
-        is_active,
-        custom_title,
-        custom_cover_image,
-        villa:villa_id (
-          id,
-          slug,
-          title,
-          badge,
-          bedrooms,
-          bathrooms,
-          guests,
-          is_active,
-          deleted_at,
-          location:villa_locations(name),
-          villa_images (
-            image_url,
-            is_cover,
-            sort_order
-          ),
-          villa_prices (
-            price,
-            currency,
-            start_date
-          )
-        )
-      `
-      )
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true });
+    const { data, error } = await homepageRepository.findActivePublicCards();
 
     if (error) {
       console.error(
@@ -372,41 +342,7 @@ export const getCachedHomepageCollectionVillas = unstable_cache(
 export const getCachedDiscountCollectionVillas = unstable_cache(
   async (): Promise<HomepageCollectionVilla[]> => {
     const statsPromise = getVillaReviewStatsBatch();
-    const { data, error } = await supabase
-      .from("discount_collections")
-      .select(
-        `
-        id,
-        sort_order,
-        is_active,
-        custom_title,
-        custom_cover_image,
-        villa:villa_id (
-          id,
-          slug,
-          title,
-          badge,
-          bedrooms,
-          bathrooms,
-          guests,
-          is_active,
-          deleted_at,
-          location:villa_locations(name),
-          villa_images (
-            image_url,
-            is_cover,
-            sort_order
-          ),
-          villa_prices (
-            price,
-            currency,
-            start_date
-          )
-        )
-      `
-      )
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true });
+    const { data, error } = await discountRepository.findActivePublicCards();
 
     if (error) {
       console.error("[cache.discountCollection] FAILED", error.message);
@@ -510,12 +446,7 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
     getLocationCoverPublicUrl ile üretilir. */
 export const getCachedVillaLocations = unstable_cache(
   async () => {
-    const { data, error } = await supabase
-      .from("villa_locations")
-      .select(
-        "id, name, slug, cover_image, show_in_filter, filter_group_name"
-      )
-      .order("name", { ascending: true });
+    const { data, error } = await villaLocationRepository.findAllForTaxonomy();
     if (error) {
       console.error("[cache.villaLocations] FAILED", error.message);
       return [];
@@ -576,9 +507,8 @@ export const getCachedCategoryCovers = unstable_cache(
        çalışıyor; embed sürprizine bağımlı değiliz. */
 
     // 1) Tüm (type_id, villa_id) eşleşmeleri
-    const { data: rels, error: relsErr } = await supabase
-      .from("villa_type_relations")
-      .select("type_id, villa_id");
+    const { data: rels, error: relsErr } =
+      await villaTypeRepository.findAllRelations();
     if (relsErr) {
       console.error("[cache.categoryCovers] rels FAILED", relsErr.message);
       return {};
@@ -595,21 +525,8 @@ export const getCachedCategoryCovers = unstable_cache(
     );
     if (villaIds.length === 0) return {};
 
-    const { data: villas, error: vErr } = await supabase
-      .from("villa")
-      .select(
-        `
-        id,
-        villa_images (
-          image_url,
-          is_cover,
-          sort_order
-        )
-      `
-      )
-      .in("id", villaIds)
-      .eq("is_active", true)
-      .is("deleted_at", null);
+    const { data: villas, error: vErr } =
+      await villaRepository.findActiveImagesByIds(villaIds);
     if (vErr) {
       console.error("[cache.categoryCovers] villas FAILED", vErr.message);
       return {};
@@ -693,11 +610,7 @@ export const getCachedCategoryCovers = unstable_cache(
 =============================================================== */
 export const getCachedLocationVillaCounts = unstable_cache(
   async (): Promise<Record<string, number>> => {
-    const { data, error } = await supabase
-      .from("villa")
-      .select("location_id")
-      .eq("is_active", true)
-      .is("deleted_at", null);
+    const { data, error } = await villaRepository.findActiveLocationIds();
 
     if (error || !data) {
       if (error) {
@@ -733,10 +646,7 @@ export const getCachedVillaTypes = unstable_cache(
        select hata verirdi; "*" hata vermez, alan undefined gelir →
        CategoryCollection `!== false` ile undefined'ı görünür sayar →
        migration öncesi "hepsi görünür" davranışı korunur. */
-    const { data, error } = await supabase
-      .from("villa_types")
-      .select("*")
-      .order("name", { ascending: true });
+    const { data, error } = await villaTypeRepository.findAllByName();
     if (error) {
       console.error("[cache.villaTypes] FAILED", error.message);
       return [];

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { dbAdmin } from "@/lib/db/server";
+import { pagesServerRepository } from "@/lib/db/pages.repository.server";
 /* 🛡️ Sayfa silmede orphan cover temizliği — server-side storage abstraction
    (removeServer write-driver'a göre R2/Supabase'e gider; provider seçme
    mantığı DEĞİŞMEZ). Cover `site-assets` bucket'ında. */
@@ -44,10 +44,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { data, error } = await dbAdmin
-    .from("pages")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const { data, error } = await pagesServerRepository.listAll();
 
   if (error) {
     console.error("[admin.pages.list] FAILED", error.message);
@@ -87,12 +84,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { data, error } = await dbAdmin
-    .from("pages")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .insert(payload as any)
-    .select()
-    .single();
+  const { data, error } = await pagesServerRepository.insert(payload);
 
   if (error) {
     console.error("[admin.pages.insert] FAILED", error.message);
@@ -132,11 +124,7 @@ export async function DELETE(req: Request): Promise<NextResponse> {
      sayfa silmeyi BLOKLAMAZ (orphan dosya log'lanır, DB silme öncelikli).
      cover_image yoksa hiçbir storage çağrısı yapılmaz (mevcut davranış). */
   try {
-    const { data: pageRow } = await dbAdmin
-      .from("pages")
-      .select("cover_image")
-      .eq("id", id)
-      .maybeSingle();
+    const { data: pageRow } = await pagesServerRepository.findCoverImage(id);
     const coverPath = (pageRow?.cover_image || "").trim();
     if (coverPath) {
       const rmRes = await removeServer(STORAGE_BUCKETS.SITE_ASSETS, [
@@ -157,7 +145,7 @@ export async function DELETE(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { error } = await dbAdmin.from("pages").delete().eq("id", id);
+  const { error } = await pagesServerRepository.deleteById(id);
   if (error) {
     console.error("[admin.pages.delete] FAILED", error.message);
     return NextResponse.json(
@@ -224,7 +212,7 @@ export async function PATCH(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { error } = await dbAdmin.from("pages").update(patch).eq("id", id);
+  const { error } = await pagesServerRepository.updateById(id, patch);
   if (error) {
     console.error("[admin.pages.patch] FAILED", error.message);
     return NextResponse.json(

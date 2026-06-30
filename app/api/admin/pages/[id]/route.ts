@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { dbAdmin } from "@/lib/db/server";
+import { pagesServerRepository } from "@/lib/db/pages.repository.server";
 
 /* ===============================================================
    🛡️ /api/admin/pages/[id] — PAGE DETAIL (admin-only)
@@ -55,11 +55,7 @@ export async function GET(
     );
   }
 
-  const { data, error } = await dbAdmin
-    .from("pages")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await pagesServerRepository.findById(id);
 
   if (error) {
     console.error("[admin.pages.detail.get] FAILED", error.message);
@@ -185,12 +181,10 @@ export async function PATCH(
     );
   }
 
-  const { data, error } = await dbAdmin
-    .from("pages")
-    .update(patch)
-    .eq("id", id)
-    .select()
-    .single();
+  const { data, error } = await pagesServerRepository.updateReturning(
+    id,
+    patch
+  );
 
   if (error) {
     console.error("[admin.pages.detail.patch] FAILED", error.message);

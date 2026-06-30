@@ -24,6 +24,17 @@ export const villaTypeRepository = {
       .order("created_at", { ascending: false });
   },
 
+  /** GET — tümü, name ASC. cache.helpers > getCachedVillaTypes (taxonomy
+   *  cache) için. `findAll`'dan TEK farkı sıralama (name ASC vs created_at
+   *  DESC); select("*") AYNEN (migration 061 show_on_homepage deploy-safe).
+   *  Mapping/cover_v timestamp caller (cache.helpers) tarafında kalır. */
+  async findAllByName() {
+    return await db
+      .from("villa_types")
+      .select("*")
+      .order("name", { ascending: true });
+  },
+
   async insert(payload: Record<string, unknown>) {
     return await db.from("villa_types").insert(payload);
   },
@@ -31,6 +42,16 @@ export const villaTypeRepository = {
   /** UPDATE by id — name/slug, cover_image, show_on_homepage hepsi buradan. */
   async updateById(id: string, payload: Record<string, unknown>) {
     return await db.from("villa_types").update(payload).eq("id", id);
+  },
+
+  /** GET — tüm (type_id, villa_id) eşleşmeleri. cache.helpers >
+   *  getCachedCategoryCovers 2-step JS-join'inin 1. adımı. Select
+   *  shape BİREBİR ("type_id, villa_id"); filter/order YOK. Aggregate
+   *  (cover seçimi + count) caller'da KALIR. */
+  async findAllRelations() {
+    return await db
+      .from("villa_type_relations")
+      .select("type_id, villa_id");
   },
 
   /** DELETE — villa_type_relations (type_id ile) önce temizlenir. */

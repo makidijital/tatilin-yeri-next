@@ -476,6 +476,55 @@ export const villaRepository = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (data || []) as any[];
   },
+
+  /* ===============================================================
+     READ — active villa location_id list (cache.helpers >
+     getCachedLocationVillaCounts delege)
+     ===============================================================
+     Orijinal (cache.helpers inline):
+       supabase.from("villa").select("location_id")
+         .eq("is_active", true).is("deleted_at", null)
+     ⚠️ Slim projeksiyon (yalnız location_id); order YOK. JS-side
+        aggregate (Record<locationId, count>) caller'da KALIR.
+     Native `{ data, error }` döner (cache.helpers fallback `{}` branch'i
+     error/data null durumunu kendisi ele alır). */
+  async findActiveLocationIds() {
+    return await db
+      .from("villa")
+      .select("location_id")
+      .eq("is_active", true)
+      .is("deleted_at", null);
+  },
+
+  /* ===============================================================
+     READ — active villas (id + images) by id list (cache.helpers >
+     getCachedCategoryCovers 2-step join'inin 2. adımı)
+     ===============================================================
+     Orijinal (cache.helpers inline):
+       supabase.from("villa")
+         .select(`id, villa_images ( image_url, is_cover, sort_order )`)
+         .in("id", villaIds).eq("is_active", true).is("deleted_at", null)
+     ⚠️ Slim embed (id + villa_images); villa_prices/location YOK,
+        order YOK (caller cover heuristic'i JS-side sort eder).
+        Empty-id guard caller'da (villaIds.length === 0 → erken return).
+     Native `{ data, error }` döner; aggregate caller'da KALIR. */
+  async findActiveImagesByIds(ids: string[]) {
+    return await db
+      .from("villa")
+      .select(
+        `
+        id,
+        villa_images (
+          image_url,
+          is_cover,
+          sort_order
+        )
+      `
+      )
+      .in("id", ids)
+      .eq("is_active", true)
+      .is("deleted_at", null);
+  },
 };
 
 /* ===============================================================

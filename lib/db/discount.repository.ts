@@ -32,6 +32,50 @@ export const discountRepository = {
       .order("sort_order", { ascending: true });
   },
 
+  /** PUBLIC CARDS — yalnız aktif (is_active=true); embedded villa +
+   *  location + images + prices; sort_order ASC. cache.helpers >
+   *  getCachedDiscountCollectionVillas delege. homepage public-cards
+   *  metodunun BİREBİR klonu; tek fark tablo (`discount_collections`).
+   *  Embedded select string + .eq + order BİREBİR cache.helpers'tan
+   *  kopyalandı; mapping caller'da KALIR. */
+  async findActivePublicCards() {
+    return await db
+      .from("discount_collections")
+      .select(
+        `
+        id,
+        sort_order,
+        is_active,
+        custom_title,
+        custom_cover_image,
+        villa:villa_id (
+          id,
+          slug,
+          title,
+          badge,
+          bedrooms,
+          bathrooms,
+          guests,
+          is_active,
+          deleted_at,
+          location:villa_locations(name),
+          villa_images (
+            image_url,
+            is_cover,
+            sort_order
+          ),
+          villa_prices (
+            price,
+            currency,
+            start_date
+          )
+        )
+      `
+      )
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+  },
+
   /** Add helper'ı için max sort_order. */
   async findMaxSortOrder() {
     return await db

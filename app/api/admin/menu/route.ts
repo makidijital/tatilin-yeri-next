@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { dbAdmin } from "@/lib/db/server";
 import { menuRepository } from "@/lib/db/menu.repository";
+import { menuServerRepository } from "@/lib/db/menu.repository.server";
+import { pagesServerRepository } from "@/lib/db/pages.repository.server";
 
 /* ===============================================================
    🛡️ /api/admin/menu — MENU CRUD (admin-only)
@@ -96,7 +97,7 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   const payload = { name, href, source_type, source_id, is_active };
 
-  const { error } = await dbAdmin.from("menu").insert([payload]);
+  const { error } = await menuServerRepository.insert(payload);
   if (error) {
     console.error("[admin.menu.insert] FAILED", error.message);
     return NextResponse.json(
@@ -111,10 +112,10 @@ export async function POST(req: Request): Promise<NextResponse> {
      DOKUNMA. Best-effort: sync hatası menü insert'i BOZMAZ.
      Eski client-side davranış BYTE-IDENTICAL — sadece server'a taşındı. */
   if (source_type === "page" && source_id) {
-    const { error: syncErr } = await dbAdmin
-      .from("pages")
-      .update({ show_in_menu: true })
-      .eq("id", source_id);
+    const { error: syncErr } = await pagesServerRepository.updateById(
+      source_id,
+      { show_in_menu: true }
+    );
     if (syncErr) {
       console.warn(
         "[admin.menu.insert] pages.show_in_menu sync non-fatal:",
@@ -169,7 +170,7 @@ export async function PATCH(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { error } = await dbAdmin.from("menu").update(patch).eq("id", id);
+  const { error } = await menuServerRepository.updateById(id, patch);
   if (error) {
     console.error("[admin.menu.patch] FAILED", error.message);
     return NextResponse.json(
@@ -203,7 +204,7 @@ export async function DELETE(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { error } = await dbAdmin.from("menu").delete().eq("id", id);
+  const { error } = await menuServerRepository.deleteById(id);
   if (error) {
     console.error("[admin.menu.delete] FAILED", error.message);
     return NextResponse.json(
