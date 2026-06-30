@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { propertyOwnerRepository } from "@/lib/db/property-owner.repository";
 
 /* ===============================================================
    🔥 PROPERTY OWNERS — MİNİMAL CRUD (mülk sahipleri)
@@ -6,10 +6,10 @@ import { supabase } from "@/lib/supabase";
    Tablo: property_owners (id, first_name, last_name, phone, email,
    iban, created_at). Villa bağlantısı: villa.owner_id nullable FK.
 
-   ⚠️ admin-only RLS (migration 044). Bu service anon `supabase`
-   client'ını kullanır AMA admin login sonrası authenticated session
-   ile çalışır → is_active_admin() policy match → CRUD izinli. (rule-item.
-   service ile aynı pattern; mevcut admin CRUD konvansiyonu.)
+   ⚠️ admin-only RLS (migration 044). Veri erişimi propertyOwnerRepository
+   (→ DbProvider `db`, anon client) üzerinden; admin login sonrası
+   authenticated session ile çalışır → is_active_admin() policy match →
+   CRUD izinli. (Phase 1 repo consolidation; RLS/davranış AYNEN.)
 
    KAPSAM: yalnız CRUD + villa sayısı. CRM/ödeme/hakediş/not YOK.
    =============================================================== */
@@ -41,12 +41,9 @@ export async function getPropertyOwners(): Promise<
   PropertyOwnerWithCount[]
 > {
   const [ownersRes, villaRes] = await Promise.all([
-    supabase
-      .from("property_owners")
-      .select("id, first_name, last_name, phone, email, iban, created_at")
-      .order("created_at", { ascending: false }),
+    propertyOwnerRepository.findAll(),
     /* villa public-read; yalnız owner_id kolonu (PII değil) — sayım için. */
-    supabase.from("villa").select("owner_id").not("owner_id", "is", null),
+    propertyOwnerRepository.findLinkedVillaOwnerIds(),
   ]);
 
   if (ownersRes.error) {
@@ -71,7 +68,7 @@ export async function getPropertyOwners(): Promise<
 export async function addPropertyOwner(
   input: PropertyOwnerInput
 ): Promise<boolean> {
-  const { error } = await supabase.from("property_owners").insert({
+  const { error } = await propertyOwnerRepository.insert({
     first_name: input.first_name,
     last_name: input.last_name,
     phone: input.phone,
@@ -90,16 +87,13 @@ export async function updatePropertyOwner(
   id: string,
   input: PropertyOwnerInput
 ): Promise<boolean> {
-  const { error } = await supabase
-    .from("property_owners")
-    .update({
-      first_name: input.first_name,
-      last_name: input.last_name,
-      phone: input.phone,
-      email: input.email,
-      iban: input.iban,
-    })
-    .eq("id", id);
+  const { error } = await propertyOwnerRepository.updateById(id, {
+    first_name: input.first_name,
+    last_name: input.last_name,
+    phone: input.phone,
+    email: input.email,
+    iban: input.iban,
+  });
   if (error) {
     console.error("❌ updatePropertyOwner:", error.message);
     return false;
@@ -109,10 +103,7 @@ export async function updatePropertyOwner(
 
 /* 🗑️ SİL — villa.owner_id on delete SET NULL ile otomatik kopar (villa silinmez). */
 export async function deletePropertyOwner(id: string): Promise<boolean> {
-  const { error } = await supabase
-    .from("property_owners")
-    .delete()
-    .eq("id", id);
+  const { error } = await propertyOwnerRepository.deleteById(id);
   if (error) {
     console.error("❌ deletePropertyOwner:", error.message);
     return false;
@@ -124,10 +115,7 @@ export async function deletePropertyOwner(id: string): Promise<boolean> {
 export async function getPropertyOwnersForSelect(): Promise<
   PropertyOwner[]
 > {
-  const { data, error } = await supabase
-    .from("property_owners")
-    .select("id, first_name, last_name, phone, email, iban")
-    .order("first_name", { ascending: true });
+  const { data, error } = await propertyOwnerRepository.findAllForSelect();
   if (error) {
     console.error("❌ getPropertyOwnersForSelect:", error.message);
     return [];

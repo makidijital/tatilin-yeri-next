@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { analyticsRepository } from "@/lib/db/analytics.repository";
 
 /* 🛡️ PHASE 3 (migration 040): reservations admin-only RLS. Bu servis
    YALNIZ server dashboard'dan (server component) çağrılır — client
@@ -112,11 +112,10 @@ export async function getDailyReservationCounts(
   const since = new Date(today);
   since.setDate(since.getDate() - (days - 1));
 
-  const { data, error } = await getSupabaseAdmin()
-    .from("reservations")
-    .select("created_at")
-    .in("status", ANALYTICS_INCLUDED_STATUSES)
-    .gte("created_at", since.toISOString());
+  const { data, error } = await analyticsRepository.findReservationsSince(
+    since.toISOString(),
+    ANALYTICS_INCLUDED_STATUSES
+  );
 
   /* Empty skeleton — fill helper. Hem hata hem data-null durumda
      N-elemanlı sıfır seri döner; UI tarafı varlığı garanti edebilir. */

@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { villaImageRepository } from "@/lib/db/villa-image.repository";
 import {
   removeVillaImageByUrl,
   removeVillaStorageFiles,
@@ -23,11 +23,9 @@ export async function getVillaImages(
 ): Promise<VillaImage[]> {
   if (!villaId) return [];
 
-  const { data, error } = await supabase
-    .from("villa_images")
-    .select("*")
-    .eq("villa_id", villaId)
-    .order("sort_order", { ascending: true });
+  const { data, error } = await villaImageRepository.findByVillaIdOrdered(
+    villaId
+  );
 
   if (error) {
     console.error("❌ getVillaImages error:", error.message);
@@ -47,26 +45,15 @@ export async function addVillaImage(
   if (!villaId || !imageUrl) return false;
 
   // 🔥 son sırayı bul (hata vermez)
-  const { data: last } = await supabase
-    .from("villa_images")
-    .select("sort_order")
-    .eq("villa_id", villaId)
-    .order("sort_order", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { data: last } = await villaImageRepository.findMaxSortOrder(villaId);
 
   const nextOrder =
     last?.sort_order !== undefined ? last.sort_order + 1 : 0;
 
   // 🔥 cover var mı kontrol et
-  const { data: cover } = await supabase
-    .from("villa_images")
-    .select("id")
-    .eq("villa_id", villaId)
-    .eq("is_cover", true)
-    .maybeSingle();
+  const { data: cover } = await villaImageRepository.findCoverId(villaId);
 
-  const { error } = await supabase.from("villa_images").insert({
+  const { error } = await villaImageRepository.insert({
     villa_id: villaId,
     image_url: imageUrl,
     sort_order: nextOrder,
@@ -89,10 +76,7 @@ export async function updateImageOrder(
 ) {
   try {
     const promises = updates.map((u) =>
-      supabase
-        .from("villa_images")
-        .update({ sort_order: u.sort_order })
-        .eq("id", u.id)
+      villaImageRepository.updateSortOrderById(u.id, u.sort_order)
     );
 
     await Promise.all(promises);
@@ -110,16 +94,10 @@ export async function setCoverImage(
 ) {
   try {
     // hepsini false yap
-    await supabase
-      .from("villa_images")
-      .update({ is_cover: false })
-      .eq("villa_id", villaId);
+    await villaImageRepository.clearCoverByVilla(villaId);
 
     // seçileni true yap
-    await supabase
-      .from("villa_images")
-      .update({ is_cover: true })
-      .eq("id", id);
+    await villaImageRepository.setCoverById(id);
   } catch (err) {
     console.error("❌ setCoverImage error:", err);
   }
@@ -167,11 +145,8 @@ export async function deleteVillaImage(id: string): Promise<boolean> {
   if (!id) return false;
 
   /* 1) Fetch — image_url storage cleanup için lazım. */
-  const { data: image, error: fetchError } = await supabase
-    .from("villa_images")
-    .select("image_url")
-    .eq("id", id)
-    .maybeSingle();
+  const { data: image, error: fetchError } =
+    await villaImageRepository.findImageUrlById(id);
 
   if (fetchError) {
     console.error("[villa-image.delete] FETCH_FAILED", {
@@ -188,10 +163,7 @@ export async function deleteVillaImage(id: string): Promise<boolean> {
   }
 
   /* 2) DB DELETE — defansif önce. */
-  const { error: dbError } = await supabase
-    .from("villa_images")
-    .delete()
-    .eq("id", id);
+  const { error: dbError } = await villaImageRepository.deleteById(id);
 
   if (dbError) {
     console.error("[villa-image.delete] DB_FAILED", {
@@ -263,10 +235,8 @@ export async function deleteAllVillaImages(villaId: string): Promise<{
   if (!villaId) return { ok: false, removed: 0, orphans: [] };
 
   /* 1) Fetch — storage cleanup için image_url'ler lazım. */
-  const { data: imgs, error: fetchError } = await supabase
-    .from("villa_images")
-    .select("image_url")
-    .eq("villa_id", villaId);
+  const { data: imgs, error: fetchError } =
+    await villaImageRepository.findImageUrlsByVilla(villaId);
 
   if (fetchError) {
     console.error("[villa-image.deleteAll] FETCH_FAILED", {
@@ -285,10 +255,7 @@ export async function deleteAllVillaImages(villaId: string): Promise<{
   const count = imgs.length;
 
   /* 2) DB BATCH DELETE — tek query, sadece bu villa. */
-  const { error: dbError } = await supabase
-    .from("villa_images")
-    .delete()
-    .eq("villa_id", villaId);
+  const { error: dbError } = await villaImageRepository.deleteByVilla(villaId);
 
   if (dbError) {
     console.error("[villa-image.deleteAll] DB_FAILED", {

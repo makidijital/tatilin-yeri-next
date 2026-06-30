@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { sharedVillaListRepository } from "@/lib/db/shared-villa-list.repository";
 
 import { getVillasByIds, type VillaDTO } from "./villa.service";
 
@@ -211,7 +211,7 @@ export async function createSharedVillaList(
   /* Insert + retry on collision. */
   const attempt = async (): Promise<CreateSharedVillaListResult | "COLLISION"> => {
     const token = generateShareToken();
-    const { error } = await supabase.from("shared_villa_lists").insert({
+    const { error } = await sharedVillaListRepository.create({
       token,
       villa_ids: cleaned,
       search_params: sp,
@@ -261,13 +261,7 @@ export async function getSharedVillaListByToken(
 ): Promise<SharedVillaListData | null> {
   if (typeof token !== "string" || token.trim().length === 0) return null;
 
-  const { data, error } = await supabase
-    .from("shared_villa_lists")
-    .select(
-      "token, villa_ids, search_params, title, note, created_at, expires_at, revoked_at"
-    )
-    .eq("token", token)
-    .maybeSingle();
+  const { data, error } = await sharedVillaListRepository.findByToken(token);
 
   if (error) {
     console.error("[sharedVillaList.get] FAILED", error.message);

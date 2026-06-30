@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { villaReviewRepository } from "@/lib/db/villa-review.repository";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 
 /* ===============================================================
@@ -137,16 +137,10 @@ export async function getApprovedVillaReviews(
 ): Promise<VillaReviewPublic[]> {
   if (!villaId) return [];
 
-  const { data, error } = await supabase
-    .from("villa_reviews")
-    .select(
-      "id, guest_name, rating, comment, created_at, is_featured"
-    )
-    .eq("villa_id", villaId)
-    .eq("is_approved", true)
-    .order("is_featured", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(PUBLIC_REVIEW_LIMIT);
+  const { data, error } = await villaReviewRepository.findApprovedByVilla(
+    villaId,
+    PUBLIC_REVIEW_LIMIT
+  );
 
   if (error) {
     console.error("[review.getApproved] FAILED", error.message);
@@ -197,10 +191,7 @@ export type GlobalReviewStats = {
 };
 
 export async function getGlobalReviewStats(): Promise<GlobalReviewStats> {
-  const { data, error } = await supabase
-    .from("villa_reviews")
-    .select("rating")
-    .eq("is_approved", true);
+  const { data, error } = await villaReviewRepository.findAllApprovedRatings();
 
   if (error) {
     console.error("[review.globalStats] FAILED", error.message);
@@ -259,10 +250,8 @@ export type VillaReviewStatsBatch = Record<
 >;
 
 export async function getVillaReviewStatsBatch(): Promise<VillaReviewStatsBatch> {
-  const { data, error } = await supabase
-    .from("villa_reviews")
-    .select("villa_id, rating")
-    .eq("is_approved", true);
+  const { data, error } =
+    await villaReviewRepository.findApprovedRatingsAllVillas();
 
   if (error) {
     console.error("[review.statsBatch] FAILED", error.message);
@@ -347,20 +336,9 @@ export async function getFeaturedHomepageReviews(): Promise<
      uygulanmıyor; JS-side filter daha güvenli ve mevcut homepage
      collection pattern'iyle birebir (lib/cache.helpers.ts >
      getCachedHomepageCollectionVillas). */
-  const { data, error } = await supabase
-    .from("villa_reviews")
-    .select(
-      `id, guest_name, rating, comment, created_at, is_featured,
-       villa:villa_id (
-         id, slug, title, is_active, deleted_at,
-         location:villa_locations(name),
-         villa_images ( image_url, is_cover, sort_order )
-       )`
-    )
-    .eq("is_approved", true)
-    .order("is_featured", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(HOMEPAGE_REVIEW_LIMIT * 2); /* over-fetch buffer; sonra trim */
+  const { data, error } = await villaReviewRepository.findFeaturedHomepage(
+    HOMEPAGE_REVIEW_LIMIT * 2 /* over-fetch buffer; sonra trim */
+  );
 
   if (error) {
     console.error("[review.homepage] FAILED", error.message);
@@ -459,11 +437,8 @@ export async function getVillaReviewStats(
 ): Promise<VillaReviewStats> {
   if (!villaId) return { count: 0, average: 0 };
 
-  const { data, error } = await supabase
-    .from("villa_reviews")
-    .select("rating")
-    .eq("villa_id", villaId)
-    .eq("is_approved", true);
+  const { data, error } =
+    await villaReviewRepository.findApprovedRatingsByVilla(villaId);
 
   if (error) {
     console.error("[review.getStats] FAILED", error.message);
@@ -529,7 +504,7 @@ export async function createVillaReview(
     };
   }
 
-  const { error } = await supabase.from("villa_reviews").insert({
+  const { error } = await villaReviewRepository.insert({
     villa_id: villaId,
     guest_name: guestName,
     rating,
@@ -555,13 +530,7 @@ export async function createVillaReview(
    ileride, şimdilik newest-first canonical pattern.
 =============================================================== */
 export async function getVillaReviewsForAdmin(): Promise<VillaReviewAdmin[]> {
-  const { data, error } = await supabase
-    .from("villa_reviews")
-    .select(
-      `id, villa_id, guest_name, rating, comment, is_approved, is_featured,
-       approved_at, created_at, villa:villa_id ( title )`
-    )
-    .order("created_at", { ascending: false });
+  const { data, error } = await villaReviewRepository.findAllForAdmin();
 
   if (error) {
     console.error("[review.adminList] FAILED", error.message);
@@ -605,13 +574,10 @@ export async function approveVillaReview(
 ): Promise<ReviewResult> {
   if (!id) return { ok: false, error: "ID gerekli" };
 
-  const { error } = await supabase
-    .from("villa_reviews")
-    .update({
-      is_approved: true,
-      approved_at: new Date().toISOString(),
-    })
-    .eq("id", id);
+  const { error } = await villaReviewRepository.updateById(id, {
+    is_approved: true,
+    approved_at: new Date().toISOString(),
+  });
 
   if (error) {
     console.error("[review.approve] FAILED", error.message);
@@ -630,10 +596,7 @@ export async function deleteVillaReview(
 ): Promise<ReviewResult> {
   if (!id) return { ok: false, error: "ID gerekli" };
 
-  const { error } = await supabase
-    .from("villa_reviews")
-    .delete()
-    .eq("id", id);
+  const { error } = await villaReviewRepository.deleteById(id);
 
   if (error) {
     console.error("[review.delete] FAILED", error.message);
@@ -666,11 +629,8 @@ export async function toggleFeaturedReview(
   if (!id) return { ok: false, error: "ID gerekli" };
 
   /* 1) mevcut state'i al */
-  const { data: existing, error: selErr } = await supabase
-    .from("villa_reviews")
-    .select("id, villa_id, is_featured, is_approved")
-    .eq("id", id)
-    .maybeSingle();
+  const { data: existing, error: selErr } =
+    await villaReviewRepository.findFeaturedStateById(id);
 
   if (selErr) {
     console.error("[review.toggleFeatured] select FAILED", selErr.message);
@@ -687,10 +647,9 @@ export async function toggleFeaturedReview(
 
   /* 2) Toggle off */
   if (existing.is_featured) {
-    const { error } = await supabase
-      .from("villa_reviews")
-      .update({ is_featured: false })
-      .eq("id", id);
+    const { error } = await villaReviewRepository.updateById(id, {
+      is_featured: false,
+    });
     if (error) {
       console.error("[review.toggleFeatured] unset FAILED", error.message);
       return { ok: false, error: error.message };
@@ -699,11 +658,9 @@ export async function toggleFeaturedReview(
   }
 
   /* 3) Aynı villa'daki diğer featured'ı temizle (defansif) */
-  const { error: clearErr } = await supabase
-    .from("villa_reviews")
-    .update({ is_featured: false })
-    .eq("villa_id", existing.villa_id)
-    .eq("is_featured", true);
+  const { error: clearErr } = await villaReviewRepository.clearFeaturedByVilla(
+    existing.villa_id
+  );
 
   if (clearErr) {
     console.error("[review.toggleFeatured] clear FAILED", clearErr.message);
@@ -711,10 +668,9 @@ export async function toggleFeaturedReview(
   }
 
   /* 4) Bu review'u featured yap */
-  const { error: setErr } = await supabase
-    .from("villa_reviews")
-    .update({ is_featured: true })
-    .eq("id", id);
+  const { error: setErr } = await villaReviewRepository.updateById(id, {
+    is_featured: true,
+  });
 
   if (setErr) {
     console.error("[review.toggleFeatured] set FAILED", setErr.message);

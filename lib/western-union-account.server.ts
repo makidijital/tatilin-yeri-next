@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { westernUnionAccountRepository } from "@/lib/db/western-union-account.repository.server";
 import type { WesternUnionAccount } from "@/lib/western-union-account.helper";
 
 /* ===============================================================
@@ -13,22 +13,17 @@ import type { WesternUnionAccount } from "@/lib/western-union-account.helper";
 
    GÜVENLİK:
      • `import "server-only"` — client bundle'a sızarsa build HATA.
-     • getSupabaseAdmin() SUPABASE_SERVICE_ROLE_KEY okur → yalnız
-       server runtime; RLS bypass.
+     • Veri erişimi westernUnionAccountRepository (→ dbAdmin, service-role,
+       SUPABASE_SERVICE_ROLE_KEY) üzerinden → yalnız server runtime; RLS
+       bypass. (Phase 1 repo consolidation; davranış AYNEN.)
 
    CALLER:
      • app/api/mail/western-union-payment/route.ts
    =============================================================== */
 export async function getActiveWesternUnionAccount(): Promise<WesternUnionAccount | null> {
   try {
-    const supabase = getSupabaseAdmin();
-    const { data, error, status } = await supabase
-      .from("western_union_accounts")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const { data, error, status } =
+      await westernUnionAccountRepository.findActive();
 
     if (error) {
       console.error("[western_union.server.getActive] FAILED", {

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { operationsRepository } from "@/lib/db/operations.repository";
 
 /* 🛡️ PHASE 3 (migration 040): reservations admin-only RLS. Bu servis
    YALNIZ server dashboard'dan (server component) çağrılır — client
@@ -167,13 +167,10 @@ export async function getOperationsSnapshot(): Promise<OperationsSnapshot> {
     `and(start_date.gte.${todayKey},start_date.lt.${windowEndKey}),` +
     `and(end_date.gte.${todayKey},end_date.lt.${windowEndKey})`;
 
-  const { data, error } = await getSupabaseAdmin()
-    .from("reservations")
-    .select(
-      "id, start_date, end_date, name, guests, status, villa:villa_id(title)"
-    )
-    .in("status", OPERATIONS_INCLUDED_STATUSES)
-    .or(orFilter);
+  const { data, error } = await operationsRepository.findOperationsWindow(
+    OPERATIONS_INCLUDED_STATUSES,
+    orFilter
+  );
 
   if (error) {
     console.error("[operations.snapshot] FAILED", {

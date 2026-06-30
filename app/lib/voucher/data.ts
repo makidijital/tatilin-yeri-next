@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { voucherRepository } from "@/lib/db/voucher.repository.server";
 import { getMailConfig } from "@/app/lib/mail/client";
 import { getSettings } from "@/app/services/settings.service";
 import { resolveAssetUrl } from "@/lib/storage.helpers";
@@ -8,9 +8,10 @@ import { resolveAssetUrl } from "@/lib/storage.helpers";
 /* 🛡️ PHASE 3 (migration 040): voucher reservation snapshot'ı tam PII
    içerir (name/phone/email/identity/address/price). 040 admin-only RLS
    sonrası server-anon SELECT reddedilir. Bu dosya yalnız server route'
-   larından (api/mail/voucher, api/voucher/[id]) çağrılır → service_role
-   (getSupabaseAdmin) + `import "server-only"` güvenli. PII server'da
-   kalır; voucher PDF'i zaten authorize edilmiş admin/erişim ile üretilir. */
+   larından (api/mail/voucher, api/voucher/[id]) çağrılır → veri erişimi
+   voucherRepository (→ dbAdmin, service_role) + `import "server-only"`
+   üzerinden güvenli. PII server'da kalır; voucher PDF'i zaten authorize
+   edilmiş admin/erişim ile üretilir. (Phase 1 repo consolidation.) */
 import {
   getPaymentDisplayValues,
   paymentPreferenceLabel,
@@ -151,21 +152,8 @@ export async function buildVoucherData(
     };
   }
 
-  const { data: rRaw, error: fetchErr } = await getSupabaseAdmin()
-    .from("reservations")
-    .select(
-      `id, reservation_no, damage_deposit,
-       name, phone, email, identity_number, country, city, address,
-       guests, guest_names, note, status, created_at,
-       start_date, end_date,
-       total_price, total_price_try,
-       paid_amount, prepayment_amount, remaining_payment,
-       payment_preference,
-       villa:villa_id ( title ),
-       payment_method:payment_method_id ( name )`
-    )
-    .eq("id", reservationId)
-    .maybeSingle();
+  const { data: rRaw, error: fetchErr } =
+    await voucherRepository.findReservationById(reservationId);
 
   if (fetchErr || !rRaw) {
     console.error("[voucher.data] NOT_FOUND", {

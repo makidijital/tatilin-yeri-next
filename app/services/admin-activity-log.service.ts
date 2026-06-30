@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { adminActivityLogRepository } from "@/lib/db/admin-activity-log.repository.server";
 import {
   boundJsonSize,
   computeDiffSummary,
@@ -71,8 +71,7 @@ export async function insertAdminActivityLog(
           .slice(0, 64)
       : computeDiffSummary(beforeSanitized, afterSanitized);
 
-    const supabase = getSupabaseAdmin();
-    const { error } = await supabase.from("admin_activity_logs").insert({
+    const { error } = await adminActivityLogRepository.insert({
       admin_user_id: ctx.admin_user_id,
       admin_email: ctx.admin_email,
       action: String(input.action || "").trim().slice(0, 80),
