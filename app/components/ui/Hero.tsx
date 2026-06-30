@@ -149,9 +149,9 @@ export default function Hero({
         className="
           absolute inset-0 pointer-events-none
           bg-gradient-to-r
-          from-white/78 via-white/30 to-transparent
-          md:from-white/90 md:via-white/45
-          lg:from-white/95 lg:via-white/55
+          from-white/78 via-white/10 via-40% to-transparent
+          md:from-white/90 md:via-white/15
+          lg:from-white/95 lg:via-white/18
         "
       />
       {/* RADIAL DEPTH — alt-sol köşede yumuşak beyaz yoğunluk:
