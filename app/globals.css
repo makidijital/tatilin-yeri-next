@@ -172,6 +172,17 @@
   border-color: var(--border);
 }
 
+/* 🎨 BAŞLIK RENGİ — hero + section h1/h2 (#082060).
+   Yalnız `text-[var(--color-stone-900)]` class'ını kullanan h1/h2'leri
+   hedefler (specificity h1.class = 0,1,1 > Tailwind .class = 0,1,0 →
+   override). Beyaz-on-koyu başlıklar (`text-white`, FAQ navy panel vb.)
+   bu class'ı kullanmadığı için ETKİLENMEZ. bg-stone-900 / body metni
+   ve diğer non-heading stone-900 kullanımları da değişmez. */
+h1.text-\[var\(--color-stone-900\)\],
+h2.text-\[var\(--color-stone-900\)\] {
+  color: #082060;
+}
+
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;

@@ -26,7 +26,7 @@ import { resolveVillaImageUrl } from "@/lib/storage.helpers";
      drawer'ı kapatmak için setOpen(false) geçer).
    =============================================================== */
 
-type Variant = "desktop" | "mobile" | "hero";
+type Variant = "desktop" | "mobile" | "hero" | "sticky";
 
 export default function VillaSearchBox({
   variant = "desktop",
@@ -87,23 +87,28 @@ export default function VillaSearchBox({
   /* ── Variant presentation (yalnız stiller; mantık ortak) ───────── */
   const containerClass =
     variant === "hero"
-      ? "relative flex items-center gap-3 w-full max-w-xl rounded-3xl px-6 py-4 bg-gradient-to-b from-white/82 to-white/64 backdrop-blur-xl border border-[var(--color-champagne-500)]/25 shadow-[0_26px_60px_-22px_rgba(11,31,58,0.45),0_10px_26px_-14px_rgba(2, 170, 229,0.20),inset_0_1px_0_rgba(255,255,255,0.65)] transition-[box-shadow,border-color] duration-300 motion-reduce:transition-none focus-within:border-[var(--color-champagne-500)]/55 focus-within:shadow-[0_30px_66px_-20px_rgba(11,31,58,0.5),0_0_0_4px_rgba(2, 170, 229,0.14),0_10px_26px_-12px_rgba(2, 170, 229,0.32),inset_0_1px_0_rgba(255,255,255,0.7)]"
+      ? "relative flex items-center gap-3 w-full max-w-xl rounded-t-3xl rounded-b-none px-6 py-4 bg-gradient-to-b from-white/82 to-white/64 backdrop-blur-xl border border-[var(--color-champagne-500)]/25 shadow-[0_26px_60px_-22px_rgba(11,31,58,0.45),0_10px_26px_-14px_rgba(2, 170, 229,0.20),inset_0_1px_0_rgba(255,255,255,0.65)] transition-[box-shadow,border-color] duration-300 motion-reduce:transition-none focus-within:border-[var(--color-champagne-500)]/55 focus-within:shadow-[0_30px_66px_-20px_rgba(11,31,58,0.5),0_0_0_4px_rgba(2, 170, 229,0.14),0_10px_26px_-12px_rgba(2, 170, 229,0.32),inset_0_1px_0_rgba(255,255,255,0.7)]"
+      : variant === "sticky"
+        ? "relative flex items-center gap-2 flex-1 min-w-0"
       : variant === "mobile"
         ? "relative flex items-center bg-[var(--color-sand-50)] border border-[var(--color-stone-100)] rounded-full px-3 py-1.5 flex-1 min-w-0 max-w-[160px]"
         : "relative flex items-center rounded-full border bg-[var(--color-sand-50)] border-[var(--color-stone-100)] text-[var(--color-stone-700)] px-4 py-2 transition-colors duration-300 motion-reduce:transition-none";
 
-  const iconSize = variant === "hero" ? 19 : variant === "mobile" ? 14 : 15;
+  const iconSize =
+    variant === "hero" ? 19 : variant === "sticky" ? 16 : variant === "mobile" ? 14 : 15;
 
-  /* Hero'da amber accent (daha belirgin concierge hissi); header
+  /* Hero/sticky'de turkuaz accent (daha belirgin); header
      variant'larında nötr stone-400 KORUNUR. */
   const iconClass =
-    variant === "hero"
+    variant === "hero" || variant === "sticky"
       ? "text-[var(--brand-coral)] shrink-0"
       : "text-[var(--color-stone-400)] shrink-0";
 
   const inputClass =
     variant === "hero"
       ? "!bg-transparent !border-0 !shadow-none outline-none w-full px-1 text-[15px] tracking-[0.01em] !text-[var(--color-stone-900)] placeholder:text-[var(--color-stone-400)] placeholder:font-normal placeholder:tracking-[0.02em]"
+      : variant === "sticky"
+        ? "!bg-transparent !border-0 !shadow-none outline-none w-full px-1 text-[14px] !text-[var(--color-stone-900)] placeholder:text-[var(--color-stone-400)]"
       : variant === "mobile"
         ? "!bg-transparent !border-0 !shadow-none outline-none text-[13px] pl-2 w-full min-w-0"
         : "!bg-transparent !border-0 !shadow-none outline-none text-[13.5px] px-2 w-32 focus:w-48 transition-all !text-[var(--color-stone-900)] placeholder-[var(--color-stone-400)]";
@@ -111,6 +116,8 @@ export default function VillaSearchBox({
   const dropdownClass =
     variant === "hero"
       ? "absolute top-full mt-3 left-0 w-full bg-white/98 backdrop-blur-xl rounded-2xl border border-[var(--color-champagne-500)]/15 shadow-[0_30px_70px_-22px_rgba(11,31,58,0.45),0_10px_28px_-14px_rgba(11,31,58,0.18)] z-50 overflow-hidden"
+      : variant === "sticky"
+        ? "absolute top-full mt-2 left-0 w-full bg-white shadow-[0_24px_48px_-16px_rgb(27_26_23/0.22)] rounded-2xl border border-[var(--color-stone-100)] z-[60] overflow-hidden"
       : variant === "mobile"
         ? "absolute top-full mt-2 right-0 w-[260px] sm:w-[300px] bg-white shadow-[0_24px_48px_-16px_rgb(27_26_23/0.22)] rounded-2xl border border-[var(--color-stone-100)] z-50 overflow-hidden"
         : "absolute top-full mt-3 left-0 w-96 bg-white shadow-[0_24px_48px_-16px_rgb(27_26_23/0.22)] rounded-2xl border border-[var(--color-stone-100)] z-50 overflow-hidden";

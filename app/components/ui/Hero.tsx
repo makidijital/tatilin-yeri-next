@@ -10,6 +10,7 @@ import {
 } from "@/lib/hero.helpers";
 
 import HeroSearchPanel from "./hero/_components/HeroSearchPanel";
+import HeroStickySearch from "./hero/_components/HeroStickySearch";
 
 import type { HeroReviewStats } from "./hero/_types/hero";
 
@@ -289,6 +290,10 @@ export default function Hero({
 
         {/* ─── FLOATING SEARCH PANEL — client island, AYNEN ───── */}
         <HeroSearchPanel />
+
+        {/* 🔎 STICKY SEARCH — sentinel (panel altı) + scroll'da header altı
+           kompakt bar. HeroSearchPanel'e DOKUNMAZ; CLS=0 (fixed). */}
+        <HeroStickySearch />
       </div>
 
       {/* 🛡️ DATEPICKER PORTAL TARGET — HeroSearchPanel'in
