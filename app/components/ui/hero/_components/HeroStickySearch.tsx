@@ -62,17 +62,35 @@ export default function HeroStickySearch() {
     setMounted(true);
   }, []);
 
-  /* Gerçek header yüksekliğini ölç (TopBar + navbar) + resize'da güncelle. */
+  /* Gerçek header yüksekliğini ölç (TopBar + navbar).
+     ⚠️ TopBar `getPublicSettings()` sonrası ASENKRON render olur → header
+     yüksekliği MOUNT'tan SONRA büyür. Tek-sefer measure() + yalnız
+     window-resize dinleyicisi bu büyümeyi kaçırıyordu (stale headerH →
+     sticky bar header altına gizleniyordu). ResizeObserver header'ın
+     boyutu her değiştiğinde (TopBar yüklenince dahil) yeniden ölçer →
+     headerH kendini düzeltir. window-resize fallback korunur. */
   useEffect(() => {
+    const header = document.querySelector("header");
+    if (!header) return;
+
     const measure = () => {
-      const h = document
-        .querySelector("header")
-        ?.getBoundingClientRect().height;
+      const h = header.getBoundingClientRect().height;
       if (h && Number.isFinite(h) && h > 0) setHeaderH(Math.round(h));
     };
+
     measure();
+
+    const ro =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(measure)
+        : null;
+    ro?.observe(header);
     window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
   }, []);
 
   /* IO eşiği headerH'e bağlı → değişince observer yeniden kurulur. */
