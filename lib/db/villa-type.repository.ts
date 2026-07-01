@@ -35,6 +35,13 @@ export const villaTypeRepository = {
       .order("name", { ascending: true });
   },
 
+  /** GET — public taxonomy slim projeksiyon (id, name, slug); order YOK.
+   *  app/api/public/taxonomies route için BİREBİR. `findAll`/`findAllByName`
+   *  select("*") + order kullanır; bu public dropdown için slim + order-suz. */
+  async findAllForPublicTaxonomy() {
+    return await db.from("villa_types").select("id, name, slug");
+  },
+
   async insert(payload: Record<string, unknown>) {
     return await db.from("villa_types").insert(payload);
   },

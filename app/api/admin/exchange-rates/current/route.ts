@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { exchangeRateServerRepository } from "@/lib/db/exchange-rate.repository.server";
 
 /* ===============================================================
    🛡️ FAZ 53A — ADMIN EXCHANGE RATES (GET, current snapshot)
@@ -40,10 +40,8 @@ export async function GET(req: Request) {
     );
   }
 
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("exchange_rates")
-    .select("code, rate, updated_at");
+  const { data, error } =
+    await exchangeRateServerRepository.findCodeRateUpdated();
 
   if (error) {
     console.error(

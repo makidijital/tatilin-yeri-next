@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { exchangeRateServerRepository } from "@/lib/db/exchange-rate.repository.server";
 import { applyRateLimit } from "@/lib/rate-limit";
 
 /* ===============================================================
@@ -52,11 +52,7 @@ export async function GET(req: Request) {
   const limited = await applyRateLimit(req, "exchange");
   if (limited) return limited;
 
-  const supabase = getSupabaseAdmin();
-
-  const { data, error } = await supabase
-    .from("exchange_rates")
-    .select("code, rate");
+  const { data, error } = await exchangeRateServerRepository.findCodeRate();
 
   if (error) {
     console.error("[public.exchange-rates] SELECT FAILED", error.message);

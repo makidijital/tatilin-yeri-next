@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { db } from "@/lib/db";
+import { villaLocationRepository } from "@/lib/db/villa-location.repository";
+import { villaTypeRepository } from "@/lib/db/villa-type.repository";
+import { villaFeatureRepository } from "@/lib/db/villa-feature.repository";
 
 /* ===============================================================
    🛡️ /api/public/taxonomies — PUBLIC TAXONOMY LOOKUPS
@@ -29,9 +31,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET(): Promise<NextResponse> {
   const [locsRes, typesRes, featsRes] = await Promise.all([
-    db.from("villa_locations").select("id, name, slug, filter_group_name"),
-    db.from("villa_types").select("id, name, slug"),
-    db.from("villa_features").select("id, name"),
+    villaLocationRepository.findAllForPublicTaxonomy(),
+    villaTypeRepository.findAllForPublicTaxonomy(),
+    villaFeatureRepository.findAllForPublicTaxonomy(),
   ]);
 
   return NextResponse.json({

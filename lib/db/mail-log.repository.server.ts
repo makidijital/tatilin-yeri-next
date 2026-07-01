@@ -3,7 +3,7 @@ import "server-only";
 import { dbAdmin } from "@/lib/db/server";
 
 /* ===============================================================
-   🛡️ MAIL LOG — SERVER-ONLY WRITE REPOSITORY (service-role)
+   🛡️ MAIL LOG — SERVER-ONLY REPOSITORY (service-role; write + admin read)
    ===============================================================
    `mail_logs` tablosu RLS PHASE 2 (migration 038) sonrası admin-only:
    anon ve normal authenticated INSERT REDDEDILIR. mail_logs INSERT'i
@@ -37,5 +37,65 @@ import { dbAdmin } from "@/lib/db/server";
 export const mailLogServerRepository = {
   async insert(payload: Record<string, unknown>) {
     return await dbAdmin.from("mail_logs").insert(payload);
+  },
+
+  /* ---------------------------------------------------------------
+     🛡️ ADMIN STATS READS (service-role) — /api/admin/mail-logs/stats
+     ---------------------------------------------------------------
+     mail_logs admin-only RLS (mig 038) → anon SELECT boş döner; admin
+     stats kartı service-role ile sayar/okur. `head: true, count:
+     "exact"` gövde döndürmez; native `{ count, error }` caller'da
+     kullanılır. BYTE-IDENTICAL eski inline getSupabaseAdmin().from
+     çağrıları. */
+
+  /** Count — tüm satırlar (head:true, count exact; gövde gelmez). */
+  async countAll() {
+    return await dbAdmin
+      .from("mail_logs")
+      .select("id", { count: "exact", head: true });
+  },
+
+  /** Count — status filtreli (head:true, count exact). */
+  async countByStatus(status: string) {
+    return await dbAdmin
+      .from("mail_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("status", status);
+  },
+
+  /** Latest created_at — tek satır (order desc, limit 1, maybeSingle). */
+  async findLatestCreatedAt() {
+    return await dbAdmin
+      .from("mail_logs")
+      .select("created_at")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+  },
+
+  /* ---------------------------------------------------------------
+     🛡️ ADMIN CLEANUP DELETES (service-role) — /api/admin/mail-logs/cleanup
+     ---------------------------------------------------------------
+     `delete({ count: "exact" })` → silinen satır sayısını döndürür
+     (native `{ count, error }`). Cutoff ISO string + mode kararı
+     caller'da. BYTE-IDENTICAL eski inline getSupabaseAdmin().from
+     çağrıları. */
+
+  /** "30d" mode — created_at < cutoff satırları sil (count exact). */
+  async deleteOlderThan(cutoffISO: string) {
+    return await dbAdmin
+      .from("mail_logs")
+      .delete({ count: "exact" })
+      .lt("created_at", cutoffISO);
+  },
+
+  /** "all" mode — kapsayıcı filter (PK NOT NULL → tüm satırlar match;
+   *  SDK no-filter delete'i reddettiği için resmi supabase-js
+   *  workaround). Net etki TRUNCATE ile aynı; count exact. */
+  async deleteAll() {
+    return await dbAdmin
+      .from("mail_logs")
+      .delete({ count: "exact" })
+      .not("id", "is", null);
   },
 };

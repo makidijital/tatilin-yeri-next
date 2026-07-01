@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { mailLogServerRepository } from "@/lib/db/mail-log.repository.server";
 
 /* ===============================================================
    🛡️ FAZ 54 — MAIL LOGS STATS (admin only, GET)
@@ -37,22 +37,10 @@ export async function GET(req: Request) {
     );
   }
 
-  const supabase = getSupabaseAdmin();
-
   const [totalRes, failedRes, latestRes] = await Promise.all([
-    supabase
-      .from("mail_logs")
-      .select("id", { count: "exact", head: true }),
-    supabase
-      .from("mail_logs")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "failed"),
-    supabase
-      .from("mail_logs")
-      .select("created_at")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    mailLogServerRepository.countAll(),
+    mailLogServerRepository.countByStatus("failed"),
+    mailLogServerRepository.findLatestCreatedAt(),
   ]);
 
   if (totalRes.error || failedRes.error || latestRes.error) {

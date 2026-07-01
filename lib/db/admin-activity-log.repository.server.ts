@@ -3,7 +3,7 @@ import "server-only";
 import { dbAdmin } from "@/lib/db/server";
 
 /* ===============================================================
-   🛡️ ADMIN ACTIVITY LOG — SERVER-ONLY WRITE REPOSITORY (service-role)
+   🛡️ ADMIN ACTIVITY LOG — SERVER-ONLY REPOSITORY (service-role; write + admin read)
    ===============================================================
    `admin_activity_logs` INSERT'i RLS PHASE 2 (migration 038) sonrası
    service-role ile yapılır. `admin-activity-log.service.ts` içindeki
@@ -25,5 +25,63 @@ import { dbAdmin } from "@/lib/db/server";
 export const adminActivityLogRepository = {
   async insert(payload: Record<string, unknown>) {
     return await dbAdmin.from("admin_activity_logs").insert(payload);
+  },
+
+  /* ---------------------------------------------------------------
+     🛡️ ADMIN LIST (service-role) — /api/admin/activity-logs/list
+     ---------------------------------------------------------------
+     Filtreli listeleme + pagination. `select("*", { count: "exact" })`
+     + created_at DESC + `.range(offset, offset+limit-1)`; opsiyonel
+     filtreler (adminUserId/action/entityType/from/to) YALNIZ verilirse
+     zincire eklenir → route'taki conditional chain BİREBİR. Param
+     parse (parseIntSafe) + response assembly caller'da KALIR. Native
+     `{ data, error, count }` döner. */
+  async list(opts: {
+    limit: number;
+    offset: number;
+    adminUserId?: string | null;
+    action?: string | null;
+    entityType?: string | null;
+    from?: string | null;
+    to?: string | null;
+  }) {
+    let q = dbAdmin
+      .from("admin_activity_logs")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(opts.offset, opts.offset + opts.limit - 1);
+
+    if (opts.adminUserId) q = q.eq("admin_user_id", opts.adminUserId);
+    if (opts.action) q = q.eq("action", opts.action);
+    if (opts.entityType) q = q.eq("entity_type", opts.entityType);
+    if (opts.from) q = q.gte("created_at", opts.from);
+    if (opts.to) q = q.lte("created_at", opts.to);
+
+    return await q;
+  },
+
+  /* ---------------------------------------------------------------
+     🛡️ ADMIN CLEANUP DELETES (service-role) — /api/admin/activity-logs/cleanup
+     ---------------------------------------------------------------
+     `delete({ count: "exact" })` → silinen satır sayısını döndürür.
+     Cutoff ISO string + mode kararı caller'da. mail-log cleanup ile
+     aynı pattern. BYTE-IDENTICAL eski inline getSupabaseAdmin().from
+     çağrıları. */
+
+  /** "90d" mode — created_at < cutoff satırları sil (count exact). */
+  async deleteOlderThan(cutoffISO: string) {
+    return await dbAdmin
+      .from("admin_activity_logs")
+      .delete({ count: "exact" })
+      .lt("created_at", cutoffISO);
+  },
+
+  /** "all" mode — kapsayıcı filter (PK NOT NULL → tüm satırlar match;
+   *  SDK no-filter delete workaround). count exact. */
+  async deleteAll() {
+    return await dbAdmin
+      .from("admin_activity_logs")
+      .delete({ count: "exact" })
+      .not("id", "is", null);
   },
 };

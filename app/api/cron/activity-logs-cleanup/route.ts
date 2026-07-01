@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeCronRequest } from "@/lib/cron-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { adminActivityLogRepository } from "@/lib/db/admin-activity-log.repository.server";
 
 /* ===============================================================
    🛡️ CRON — ACTIVITY LOGS RETENTION (thin wrapper)
@@ -37,15 +37,11 @@ export async function GET(req: Request) {
     );
   }
 
-  const supabase = getSupabaseAdmin();
   const cutoff = new Date(
     Date.now() - 90 * 24 * 60 * 60 * 1000
   ).toISOString();
 
-  const result = await supabase
-    .from("admin_activity_logs")
-    .delete({ count: "exact" })
-    .lt("created_at", cutoff);
+  const result = await adminActivityLogRepository.deleteOlderThan(cutoff);
 
   if (result.error) {
     console.error("[cron.activity-logs-cleanup] FAILED", {

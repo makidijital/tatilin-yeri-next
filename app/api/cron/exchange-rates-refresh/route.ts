@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeCronRequest } from "@/lib/cron-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { exchangeRateServerRepository } from "@/lib/db/exchange-rate.repository.server";
 import { fetchTcmbRates } from "@/lib/exchange-rate.tcmb";
 
 /* ===============================================================
@@ -56,7 +56,6 @@ export async function GET(req: Request) {
 
   /* Upsert — admin route ile birebir aynı pattern. Tek timestamp
      atomic batch'te uygulanır. */
-  const supabase = getSupabaseAdmin();
   const updatedAt = new Date().toISOString();
   const writes: Array<{ code: string; rate: number; updated_at: string }> = [];
   for (const [code, rate] of Object.entries(tcmb.rates) as Array<
@@ -66,9 +65,7 @@ export async function GET(req: Request) {
     writes.push({ code, rate, updated_at: updatedAt });
   }
 
-  const { error } = await supabase
-    .from("exchange_rates")
-    .upsert(writes, { onConflict: "code" });
+  const { error } = await exchangeRateServerRepository.upsert(writes);
 
   if (error) {
     console.error(

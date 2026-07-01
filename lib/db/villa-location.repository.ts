@@ -32,4 +32,14 @@ export const villaLocationRepository = {
       )
       .order("name", { ascending: true });
   },
+
+  /** GET — public taxonomy slim projeksiyon (id, name, slug,
+   *  filter_group_name); order YOK. app/api/public/taxonomies route
+   *  için BİREBİR. `findAllForTaxonomy`'den farkı: cover_image/
+   *  show_in_filter YOK + order YOK (public form dropdown'ları). */
+  async findAllForPublicTaxonomy() {
+    return await db
+      .from("villa_locations")
+      .select("id, name, slug, filter_group_name");
+  },
 };

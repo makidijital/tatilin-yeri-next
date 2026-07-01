@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { adminActivityLogRepository } from "@/lib/db/admin-activity-log.repository.server";
 
 /* ===============================================================
    🛡️ FAZ 55 — ACTIVITY LOG CLEANUP (admin POST)
@@ -47,21 +47,14 @@ export async function POST(req: Request) {
     );
   }
 
-  const supabase = getSupabaseAdmin();
   let result;
   if (mode === "90d") {
     const cutoff = new Date(
       Date.now() - 90 * 24 * 60 * 60 * 1000
     ).toISOString();
-    result = await supabase
-      .from("admin_activity_logs")
-      .delete({ count: "exact" })
-      .lt("created_at", cutoff);
+    result = await adminActivityLogRepository.deleteOlderThan(cutoff);
   } else {
-    result = await supabase
-      .from("admin_activity_logs")
-      .delete({ count: "exact" })
-      .not("id", "is", null);
+    result = await adminActivityLogRepository.deleteAll();
   }
 
   if (result.error) {

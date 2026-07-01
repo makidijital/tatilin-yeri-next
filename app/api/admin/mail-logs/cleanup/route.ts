@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { mailLogServerRepository } from "@/lib/db/mail-log.repository.server";
 import {
   extractAdminContextFromRequest,
   insertAdminActivityLog,
@@ -74,26 +74,17 @@ export async function POST(req: Request) {
     );
   }
 
-  const supabase = getSupabaseAdmin();
-
   /* Execute mode-specific DELETE */
   let result;
   if (mode === "30d") {
     const cutoff = new Date(
       Date.now() - 30 * 24 * 60 * 60 * 1000
     ).toISOString();
-    result = await supabase
-      .from("mail_logs")
-      .delete({ count: "exact" })
-      .lt("created_at", cutoff);
+    result = await mailLogServerRepository.deleteOlderThan(cutoff);
   } else {
-    /* "all" — kapsayıcı filter: PK NOT NULL olduğundan tüm satırlar
-       match. SDK no-filter delete'i reddediyor; bu pattern resmi
-       supabase-js workaround. */
-    result = await supabase
-      .from("mail_logs")
-      .delete({ count: "exact" })
-      .not("id", "is", null);
+    /* "all" — kapsayıcı filter (PK NOT NULL → tüm satırlar match);
+       repo `deleteAll` içindeki resmi supabase-js workaround. */
+    result = await mailLogServerRepository.deleteAll();
   }
 
   if (result.error) {

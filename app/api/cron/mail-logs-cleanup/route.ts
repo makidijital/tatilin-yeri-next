@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeCronRequest } from "@/lib/cron-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { mailLogServerRepository } from "@/lib/db/mail-log.repository.server";
 
 /* ===============================================================
    🛡️ CRON — MAIL LOGS RETENTION (thin wrapper)
@@ -43,15 +43,11 @@ export async function GET(req: Request) {
     );
   }
 
-  const supabase = getSupabaseAdmin();
   const cutoff = new Date(
     Date.now() - 30 * 24 * 60 * 60 * 1000
   ).toISOString();
 
-  const result = await supabase
-    .from("mail_logs")
-    .delete({ count: "exact" })
-    .lt("created_at", cutoff);
+  const result = await mailLogServerRepository.deleteOlderThan(cutoff);
 
   if (result.error) {
     console.error("[cron.mail-logs-cleanup] FAILED", {

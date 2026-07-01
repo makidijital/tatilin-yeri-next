@@ -24,6 +24,13 @@ export const villaFeatureRepository = {
       .order("created_at", { ascending: false });
   },
 
+  /** GET — public taxonomy slim projeksiyon (id, name); order YOK.
+   *  app/api/public/taxonomies route için BİREBİR. `findAll`'dan farkı:
+   *  order YOK (public form dropdown; sıra caller/DB natural). */
+  async findAllForPublicTaxonomy() {
+    return await db.from("villa_features").select("id, name");
+  },
+
   /** Front — villaya ait feature'lar (villa_feature_relations embed). */
   async findFeaturesByVilla(villaId: string) {
     return await db

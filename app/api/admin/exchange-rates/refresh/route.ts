@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { exchangeRateServerRepository } from "@/lib/db/exchange-rate.repository.server";
 import { fetchTcmbRates } from "@/lib/exchange-rate.tcmb";
 import {
   extractAdminContextFromRequest,
@@ -55,12 +55,10 @@ export async function POST(req: Request) {
   /* 🛡️ FAZ 55B — BEFORE SNAPSHOT (activity log diff için)
      TCMB fetch'inden ÖNCE mevcut DB rate'lerini çek. Hata olursa
      before null kalır (logger fail-safe; ana operation etkilenmez). */
-  const supabase = getSupabaseAdmin();
   let beforeRates: Record<string, number> | null = null;
   try {
-    const { data: beforeRows } = await supabase
-      .from("exchange_rates")
-      .select("code, rate");
+    const { data: beforeRows } =
+      await exchangeRateServerRepository.findCodeRate();
     if (Array.isArray(beforeRows)) {
       const acc: Record<string, number> = {};
       for (const r of beforeRows as Array<{
@@ -99,9 +97,7 @@ export async function POST(req: Request) {
 
   /* Single batch upsert (mevcut /api/exchange-rates loop pattern'i
      yerine atomic batch — daha az round-trip, aynı sonuç). */
-  const { error } = await supabase
-    .from("exchange_rates")
-    .upsert(writes, { onConflict: "code" });
+  const { error } = await exchangeRateServerRepository.upsert(writes);
 
   if (error) {
     console.error(

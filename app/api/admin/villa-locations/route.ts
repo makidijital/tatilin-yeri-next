@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { dbAdmin } from "@/lib/db/server";
+import { villaLocationServerRepository } from "@/lib/db/villa-location.repository.server";
 
 /* ===============================================================
    🛡️ /api/admin/villa-locations — VILLA LOCATIONS CRUD (admin-only)
@@ -31,10 +31,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { data, error } = await dbAdmin
-    .from("villa_locations")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const { data, error } = await villaLocationServerRepository.listAll();
 
   if (error) {
     console.error("[admin.villa-locations.list] FAILED", error.message);
@@ -69,9 +66,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { error } = await dbAdmin
-    .from("villa_locations")
-    .insert([{ name, slug }]);
+  const { error } = await villaLocationServerRepository.insert({ name, slug });
 
   if (error) {
     console.error("[admin.villa-locations.insert] FAILED", error.message);
@@ -172,10 +167,7 @@ export async function PATCH(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { error } = await dbAdmin
-    .from("villa_locations")
-    .update(updates)
-    .eq("id", id);
+  const { error } = await villaLocationServerRepository.updateById(id, updates);
 
   if (error) {
     console.error("[admin.villa-locations.patch] FAILED", error.message);
@@ -210,10 +202,7 @@ export async function DELETE(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { error } = await dbAdmin
-    .from("villa_locations")
-    .delete()
-    .eq("id", id);
+  const { error } = await villaLocationServerRepository.deleteById(id);
 
   if (error) {
     console.error("[admin.villa-locations.delete] FAILED", error.message);

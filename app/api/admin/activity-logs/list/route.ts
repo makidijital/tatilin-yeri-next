@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { adminActivityLogRepository } from "@/lib/db/admin-activity-log.repository.server";
 
 /* ===============================================================
    🛡️ FAZ 55 — ACTIVITY LOG LIST (admin GET, service-role)
@@ -55,20 +55,15 @@ export async function GET(req: Request) {
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
 
-  const supabase = getSupabaseAdmin();
-  let q = supabase
-    .from("admin_activity_logs")
-    .select("*", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
-
-  if (adminUserId) q = q.eq("admin_user_id", adminUserId);
-  if (action) q = q.eq("action", action);
-  if (entityType) q = q.eq("entity_type", entityType);
-  if (from) q = q.gte("created_at", from);
-  if (to) q = q.lte("created_at", to);
-
-  const { data, error, count } = await q;
+  const { data, error, count } = await adminActivityLogRepository.list({
+    limit,
+    offset,
+    adminUserId,
+    action,
+    entityType,
+    from,
+    to,
+  });
   if (error) {
     console.error("[activity-logs.list] FAILED", error.message);
     return NextResponse.json(

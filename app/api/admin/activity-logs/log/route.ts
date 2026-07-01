@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { adminActivityLogRepository } from "@/lib/db/admin-activity-log.repository.server";
 import {
   boundJsonSize,
   computeDiffSummary,
@@ -124,8 +124,7 @@ export async function POST(req: Request) {
     user_agent: userAgent ? userAgent.slice(0, 500) : null,
   };
 
-  const supabase = getSupabaseAdmin();
-  const { error } = await supabase.from("admin_activity_logs").insert(row);
+  const { error } = await adminActivityLogRepository.insert(row);
 
   if (error) {
     console.error("[activity-logs.log] INSERT FAILED", error.message);

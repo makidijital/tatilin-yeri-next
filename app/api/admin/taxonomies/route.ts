@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { dbAdmin } from "@/lib/db/server";
+import { taxonomyServerRepository } from "@/lib/db/taxonomy.repository.server";
 
 /* ===============================================================
    🛡️ /api/admin/taxonomies — TAXONOMY LOOKUPS (admin-only)
@@ -43,19 +43,11 @@ export async function GET(req: Request): Promise<NextResponse> {
      Master fetch (admin dropdown). RLS-public read aynı semantic. */
   const [locsRes, typesRes, featsRes, rulesRes, includesRes] =
     await Promise.all([
-      dbAdmin
-        .from("villa_locations")
-        .select("id, name, slug, filter_group_name"),
-      dbAdmin.from("villa_types").select("id, name, slug"),
-      dbAdmin.from("villa_features").select("id, name"),
-      dbAdmin
-        .from("rule_items")
-        .select("id, title")
-        .order("created_at", { ascending: true }),
-      dbAdmin
-        .from("price_include_items")
-        .select("id, title")
-        .order("created_at", { ascending: true }),
+      taxonomyServerRepository.findLocations(),
+      taxonomyServerRepository.findTypes(),
+      taxonomyServerRepository.findFeatures(),
+      taxonomyServerRepository.findRuleItems(),
+      taxonomyServerRepository.findPriceIncludeItems(),
     ]);
 
   return NextResponse.json({
