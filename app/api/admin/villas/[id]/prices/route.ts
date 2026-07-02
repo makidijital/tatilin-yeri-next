@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { dbAdmin } from "@/lib/db/server";
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 
 /* ===============================================================
    🛡️ /api/admin/villas/[id]/prices — VILLA PRICES (admin-only)
@@ -36,10 +36,7 @@ export async function GET(
     );
   }
 
-  const { data, error } = await dbAdmin
-    .from("villa_prices")
-    .select("*")
-    .eq("villa_id", id);
+  const { data, error } = await villaAdminRepository.findPricesByVillaId(id);
 
   if (error) {
     console.error("[admin.villas.prices] FAILED", error.message);

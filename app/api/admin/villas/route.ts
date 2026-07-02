@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { dbAdmin } from "@/lib/db/server";
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { createVillaFull } from "@/app/services/villa-admin.service";
 import type { VillaFormPayload } from "@/app/services/villa-admin/types";
 
@@ -43,16 +43,8 @@ export async function GET(req: Request): Promise<NextResponse> {
     /* URL parse hata → default */
   }
 
-  const baseQuery = dbAdmin
-    .from("villa")
-    .select("id, title, slug, is_active, deleted_at");
-
-  const { data, error } = await (activeOnly
-    ? baseQuery
-        .eq("is_active", true)
-        .is("deleted_at", null)
-        .order("title", { ascending: true })
-    : baseQuery);
+  const { data, error } =
+    await villaAdminRepository.findAdminSelectList(activeOnly);
 
   if (error) {
     console.error("[admin.villas.list] FAILED", error.message);

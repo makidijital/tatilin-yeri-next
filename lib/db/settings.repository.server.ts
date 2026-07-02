@@ -55,4 +55,13 @@ export const settingsServerRepository = {
       .select("*")
       .maybeSingle();
   },
+
+  /** ZIP filename için slim projeksiyon (site_name, company_legal_name),
+   *  .maybeSingle(). /api/villa-zip/[token] delege. BİREBİR select. */
+  async findZipNameFields() {
+    return await dbAdmin
+      .from("settings")
+      .select("site_name, company_legal_name")
+      .maybeSingle();
+  },
 };

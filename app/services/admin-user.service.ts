@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { adminUserRepository } from "@/lib/db/admin-user.repository";
 import { authProvider } from "@/lib/auth";
 
 /* ===============================================================
@@ -36,12 +36,7 @@ export type AdminUserInput = {
 
 /* ----- LIST ----- */
 export async function getAdminUsers(): Promise<AdminUser[]> {
-  const { data, error } = await supabase
-    .from("admin_users")
-    .select(
-      "id, full_name, email, sidebar_permissions, is_active, last_login_at, created_at"
-    )
-    .order("created_at", { ascending: false });
+  const { data, error } = await adminUserRepository.findAllForList();
 
   if (error) {
     console.error("❌ getAdminUsers:", error.message);
@@ -55,13 +50,7 @@ export async function getAdminUserById(
   id: string
 ): Promise<AdminUser | null> {
   if (!id) return null;
-  const { data, error } = await supabase
-    .from("admin_users")
-    .select(
-      "id, full_name, email, sidebar_permissions, is_active, last_login_at, created_at"
-    )
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await adminUserRepository.findById(id);
   if (error) {
     console.error("❌ getAdminUserById:", error.message);
     return null;
@@ -193,10 +182,7 @@ export async function updateAdminUser(
   if (input.is_active !== undefined)
     payload.is_active = !!input.is_active;
 
-  const { error } = await supabase
-    .from("admin_users")
-    .update(payload)
-    .eq("id", id);
+  const { error } = await adminUserRepository.updateById(id, payload);
 
   if (error) {
     console.error("❌ updateAdminUser:", error.message);
@@ -211,10 +197,9 @@ export async function setAdminUserActive(
   active: boolean
 ): Promise<boolean> {
   if (!id) return false;
-  const { error } = await supabase
-    .from("admin_users")
-    .update({ is_active: !!active })
-    .eq("id", id);
+  const { error } = await adminUserRepository.updateById(id, {
+    is_active: !!active,
+  });
   if (error) {
     console.error("❌ setAdminUserActive:", error.message);
     return false;

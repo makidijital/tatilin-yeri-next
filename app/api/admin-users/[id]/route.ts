@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { adminUserServerRepository } from "@/lib/db/admin-user.repository.server";
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import {
   extractAdminContextFromRequest,
@@ -72,11 +73,8 @@ export async function DELETE(
     const admin = getSupabaseAdmin();
 
     /* ---------- TARGET FETCH ---------- */
-    const { data: target, error: fetchErr } = await admin
-      .from("admin_users")
-      .select("id, auth_user_id, email")
-      .eq("id", targetId)
-      .maybeSingle();
+    const { data: target, error: fetchErr } =
+      await adminUserServerRepository.findByIdForDelete(targetId);
     if (fetchErr) {
       console.error("[admin-users.delete] FETCH_FAILED", {
         targetId,
@@ -141,10 +139,8 @@ export async function DELETE(
     }
 
     /* ---------- ADMIN_USERS DELETE ---------- */
-    const { error: rowDelErr } = await admin
-      .from("admin_users")
-      .delete()
-      .eq("id", targetId);
+    const { error: rowDelErr } =
+      await adminUserServerRepository.deleteById(targetId);
     if (rowDelErr) {
       console.error(
         "[admin-users.delete] ROW_DELETE_FAILED",

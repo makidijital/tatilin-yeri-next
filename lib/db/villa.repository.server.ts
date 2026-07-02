@@ -147,6 +147,147 @@ export const villaAdminRepository = {
   },
 
   /* ===============================================================
+     READ — CLONE flow source fetches (clone.service.ts delege)
+     ===============================================================
+     Orijinal (clone.service Promise.all): 7 paralel service-role read.
+     ⚠️ Select string'leri BİREBİR — özellikle villa `select("*")` (embed
+        YOK; corePayload spread'i temiz) ve villa_distances
+        `select("title, distance")` (unit sütunu YOK fix). */
+
+  /** Master villa ham satırı — `select("*")` (embed YOK), .maybeSingle(). */
+  async findRawById(id: string) {
+    return await dbAdmin
+      .from("villa")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+  },
+
+  /** villa_type_relations → type_id list (villa_id ile). */
+  async findTypeRelationIds(villaId: string) {
+    return await dbAdmin
+      .from("villa_type_relations")
+      .select("type_id")
+      .eq("villa_id", villaId);
+  },
+
+  /** villa_feature_relations → feature_id list (villa_id ile). */
+  async findFeatureRelationIds(villaId: string) {
+    return await dbAdmin
+      .from("villa_feature_relations")
+      .select("feature_id")
+      .eq("villa_id", villaId);
+  },
+
+  /** villa_rule_relations → rule_id list (villa_id ile). */
+  async findRuleRelationIds(villaId: string) {
+    return await dbAdmin
+      .from("villa_rule_relations")
+      .select("rule_id")
+      .eq("villa_id", villaId);
+  },
+
+  /** villa_price_include_relations → include_id list (villa_id ile). */
+  async findPriceIncludeRelationIds(villaId: string) {
+    return await dbAdmin
+      .from("villa_price_include_relations")
+      .select("include_id")
+      .eq("villa_id", villaId);
+  },
+
+  /** villa_prices → start_date/end_date/price/currency (villa_id ile). */
+  async findPricesForClone(villaId: string) {
+    return await dbAdmin
+      .from("villa_prices")
+      .select("start_date, end_date, price, currency")
+      .eq("villa_id", villaId);
+  },
+
+  /** villa_distances → title/distance (villa_id ile). ⚠️ `unit` sütunu
+   *  YOK — select yalnız title+distance (distance metni serialized
+   *  unit'i taşır). */
+  async findDistancesForClone(villaId: string) {
+    return await dbAdmin
+      .from("villa_distances")
+      .select("title, distance")
+      .eq("villa_id", villaId);
+  },
+
+  /* ===============================================================
+     READ — admin select list (/api/admin/villas GET delege)
+     ===============================================================
+     Slim projeksiyon (id, title, slug, is_active, deleted_at). Conditional:
+       activeOnly → .eq("is_active", true).is("deleted_at", null)
+                    .order("title", asc)   (homepage-collection consumer)
+       default    → filtresiz, order YOK   (reservation form consumer'ları)
+     ⚠️ Conditional chain + select string BİREBİR. activeOnly parse
+        caller (route) tarafında. */
+  async findAdminSelectList(activeOnly: boolean) {
+    const baseQuery = dbAdmin
+      .from("villa")
+      .select("id, title, slug, is_active, deleted_at");
+    return await (activeOnly
+      ? baseQuery
+          .eq("is_active", true)
+          .is("deleted_at", null)
+          .order("title", { ascending: true })
+      : baseQuery);
+  },
+
+  /* ===============================================================
+     READ — villa context by id (/api/admin/villas/[id] GET delege)
+     ===============================================================
+     Reservation detail page için slim context fields; `.single()`
+     resolver (satır yoksa error — maybeSingle DEĞİL). Select string
+     BİREBİR. */
+  async findContextById(id: string) {
+    return await dbAdmin
+      .from("villa")
+      .select(
+        "id, title, cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate, deposit"
+      )
+      .eq("id", id)
+      .single();
+  },
+
+  /* ===============================================================
+     READ — villa_prices by villa_id (/api/admin/villas/[id]/prices GET)
+     ===============================================================
+     `select("*")` (tüm kolonlar), order YOK — route ham satırları döner
+     (pricing transform/hesaplama route/consumer'da). BİREBİR. */
+  async findPricesByVillaId(villaId: string) {
+    return await dbAdmin
+      .from("villa_prices")
+      .select("*")
+      .eq("villa_id", villaId);
+  },
+
+  /* ===============================================================
+     READ — villa-zip download flow (/api/villa-zip/[token] GET delege)
+     ===============================================================
+     ZIP dosya adı + görsel listesi için 2 service-role read. Select
+     string + order BİREBİR. */
+
+  /** Villa slug/title — ZIP filename için, .maybeSingle(). */
+  async findSlugTitleById(id: string) {
+    return await dbAdmin
+      .from("villa")
+      .select("slug, title")
+      .eq("id", id)
+      .maybeSingle();
+  },
+
+  /** villa_images (image_url, sort_order) — sort_order ASC. ZIP entry
+   *  sırası. */
+  async findImagesForZip(villaId: string) {
+    return await dbAdmin
+      .from("villa_images")
+      .select("image_url, sort_order")
+      .eq("villa_id", villaId)
+      .order("sort_order", { ascending: true });
+  },
+
+  /* ===============================================================
      WRITE — INSERT villa
      ===============================================================
      Orijinal: .insert(payload).select().single()

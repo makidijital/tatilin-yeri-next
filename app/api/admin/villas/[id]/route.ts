@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { dbAdmin } from "@/lib/db/server";
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 
 /* ===============================================================
    🛡️ /api/admin/villas/[id] — VILLA CONTEXT (admin-only)
@@ -38,13 +38,7 @@ export async function GET(
     );
   }
 
-  const { data, error } = await dbAdmin
-    .from("villa")
-    .select(
-      "id, title, cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate, deposit"
-    )
-    .eq("id", id)
-    .single();
+  const { data, error } = await villaAdminRepository.findContextById(id);
 
   if (error) {
     console.error("[admin.villas.detail] FAILED", error.message);

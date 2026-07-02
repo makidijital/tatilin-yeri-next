@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { adminUserServerRepository } from "@/lib/db/admin-user.repository.server";
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import {
   extractAdminContextFromRequest,
@@ -98,11 +99,8 @@ export async function POST(req: Request): Promise<NextResponse> {
     const admin = getSupabaseAdmin();
 
     /* ---------- DUPLICATE CHECK (admin_users) ---------- */
-    const { data: existing, error: existingErr } = await admin
-      .from("admin_users")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
+    const { data: existing, error: existingErr } =
+      await adminUserServerRepository.findIdByEmail(email);
     if (existingErr) {
       console.error("[admin.create_user] DUP_LOOKUP_FAILED", {
         error: existingErr.message,
@@ -147,9 +145,8 @@ export async function POST(req: Request): Promise<NextResponse> {
     const authUserId = authCreated.user.id;
 
     /* ---------- STEP 2: ADMIN_USERS INSERT ---------- */
-    const { data: adminRow, error: insertErr } = await admin
-      .from("admin_users")
-      .insert({
+    const { data: adminRow, error: insertErr } =
+      await adminUserServerRepository.insert({
         full_name: fullName,
         email,
         sidebar_permissions: permissions,
@@ -157,9 +154,7 @@ export async function POST(req: Request): Promise<NextResponse> {
         // 🔥 auth.users.id ↔ admin_users.auth_user_id (UNIQUE) ilişkisi
         auth_user_id: authUserId,
         // password kolonu YOK — auth tarafında tutuluyor.
-      })
-      .select("id")
-      .single();
+      });
 
     if (insertErr || !adminRow?.id) {
       // 🔥 ROLLBACK — admin_users insert fail ise auth user'ı sil

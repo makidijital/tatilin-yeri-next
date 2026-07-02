@@ -1,8 +1,9 @@
 import { Readable } from "node:stream";
 import archiver from "archiver";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { villaZipRepository } from "@/lib/db/villa-zip.repository.server";
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
+import { settingsServerRepository } from "@/lib/db/settings.repository.server";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 
@@ -83,25 +84,12 @@ export async function GET(
      indeksli (046) → sub-ms select; PK ile delete. */
   villaZipRepository.purgeStaleGlobal(200).catch(() => {});
 
-  const admin = getSupabaseAdmin();
-
   /* 3) FILENAME parçaları — villa.slug + firma adı. */
   const [{ data: villaRow }, { data: settingsRow }, { data: images }] =
     await Promise.all([
-      admin
-        .from("villa")
-        .select("slug, title")
-        .eq("id", villaId as string)
-        .maybeSingle(),
-      admin
-        .from("settings")
-        .select("site_name, company_legal_name")
-        .maybeSingle(),
-      admin
-        .from("villa_images")
-        .select("image_url, sort_order")
-        .eq("villa_id", villaId as string)
-        .order("sort_order", { ascending: true }),
+      villaAdminRepository.findSlugTitleById(villaId as string),
+      settingsServerRepository.findZipNameFields(),
+      villaAdminRepository.findImagesForZip(villaId as string),
     ]);
 
   const imageRows = (images as Array<{ image_url: string | null }> | null) || [];
