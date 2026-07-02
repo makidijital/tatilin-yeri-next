@@ -1,8 +1,8 @@
 import ManualReservationForm from "./ManualReservationForm";
-import { supabase } from "@/lib/supabase";
+import { villaRepository } from "@/lib/db/villa.repository";
 
 async function getVillas() {
-  const { data, error } = await supabase.from("villa").select("id, title, slug");
+  const { data, error } = await villaRepository.findAllIdTitleSlug();
   if (error) throw error;
   return data;
 }

@@ -1,4 +1,6 @@
-import { supabase } from "@/lib/supabase";
+import { villaRepository } from "@/lib/db/villa.repository";
+import { villaLocationRepository } from "@/lib/db/villa-location.repository";
+import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 
 import VillaListesiClient, {
@@ -81,52 +83,15 @@ export default async function VillaListesiPage() {
      fetch. SELECT pattern /arama ve villaRepository.listPublic ile
      birebir aynı (yıldız + embed). */
   const [villasRes, locationsRes, typesRes, relationsRes] = await Promise.all([
-    supabase
-      .from("villa")
-      .select(
-        `
-        id, slug, title, location_id, badge,
-        guests, bedrooms, bathrooms,
-        cleaning_fee, cleaning_currency, cleaning_limit,
-        location:villa_locations(name),
-        villa_images (image_url, is_cover, sort_order),
-        villa_prices (price, currency, start_date, end_date)
-      `
-      )
-      .eq("is_active", true)
-      .is("deleted_at", null)
-      /* 🛡️ SLIM-EMBED villa_images — cover-only (lib/db/villa.repository.ts
-         listForAdmin paterni). is_cover öncelikli + sort_order tie-break
-         ile sıralayıp limit(1, referencedTable) → 10-25 satır/villa yerine
-         1 satır. VillaCard zaten yalnız images[0]'ı kullanıyor; davranış
-         birebir korunur. */
-      .order("is_cover", {
-        referencedTable: "villa_images",
-        ascending: false,
-      })
-      .order("sort_order", {
-        referencedTable: "villa_images",
-        ascending: true,
-      })
-      .limit(1, { referencedTable: "villa_images" })
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("villa_locations")
-      .select("id, name, filter_group_name")
-      .order("name", { ascending: true }),
-    supabase
-      .from("villa_types")
-      .select("id, name")
-      .order("name", { ascending: true }),
+    villaRepository.findActiveCuratorCards(),
+    villaLocationRepository.findAllForFilter(),
+    villaTypeRepository.findAllIdNameByName(),
     /* villa_type_relations: M:N junction. Tüm satırları çekiyoruz —
        admin scope (varsayım: <500 villa × birkaç kategori). Client
        tarafı bunu villa.id → categoryId[] map'ine dönüştürür ve
        in-memory filter uygular. Public /arama page'i URL-driven SSR
        round-trip yapıyor; admin client-side flow için bu yeterli. */
-    supabase
-      .from("villa_type_relations")
-      .select("villa_id, type_id"),
+    villaTypeRepository.findAllRelations(),
   ]);
 
   /* Silent failure → console'a yansıt (server log). UI tarafı boş

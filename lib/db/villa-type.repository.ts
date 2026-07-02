@@ -48,6 +48,17 @@ export const villaTypeRepository = {
     return await db.from("villa_types").select("*");
   },
 
+  /** GET — slim (id, name), name ASC. Admin villa-listesi (concierge
+   *  curator) kategori dropdown'u. `findAllForPublicTaxonomy` (id,name,slug;
+   *  order YOK) ve `findAllByName` (select("*")) DEĞİL — bu slim + name ASC.
+   *  Native `{ data, error }` döner (caller kendi error-log'unu yapar). */
+  async findAllIdNameByName() {
+    return await db
+      .from("villa_types")
+      .select("id, name")
+      .order("name", { ascending: true });
+  },
+
   /** GET — villa'nın seçili type_id'leri (villa_type_relations). Admin
    *  villa edit page selected-types. `.select("type_id").eq("villa_id")`
    *  BİREBİR; map caller'da. */
@@ -56,6 +67,32 @@ export const villaTypeRepository = {
       .from("villa_type_relations")
       .select("type_id")
       .eq("villa_id", villaId);
+  },
+
+  /** GET — seçili type_id'lere sahip (villa_id, type_id) satırları.
+   *  Public /arama kategori resolver (AND-match Map caller'da).
+   *  `.select("villa_id, type_id").in("type_id", typeIds)` BİREBİR. */
+  async findVillaTypeRelationsByTypeIds(typeIds: string[]) {
+    return await db
+      .from("villa_type_relations")
+      .select("villa_id, type_id")
+      .in("type_id", typeIds);
+  },
+
+  /** GET — (villa_id, type_id) satırları, type_id VE villa_id ile scope'lu.
+   *  /kisa-sureli-tarihler kısa-gap sayfası tip-kesişimi: gap villa
+   *  havuzuyla (`villaIds`) sınırlı AND-match resolver (Map caller'da).
+   *  `findVillaTypeRelationsByTypeIds`'ten TEK farkı ek `.in("villa_id")`
+   *  scope'u. Select BİREBİR. */
+  async findVillaTypeRelationsByTypeAndVillaIds(
+    typeIds: string[],
+    villaIds: string[]
+  ) {
+    return await db
+      .from("villa_type_relations")
+      .select("villa_id, type_id")
+      .in("type_id", typeIds)
+      .in("villa_id", villaIds);
   },
 
   async insert(payload: Record<string, unknown>) {

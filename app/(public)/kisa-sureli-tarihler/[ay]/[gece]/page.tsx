@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 
 import VillaCard from "@/app/components/villa/VillaCard";
 import { JsonLd, buildItemList } from "@/app/components/seo/StructuredData";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { shortGapsRepository } from "@/lib/db/short-gaps.repository";
+import { villaRepository } from "@/lib/db/villa.repository";
+import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { getCachedVillaLocations, getCachedVillaTypes } from "@/lib/cache.helpers";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import {
@@ -149,15 +151,11 @@ export default async function ShortGapListingPage({
   const bucketMonth = resolveBucketMonthFromSlug(ay);
   if (!nights || !bucketMonth) notFound();
 
-  const supabase = await createSupabaseServerClient();
-
   /* 1) Boşluk seti — bucket_month + gap_nights filtreli. */
-  const { data: gapData } = await supabase
-    .from("villa_short_gaps")
-    .select("villa_id, gap_start, gap_end")
-    .eq("bucket_month", bucketMonth)
-    .eq("gap_nights", nights)
-    .order("gap_start", { ascending: true });
+  const { data: gapData } = await shortGapsRepository.findGapsByMonthNights(
+    bucketMonth,
+    nights
+  );
 
   const gapRows: GapRow[] = Array.isArray(gapData) ? (gapData as GapRow[]) : [];
 
@@ -199,25 +197,10 @@ export default async function ShortGapListingPage({
 
   if (gapVillaIds.length > 0) {
     /* 2) Villa sorgusu — arama ile AYNI shape, YALNIZ gap villa_id'leri. */
-    let query = supabase
-      .from("villa")
-      .select(
-        `
-          *,
-          location:villa_locations(name),
-          villa_images ( image_url, is_cover, sort_order ),
-          villa_prices ( price, currency, start_date, end_date )
-        `
-      )
-      .eq("is_active", true)
-      .is("deleted_at", null)
-      .in("id", gapVillaIds)
-      .order("is_cover", { referencedTable: "villa_images", ascending: false })
-      .order("sort_order", { referencedTable: "villa_images", ascending: true })
-      .limit(1, { referencedTable: "villa_images" });
 
     /* Bölge (grup-kökü genişletme — arama ile aynı mantık). */
     const regionIds = tokensToIds(regionTokens, regionOptionsRaw);
+    let expandedRegions: string[] = [];
     if (regionIds.length > 0) {
       const byId = new Map(regionOptionsRaw.map((o) => [o.id, o]));
       const expanded = new Set<string>();
@@ -233,30 +216,33 @@ export default async function ShortGapListingPage({
           expanded.add(id);
         }
       }
-      query = query.in("location_id", Array.from(expanded));
+      expandedRegions = Array.from(expanded);
     }
 
     /* Villa tipi (villa_type_relations junction → villa_id intersection). */
     const typeIds = tokensToIds(typeTokens, typeOptionsRaw);
+    let typeIdFilter: string[] | null = null;
     if (typeIds.length > 0) {
-      const { data: rels } = await supabase
-        .from("villa_type_relations")
-        .select("villa_id, type_id")
-        .in("type_id", typeIds)
-        .in("villa_id", gapVillaIds);
+      const { data: rels } =
+        await villaTypeRepository.findVillaTypeRelationsByTypeAndVillaIds(
+          typeIds,
+          gapVillaIds
+        );
       const typeVillaIds = Array.from(
         new Set((rels || []).map((r) => String(r.villa_id)).filter(Boolean))
       );
       // Eşleşme yoksa boş sonuç (geçersiz uuid hatası vermemek için guard).
-      query = query.in("id", typeVillaIds.length > 0 ? typeVillaIds : [
+      typeIdFilter = typeVillaIds.length > 0 ? typeVillaIds : [
         "00000000-0000-0000-0000-000000000000",
-      ]);
+      ];
     }
 
-    /* Kişi. */
-    if (guests > 0) query = query.gte("guests", guests);
-
-    const { data: villaData } = await query;
+    const { data: villaData } = await villaRepository.findShortGapVillas({
+      gapVillaIds,
+      expandedRegions,
+      typeIdFilter,
+      guests,
+    });
     const rows: VillaRow[] = Array.isArray(villaData)
       ? (villaData as VillaRow[])
       : [];

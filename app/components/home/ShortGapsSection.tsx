@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarRange, ArrowUpRight } from "lucide-react";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { shortGapsRepository } from "@/lib/db/short-gaps.repository";
 import {
   SHORT_GAP_NIGHTS,
   bucketMonthLabelTr,
@@ -34,9 +34,7 @@ type MonthGroup = {
 };
 
 export default async function ShortGapsSection() {
-  const supabase = await createSupabaseServerClient();
-
-  const { data, error } = await supabase.rpc("get_short_gap_counts");
+  const { data, error } = await shortGapsRepository.getShortGapCounts();
   if (error || !Array.isArray(data) || data.length === 0) return null;
 
   /* Ay bazında grupla (RPC zaten bucket_month, gap_nights sıralı döner). */

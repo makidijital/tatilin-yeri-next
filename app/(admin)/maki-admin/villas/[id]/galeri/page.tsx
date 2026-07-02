@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { villaRepository } from "@/lib/db/villa.repository";
 import {
   getVillaImages,
   addVillaImage,
@@ -45,11 +45,7 @@ export default function AdminVillaGallery() {
      Başarısız olursa null kalır → AdminGallery generic prefix kullanır;
      shortId villa.id'den deterministic ve stable kalır. */
   async function loadVillaSlug() {
-    const { data } = await supabase
-      .from("villa")
-      .select("slug")
-      .eq("id", id)
-      .maybeSingle();
+    const { data } = await villaRepository.findSlugById(id);
     setVillaSlug((data?.slug as string | null) ?? null);
   }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeCronRequest } from "@/lib/cron-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { shortGapsServerRepository } from "@/lib/db/short-gaps.repository.server";
 
 /* ===============================================================
    🛡️ CRON — SHORT GAPS REFRESH (thin wrapper)
@@ -36,8 +36,8 @@ export async function GET(req: Request) {
     );
   }
 
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.rpc("refresh_villa_short_gaps");
+  const { data, error } =
+    await shortGapsServerRepository.refreshVillaShortGaps();
 
   if (error) {
     console.error("[cron.short-gaps-refresh] FAILED", {

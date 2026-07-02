@@ -2,9 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Sparkles, Users, MapPin, CalendarRange } from "lucide-react";
 
-/* 🛡️ FAZ 4A — SSR-AWARE client. Liste RSC public-readable villa
-   tabloları okuyor; runtime davranış AYNEN. */
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { villaRepository } from "@/lib/db/villa.repository";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import VillaCard from "@/app/components/villa/VillaCard";
 import { getStartingPrice } from "@/lib/price.engine";
@@ -121,33 +119,8 @@ export default async function SharedVillaListPage({
     notFound();
   }
 
-  /* 🛡️ FAZ 4A — request-scoped Supabase client (cookies-aware).
-     Identifier `supabase` korundu; query AYNEN. */
-  const supabase = await createSupabaseServerClient();
-
-  const { data: rawVillas, error: rawErr } = await supabase
-    .from("villa")
-    .select(
-      `
-      *,
-      location:villa_locations(name),
-      villa_images (image_url, is_cover, sort_order),
-      villa_prices (price, currency, start_date, end_date)
-    `
-    )
-    .in("id", snapshotIds)
-    .eq("is_active", true)
-    .is("deleted_at", null)
-    /* 🛡️ SCALE HARDENING — villa_images embed slim (cover-only). */
-    .order("is_cover", {
-      referencedTable: "villa_images",
-      ascending: false,
-    })
-    .order("sort_order", {
-      referencedTable: "villa_images",
-      ascending: true,
-    })
-    .limit(1, { referencedTable: "villa_images" });
+  const { data: rawVillas, error: rawErr } =
+    await villaRepository.findCardsByIds(snapshotIds);
 
   /* Silent failure → server log'a yansıt. UI fall-through olur:
      boş listede notFound zaten çağrılıyor, ops debug için neden

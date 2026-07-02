@@ -179,6 +179,42 @@ export const villaRepository = {
     return (data || []) as VillaRawRow[];
   },
 
+  /* ADMIN CURATOR CARDS — /maki-admin/villa-listesi (concierge seçki).
+     Active villalar (is_active + deleted_at null), SLIM projeksiyon —
+     render'da tüketilen kolonlar + embed'ler. ⚠️ listPublic DEĞİL:
+     (1) `SELECT_WITH_PRICES` (`*`, villa_prices end_date YOK) yerine slim
+     kolon listesi + villa_prices'ta `end_date` DAHİL; (2) listPublic hatayı
+     yutup `[]` döner — burada caller kendi `if (res.error)` log'unu yapar,
+     bu yüzden NATIVE `{ data, error }` döner. Filter + villa_images cover-
+     slim + top-level order (sort_order asc → created_at desc) BİREBİR. */
+  async findActiveCuratorCards() {
+    return await db
+      .from("villa")
+      .select(
+        `
+        id, slug, title, location_id, badge,
+        guests, bedrooms, bathrooms,
+        cleaning_fee, cleaning_currency, cleaning_limit,
+        location:villa_locations(name),
+        villa_images (image_url, is_cover, sort_order),
+        villa_prices (price, currency, start_date, end_date)
+      `
+      )
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("is_cover", {
+        referencedTable: "villa_images",
+        ascending: false,
+      })
+      .order("sort_order", {
+        referencedTable: "villa_images",
+        ascending: true,
+      })
+      .limit(1, { referencedTable: "villa_images" })
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+  },
+
   /* ADMIN LIST — pasif villalar dahil; soft-deleted hariç.
      Frontend public list ile birebir order; admin drag-drop sırası.
 
@@ -345,6 +381,207 @@ export const villaRepository = {
       )
       .eq("id", id)
       .maybeSingle();
+  },
+
+  /* ALL id/title/slug — filtresiz, order YOK. Manual reservation "ekle"
+     sayfası villa dropdown'ı (TÜM villalar; is_active/deleted_at filtresi
+     YOK). Anon `db` (public_read). BİREBİR select. */
+  async findAllIdTitleSlug() {
+    return await db.from("villa").select("id, title, slug");
+  },
+
+  /* SLUG BY ID — admin galeri sayfası (storage human-readable folder).
+     `select("slug").eq("id").maybeSingle()` BİREBİR; fail-soft (data?.slug
+     ?? null) caller'da. Anon `db` (client-safe). */
+  async findSlugById(id: string) {
+    return await db
+      .from("villa")
+      .select("slug")
+      .eq("id", id)
+      .maybeSingle();
+  },
+
+  /* ID/TITLE/CURRENCY BY ID — admin pricing calendar canvas (EDIT mode).
+     `select("id, title, currency").eq("id").maybeSingle()` BİREBİR;
+     guard + fallback caller'da. Anon `db` (client-safe). */
+  async findIdTitleCurrencyById(villaId: string) {
+    return await db
+      .from("villa")
+      .select("id, title, currency")
+      .eq("id", villaId)
+      .maybeSingle();
+  },
+
+  /* SEARCH RESULTS — public /arama villa listesi (conditional builder).
+     CARD-style embed (`villa_prices` içinde `end_date` DAHİL) + is_active +
+     deleted_at null + villa_images cover-slim (is_cover desc + sort_order
+     asc + limit 1). Opsiyonel filtreler SIRASI BİREBİR: id → location_id →
+     guests, ardından top-level order (sort_order ASC, created_at DESC).
+     ⚠️ Top-level limit YOK. Filter değerleri (categoryVillaIds/
+     expandedRegions/guests) caller'da hesaplanır. Anon `db` (public_read). */
+  async findSearchResults(opts: {
+    categoryVillaIds: string[] | null;
+    expandedRegions: string[];
+    guests: number | null;
+  }) {
+    let q = db
+      .from("villa")
+      .select(
+        `
+        *,
+        location:villa_locations(name),
+        villa_images (
+          image_url,
+          is_cover,
+          sort_order
+        ),
+        villa_prices (
+          price,
+          currency,
+          start_date,
+          end_date
+        )
+      `
+      )
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("is_cover", {
+        referencedTable: "villa_images",
+        ascending: false,
+      })
+      .order("sort_order", {
+        referencedTable: "villa_images",
+        ascending: true,
+      })
+      .limit(1, { referencedTable: "villa_images" });
+    if (opts.categoryVillaIds && opts.categoryVillaIds.length > 0) {
+      q = q.in("id", opts.categoryVillaIds);
+    }
+    if (opts.expandedRegions.length) {
+      q = q.in("location_id", opts.expandedRegions);
+    }
+    if (opts.guests) {
+      q = q.gte("guests", opts.guests);
+    }
+    q = q
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+    return await q;
+  },
+
+  /* CARDS BY IDS — public shared-list (/liste/[token]) landing. CARD-style
+     embed (`villa_prices` içinde `end_date` DAHİL) + `.in("id", ids)` +
+     is_active + deleted_at null + villa_images cover-slim (is_cover desc +
+     sort_order asc + limit 1). ⚠️ findByIds DEĞİL: top-level limit YOK,
+     created_at order YOK, dedup guard YOK. Snapshot-order re-sort caller'da.
+     Anon `db` (public_read). Select + order chain BİREBİR. */
+  async findCardsByIds(ids: string[]) {
+    return await db
+      .from("villa")
+      .select(
+        `
+      *,
+      location:villa_locations(name),
+      villa_images (image_url, is_cover, sort_order),
+      villa_prices (price, currency, start_date, end_date)
+    `
+      )
+      .in("id", ids)
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("is_cover", {
+        referencedTable: "villa_images",
+        ascending: false,
+      })
+      .order("sort_order", {
+        referencedTable: "villa_images",
+        ascending: true,
+      })
+      .limit(1, { referencedTable: "villa_images" });
+  },
+
+  /* SHORT-GAP VILLAS — /kisa-sureli-tarihler/[ay]/[gece] kısa-gap kartları.
+     CARD-style embed (`villa_prices` içinde `end_date` DAHİL) + is_active +
+     deleted_at null + `.in("id", gapVillaIds)` (gap havuzu) + villa_images
+     cover-slim (is_cover desc + sort_order asc + limit 1). Sonra opsiyonel
+     filtreler AYNI SIRAYLA: location_id (bölge) → id (tip kesişimi; caller
+     dummy-uuid guard'ı hazırlar) → guests gte.
+     ⚠️ findSearchResults DEĞİL: top-level sort_order/created_at order YOK;
+     base `.in("id")` UNCONDITIONAL + ikinci opsiyonel `.in("id")` (tip).
+     Anon `db` (public_read). Select + filter chain BİREBİR. */
+  async findShortGapVillas(opts: {
+    gapVillaIds: string[];
+    expandedRegions: string[];
+    typeIdFilter: string[] | null;
+    guests: number;
+  }) {
+    let q = db
+      .from("villa")
+      .select(
+        `
+      *,
+      location:villa_locations(name),
+      villa_images (image_url, is_cover, sort_order),
+      villa_prices (price, currency, start_date, end_date)
+    `
+      )
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .in("id", opts.gapVillaIds)
+      .order("is_cover", {
+        referencedTable: "villa_images",
+        ascending: false,
+      })
+      .order("sort_order", {
+        referencedTable: "villa_images",
+        ascending: true,
+      })
+      .limit(1, { referencedTable: "villa_images" });
+    if (opts.expandedRegions.length) {
+      q = q.in("location_id", opts.expandedRegions);
+    }
+    if (opts.typeIdFilter) {
+      q = q.in("id", opts.typeIdFilter);
+    }
+    if (opts.guests > 0) {
+      q = q.gte("guests", opts.guests);
+    }
+    return await q;
+  },
+
+  /* SIMILAR VILLAS CARDS — villa detail "Benzer Villalar" section.
+     Public villa cards (is_active + deleted_at null). CARD_SELECT embed
+     (`villa_prices` içinde `end_date` DAHİL — SELECT_WITH_PRICES'ten farklı),
+     villa_images cover-slim (is_cover desc + sort_order asc + limit 1),
+     top-level limit, opsiyonel location_id + excludeIds(.not id in).
+     Select string + order chain + conditional builder BİREBİR; mapping
+     (getStartingPrice / image sort) caller'da. Anon `db` (public_read). */
+  async findSimilarCards(opts: {
+    locationId: string | null;
+    excludeIds: string[];
+    limit: number;
+  }) {
+    let q = db
+      .from("villa")
+      .select(
+        `
+  *,
+  location:villa_locations(name),
+  villa_images ( image_url, is_cover, sort_order ),
+  villa_prices ( price, currency, start_date, end_date )
+`
+      )
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("is_cover", { referencedTable: "villa_images", ascending: false })
+      .order("sort_order", { referencedTable: "villa_images", ascending: true })
+      .limit(1, { referencedTable: "villa_images" })
+      .limit(opts.limit);
+    if (opts.locationId) q = q.eq("location_id", opts.locationId);
+    if (opts.excludeIds.length > 0) {
+      q = q.not("id", "in", `(${opts.excludeIds.join(",")})`);
+    }
+    return await q;
   },
 
   /* 🛡️ FAZ 36 — BY IDS (guest favorites support).

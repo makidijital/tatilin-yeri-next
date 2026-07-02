@@ -48,4 +48,16 @@ export const villaLocationRepository = {
   async findAllStar() {
     return await db.from("villa_locations").select("*");
   },
+
+  /** GET — slim (id, name, filter_group_name), name ASC. Admin
+   *  villa-listesi (concierge curator) bölge dropdown'u + grup-kök
+   *  genişletme. `findAllForPublicTaxonomy` (slug DAHİL, order YOK) ve
+   *  `findAllForTaxonomy` (cover_image/show_in_filter DAHİL) DEĞİL — bu
+   *  slim + name ASC. Native `{ data, error }` döner. */
+  async findAllForFilter() {
+    return await db
+      .from("villa_locations")
+      .select("id, name, filter_group_name")
+      .order("name", { ascending: true });
+  },
 };

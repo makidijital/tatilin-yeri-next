@@ -5,7 +5,8 @@
    tablolarda zaten anon allow → runtime farkı yok; gelecekte admin-only
    tabloya yazma/okuma eklenirse session cookies otomatik akar. */
 import { cookies } from "next/headers";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { villaRepository } from "@/lib/db/villa.repository";
+import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
 import VillaCard from "@/app/components/villa/VillaCard";
@@ -137,14 +138,6 @@ const firstString = (v: unknown): string | null => {
 export default async function AramaPage({ searchParams }: Props) {
   const sp = await searchParams;
 
-  /* 🛡️ FAZ 4A — request-scoped Supabase client (cookies-aware).
-     Eski `import { supabase }` module-level singleton'ı yerine her
-     request için yeni client. Identifier adı KORUNDU (`supabase`) →
-     aşağıdaki `supabase.from(...)` chain'leri tek karakter
-     değişiklik istemiyor. Davranış AYNEN: anon RLS context (mevcut)
-     korunur; gelecekte authenticated kullanıcı session cookies'i
-     otomatik akar. */
-  const supabase = await createSupabaseServerClient();
 
   /* 🛡️ CATEGORY PARAM EVRIMI:
      Yeni canonical: `villa-turleri` (SEO-friendly TR).
@@ -281,10 +274,8 @@ export default async function AramaPage({ searchParams }: Props) {
      =============================================================== */
   let categoryVillaIds: string[] | null = null;
   if (categories.length > 0) {
-    const { data: rels, error: relsErr } = await supabase
-      .from("villa_type_relations")
-      .select("villa_id, type_id")
-      .in("type_id", categories);
+    const { data: rels, error: relsErr } =
+      await villaTypeRepository.findVillaTypeRelationsByTypeIds(categories);
 
     if (relsErr) {
       console.error(
@@ -328,40 +319,6 @@ export default async function AramaPage({ searchParams }: Props) {
   // FK olduğu için `location:villa_locations(name)` aliasıyla joinli
   // okuyoruz. JOIN aliasing FK kolonunu filtre amacıyla bozmaz
   // (.in("location", regions) hâlâ doğrudan FK üzerinden çalışır).
-  let query = supabase
-    .from("villa")
-    .select(
-      `
-        *,
-        location:villa_locations(name),
-        villa_images (
-          image_url,
-          is_cover,
-          sort_order
-        ),
-        villa_prices (
-          price,
-          currency,
-          start_date,
-          end_date
-        )
-      `
-    )
-    .eq("is_active", true)
-    .is("deleted_at", null)
-    /* 🛡️ SCALE HARDENING — villa_images embed slim (cover-only).
-       VillaCard `images[]` array'inden `.find` ile ilk URL'i alır →
-       1500 villa × tüm image rows yerine 1 row/villa. Davranış AYNEN. */
-    .order("is_cover", {
-      referencedTable: "villa_images",
-      ascending: false,
-    })
-    .order("sort_order", {
-      referencedTable: "villa_images",
-      ascending: true,
-    })
-    .limit(1, { referencedTable: "villa_images" });
-
   /* 🏷️ VİLLA TİPİ (categories) — DB-level filter via pre-resolved IDs.
      🛡️ FIX: önceden `__no_match__` literal'i ile boş match'e
      zorluyorduk; villa.id UUID kolonu olduğu için Postgres
@@ -372,9 +329,6 @@ export default async function AramaPage({ searchParams }: Props) {
      → 0-sonuç empty state'i layout içinde sakince render edilir. */
   const forceEmpty =
     categoryVillaIds !== null && categoryVillaIds.length === 0;
-  if (categoryVillaIds && categoryVillaIds.length > 0) {
-    query = query.in("id", categoryVillaIds);
-  }
 
   /* 📍 BÖLGE
      🛡️ DB SCHEMA: villa tablosunda `location` kolonu YOK; gerçek
@@ -416,21 +370,6 @@ export default async function AramaPage({ searchParams }: Props) {
     return Array.from(out);
   })();
 
-  if (expandedRegions.length) {
-    query = query.in("location_id", expandedRegions);
-  }
-
-  // 👨‍👩‍👧 KİŞİ
-  if (guests) {
-    query = query.gte("guests", guests);
-  }
-
-  /* 🛡️ ORDERING (db/migrations/006): admin drag-drop ile birebir aynı
-     deterministik sıra — sort_order ASC, eşitlikte created_at DESC. */
-  query = query
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: false });
-
   /* Adım 1 — villa listesi.
      Taxonomy opsiyonları (regions/categories) zaten yukarıda
      cached helper'larla çekildi (slug resolver için lazımdı).
@@ -443,7 +382,11 @@ export default async function AramaPage({ searchParams }: Props) {
      tüm villa yorumlarının aggregate'i. main villa query ile
      Promise.all → ek RTT yok (net latency = max of two). */
   const [villaRes, reviewStatsMap] = await Promise.all([
-    query,
+    villaRepository.findSearchResults({
+      categoryVillaIds,
+      expandedRegions,
+      guests,
+    }),
     getVillaReviewStatsBatch(),
   ]);
   const { data: villasRaw, error } = villaRes;

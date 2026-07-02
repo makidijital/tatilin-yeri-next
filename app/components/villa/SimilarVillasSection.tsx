@@ -1,5 +1,5 @@
 import VillaCard from "@/app/components/villa/VillaCard";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { villaRepository } from "@/lib/db/villa.repository";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getStartingPrice } from "@/lib/price.engine";
 
@@ -20,13 +20,6 @@ import { getStartingPrice } from "@/lib/price.engine";
    önlenir. (mapVilla `villa_prices[0]` kullanır; burada min-pozitif daha
    sağlam ama AYNI veri kaynağı + AYNI engine.)
    =============================================================== */
-
-const CARD_SELECT = `
-  *,
-  location:villa_locations(name),
-  villa_images ( image_url, is_cover, sort_order ),
-  villa_prices ( price, currency, start_date, end_date )
-` as const;
 
 type VillaImageEmbed = {
   image_url: string | null;
@@ -59,24 +52,10 @@ type Props = {
 };
 
 async function fetchCardVillas(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   opts: { locationId: string | null; excludeIds: string[]; limit: number }
 ): Promise<SimilarRow[]> {
   if (opts.limit <= 0) return [];
-  let q = supabase
-    .from("villa")
-    .select(CARD_SELECT)
-    .eq("is_active", true)
-    .is("deleted_at", null)
-    .order("is_cover", { referencedTable: "villa_images", ascending: false })
-    .order("sort_order", { referencedTable: "villa_images", ascending: true })
-    .limit(1, { referencedTable: "villa_images" })
-    .limit(opts.limit);
-  if (opts.locationId) q = q.eq("location_id", opts.locationId);
-  if (opts.excludeIds.length > 0) {
-    q = q.not("id", "in", `(${opts.excludeIds.join(",")})`);
-  }
-  const { data } = await q;
+  const { data } = await villaRepository.findSimilarCards(opts);
   return Array.isArray(data) ? (data as SimilarRow[]) : [];
 }
 
@@ -84,11 +63,9 @@ export default async function SimilarVillasSection({
   villaId,
   locationId,
 }: Props) {
-  const supabase = await createSupabaseServerClient();
-
   /* Query 1 — aynı bölge (location_id varsa). */
   const primary = locationId
-    ? await fetchCardVillas(supabase, {
+    ? await fetchCardVillas({
         locationId,
         excludeIds: [villaId],
         limit: 3,
@@ -100,7 +77,7 @@ export default async function SimilarVillasSection({
   /* Query 2 — yalnız 3'e ulaşılmadıysa fallback dolum. */
   if (rows.length < 3) {
     const exclude = [villaId, ...rows.map((r) => r.id)];
-    const fill = await fetchCardVillas(supabase, {
+    const fill = await fetchCardVillas({
       locationId: null,
       excludeIds: exclude,
       limit: 3 - rows.length,

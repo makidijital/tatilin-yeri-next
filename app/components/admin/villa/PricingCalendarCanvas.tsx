@@ -9,7 +9,7 @@ import {
 } from "react";
 import { Loader2 } from "lucide-react";
 
-import { supabase } from "@/lib/supabase";
+import { villaRepository } from "@/lib/db/villa.repository";
 import {
   getVillaPrices,
   setVillaPrices,
@@ -151,11 +151,7 @@ export default function PricingCalendarCanvas({
       if (villaId) {
         // EDIT mode — DB load
         const [villaRes, pricesData] = await Promise.all([
-          supabase
-            .from("villa")
-            .select("id, title, currency")
-            .eq("id", villaId)
-            .maybeSingle(),
+          villaRepository.findIdTitleCurrencyById(villaId),
           getVillaPrices(villaId),
         ]);
 
