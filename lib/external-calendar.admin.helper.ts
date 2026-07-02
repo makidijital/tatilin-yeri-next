@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { externalCalendarEventRepository } from "@/lib/db/external-calendar-event.repository";
 import { parseLocalDate, formatLocalDate } from "@/lib/date-format";
 
 /* ===============================================================
@@ -59,16 +59,10 @@ export async function fetchExternalCalendarArraysForVillaAdmin(
     return EMPTY_EXTERNAL_ADMIN_ARRAYS;
   }
   try {
-    const { data, error } = await supabase
-      .from("external_calendar_events")
-      .select(
-        `start_date, end_date, summary, status,
-         last_seen_at,
-         source:source_id ( source_name )`
-      )
-      .eq("villa_id", villaId)
-      .eq("is_active", true)
-      .order("start_date", { ascending: true });
+    const { data, error } =
+      await externalCalendarEventRepository.findActiveWithSourceByVilla(
+        villaId
+      );
     if (error) {
       console.warn(
         "[external-calendar.admin.helper] SELECT failed:",

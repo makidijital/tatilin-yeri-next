@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { externalCalendarEventRepository } from "@/lib/db/external-calendar-event.repository";
+import { externalCalendarSourceRepository } from "@/lib/db/external-calendar-source.repository";
 import { adminFetch } from "@/lib/admin-fetch";
 
 /* ===============================================================
@@ -79,36 +80,16 @@ export async function listExternalCalendarEvents(
   );
   const offset = Math.max(0, Number(filters.offset) || 0);
 
-  let q = supabase
-    .from("external_calendar_events")
-    .select(
-      `id, villa_id, source_id, external_uid,
-       start_date, end_date, summary, status, is_active,
-       last_seen_at, created_at,
-       source:source_id ( id, source_name, is_active,
-                          last_success_at, last_error ),
-       villa:villa_id ( id, title, slug )`,
-      { count: "exact" }
-    )
-    .order("start_date", { ascending: true })
-    .range(offset, offset + limit - 1);
-
-  if (filters.villa_id) q = q.eq("villa_id", filters.villa_id);
-  if (filters.source_id) q = q.eq("source_id", filters.source_id);
-  if (typeof filters.is_active === "boolean") {
-    q = q.eq("is_active", filters.is_active);
-  }
-  /* Overlap filter: range [from, to) — half-open. */
-  if (filters.from) q = q.gt("end_date", filters.from);
-  if (filters.to) q = q.lt("start_date", filters.to);
-  /* Search: summary contains substring (case-insensitive).
-     Villa title search'i client-side filter ile yapacağız çünkü
-     PostgREST embed üzerinde ilike şu an güvenilir çalışmıyor. */
-  if (filters.search && filters.search.trim()) {
-    q = q.ilike("summary", `%${filters.search.trim()}%`);
-  }
-
-  const { data, error, count } = await q;
+  const { data, error, count } = await externalCalendarEventRepository.list({
+    limit,
+    offset,
+    villa_id: filters.villa_id,
+    source_id: filters.source_id,
+    is_active: filters.is_active,
+    from: filters.from,
+    to: filters.to,
+    search: filters.search,
+  });
   if (error) {
     console.error("[external-calendar-events.list] FAILED", error.message);
     return { items: [], total: 0 };
@@ -133,25 +114,10 @@ export async function getExternalCalendarKpi(): Promise<ExternalCalendarKpi> {
   /* Tek round-trip yerine 4 paralel head-count query — minimal payload. */
   const [eventsRes, activeSourcesRes, errorSourcesRes, latestSourceRes] =
     await Promise.all([
-      supabase
-        .from("external_calendar_events")
-        .select("id", { count: "exact", head: true })
-        .eq("is_active", true),
-      supabase
-        .from("external_calendar_sources")
-        .select("id", { count: "exact", head: true })
-        .eq("is_active", true),
-      supabase
-        .from("external_calendar_sources")
-        .select("id", { count: "exact", head: true })
-        .not("last_error", "is", null),
-      supabase
-        .from("external_calendar_sources")
-        .select("last_success_at")
-        .not("last_success_at", "is", null)
-        .order("last_success_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+      externalCalendarEventRepository.countActive(),
+      externalCalendarSourceRepository.countActive(),
+      externalCalendarSourceRepository.countWithError(),
+      externalCalendarSourceRepository.findLatestSuccessAt(),
     ]);
 
   return {
@@ -179,16 +145,10 @@ export async function getExternalCalendarFilterOptions(): Promise<{
        gerekir; alternatif olarak tüm aktif villaları çekmek daha
        basit ama dropdown'ı kalabalıklaştırır. İlk PR'da basit yol:
        Yalnız external_calendar_sources'ı olan villaları join'le. */
-    supabase
-      .from("external_calendar_sources")
-      .select("villa:villa_id ( id, title )")
-      .eq("is_active", true),
+    externalCalendarSourceRepository.findActiveVillaEmbeds(),
     /* FAZ 56G+ — is_active da çekilir → "Pasifleri Temizle" buton'unun
        enable/disable kararında kullanılır. Aktif kaynaklar purge edilemez. */
-    supabase
-      .from("external_calendar_sources")
-      .select("id, source_name, is_active, villa:villa_id ( title )")
-      .order("source_name", { ascending: true }),
+    externalCalendarSourceRepository.findAllWithVillaTitle(),
   ]);
 
   type VillaRow = { villa: { id: string; title: string | null } | null };
@@ -236,11 +196,8 @@ export async function countInactiveEventsForSource(
 ): Promise<number> {
   const id = (sourceId || "").toString().trim();
   if (!id) return 0;
-  const { count, error } = await supabase
-    .from("external_calendar_events")
-    .select("id", { count: "exact", head: true })
-    .eq("source_id", id)
-    .eq("is_active", false);
+  const { count, error } =
+    await externalCalendarEventRepository.countInactiveBySource(id);
   if (error) {
     console.warn(
       "[external-calendar-events.countInactive] FAILED",

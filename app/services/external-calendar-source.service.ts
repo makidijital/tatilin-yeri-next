@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { externalCalendarSourceRepository } from "@/lib/db/external-calendar-source.repository";
+import { externalCalendarEventRepository } from "@/lib/db/external-calendar-event.repository";
 import { validateExternalUrlStatic } from "@/lib/security/ssrf";
 
 /* ===============================================================
@@ -78,11 +79,8 @@ export async function listExternalCalendarSources(
 ): Promise<ExternalCalendarSourceListResult> {
   if (!villaId) return { sources: [], eventCounts: {} };
 
-  const { data, error } = await supabase
-    .from("external_calendar_sources")
-    .select("*")
-    .eq("villa_id", villaId)
-    .order("created_at", { ascending: true });
+  const { data, error } =
+    await externalCalendarSourceRepository.findAllByVilla(villaId);
 
   if (error) {
     console.error(
@@ -97,11 +95,10 @@ export async function listExternalCalendarSources(
   /* Event count per source (yalnız is_active=true) — UI metadata. */
   const eventCounts: Record<string, number> = {};
   if (sources.length > 0) {
-    const { data: ev, error: evErr } = await supabase
-      .from("external_calendar_events")
-      .select("source_id")
-      .eq("villa_id", villaId)
-      .eq("is_active", true);
+    const { data: ev, error: evErr } =
+      await externalCalendarEventRepository.findActiveSourceIdsByVilla(
+        villaId
+      );
     if (!evErr && Array.isArray(ev)) {
       for (const row of ev as Array<{ source_id: string | null }>) {
         if (row?.source_id) {
@@ -138,17 +135,13 @@ export async function createExternalCalendarSource(
   const urlCheck = isValidIcalUrl(url);
   if (!urlCheck.ok) return { ok: false, error: urlCheck.error || "URL hatası" };
 
-  const { data, error } = await supabase
-    .from("external_calendar_sources")
-    .insert({
-      villa_id: villaId,
-      source_name: name,
-      source_type: "ical",
-      ical_url: url,
-      is_active: true,
-    })
-    .select("*")
-    .single();
+  const { data, error } = await externalCalendarSourceRepository.insert({
+    villa_id: villaId,
+    source_name: name,
+    source_type: "ical",
+    ical_url: url,
+    is_active: true,
+  });
 
   if (error || !data) {
     /* UNIQUE (villa_id, source_name) constraint → 23505 */
@@ -174,15 +167,13 @@ export async function setExternalCalendarSourceActive(
   active: boolean
 ): Promise<ExternalCalendarSourceResult> {
   if (!id) return { ok: false, error: "id gerekli" };
-  const { data, error } = await supabase
-    .from("external_calendar_sources")
-    .update({
+  const { data, error } = await externalCalendarSourceRepository.updateById(
+    id,
+    {
       is_active: !!active,
       updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .select("*")
-    .single();
+    }
+  );
   if (error || !data) {
     return {
       ok: false,
@@ -205,15 +196,13 @@ export async function updateExternalCalendarSourceUrl(
   const url = sanitizeUrl(icalUrl);
   const check = isValidIcalUrl(url);
   if (!check.ok) return { ok: false, error: check.error || "URL hatası" };
-  const { data, error } = await supabase
-    .from("external_calendar_sources")
-    .update({
+  const { data, error } = await externalCalendarSourceRepository.updateById(
+    id,
+    {
       ical_url: url,
       updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .select("*")
-    .single();
+    }
+  );
   if (error || !data) {
     return { ok: false, error: error?.message || "Güncelleme başarısız" };
   }

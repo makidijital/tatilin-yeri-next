@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeCronRequest } from "@/lib/cron-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { externalCalendarSourceServerRepository } from "@/lib/db/external-calendar-source.repository.server";
 import { syncExternalCalendarSource } from "@/app/services/external-calendar.service";
 
 /* ===============================================================
@@ -53,11 +53,8 @@ export async function GET(req: Request) {
   /* Aktif source'ları çek. service-role; mig 029 RLS authenticated
      SELECT için bu cron context anon JWT taşımıyor → service-role
      gerekli. */
-  const supabase = getSupabaseAdmin();
-  const { data: sources, error: listErr } = await supabase
-    .from("external_calendar_sources")
-    .select("id")
-    .eq("is_active", true);
+  const { data: sources, error: listErr } =
+    await externalCalendarSourceServerRepository.findActiveIds();
 
   if (listErr) {
     console.error(

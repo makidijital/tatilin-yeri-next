@@ -1,6 +1,7 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { externalCalendarSourceServerRepository } from "@/lib/db/external-calendar-source.repository.server";
+import { externalCalendarEventServerRepository } from "@/lib/db/external-calendar-event.repository.server";
 import { parseICS, type ParsedEvent } from "@/lib/ical.parser";
 import { validateExternalUrl } from "@/lib/security/ssrf.server";
 
@@ -157,11 +158,10 @@ async function markSourceMetadata(
     last_event_count?: number | null;
   }
 ): Promise<void> {
-  const supabase = getSupabaseAdmin();
-  const { error } = await supabase
-    .from("external_calendar_sources")
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq("id", sourceId);
+  const { error } = await externalCalendarSourceServerRepository.updateById(
+    sourceId,
+    { ...patch, updated_at: new Date().toISOString() }
+  );
   if (error) {
     console.warn(
       "[external-calendar.sync] source metadata update FAILED",
@@ -176,15 +176,11 @@ async function markSourceMetadata(
 export async function syncExternalCalendarSource(
   sourceId: string
 ): Promise<SyncSourceResult> {
-  const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
 
   /* 1) Source row fetch */
-  const { data: srcData, error: srcErr } = await supabase
-    .from("external_calendar_sources")
-    .select("id, villa_id, source_name, ical_url, is_active")
-    .eq("id", sourceId)
-    .maybeSingle();
+  const { data: srcData, error: srcErr } =
+    await externalCalendarSourceServerRepository.findForSync(sourceId);
   if (srcErr || !srcData) {
     return {
       ok: false,
@@ -248,10 +244,10 @@ export async function syncExternalCalendarSource(
   const upsertRows = buildUpsertRows(source, parsed.events, now);
   let imported = 0;
   if (upsertRows.length > 0) {
-    const { data, error } = await supabase
-      .from("external_calendar_events")
-      .upsert(upsertRows, { onConflict: "villa_id,external_uid" })
-      .select("id");
+    const { data, error } =
+      await externalCalendarEventServerRepository.upsertByVillaUid(
+        upsertRows
+      );
     if (error) {
       await markSourceMetadata(source.id, {
         last_synced_at: now,
@@ -277,12 +273,11 @@ export async function syncExternalCalendarSource(
         satırları is_active=false'a tekrar düşürür. Sweep idempotent
         ve fail-soft — hata olursa sync'in tamamı bozulmaz. */
   try {
-    const { error: overrideErr } = await supabase
-      .from("external_calendar_events")
-      .update({ is_active: false, updated_at: now })
-      .eq("source_id", source.id)
-      .eq("manually_deactivated", true)
-      .eq("is_active", true);
+    const { error: overrideErr } =
+      await externalCalendarEventServerRepository.deactivateManualOverrideBySource(
+        source.id,
+        now
+      );
     if (overrideErr) {
       console.warn(
         "[external-calendar.sync] manual_override sweep WARN",
@@ -305,22 +300,12 @@ export async function syncExternalCalendarSource(
          source_id = source.id AND is_active = true
          AND external_uid NOT IN (seenUids)
        seenUids boş ise: tüm aktif satırları deaktive et. */
-    const deactivateQuery = supabase
-      .from("external_calendar_events")
-      .update({ is_active: false, updated_at: now })
-      .eq("source_id", source.id)
-      .eq("is_active", true);
-
-    const finalQuery =
-      seenUids.length > 0
-        ? deactivateQuery.not(
-            "external_uid",
-            "in",
-            "(" + seenUids.map((u) => `"${u.replace(/"/g, '""')}"`).join(",") + ")"
-          )
-        : deactivateQuery;
-
-    const { data: deactData, error: deactErr } = await finalQuery.select("id");
+    const { data: deactData, error: deactErr } =
+      await externalCalendarEventServerRepository.deactivateStaleBySource(
+        source.id,
+        now,
+        seenUids
+      );
     if (deactErr) {
       /* Deactivate fail = stale event'ler aktif kalır; bir sonraki
          sync yine dener. Hata source metadata'sına yazılır ama

@@ -137,7 +137,7 @@ export async function POST(req: Request) {
     // 🔥 Müşteri-facing "Kalan" → helper.remainingOnArrival
     // (full_payment → ₺0, prepayment → total−prepayment).
     // DB'deki remaining_payment SNAPSHOT'ı bozulmuyor; sadece display.
-    const remainingDisplay = formatTRY(payment.remainingOnArrival);
+    const remainingDisplay = formatTRY(payment.remainingFromPaid);
 
     const paymentMethodName: string | null =
       ((r as any)?.payment_method?.name || "").trim() || null;

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { externalCalendarSourceServerRepository } from "@/lib/db/external-calendar-source.repository.server";
+import { externalCalendarEventServerRepository } from "@/lib/db/external-calendar-event.repository.server";
 import {
   extractAdminContextFromRequest,
   insertAdminActivityLog,
@@ -69,10 +71,11 @@ export async function POST(
     );
   }
 
-  /* Service-role client init guard. */
-  let supabase: ReturnType<typeof getSupabaseAdmin>;
+  /* Service-role client init guard. Repo çağrıları dbAdmin (aynı
+     getSupabaseAdmin singleton) kullanır; bu guard env-eksik durumunda
+     spesifik 500 mesajını BYTE-IDENTICAL korur. */
   try {
-    supabase = getSupabaseAdmin();
+    getSupabaseAdmin();
   } catch (err) {
     const msg =
       err instanceof Error ? err.message : "service-role init hatası";
@@ -87,11 +90,8 @@ export async function POST(
   }
 
   /* SOURCE VERIFY — yalnız pasif kaynak için purge. */
-  const { data: sourceRow, error: sourceErr } = await supabase
-    .from("external_calendar_sources")
-    .select("id, source_name, is_active, villa_id")
-    .eq("id", sourceId)
-    .maybeSingle();
+  const { data: sourceRow, error: sourceErr } =
+    await externalCalendarSourceServerRepository.findPurgeGuardById(sourceId);
 
   if (sourceErr) {
     console.error(
@@ -130,12 +130,10 @@ export async function POST(
   }
 
   /* DELETE — yalnız inactive event'ler. Returning id → deleted_count. */
-  const { data: deletedRows, error: delErr } = await supabase
-    .from("external_calendar_events")
-    .delete()
-    .eq("source_id", sourceId)
-    .eq("is_active", false)
-    .select("id");
+  const { data: deletedRows, error: delErr } =
+    await externalCalendarEventServerRepository.deleteInactiveBySource(
+      sourceId
+    );
 
   if (delErr) {
     console.error(

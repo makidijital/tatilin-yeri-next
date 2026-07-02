@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { externalCalendarEventServerRepository } from "@/lib/db/external-calendar-event.repository.server";
+import { externalCalendarSourceServerRepository } from "@/lib/db/external-calendar-source.repository.server";
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import {
   extractAdminContextFromRequest,
   insertAdminActivityLog,
@@ -63,9 +66,11 @@ export async function POST(
      authenticated UPDATE policy yok; tüm SELECT/UPDATE'ler bu client
      üzerinden gider. getSupabaseAdmin throw ederse (env eksik) catch'e
      düşer, actual mesaj response'a yansır. */
-  let supabase: ReturnType<typeof getSupabaseAdmin>;
+  /* Repo çağrıları dbAdmin (aynı getSupabaseAdmin singleton) kullanır;
+     bu guard env-eksik durumunda spesifik 500 mesajını BYTE-IDENTICAL
+     korur. */
   try {
-    supabase = getSupabaseAdmin();
+    getSupabaseAdmin();
   } catch (err) {
     const msg =
       err instanceof Error ? err.message : "service-role init hatası";
@@ -89,13 +94,8 @@ export async function POST(
        • Source/villa embed yalnız activity log entity_title için
          lazımdı; PostgREST embed fail-prone (FK relationship cache,
          RLS) → ayrı fail-soft fetch'e taşındı (aşağıda). */
-  const { data: existing, error: fetchErr } = await supabase
-    .from("external_calendar_events")
-    .select(
-      "id, villa_id, source_id, external_uid, start_date, end_date, summary, is_active"
-    )
-    .eq("id", eventId)
-    .maybeSingle();
+  const { data: existing, error: fetchErr } =
+    await externalCalendarEventServerRepository.findByIdForDeactivate(eventId);
 
   if (fetchErr) {
     console.error(
@@ -131,14 +131,12 @@ export async function POST(
      net mesajla taşınır → admin gerçek sebebi görür ve migration'ı
      uygular. */
   const now = new Date().toISOString();
-  const { error: updateErr } = await supabase
-    .from("external_calendar_events")
-    .update({
+  const { error: updateErr } =
+    await externalCalendarEventServerRepository.updateById(eventId, {
       is_active: false,
       manually_deactivated: true,
       updated_at: now,
-    })
-    .eq("id", eventId);
+    });
 
   if (updateErr) {
     console.error(
@@ -160,11 +158,10 @@ export async function POST(
   let sourceName = "Harici";
   let villaTitle = row.villa_id;
   try {
-    const { data: srcData } = await supabase
-      .from("external_calendar_sources")
-      .select("source_name")
-      .eq("id", row.source_id)
-      .maybeSingle();
+    const { data: srcData } =
+      await externalCalendarSourceServerRepository.findSourceNameById(
+        row.source_id
+      );
     if (
       srcData &&
       typeof (srcData as { source_name?: string | null }).source_name === "string"
@@ -172,11 +169,9 @@ export async function POST(
       const n = (srcData as { source_name: string }).source_name.trim();
       if (n) sourceName = n;
     }
-    const { data: vData } = await supabase
-      .from("villa")
-      .select("title")
-      .eq("id", row.villa_id)
-      .maybeSingle();
+    const { data: vData } = await villaAdminRepository.findTitleById(
+      row.villa_id
+    );
     if (
       vData &&
       typeof (vData as { title?: string | null }).title === "string"

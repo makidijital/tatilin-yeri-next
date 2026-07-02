@@ -252,7 +252,7 @@ export async function buildVoucherData(
       Number(r.paid_amount) > 0
         ? formatTRY(Number(r.paid_amount))
         : null,
-    remainingDisplay: formatTRY(payment.remainingOnArrival),
+    remainingDisplay: formatTRY(payment.remainingFromPaid),
     paymentMethodName:
       (r.payment_method?.name || "").trim() || null,
   };

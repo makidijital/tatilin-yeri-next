@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { externalCalendarEventServerRepository } from "@/lib/db/external-calendar-event.repository.server";
 import { parseLocalDate } from "@/lib/date-format";
 
 import {
@@ -77,12 +77,10 @@ export async function fetchExternalCalendarArraysForVilla(
     return EMPTY_EXTERNAL_ARRAYS;
   }
   try {
-    const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase
-      .from("external_calendar_events")
-      .select("start_date, end_date")
-      .eq("villa_id", villaId)
-      .eq("is_active", true);
+    const { data, error } =
+      await externalCalendarEventServerRepository.findActiveDateRangesByVilla(
+        villaId
+      );
     if (error) {
       console.error(
         "[external-calendar.public.helper] FAILED:",
@@ -110,12 +108,10 @@ export async function fetchExternalCalendarStringsForVilla(
     return EMPTY_EXTERNAL_STRING_ARRAYS;
   }
   try {
-    const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase
-      .from("external_calendar_events")
-      .select("start_date, end_date")
-      .eq("villa_id", villaId)
-      .eq("is_active", true);
+    const { data, error } =
+      await externalCalendarEventServerRepository.findActiveDateRangesByVilla(
+        villaId
+      );
     if (error) {
       console.error(
         "[external-calendar.public.helper] strings FAILED:",

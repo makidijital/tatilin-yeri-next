@@ -9,7 +9,7 @@ import {
   extractAdminContextFromRequest,
   insertAdminActivityLog,
 } from "@/app/services/admin-activity-log.service";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 
 /* ===============================================================
    🛡️ FAZ 56B — ADMIN ICAL SYNC ENDPOINT
@@ -76,12 +76,9 @@ export async function POST(req: Request) {
     /* Villa title için lookup (audit için "Airbnb · Villa Adı" entity_title). */
     let villaTitle: string | null = null;
     try {
-      const supabase = getSupabaseAdmin();
-      const { data } = await supabase
-        .from("villa")
-        .select("title")
-        .eq("id", result.villaId)
-        .maybeSingle();
+      const { data } = await villaAdminRepository.findTitleById(
+        result.villaId
+      );
       villaTitle =
         data && typeof (data as { title?: string | null }).title === "string"
           ? (data as { title: string }).title

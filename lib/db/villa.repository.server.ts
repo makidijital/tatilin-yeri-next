@@ -132,6 +132,21 @@ export const villaAdminRepository = {
   },
 
   /* ===============================================================
+     READ — villa title by id (audit entity_title enrichment)
+     ===============================================================
+     Orijinal (external-calendar deactivate + sync route, inline):
+       dbAdmin.from("villa").select("title").eq("id", id).maybeSingle()
+     Service-role; fail-soft audit kozmetiği (caller try/catch'ler).
+  =============================================================== */
+  async findTitleById(id: string) {
+    return await dbAdmin
+      .from("villa")
+      .select("title")
+      .eq("id", id)
+      .maybeSingle();
+  },
+
+  /* ===============================================================
      WRITE — INSERT villa
      ===============================================================
      Orijinal: .insert(payload).select().single()
