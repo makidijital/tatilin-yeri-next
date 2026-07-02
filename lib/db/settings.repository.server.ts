@@ -64,4 +64,15 @@ export const settingsServerRepository = {
       .select("site_name, company_legal_name")
       .maybeSingle();
   },
+
+  /** Singleton settings row (FULL `*`) — `.single()` resolver. /api/admin/
+   *  settings GET delege. ⚠️ `findSingleton`'dan FARKLI: `.single()`
+   *  (maybeSingle DEĞİL) → satır yoksa error (PGRST116) → caller 500.
+   *  Bu davranış BİREBİR korunmalı. */
+  async findSingletonStrict() {
+    return await dbAdmin
+      .from("settings")
+      .select("*")
+      .single();
+  },
 };

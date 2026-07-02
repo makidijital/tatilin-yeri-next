@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { dbAdmin } from "@/lib/db/server";
 import {
   createReservation,
   updateReservationStatus,
@@ -42,18 +41,6 @@ import type {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const RESERVATION_LIST_SELECT = `id, reservation_no,
-         villa_id, name, phone, start_date, end_date,
-         total_price,
-         total_price_try,
-         original_price,
-         original_currency,
-         paid_amount,
-         payment_preference,
-         damage_deposit,
-         status, created_at,
-         villa:villa_id ( title )`;
-
 export async function GET(req: Request): Promise<NextResponse> {
   const auth = await authorizeAdminCaller(req);
   if (!auth.ok) {
@@ -63,10 +50,8 @@ export async function GET(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { data, error } = await dbAdmin
-    .from("reservations")
-    .select(RESERVATION_LIST_SELECT)
-    .order("created_at", { ascending: false });
+  const { data, error } =
+    await reservationServerRepository.findAllForAdminList();
 
   if (error) {
     console.error("[admin.reservations.list] FAILED", error.message);
@@ -209,7 +194,7 @@ export async function DELETE(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { error } = await dbAdmin.from("reservations").delete().eq("id", id);
+  const { error } = await reservationServerRepository.deleteById(id);
   if (error) {
     console.error("[admin.reservations.delete] FAILED", error.message);
     return NextResponse.json(

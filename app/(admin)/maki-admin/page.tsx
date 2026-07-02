@@ -1,7 +1,7 @@
 import "server-only";
 
 import Link from "next/link";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { reservationServerRepository } from "@/lib/db/reservation.repository.server";
 import { ArrowUpRight } from "lucide-react";
 
 import { getDailyReservationCounts } from "@/app/services/analytics.service";
@@ -21,13 +21,7 @@ export default async function AdminHome() {
          (040 admin-only RLS sonrası server-anon reddedilir). PII
          (name/total_price) yalnız server'da; admin dashboard'da zaten
          gösterilen alanlar. */
-      getSupabaseAdmin()
-        .from("reservations")
-        .select(
-          "id, name, total_price, status, created_at, start_date, end_date, villa:villa_id(title)"
-        )
-        .order("created_at", { ascending: false })
-        .limit(5),
+      reservationServerRepository.findRecentForDashboard(),
       /* 📊 ANALYTICS — son 30 gün günlük rezervasyon serisi
          (pending + confirmed; rejected/cancelled hariç). Tek SELECT
          + JS-side bucket; finance / booking / pricing engine'lere

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { reservationServerRepository } from "@/lib/db/reservation.repository.server";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { normalizeReservationNo } from "@/lib/reservation-code.helper";
 
@@ -87,20 +87,8 @@ export async function POST(req: Request): Promise<Response> {
      REZ-2026-0042); `code` zaten uppercase+trim normalize edildi →
      exact `eq` kullanılır (ilike wildcard %/_ injection riskini
      eler). Defansif: limit(1). */
-  const { data, error } = await getSupabaseAdmin()
-    .from("reservations")
-    .select(
-      `reservation_no,
-       email,
-       status,
-       payment_link_status,
-       start_date,
-       end_date,
-       guests,
-       villa:villa_id ( title )`
-    )
-    .eq("reservation_no", code)
-    .limit(1);
+  const { data, error } =
+    await reservationServerRepository.findForPublicLookup(code);
 
   if (error) {
     console.error("[reservation-lookup] query error:", error.message);

@@ -183,4 +183,132 @@ export const reservationServerRepository = {
       .eq("id", id)
       .maybeSingle();
   },
+
+  /* ===============================================================
+     READ — PUBLIC LOOKUP (service-role) — /api/public/reservation-lookup
+     ===============================================================
+     Müşteri reservation_no + email eşleşmesiyle durum sorgular. Mig 040
+     admin-only RLS → anon SELECT reddedilir; service_role ile okunur.
+     ⚠️ Public-lookup slim projeksiyon (PII yok: telefon/TC/adres/fiyat
+        ASLA seçilmez) + `villa:villa_id ( title )` embed BİREBİR.
+     ⚠️ Filter `.eq("reservation_no", …)` + resolver `.limit(1)` (array
+        döner; caller `data[0]` alır). Email eşleşme + generic-404
+        anti-enumeration guard route'ta KALIR. */
+  async findForPublicLookup(reservationNo: string) {
+    return await dbAdmin
+      .from("reservations")
+      .select(
+        `reservation_no,
+         email,
+         status,
+         payment_link_status,
+         start_date,
+         end_date,
+         guests,
+         villa:villa_id ( title )`
+      )
+      .eq("reservation_no", reservationNo)
+      .limit(1);
+  },
+
+  /* ===============================================================
+     READ — REQUEST MAIL snapshot (service-role) — /api/mail/reservation-request
+     ===============================================================
+     Public booking flow'unun request-mail snapshot'ı. Diğer
+     findByIdFor*Mail read'leriyle aynı pattern; route-spesifik EXACT
+     projeksiyon (yalnız BU read `original_price/original_currency/
+     exchange_rate` + `payment_method:payment_method_id ( name, type )`
+     embed'ini taşır). Select string + iki embed BİREBİR; .eq("id")
+     .maybeSingle() resolver KORUNDU. */
+  async findByIdForRequestMail(id: string) {
+    return await dbAdmin
+      .from("reservations")
+      .select(
+        `id, reservation_no,
+         name, phone, email, identity_number, country, city, address,
+         guests, guest_names, note, status, created_at,
+         start_date, end_date,
+         total_price, total_price_try,
+         original_price, original_currency,
+         paid_amount, prepayment_amount, remaining_payment,
+         payment_preference,
+         damage_deposit,
+         exchange_rate,
+         villa:villa_id ( title ),
+         payment_method:payment_method_id ( name, type )`
+      )
+      .eq("id", id)
+      .maybeSingle();
+  },
+
+  /* ===============================================================
+     READ — CANCELLED MAIL snapshot (service-role) — /api/mail/reservation-cancelled
+     ===============================================================
+     ⚠️ findByIdForRequestMail'den FARKLI (byte-identical DEĞİL):
+        • `damage_deposit` YOK (cancelled email damage-deposit satırı
+          göstermez).
+        • `payment_method:payment_method_id ( name )` — yalnız name
+          (`type` YOK).
+     Select string + `villa` embed + .eq("id").maybeSingle() BİREBİR. */
+  async findByIdForCancelledMail(id: string) {
+    return await dbAdmin
+      .from("reservations")
+      .select(
+        `id, reservation_no,
+         name, phone, email, identity_number, country, city, address,
+         guests, guest_names, note, status, created_at,
+         start_date, end_date,
+         total_price, total_price_try,
+         original_price, original_currency,
+         paid_amount, prepayment_amount, remaining_payment,
+         payment_preference,
+         exchange_rate,
+         villa:villa_id ( title ),
+         payment_method:payment_method_id ( name )`
+      )
+      .eq("id", id)
+      .maybeSingle();
+  },
+
+  /* ===============================================================
+     READ — RECENT DASHBOARD LIST (service-role) — /maki-admin (RSC)
+     ===============================================================
+     Admin dashboard "Son rezervasyonlar" — en yeni 5. Slim projeksiyon
+     + `villa:villa_id(title)` COMPACT embed (parantez içi boşluksuz) +
+     created_at DESC + limit(5). Filter YOK. Select string BİREBİR. */
+  async findRecentForDashboard() {
+    return await dbAdmin
+      .from("reservations")
+      .select(
+        "id, name, total_price, status, created_at, start_date, end_date, villa:villa_id(title)"
+      )
+      .order("created_at", { ascending: false })
+      .limit(5);
+  },
+
+  /* ===============================================================
+     READ — ADMIN LIST (service-role) — /api/admin/reservations GET
+     ===============================================================
+     Admin rezervasyon liste sayfası. 16-field list projeksiyon +
+     `villa:villa_id ( title )` SPACED embed + created_at DESC. Filter/
+     limit YOK. Select string BİREBİR (route'un RESERVATION_LIST_SELECT
+     constant'ından kopyalandı). */
+  async findAllForAdminList() {
+    return await dbAdmin
+      .from("reservations")
+      .select(
+        `id, reservation_no,
+         villa_id, name, phone, start_date, end_date,
+         total_price,
+         total_price_try,
+         original_price,
+         original_currency,
+         paid_amount,
+         payment_preference,
+         damage_deposit,
+         status, created_at,
+         villa:villa_id ( title )`
+      )
+      .order("created_at", { ascending: false });
+  },
 };

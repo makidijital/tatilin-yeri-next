@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { reservationRepository } from "@/lib/db/reservation.repository";
 
 /* FAZ 51B — pure validators (isValidYmd / isValidRange /
    AVAILABILITY_BLOCKING_STATUSES) artık lib/availability.validator.ts
@@ -145,11 +145,11 @@ export async function getBlockedVillaIds(
   const scoped =
     Array.isArray(villaIds) && villaIds.length > 0 ? villaIds : null;
 
-  const { data, error } = await supabase.rpc("get_blocked_villa_ids", {
-    p_start: start,
-    p_end: end,
-    p_villa_ids: scoped,
-  });
+  const { data, error } = await reservationRepository.getBlockedVillaIdsRpc(
+    start,
+    end,
+    scoped
+  );
 
   if (error) {
     console.error(

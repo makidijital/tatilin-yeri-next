@@ -155,6 +155,25 @@ export const manualReservationRepository = {
   },
 
   /* ===============================================================
+     READ — BLOCK DATE RANGES BY VILLA (edit-page calendar feed)
+     ===============================================================
+     Orijinal (fetchBlockedDates.ts):
+       supabase.from("manual_reservations")
+         .select("start_date, end_date")
+         .eq("villa_id", villaId);
+
+     ⚠️ `findManualBlocksByVilla`'dan FARKLI: select `id` YOK — yalnız
+        start_date+end_date (fetchBlockedDates consumer id kullanmaz).
+        CLIENT-SIDE consumer; anon `db` (browser JWT). Status/order YOK
+        (manual asimetrisi). */
+  async findBlockDateRangesByVilla(villaId: string) {
+    return await db
+      .from("manual_reservations")
+      .select("start_date, end_date")
+      .eq("villa_id", villaId);
+  },
+
+  /* ===============================================================
      CONFLICT — MANUAL SELF OVERLAP
      ===============================================================
      Orijinal:

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { reservationServerRepository } from "@/lib/db/reservation.repository.server";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { sendMail } from "@/app/lib/mail/send";
 import { renderReservationRequestEmail } from "@/app/lib/mail/templates/ReservationRequestEmail";
@@ -72,24 +72,8 @@ export async function POST(req: Request) {
 
     // 🔥 Reservation snapshot fetch — services'tan değil, route içinde
     //    minimal okuma; mevcut servisleri değiştirmeyelim.
-    const { data: r, error: fetchErr } = await getSupabaseAdmin()
-      .from("reservations")
-      .select(
-        `id, reservation_no,
-         name, phone, email, identity_number, country, city, address,
-         guests, guest_names, note, status, created_at,
-         start_date, end_date,
-         total_price, total_price_try,
-         original_price, original_currency,
-         paid_amount, prepayment_amount, remaining_payment,
-         payment_preference,
-         damage_deposit,
-         exchange_rate,
-         villa:villa_id ( title ),
-         payment_method:payment_method_id ( name, type )`
-      )
-      .eq("id", reservationId)
-      .maybeSingle();
+    const { data: r, error: fetchErr } =
+      await reservationServerRepository.findByIdForRequestMail(reservationId);
 
     if (fetchErr || !r) {
       console.error(

@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { reservationRepository } from "@/lib/db/reservation.repository";
+import { manualReservationRepository } from "@/lib/db/manual-reservation.repository";
 import { parseLocalDate } from "@/lib/date-format";
 
 import type {
@@ -45,17 +46,15 @@ export async function fetchBlockedDates(
 ): Promise<BlockedDateGroups> {
   const { villaId, excludeReservationId } = input;
 
-  const { data: reservations } = await supabase
-    .from("reservations")
-    .select("start_date, end_date, status")
-    .eq("villa_id", villaId)
-    .in("status", ["pending", "confirmed"])
-    .neq("id", excludeReservationId);
+  const { data: reservations } =
+    await reservationRepository.findActiveBlockDatesByVilla(
+      villaId,
+      ["pending", "confirmed"],
+      excludeReservationId
+    );
 
-  const { data: manual } = await supabase
-    .from("manual_reservations")
-    .select("start_date, end_date")
-    .eq("villa_id", villaId);
+  const { data: manual } =
+    await manualReservationRepository.findBlockDateRangesByVilla(villaId);
 
   const blocked: Date[] = [];
   const checkin: Date[] = [];

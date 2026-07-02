@@ -320,6 +320,20 @@ export const villaRepository = {
     return (data as VillaRawRow | null) || null;
   },
 
+  /* PUBLIC AVAILABILITY CONFIG — /api/public/villas/[id]/availability.
+     Booking modal config alanları (deposit, cleaning_*, prepayment,
+     min stay). Anon `db` (villa public_read RLS). Select field order +
+     .maybeSingle() BİREBİR; mapping/fallback caller'da (route). */
+  async findAvailabilityConfigById(id: string) {
+    return await db
+      .from("villa")
+      .select(
+        "deposit, cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate, minimum_stay_nights"
+      )
+      .eq("id", id)
+      .maybeSingle();
+  },
+
   /* 🛡️ FAZ 36 — BY IDS (guest favorites support).
      /favoriler client component'i localStorage'dan villa.id dizisi
      okur ve bu yol ile data fetch eder.

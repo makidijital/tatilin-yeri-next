@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { supabase } from "@/lib/supabase";
+import { villaRepository } from "@/lib/db/villa.repository";
 import {
   fetchExternalCalendarStringsForVilla,
   EMPTY_EXTERNAL_STRING_ARRAYS,
@@ -130,13 +130,7 @@ export async function GET(
             sayfa server-fetch'i ile birebir aynı service çağrısı
          3. external_calendar_events (service role, helper internal) */
     const [configRes, prices, externalBlocks] = await Promise.all([
-      supabase
-        .from("villa")
-        .select(
-          "deposit, cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate, minimum_stay_nights"
-        )
-        .eq("id", id)
-        .maybeSingle(),
+      villaRepository.findAvailabilityConfigById(id),
       getVillaPrices(id),
       fetchExternalCalendarStringsForVilla(id),
     ]);

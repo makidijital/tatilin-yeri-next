@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { db } from "@/lib/db";
+import { reservationRepository } from "@/lib/db/reservation.repository";
 import { applyRateLimit } from "@/lib/rate-limit";
 
 /* ===============================================================
@@ -56,9 +56,7 @@ export async function GET(
     );
   }
 
-  const { data, error } = await db.rpc("get_villa_blocked_ranges", {
-    p_villa_id: id,
-  });
+  const { data, error } = await reservationRepository.getBlockedRanges(id);
 
   if (error) {
     /* Eski client davranışı: `console.error("❌ rezervasyon çekme:", error)`

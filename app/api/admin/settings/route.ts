@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { dbAdmin } from "@/lib/db/server";
+import { settingsServerRepository } from "@/lib/db/settings.repository.server";
 
 /* ===============================================================
    🛡️ /api/admin/settings — SETTINGS READ (admin-only)
@@ -29,10 +29,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     );
   }
 
-  const { data, error } = await dbAdmin
-    .from("settings")
-    .select("*")
-    .single();
+  const { data, error } = await settingsServerRepository.findSingletonStrict();
 
   if (error) {
     console.error("[admin.settings.read] FAILED", error.message);

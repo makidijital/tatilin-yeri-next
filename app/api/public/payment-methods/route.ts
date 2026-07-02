@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { db } from "@/lib/db";
+import { paymentRepository } from "@/lib/db/payment.repository";
 
 /* ===============================================================
    🛡️ /api/public/payment-methods — PUBLIC PAYMENT METHODS
@@ -22,7 +22,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(): Promise<NextResponse> {
-  const { data, error } = await db.from("payment_methods").select("*");
+  const { data, error } = await paymentRepository.findPaymentMethodsPublic();
 
   if (error) {
     /* Eski client davranışı: hata fırlatılmaz, sadece state boş kalır

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { dbAdmin } from "@/lib/db/server";
 
 import type { AdminAuditEntry } from "./admin-gateway.types";
 
@@ -22,8 +22,7 @@ export const adminAuditRepository = {
   /** Best-effort insert; fail throw etmez. */
   async insert(entry: AdminAuditEntry): Promise<void> {
     try {
-      const admin = getSupabaseAdmin();
-      const { error } = await admin.from("admin_audit_logs").insert({
+      const { error } = await dbAdmin.from("admin_audit_logs").insert({
         admin_user_id: entry.admin_user_id ?? null,
         action: entry.action,
         entity_type: entry.entity_type ?? null,

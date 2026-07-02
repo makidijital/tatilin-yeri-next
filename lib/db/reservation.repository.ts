@@ -179,6 +179,31 @@ export const reservationRepository = {
   },
 
   /* ===============================================================
+     READ — VILLA CLEANING CONFIG (cross-table, price-verify helper)
+     ===============================================================
+     Orijinal (_helpers/price-verify.ts recompute):
+       supabase.from("villa")
+         .select("cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate")
+         .eq("id", villa_id)
+         .maybeSingle();
+
+     ⚠️ Cross-table villa read; reservation flow'un (public price
+        recompute/compare) ihtiyacı — `findVillaCommissionRate`
+        precedent'i ile aynı sahiplik (villa repository donmuş).
+        4-field projeksiyon BİREBİR; `findAvailabilityConfigById`
+        (6-field superset) REUSE EDİLMEZ. Anon `db` (villa public_read).
+        Fail-open mapping caller'da (helper). */
+  async findVillaCleaningConfig(villaId: string) {
+    return await db
+      .from("villa")
+      .select(
+        "cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate"
+      )
+      .eq("id", villaId)
+      .maybeSingle();
+  },
+
+  /* ===============================================================
      CONFLICT — AVAILABILITY (PII-SAFE, SECURITY DEFINER RPC — migration 039)
      ===============================================================
      ESKİ: iki ayrı anon SELECT (findOverlappingReservations +
@@ -204,6 +229,77 @@ export const reservationRepository = {
       p_start: window.start_date,
       p_end: window.end_date,
     });
+  },
+
+  /* ===============================================================
+     RPC — BLOCKED RANGES (public availability, SECURITY DEFINER — mig 039)
+     ===============================================================
+     Orijinal (/api/public/villas/[id]/blocked-ranges route):
+       db.rpc("get_villa_blocked_ranges", { p_villa_id: id })
+
+     ⚠️ SECURITY DEFINER RPC (grant execute → anon/authenticated/
+        service_role). PII açmaz; yalnız blocked range array döner
+        (`{ kind, status, start_date, end_date }[]`). Anon `db` (public
+        route). RPC adı + arg key BİREBİR. Sessiz: native `{ data, error }`
+        döner; fail-soft (empty array) caller'da. */
+  async getBlockedRanges(villaId: string) {
+    return await db.rpc("get_villa_blocked_ranges", {
+      p_villa_id: villaId,
+    });
+  },
+
+  /* ===============================================================
+     RPC — BLOCKED VILLA IDS (batch availability, SECURITY DEFINER — mig 039)
+     ===============================================================
+     Orijinal (lib/availability.helper.ts > getBlockedVillaIds):
+       supabase.rpc("get_blocked_villa_ids", {
+         p_start: start, p_end: end, p_villa_ids: scoped,
+       })
+
+     ⚠️ SECURITY DEFINER RPC — reservations(pending/confirmed) + manual +
+        external(active) blocking birleşimini DB içinde (RLS-bypass)
+        hesaplar; YALNIZ villa_id[] döner (PII yok). Half-open overlap +
+        allow-list RPC İÇİNDE — bu wrapper mantığa DOKUNMAZ. Anon `db`
+        (grant → anon). `scoped` (villaIds|null) caller'da hesaplanır;
+        arg key'leri (p_start/p_end/p_villa_ids) BİREBİR. Fail-soft
+        (empty Set) caller'da. */
+  async getBlockedVillaIdsRpc(
+    start: string,
+    end: string,
+    scoped: string[] | null
+  ) {
+    return await db.rpc("get_blocked_villa_ids", {
+      p_start: start,
+      p_end: end,
+      p_villa_ids: scoped,
+    });
+  },
+
+  /* ===============================================================
+     READ — ACTIVE BLOCK DATES BY VILLA (edit-page calendar feed)
+     ===============================================================
+     Orijinal (fetchBlockedDates.ts):
+       supabase.from("reservations")
+         .select("start_date, end_date, status")
+         .eq("villa_id", villaId)
+         .in("status", ["pending", "confirmed"])
+         .neq("id", excludeReservationId);
+
+     ⚠️ CLIENT-SIDE consumer (reservation edit page useEffect); anon `db`
+        (browser JWT authenticated-admin). Status allow-list + exclude-id
+        caller'da (byte-identical). `.neq("id", …)` self-exclude KORUNDU
+        — düzenlenen rezervasyon kendi takvimini bloklamamalı. */
+  async findActiveBlockDatesByVilla(
+    villaId: string,
+    statuses: readonly string[],
+    excludeReservationId: string
+  ) {
+    return await db
+      .from("reservations")
+      .select("start_date, end_date, status")
+      .eq("villa_id", villaId)
+      .in("status", statuses as unknown as string[])
+      .neq("id", excludeReservationId);
   },
 
   /* ===============================================================

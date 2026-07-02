@@ -1,6 +1,6 @@
 import "server-only";
 
-import { supabase } from "@/lib/supabase";
+import { reservationRepository } from "@/lib/db/reservation.repository";
 import {
   calculateGrandTotal,
   calculatePrepayment,
@@ -72,13 +72,7 @@ export async function recomputePublicReservationPrice(input: {
     getVillaPrices(villa_id),
     getExchangeRatesMap(),
     getPublicSettings(),
-    supabase
-      .from("villa")
-      .select(
-        "cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate"
-      )
-      .eq("id", villa_id)
-      .maybeSingle(),
+    reservationRepository.findVillaCleaningConfig(villa_id),
   ]);
 
   const villaRow =

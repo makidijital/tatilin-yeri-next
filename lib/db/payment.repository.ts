@@ -70,6 +70,20 @@ export const paymentRepository = {
   },
 
   /* ===============================================================
+     PAYMENT METHODS — PUBLIC READ (order-suz)
+     ===============================================================
+     Orijinal (/api/public/payment-methods GET):
+       db.from("payment_methods").select("*")
+
+     ⚠️ `findPaymentMethods`'ten FARKLI: `.order("created_at", desc)`
+        YOK — public route order uygulamaz (row sırası byte-identical
+        korunur). Anon `db` (public RLS; service-role KULLANILMAZ →
+        admin-only alanlar sızmasın). Fail-soft mapping caller'da. */
+  async findPaymentMethodsPublic() {
+    return await db.from("payment_methods").select("*");
+  },
+
+  /* ===============================================================
      PAYMENT METHODS — INSERT
      ===============================================================
      Orijinal (payment-method.service.ts > createPaymentMethod):
