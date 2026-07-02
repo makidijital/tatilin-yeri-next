@@ -1,6 +1,11 @@
 "use client";
 
-import { supabase } from "@/lib/supabase";
+import { villaRepository } from "@/lib/db/villa.repository";
+import { villaLocationRepository } from "@/lib/db/villa-location.repository";
+import { villaTypeRepository } from "@/lib/db/villa-type.repository";
+import { villaFeatureRepository } from "@/lib/db/villa-feature.repository";
+import { ruleItemRepository } from "@/lib/db/rule-item.repository";
+import { priceIncludeItemRepository } from "@/lib/db/price-include-item.repository";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -169,11 +174,7 @@ export default function EditVilla() {
 
   useEffect(() => {
     const fetchVilla = async () => {
-      const { data } = await supabase
-        .from("villa")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const { data } = await villaRepository.findRawByIdSingle(id);
 
       if (!data) return;
 
@@ -206,9 +207,8 @@ export default function EditVilla() {
   }, [id]);
 
   useEffect(() => {
-    supabase
-      .from("villa_locations")
-      .select("*")
+    villaLocationRepository
+      .findAllStar()
       .then(({ data }) =>
         /* 🛡️ Migration 050 — grup köklerini (name === filter_group_name)
            lokasyon seçicisinden gizle (ekle ekranıyla aynı kural).
@@ -224,14 +224,11 @@ export default function EditVilla() {
 
   useEffect(() => {
     if (!id) return;
-    supabase
-      .from("villa_types")
-      .select("*")
+    villaTypeRepository
+      .findAllStarUnordered()
       .then(({ data }) => setTypes(data || []));
-    supabase
-      .from("villa_type_relations")
-      .select("type_id")
-      .eq("villa_id", id)
+    villaTypeRepository
+      .findTypeIdsByVilla(id)
       .then(({ data }) =>
         setSelectedTypes(data?.map((x) => x.type_id) || [])
       );
@@ -239,14 +236,11 @@ export default function EditVilla() {
 
   useEffect(() => {
     if (!id) return;
-    supabase
-      .from("villa_features")
-      .select("*")
+    villaFeatureRepository
+      .findAllStar()
       .then(({ data }) => setFeatures(data || []));
-    supabase
-      .from("villa_feature_relations")
-      .select("feature_id")
-      .eq("villa_id", id)
+    villaFeatureRepository
+      .findFeatureIdsByVilla(id)
       .then(({ data }) =>
         setSelectedFeatures(data?.map((x) => x.feature_id) || [])
       );
@@ -267,19 +261,15 @@ export default function EditVilla() {
      ⚠️ DB kolonu "title" — "name" DEĞİL.
   ---------------------------------------------- */
   useEffect(() => {
-    supabase
-      .from("rule_items")
-      .select("id, title")
-      .order("created_at", { ascending: true })
+    ruleItemRepository
+      .findAllOrderedAsc()
       .then(({ data }) => setRuleItems(data || []));
   }, []);
 
   useEffect(() => {
     if (!id) return;
-    supabase
-      .from("villa_rule_relations")
-      .select("rule_id")
-      .eq("villa_id", id)
+    ruleItemRepository
+      .findRuleIdsByVilla(id)
       .then(({ data }) =>
         setSelectedRules((data || []).map((x: any) => x.rule_id))
       );
@@ -290,20 +280,16 @@ export default function EditVilla() {
      ⚠️ DB kolonu "title" — "name" DEĞİL.
   ---------------------------------------------- */
   useEffect(() => {
-    supabase
-      .from("price_include_items")
-      .select("id, title")
-      .order("created_at", { ascending: true })
+    priceIncludeItemRepository
+      .findAllOrderedAsc()
       .then(({ data }) => setPriceIncludeItems(data || []));
   }, []);
 
   useEffect(() => {
     if (!id) return;
     /* ⚠️ Relation kolonu "include_id" — "price_include_id" DEĞİL. */
-    supabase
-      .from("villa_price_include_relations")
-      .select("include_id")
-      .eq("villa_id", id)
+    priceIncludeItemRepository
+      .findIncludeIdsByVilla(id)
       .then(({ data }) =>
         setSelectedPriceIncludes(
           (data || []).map((x: any) => x.include_id)

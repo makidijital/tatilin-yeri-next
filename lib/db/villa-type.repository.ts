@@ -42,6 +42,22 @@ export const villaTypeRepository = {
     return await db.from("villa_types").select("id, name, slug");
   },
 
+  /** GET — `select("*")` (order YOK). Admin villa edit page tip listesi.
+   *  `findAll` (order created_at DESC) DEĞİL — bu order-suz. BİREBİR. */
+  async findAllStarUnordered() {
+    return await db.from("villa_types").select("*");
+  },
+
+  /** GET — villa'nın seçili type_id'leri (villa_type_relations). Admin
+   *  villa edit page selected-types. `.select("type_id").eq("villa_id")`
+   *  BİREBİR; map caller'da. */
+  async findTypeIdsByVilla(villaId: string) {
+    return await db
+      .from("villa_type_relations")
+      .select("type_id")
+      .eq("villa_id", villaId);
+  },
+
   async insert(payload: Record<string, unknown>) {
     return await db.from("villa_types").insert(payload);
   },

@@ -25,6 +25,25 @@ export const ruleItemRepository = {
       .order("created_at", { ascending: false });
   },
 
+  /** GET — (id, title), created_at ASC. Admin villa edit page kural
+   *  listesi. ⚠️ `findAll`'dan farkı: order ASC (DESC DEĞİL). BİREBİR. */
+  async findAllOrderedAsc() {
+    return await db
+      .from("rule_items")
+      .select("id, title")
+      .order("created_at", { ascending: true });
+  },
+
+  /** GET — villa'nın seçili rule_id'leri (villa_rule_relations). Admin
+   *  villa edit page selected-rules. `.select("rule_id").eq("villa_id")`
+   *  BİREBİR; map caller'da. */
+  async findRuleIdsByVilla(villaId: string) {
+    return await db
+      .from("villa_rule_relations")
+      .select("rule_id")
+      .eq("villa_id", villaId);
+  },
+
   /** Front — villaya ait kurallar (villa_rule_relations embed). */
   async findRulesByVilla(villaId: string) {
     return await db

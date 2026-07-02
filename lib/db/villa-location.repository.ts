@@ -42,4 +42,10 @@ export const villaLocationRepository = {
       .from("villa_locations")
       .select("id, name, slug, filter_group_name");
   },
+
+  /** GET — `select("*")` (filter/order YOK). Admin villa edit page
+   *  location seçici (grup-kök filtresi caller'da). BİREBİR. */
+  async findAllStar() {
+    return await db.from("villa_locations").select("*");
+  },
 };

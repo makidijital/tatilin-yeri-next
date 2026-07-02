@@ -31,6 +31,23 @@ export const villaFeatureRepository = {
     return await db.from("villa_features").select("id, name");
   },
 
+  /** GET — `select("*")` (order YOK). Admin villa edit page olanak listesi.
+   *  `findAll` (id,name + order created_at DESC) DEĞİL — bu `*` order-suz.
+   *  BİREBİR. */
+  async findAllStar() {
+    return await db.from("villa_features").select("*");
+  },
+
+  /** GET — villa'nın seçili feature_id'leri (villa_feature_relations).
+   *  Admin villa edit page selected-features. `.select("feature_id")
+   *  .eq("villa_id")` BİREBİR; map caller'da. */
+  async findFeatureIdsByVilla(villaId: string) {
+    return await db
+      .from("villa_feature_relations")
+      .select("feature_id")
+      .eq("villa_id", villaId);
+  },
+
   /** Front — villaya ait feature'lar (villa_feature_relations embed). */
   async findFeaturesByVilla(villaId: string) {
     return await db

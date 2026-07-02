@@ -26,6 +26,26 @@ export const priceIncludeItemRepository = {
       .order("created_at", { ascending: false });
   },
 
+  /** GET — (id, title), created_at ASC. Admin villa edit page fiyata-dahil
+   *  listesi. ⚠️ `findAll`'dan farkı: order ASC (DESC DEĞİL). BİREBİR. */
+  async findAllOrderedAsc() {
+    return await db
+      .from("price_include_items")
+      .select("id, title")
+      .order("created_at", { ascending: true });
+  },
+
+  /** GET — villa'nın seçili include_id'leri (villa_price_include_relations).
+   *  Admin villa edit page selected-includes. ⚠️ Relation kolonu
+   *  "include_id". `.select("include_id").eq("villa_id")` BİREBİR; map
+   *  caller'da. */
+  async findIncludeIdsByVilla(villaId: string) {
+    return await db
+      .from("villa_price_include_relations")
+      .select("include_id")
+      .eq("villa_id", villaId);
+  },
+
   /** Front — villaya ait price includes (relation embed). */
   async findIncludesByVilla(villaId: string) {
     return await db

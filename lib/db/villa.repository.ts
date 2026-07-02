@@ -320,6 +320,19 @@ export const villaRepository = {
     return (data as VillaRawRow | null) || null;
   },
 
+  /* ADMIN EDIT HYDRATE — raw full row (`select("*")`) by id, `.single()`.
+     Admin villa edit page (client) form hydrate. ⚠️ findById/findBySlug
+     (SELECT_BASIC embed + maybeSingle + mapped null) REUSE EDİLMEZ — bu
+     ham `*` + `.single()` (satır yoksa error) native `{ data, error }`
+     döner; hydrate helper'ları caller'da. Anon `db` (client-safe). */
+  async findRawByIdSingle(id: string) {
+    return await db
+      .from("villa")
+      .select("*")
+      .eq("id", id)
+      .single();
+  },
+
   /* PUBLIC AVAILABILITY CONFIG — /api/public/villas/[id]/availability.
      Booking modal config alanları (deposit, cleaning_*, prepayment,
      min stay). Anon `db` (villa public_read RLS). Select field order +
