@@ -584,6 +584,7 @@ export async function getVillasForAdminPage(opts: {
   pageSize: number;
   q?: string;
   active?: boolean;
+  document?: "licensed" | "unlicensed";
 }): Promise<{
   items: VillaDTO[];
   total: number;
@@ -596,6 +597,8 @@ export async function getVillasForAdminPage(opts: {
   const q = opts.q && opts.q.trim().length > 0 ? opts.q.trim() : undefined;
   /* active undefined → filtre YOK (tüm villalar; eski davranış). */
   const active = opts.active;
+  /* document undefined → filtre YOK (eski davranış). */
+  const document = opts.document;
 
   /* Paralel: liste + count tek round-trip yerine eşzamanlı.
      Sıralama (sort_order ASC, created_at DESC) listForAdmin'in
@@ -607,8 +610,9 @@ export async function getVillasForAdminPage(opts: {
       offset,
       q,
       active,
+      document,
     }),
-    villaRepository.countForAdmin({ q, active }),
+    villaRepository.countForAdmin({ q, active, document }),
   ]);
 
   const items = (rows as unknown as Villa[]).map(mapVilla);

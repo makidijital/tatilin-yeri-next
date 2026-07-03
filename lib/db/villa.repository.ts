@@ -250,6 +250,7 @@ export const villaRepository = {
     offset?: number;
     q?: string;
     active?: boolean;
+    document?: "licensed" | "unlicensed";
   }): Promise<VillaRawRow[]> {
     let query = db
       .from("villa")
@@ -262,6 +263,15 @@ export const villaRepository = {
        ⚠️ countForAdmin ile BİREBİR aynı olmalı (count parity). */
     if (opts?.active !== undefined) {
       query = query.eq("is_active", opts.active);
+    }
+
+    /* OPSIYONEL: belge (T.C. Kültür ve Turizm Bakanlığı belge no) filtresi.
+       document undefined → filtre YOK (eski davranış birebir).
+       ⚠️ countForAdmin ile BİREBİR aynı olmalı (count parity). */
+    if (opts?.document === "licensed") {
+      query = query.not("tourism_document_number", "is", null);
+    } else if (opts?.document === "unlicensed") {
+      query = query.is("tourism_document_number", null);
     }
 
     /* OPSIYONEL: server-side search (operasyon ekranı pagination yolu).
@@ -309,7 +319,11 @@ export const villaRepository = {
      `q` filtresi listForAdmin ile birebir aynı semantik (filtered total).
      Sıralama paneli bu method'u ASLA çağırmaz; yalnız operasyon
      ekranı pagination için. */
-  async countForAdmin(opts?: { q?: string; active?: boolean }): Promise<number> {
+  async countForAdmin(opts?: {
+    q?: string;
+    active?: boolean;
+    document?: "licensed" | "unlicensed";
+  }): Promise<number> {
     let query = db
       .from("villa")
       .select("id", { count: "exact", head: true })
@@ -319,6 +333,14 @@ export const villaRepository = {
        active undefined → filtre YOK (eski davranış). */
     if (opts?.active !== undefined) {
       query = query.eq("is_active", opts.active);
+    }
+
+    /* Belge filtresi — listForAdmin ile BİREBİR aynı (count parity).
+       document undefined → filtre YOK (eski davranış). */
+    if (opts?.document === "licensed") {
+      query = query.not("tourism_document_number", "is", null);
+    } else if (opts?.document === "unlicensed") {
+      query = query.is("tourism_document_number", null);
     }
 
     if (opts?.q && opts.q.trim().length > 0) {

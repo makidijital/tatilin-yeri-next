@@ -28,6 +28,7 @@ type SearchParams = Promise<{
   pageSize?: string;
   q?: string;
   status?: string;
+  document?: string;
 }>;
 
 function parsePage(raw: string | undefined): number {
@@ -61,6 +62,14 @@ function parseStatus(value?: string): boolean | undefined {
   return undefined;
 }
 
+/* document → belge filtresi. "licensed"/"unlicensed" geçerli, aksi
+   halde undefined (filtre YOK; tüm villalar; eski davranış korunur). */
+function parseDocument(value?: string): "licensed" | "unlicensed" | undefined {
+  if (value === "licensed") return "licensed";
+  if (value === "unlicensed") return "unlicensed";
+  return undefined;
+}
+
 export default async function VillasPage({
   searchParams,
 }: {
@@ -72,6 +81,8 @@ export default async function VillasPage({
   const q = parseQ(sp.q);
   const status = sp.status;
   const active = parseStatus(status);
+  const document = sp.document;
+  const documentFilter = parseDocument(document);
 
   /* 🛡️ Admin listing: pasif villalar dahil; soft-deleted hariç.
      YENİ service: pagination + search. Sıralama paneli'nin kullandığı
@@ -81,7 +92,13 @@ export default async function VillasPage({
     total,
     page: serverPage,
     pageSize: serverPageSize,
-  } = await getVillasForAdminPage({ page, pageSize, q, active });
+  } = await getVillasForAdminPage({
+    page,
+    pageSize,
+    q,
+    active,
+    document: documentFilter,
+  });
 
   return (
     <div className="space-y-10">
@@ -154,6 +171,7 @@ export default async function VillasPage({
           pageSize={serverPageSize}
           q={q}
           status={status}
+          document={document}
           allowedPageSizes={ALLOWED_PAGE_SIZES as unknown as number[]}
         />
       )}
