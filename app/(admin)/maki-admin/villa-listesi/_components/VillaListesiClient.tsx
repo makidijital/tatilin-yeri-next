@@ -18,6 +18,7 @@ import AdminDateRangePicker from "@/app/components/admin/shared/AdminDateRangePi
    Reservations(pending/confirmed) + manual_reservations + external
    (is_active) half-open [start,end) overlap birleşimi. */
 import { getBlockedVillaIds } from "@/lib/availability.helper";
+import { normalizeSearchText } from "@/lib/search";
 
 import VillaCard from "@/app/components/villa/VillaCard";
 import {
@@ -263,7 +264,8 @@ export default function VillaListesiClient({
   }, [locationId, locations]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    /* 🔎 Türkçe-aware arama kanonu (ırmak/Irmak/İrmak → aynı). */
+    const q = normalizeSearchText(search);
     return villas.filter((v) => {
       /* 🛡️ AVAILABILITY — public /arama ile aynı: seçili tarihte dolu
          villayı gizle. hasDateRange false iken blockedSet boş → no-op. */
@@ -282,15 +284,15 @@ export default function VillaListesiClient({
       /* 🛡️ Search — title / location adı / slug / id üzerinde lowercase
          includes. Dropdown filtreleriyle AND mantığı (en sonda). */
       if (q) {
-        const haystack = (
+        const haystack = normalizeSearchText(
           (v.title || "") +
-          " " +
-          (v.location || "") +
-          " " +
-          (v.slug || "") +
-          " " +
-          (v.id || "")
-        ).toLowerCase();
+            " " +
+            (v.location || "") +
+            " " +
+            (v.slug || "") +
+            " " +
+            (v.id || "")
+        );
         if (!haystack.includes(q)) return false;
       }
       return true;

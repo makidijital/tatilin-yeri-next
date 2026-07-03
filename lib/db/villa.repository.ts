@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { normalizeSearchText, escapeLikePattern } from "@/lib/search";
 
 /* ===============================================================
    🛡️ FAZ 32 — VILLA REPOSITORY (Data Access Layer)
@@ -120,28 +121,42 @@ const SELECT_BASIC = `
    POSTGREST RESMİ ÇÖZÜM:
      Value içeriği "double quotes" ile sarılır; içerideki `\` ve `"`
      backslash ile escape edilir.
-     Örnek: or=(title.ilike."%deniz, kalkan%",slug.ilike."%O'Brien%")
+     Örnek: or=(search_title.ilike."%deniz kalkan%",slug.ilike."%O'Brien%")
 
-   AKIŞ:
+   AKIŞ (her value için):
      1. Backslash önce escape (sıralama kritik — sonra eklenen
         escape'leri çift escape etmemek için)
      2. ILIKE wildcard escape (% ve _ → \% \_) — mevcut davranış
      3. Çift tırnak escape (" → \")
      4. Değeri çift tırnak içine al
 
+   ⚠️ TÜRKÇE TOLERANS (migration 065):
+     Başlık tarafı artık ham `title` yerine normalize edilmiş
+     `search_title` kolonu üzerinde aranır. Sorgu `normalizeSearchText`
+     ile AYNI kanona (TR-fold + lower + whitespace) indirgenir → "ırmak"
+     ↔ "Irmak" eşleşir. SLUG tarafı DEĞİŞMEZ: slug zaten `slugifyTr` ile
+     ascii-normalize edilmiş olduğundan HAM q ile aranır (eski davranış
+     birebir korunur). Helper hem `listForAdmin` hem `countForAdmin`'de
+     kullanıldığı için filter parity → pagination + count DEĞİŞMEZ.
+
    `'` (tek tırnak) — Supabase JS HTTP query string'inde URL-encode
      edilir; SQL parametrize binding yok ama PostgREST katmanı tek
      tırnağı value içinde güvenli işler. Defansif escape gerekmez.
 =============================================================== */
 function buildVillaSearchOrClause(q: string): string {
-  const escaped = q
-    .replace(/\\/g, "\\\\")            // 1) backslash → \\
-    .replace(/[%_]/g, (m) => `\\${m}`) // 2) ILIKE wildcard escape
-    .replace(/"/g, '\\"');             // 3) çift tırnak → \"
+  /* PostgREST .or() güvenli quoting — value başına uygulanır. */
+  const escapeOrValue = (v: string) =>
+    v
+      .replace(/\\/g, "\\\\") // 1) backslash → \\
+      .replace(/[%_]/g, (m) => `\\${m}`) // 2) ILIKE wildcard escape
+      .replace(/"/g, '\\"'); // 3) çift tırnak → \"
   /* 4) Değeri çift tırnak içine al — virgül/parantez/nokta gibi
-     PostgREST operator karakterlerini izole eder. */
-  const quoted = `"%${escaped}%"`;
-  return `title.ilike.${quoted},slug.ilike.${quoted}`;
+     PostgREST operator karakterlerini izole eder.
+     Başlık: normalize edilmiş q → search_title (TR-tolerant).
+     Slug: HAM q → slug (davranış değişmez). */
+  const titleQuoted = `"%${escapeOrValue(normalizeSearchText(q))}%"`;
+  const slugQuoted = `"%${escapeOrValue(q)}%"`;
+  return `search_title.ilike.${titleQuoted},slug.ilike.${slugQuoted}`;
 }
 
 export const villaRepository = {
@@ -703,9 +718,17 @@ export const villaRepository = {
     return out;
   },
 
-  /* HEADER SEARCH — title ilike, cover embed, limit. Exit hardening:
-     Header.tsx'in inline arama sorgusunun birebir karşılığı (aynı
-     select shape + is_active + deleted_at + ilike + limit). */
+  /* HEADER SEARCH — Türkçe-aware villa adı araması (header + hero).
+     ⚠️ ESKİ: `.ilike("title", %t%)` — Postgres ILIKE Türkçe noktalı/
+     noktasız i (i/ı/İ/I) çiftini AYNI kabul etmediği için "ırmak" →
+     "Villa Irmak" eşleşmiyordu (0 sonuç).
+     YENİ (DB-LEVEL, JS full-fetch YOK): migration 065 ile eklenen
+     GENERATED STORED `search_title` kolonu (translate TR-fold + lower +
+     whitespace normalize) üzerinde ILIKE. Sorgu tarafı aynı kanona
+     `normalizeSearchText` ile indirgenir + `escapeLikePattern` ile
+     wildcard escape edilir. Infix eşleşme pg_trgm GIN indexinden
+     (villa_search_title_trgm_idx) faydalanır. Dönen shape (id, title,
+     slug, villa_images[]) + is_active/deleted_at filtresi + limit KORUNUR. */
   async searchByTitle(
     term: string,
     limit = 5
@@ -721,8 +744,9 @@ export const villaRepository = {
       }[];
     }[]
   > {
-    const t = (term || "").trim();
-    if (t.length === 0) return [];
+    const needle = normalizeSearchText(term);
+    if (needle.length === 0) return [];
+    const pattern = `%${escapeLikePattern(needle)}%`;
     const { data, error } = await db
       .from("villa")
       .select(
@@ -730,7 +754,7 @@ export const villaRepository = {
       )
       .eq("is_active", true)
       .is("deleted_at", null)
-      .ilike("title", `%${t}%`)
+      .ilike("search_title", pattern)
       .limit(limit);
 
     if (error) {
