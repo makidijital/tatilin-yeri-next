@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 import {
   Image as ImageIcon,
@@ -74,6 +74,7 @@ export default function VillaOperationsList({
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   /* Local search state — URL hâlâ source-of-truth, ama input controlled
      olsun diye local state. Server q değişirse (back/forward) local
@@ -126,9 +127,9 @@ export default function VillaOperationsList({
       }
 
       const qs = sp.toString();
-      return qs.length > 0 ? `?${qs}` : "";
+      return qs.length > 0 ? `${pathname}?${qs}` : pathname;
     },
-    [searchParams]
+    [searchParams, pathname]
   );
 
   /* Debounced search → URL push. q değişince page=1'e reset. */
