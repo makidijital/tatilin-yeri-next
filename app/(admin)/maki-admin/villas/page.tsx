@@ -27,6 +27,7 @@ type SearchParams = Promise<{
   page?: string;
   pageSize?: string;
   q?: string;
+  status?: string;
 }>;
 
 function parsePage(raw: string | undefined): number {
@@ -51,6 +52,15 @@ function parseQ(raw: string | undefined): string {
   return raw.trim();
 }
 
+/* status → is_active filtre değeri.
+   "active" → true, "passive" → false, geçersiz/eksik → undefined
+   (undefined = filtre YOK; tüm villalar; eski davranış korunur). */
+function parseStatus(value?: string): boolean | undefined {
+  if (value === "active") return true;
+  if (value === "passive") return false;
+  return undefined;
+}
+
 export default async function VillasPage({
   searchParams,
 }: {
@@ -60,6 +70,8 @@ export default async function VillasPage({
   const page = parsePage(sp.page);
   const pageSize = parsePageSize(sp.pageSize);
   const q = parseQ(sp.q);
+  const status = sp.status;
+  const active = parseStatus(status);
 
   /* 🛡️ Admin listing: pasif villalar dahil; soft-deleted hariç.
      YENİ service: pagination + search. Sıralama paneli'nin kullandığı
@@ -69,7 +81,7 @@ export default async function VillasPage({
     total,
     page: serverPage,
     pageSize: serverPageSize,
-  } = await getVillasForAdminPage({ page, pageSize, q });
+  } = await getVillasForAdminPage({ page, pageSize, q, active });
 
   return (
     <div className="space-y-10">
@@ -141,6 +153,7 @@ export default async function VillasPage({
           page={serverPage}
           pageSize={serverPageSize}
           q={q}
+          status={status}
           allowedPageSizes={ALLOWED_PAGE_SIZES as unknown as number[]}
         />
       )}

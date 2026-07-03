@@ -57,6 +57,7 @@ type Props = {
   page: number;
   pageSize: number;
   q: string;
+  status?: string;
   allowedPageSizes: number[];
 };
 
@@ -68,6 +69,7 @@ export default function VillaOperationsList({
   page,
   pageSize,
   q,
+  status,
   allowedPageSizes,
 }: Props) {
   const router = useRouter();
@@ -97,7 +99,12 @@ export default function VillaOperationsList({
   /* URL builder — diğer query parametrelerini korur. Default değerler
      URL'den temizlenir (page=1, pageSize=30, q="" yazılmaz). */
   const buildHref = useCallback(
-    (next: { page?: number; pageSize?: number; q?: string }) => {
+    (next: {
+      page?: number;
+      pageSize?: number;
+      q?: string;
+      status?: string | null;
+    }) => {
       const sp = new URLSearchParams(searchParams?.toString() || "");
 
       if (next.page !== undefined) {
@@ -111,6 +118,11 @@ export default function VillaOperationsList({
       if (next.q !== undefined) {
         if (next.q.trim().length === 0) sp.delete("q");
         else sp.set("q", next.q.trim());
+      }
+      /* status: "all"/null → param sil (default); active/passive → set. */
+      if (next.status !== undefined) {
+        if (next.status === null || next.status === "all") sp.delete("status");
+        else sp.set("status", next.status);
       }
 
       const qs = sp.toString();
@@ -164,6 +176,34 @@ export default function VillaOperationsList({
             onChange={(e) => setSearchValue(e.target.value)}
           />
         </div>
+
+        {/* STATUS FILTER — Tümü / Aktif / Pasif (URL-driven, page=1 reset) */}
+        <label className="inline-flex items-center gap-2 text-[12px] text-[var(--admin-muted-2)]">
+          <span>Durum</span>
+          <select
+            value={status ?? "all"}
+            onChange={(e) => {
+              const next = e.target.value;
+              router.replace(
+                buildHref({
+                  status: next === "all" ? null : next,
+                  page: 1,
+                }),
+                { scroll: false }
+              );
+            }}
+            className="
+              text-[12.5px] rounded-lg border border-[var(--admin-border)]
+              bg-white px-2 py-1
+              text-[var(--admin-text)]
+              focus:outline-none focus:ring-2 focus:ring-[var(--admin-accent-soft,rgba(0,0,0,0.08))]
+            "
+          >
+            <option value="all">Tümü</option>
+            <option value="active">Aktif</option>
+            <option value="passive">Pasif</option>
+          </select>
+        </label>
 
         {/* PAGE SIZE SELECTOR */}
         <label className="inline-flex items-center gap-2 text-[12px] text-[var(--admin-muted-2)]">

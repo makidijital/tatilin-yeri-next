@@ -249,11 +249,20 @@ export const villaRepository = {
     limit?: number;
     offset?: number;
     q?: string;
+    active?: boolean;
   }): Promise<VillaRawRow[]> {
     let query = db
       .from("villa")
       .select(SELECT_WITH_PRICES)
       .is("deleted_at", null);
+
+    /* OPSIYONEL: aktif/pasif filtresi (operasyon ekranı status filtresi).
+       active undefined → filtre YOK (tüm villalar; eski davranış birebir).
+       active=true → yalnız aktif, active=false → yalnız pasif.
+       ⚠️ countForAdmin ile BİREBİR aynı olmalı (count parity). */
+    if (opts?.active !== undefined) {
+      query = query.eq("is_active", opts.active);
+    }
 
     /* OPSIYONEL: server-side search (operasyon ekranı pagination yolu).
        q sanitize: PostgREST .or() güvenli quoting + ILIKE wildcard
@@ -300,11 +309,17 @@ export const villaRepository = {
      `q` filtresi listForAdmin ile birebir aynı semantik (filtered total).
      Sıralama paneli bu method'u ASLA çağırmaz; yalnız operasyon
      ekranı pagination için. */
-  async countForAdmin(opts?: { q?: string }): Promise<number> {
+  async countForAdmin(opts?: { q?: string; active?: boolean }): Promise<number> {
     let query = db
       .from("villa")
       .select("id", { count: "exact", head: true })
       .is("deleted_at", null);
+
+    /* Aktif/pasif filtresi — listForAdmin ile BİREBİR aynı (count parity).
+       active undefined → filtre YOK (eski davranış). */
+    if (opts?.active !== undefined) {
+      query = query.eq("is_active", opts.active);
+    }
 
     if (opts?.q && opts.q.trim().length > 0) {
       /* Aynı helper — listForAdmin ile filter parity garantisi
