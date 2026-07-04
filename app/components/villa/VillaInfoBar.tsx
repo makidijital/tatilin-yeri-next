@@ -84,10 +84,10 @@ export default function VillaInfoBar({
     <>
       <div
         className="
-          rounded-3xl
+          rounded-3xl ring-2 ring-[#1fb2ec]/30
           border border-[var(--color-stone-100)]
           bg-gradient-to-br from-white via-white to-[var(--color-sand-50)]/55
-          shadow-[0_12px_34px_-18px_rgba(11,31,58,0.16)]
+          shadow-[0_12px_34px_-18px_rgba(11,31,58,0.16),0_16px_38px_-16px_rgba(2,170,229,0.38)]
           px-5 py-5 md:px-7 md:py-6
         "
       >

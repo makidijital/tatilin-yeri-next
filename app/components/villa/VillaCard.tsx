@@ -472,7 +472,7 @@ export default function VillaCard({
                     </p>
                   </>
                 ) : (
-                  <div className="flex items-baseline gap-2 min-w-0">
+                  <div className="flex flex-col min-w-0">
                     <span
                       className={
                         "font-display text-white tracking-[-0.015em] tabular-nums " +
@@ -490,7 +490,7 @@ export default function VillaCard({
                           (isCuration ? "text-[11px]" : "text-[12px]")
                         }
                       >
-                        / gece
+                        Başlayan Fiyatlarla
                       </span>
                     ) : null}
                   </div>
@@ -815,7 +815,7 @@ export default function VillaCard({
                   </div>
                   {price ? (
                     <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)]">
-                      / gece
+                      Başlayan Fiyatlarla
                     </div>
                   ) : null}
                 </>

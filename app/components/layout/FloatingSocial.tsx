@@ -58,7 +58,7 @@ export default async function FloatingSocial() {
     <aside
       aria-label="Hızlı iletişim"
       className="
-        fixed right-3 md:right-5 bottom-24 md:bottom-16
+        fixed right-3 md:right-5 bottom-20 md:bottom-8
         z-40
         flex flex-col gap-2.5
         print:hidden
