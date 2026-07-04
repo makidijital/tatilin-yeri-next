@@ -146,7 +146,7 @@ export default function HeroStickySearch() {
             "
           >
             <SlidersHorizontal size={15} aria-hidden />
-            <span>Filtrele</span>
+            <span>Tarih Seç</span>
           </button>
         </div>
       </div>

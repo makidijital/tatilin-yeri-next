@@ -49,6 +49,7 @@ const DISTANCE_ICON_MAP: Record<DistanceIconKey, LucideIcon> = {
 };
 
 import PriceList from "@/app/components/villa/PriceList";
+import CollapsibleDescription from "@/app/components/villa/CollapsibleDescription";
 import AccommodationLayout from "@/app/components/villa/AccommodationLayout";
 
 import { getVillaBySlug } from "@/app/services/villa.service";
@@ -422,11 +423,9 @@ export default async function VillaDetail({
               Villa hakkında
             </h2>
             {villa.description && villa.description.trim() ? (
-              <div
-                className="villa-description card-premium mt-5 p-6 md:p-7 text-[var(--color-stone-600)] leading-[1.75] text-[15px]"
-                dangerouslySetInnerHTML={{
-                  __html: sanitizeHtml(villa.description),
-                }}
+              <CollapsibleDescription
+                html={sanitizeHtml(villa.description)}
+                collapsible={stripHtml(villa.description).trim().length > 280}
               />
             ) : (
               <div className="card-premium mt-5 p-6 md:p-7 text-[var(--color-stone-600)] leading-[1.75] text-[15px]">
