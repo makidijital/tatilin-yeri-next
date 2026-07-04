@@ -58,7 +58,7 @@ export default async function FloatingSocial() {
     <aside
       aria-label="Hızlı iletişim"
       className="
-        fixed right-3 md:right-5 bottom-5 md:bottom-8
+        fixed right-3 md:right-5 bottom-24 md:bottom-16
         z-40
         flex flex-col gap-2.5
         print:hidden
@@ -71,7 +71,7 @@ export default async function FloatingSocial() {
           aria-label="Hemen Ara"
           className="
             group inline-flex items-center gap-2.5
-            rounded-3xl pl-3 pr-3 sm:pr-5 py-3
+            rounded-3xl pl-2.5 pr-2.5 sm:pr-4 py-2.5
             bg-[var(--color-stone-900)] text-white
             ring-1 ring-white/10
             shadow-[0_16px_34px_-12px_rgba(11,31,58,0.5)]
@@ -81,8 +81,8 @@ export default async function FloatingSocial() {
             focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/50
           "
         >
-          <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white text-[var(--color-stone-900)] shrink-0">
-            <Phone size={17} strokeWidth={2} aria-hidden />
+          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white text-[var(--color-stone-900)] shrink-0">
+            <Phone size={15} strokeWidth={2} aria-hidden />
           </span>
           <span className="hidden sm:inline pr-1 text-[13px] font-semibold tracking-wide whitespace-nowrap">
             Hemen Ara
@@ -99,7 +99,7 @@ export default async function FloatingSocial() {
           aria-label="WhatsApp'tan Yaz"
           className="
             group inline-flex items-center gap-2.5
-            rounded-3xl pl-3 pr-3 sm:pr-5 py-3
+            rounded-3xl pl-2.5 pr-2.5 sm:pr-4 py-2.5
             bg-[#25D366] text-white
             ring-1 ring-[#1da851]/40
             shadow-[0_18px_40px_-12px_rgba(37,211,102,0.75)]
@@ -109,12 +109,12 @@ export default async function FloatingSocial() {
             focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80
           "
         >
-          <span className="inline-flex items-center justify-center w-9 h-9 shrink-0">
+          <span className="inline-flex items-center justify-center w-8 h-8 shrink-0">
             {/* Solid WHITE WhatsApp glyph — yeşil zeminde net görünür. */}
             <svg
               viewBox="0 0 24 24"
-              width={24}
-              height={24}
+              width={20}
+              height={20}
               fill="#ffffff"
               aria-hidden
               xmlns="http://www.w3.org/2000/svg"
