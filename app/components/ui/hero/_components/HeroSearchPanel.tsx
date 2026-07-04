@@ -173,7 +173,7 @@ export default function HeroSearchPanel() {
           (hero variant) → canlı arama + autocomplete + navigation.
           Filtre alanları / filtre logic'i ile SIFIR etkileşim.
           ═══════════════════════════════════════════════════════ */}
-      <div className="absolute left-1/2 -translate-x-1/2 -top-14 z-40 w-[min(90vw,400px)]">
+      <div className="absolute left-1/2 -translate-x-1/2 -top-16 z-40 w-[min(90vw,400px)]">
         <VillaSearchBox variant="hero" placeholder="Villa adı ile ara..." />
       </div>
 

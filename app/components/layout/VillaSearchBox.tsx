@@ -87,7 +87,7 @@ export default function VillaSearchBox({
   /* ── Variant presentation (yalnız stiller; mantık ortak) ───────── */
   const containerClass =
     variant === "hero"
-      ? "relative flex items-center gap-3 w-full max-w-xl rounded-t-3xl rounded-b-none px-6 py-4 bg-gradient-to-b from-white/82 to-white/64 backdrop-blur-xl border border-[var(--color-champagne-500)]/25 shadow-[0_26px_60px_-22px_rgba(11,31,58,0.45),0_10px_26px_-14px_rgba(2, 170, 229,0.20),inset_0_1px_0_rgba(255,255,255,0.65)] transition-[box-shadow,border-color] duration-300 motion-reduce:transition-none focus-within:border-[var(--color-champagne-500)]/55 focus-within:shadow-[0_30px_66px_-20px_rgba(11,31,58,0.5),0_0_0_4px_rgba(2, 170, 229,0.14),0_10px_26px_-12px_rgba(2, 170, 229,0.32),inset_0_1px_0_rgba(255,255,255,0.7)]"
+      ? "relative flex items-center gap-3 w-full max-w-xl rounded-3xl px-6 py-4 bg-gradient-to-b from-white/82 to-white/64 backdrop-blur-xl border border-[var(--color-champagne-500)]/25 shadow-[0_26px_60px_-22px_rgba(11,31,58,0.45),0_10px_26px_-14px_rgba(2, 170, 229,0.20),inset_0_1px_0_rgba(255,255,255,0.65)] transition-[box-shadow,border-color] duration-300 motion-reduce:transition-none focus-within:border-[var(--color-champagne-500)]/55 focus-within:shadow-[0_30px_66px_-20px_rgba(11,31,58,0.5),0_0_0_4px_rgba(2, 170, 229,0.14),0_10px_26px_-12px_rgba(2, 170, 229,0.32),inset_0_1px_0_rgba(255,255,255,0.7)]"
       : variant === "sticky"
         ? "relative flex items-center gap-2 flex-1 min-w-0"
       : variant === "mobile"

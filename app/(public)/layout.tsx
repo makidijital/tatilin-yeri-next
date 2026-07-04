@@ -2,6 +2,7 @@ import HeaderWrapper from "@/app/components/layout/HeaderWrapper";
 import Footer from "@/app/components/layout/Footer";
 import CookieConsent from "@/app/components/layout/CookieConsent";
 import FloatingSocial from "@/app/components/layout/FloatingSocial";
+import ScrollToTopButton from "@/app/components/layout/ScrollToTopButton";
 import { getCachedSettings } from "@/lib/cache.helpers";
 
 /* ===============================================================
@@ -62,6 +63,12 @@ export default async function PublicLayout({
          üstte kalır; Hero/Header/SearchPanel dokunulmadan additive
          entegrasyon. Bakım modunda render edilmez (early-return). */}
       <FloatingSocial />
+
+      {/* ⬆️ Scroll-to-top — sol alt floating client island; scrollY>400'de
+         görünür. z-40 (cookie/modaller üstte kalır), bottom-20 md:bottom-8
+         (mobil MobileBookingCta bar'ını temizler). Additive; layout
+         yapısına dokunmaz. */}
+      <ScrollToTopButton />
 
       {/* 🍪 Çerez onay banner'ı — client-only island, SSR-safe, additive.
          Bakım modunda render edilmez (yukarıdaki early-return). */}
