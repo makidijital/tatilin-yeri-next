@@ -1,4 +1,4 @@
-import { calculateGrandTotal } from "@/lib/price.engine";
+import { calculateGrandTotal, accommodationBase } from "@/lib/price.engine";
 import { formatLocalDate } from "@/lib/date-format";
 
 import type {
@@ -92,7 +92,7 @@ export function computeCustomPriceToggle(
       const nextCleaningTRY = Number(result.cleaning) || 0;
 
       const newPrepayment = Math.round(
-        (nextTotalTRY * prepaymentRate) / 100
+        (accommodationBase(nextTotalTRY, nextCleaningTRY) * prepaymentRate) / 100
       );
       const newRemaining = Math.max(nextTotalTRY - newPrepayment, 0);
 

@@ -51,6 +51,7 @@ import {
   calculateGrandTotal,
   calculateNights,
   calculatePrepayment,
+  accommodationBase,
 } from "@/lib/price.engine";
 
 /* getValidEndDate → lib/date-range (TEK source-of-truth).
@@ -590,7 +591,10 @@ export function useBookingEngine(
       : null;
 
   const prepayment = result
-    ? calculatePrepayment(result.total, prepaymentRate)
+    ? calculatePrepayment(
+        accommodationBase(result.total, result.cleaning),
+        prepaymentRate
+      )
     : 0;
 
   const convertedDeposit = convertPrice(deposit, "TRY", currency, rates);

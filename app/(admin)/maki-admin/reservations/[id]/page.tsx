@@ -69,6 +69,7 @@ import VillaSelectCard from "./_components/VillaSelectCard";
 import PriceCard from "./_components/PriceCard";
 
 import { getPaymentDisplayValues } from "@/lib/payment.helper";
+import { accommodationBase } from "@/lib/price.engine";
 
 import { reservationCodeDisplay } from "@/lib/reservation-code.helper";
 
@@ -1186,7 +1187,11 @@ export default function AdminReservationDetailPage() {
      sonrası orphan kaldı → kaldırıldı. Multi-currency display kartları
      PriceCard içinde `data.original_currency` üzerinden render eder. */
   const prepayment = priceDetail
-    ? Math.round((priceDetail.total * prepaymentRate) / 100)
+    ? Math.round(
+        (accommodationBase(priceDetail.total, priceDetail.cleaning) *
+          prepaymentRate) /
+          100
+      )
     : 0;
 
   /* ---------------------------------------------
@@ -1206,7 +1211,12 @@ export default function AdminReservationDetailPage() {
         ? data.prepayment_amount
         : prepayment ||
           Math.round(
-            (Number(data?.total_price_try || 0) * prepaymentRate) / 100
+            (accommodationBase(
+              Number(data?.total_price_try || 0),
+              Number(data?.cleaning_fee_try || 0)
+            ) *
+              prepaymentRate) /
+              100
           ),
     paid_amount: data?.paid_amount,
     payment_preference: data?.payment_preference,

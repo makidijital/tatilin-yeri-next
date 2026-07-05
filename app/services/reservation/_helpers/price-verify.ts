@@ -4,6 +4,7 @@ import { reservationRepository } from "@/lib/db/reservation.repository";
 import {
   calculateGrandTotal,
   calculatePrepayment,
+  accommodationBase,
 } from "@/lib/price.engine";
 import { normalizePriceRanges } from "@/lib/villa-row.types";
 import { getVillaPrices } from "@/app/services/villa-price.service";
@@ -108,7 +109,7 @@ export async function recomputePublicReservationPrice(input: {
   const totalPriceTry = snapshot.total || 0;
   const cleaningFeeTry = snapshot.cleaning || 0;
   const prepaymentAmount = calculatePrepayment(
-    totalPriceTry,
+    accommodationBase(totalPriceTry, cleaningFeeTry),
     prepaymentRate
   );
   const remainingPayment = Math.max(

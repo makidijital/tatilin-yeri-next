@@ -15,6 +15,7 @@ import { Calendar, Users, CreditCard, CheckCircle2 } from "lucide-react";
 import {
   calculateGrandTotal,
   calculatePrepayment,
+  accommodationBase,
 } from "@/lib/price.engine";
 
 import type { PaymentPreference } from "@/lib/payment.helper";
@@ -263,7 +264,7 @@ export default function ReservationForm({
 
   const prepayment = result
     ? calculatePrepayment(
-      result.total,
+      accommodationBase(result.total, result.cleaning),
       prepaymentRate
     )
     : 0;
@@ -274,7 +275,7 @@ export default function ReservationForm({
   const snapshotCleaningTRY = snapshot?.cleaning || 0;
 
   const snapshotPrepayment = calculatePrepayment(
-    snapshotTotalTRY,
+    accommodationBase(snapshotTotalTRY, snapshotCleaningTRY),
     prepaymentRate
   );
 

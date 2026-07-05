@@ -346,7 +346,24 @@ export const calculateGrandTotal = ({
   };
 };
 
-// 🔥 ÖN ÖDEME
+/* 🔥 KONAKLAMA BEDELİ (prepayment base) — CANONICAL.
+   Ön ödeme YALNIZ konaklama bedelinden hesaplanır. Grand total
+   (`total = stay + cleaning`) içinden temizlik ÇIKARILIR; hasar
+   depozitosu zaten total'e dahil değildir (yalnız snapshot).
+   accommodationBase(total, cleaning) = max(total - cleaning, 0)
+   ⚠️ total ve cleaning AYNI para biriminde olmalı (ikisi de display
+   currency ya da ikisi de TRY snapshot). */
+export const accommodationBase = (
+  total: number,
+  cleaningFee: number
+) =>
+  Math.max(
+    (Number(total) || 0) - (Number(cleaningFee) || 0),
+    0
+  );
+
+// 🔥 ÖN ÖDEME — base * rate/100. Base DAİMA konaklama bedeli olmalı
+// (accommodationBase ile üretilir); grand total GEÇİLMEZ.
 export const calculatePrepayment = (
   total: number,
   rate: number

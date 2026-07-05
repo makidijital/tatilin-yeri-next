@@ -1,4 +1,4 @@
-import { calculateGrandTotal } from "@/lib/price.engine";
+import { calculateGrandTotal, accommodationBase } from "@/lib/price.engine";
 import { formatLocalDate } from "@/lib/date-format";
 
 import type {
@@ -220,7 +220,7 @@ export function computeReservationPriceRecalc(
      🔥 FINANCIAL SNAPSHOT — paid_amount KORUNUR
   ---------------------------------------------- */
   const newPrepayment = Math.round(
-    (nextTotalTRY * prepaymentRate) / 100
+    (accommodationBase(nextTotalTRY, nextCleaningTRY) * prepaymentRate) / 100
   );
   const newRemaining = Math.max(nextTotalTRY - newPrepayment, 0);
 

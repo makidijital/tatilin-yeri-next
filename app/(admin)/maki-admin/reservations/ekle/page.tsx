@@ -826,7 +826,7 @@ export default function AdminReservationDetailPage() {
   const stayTRYDisplay = Math.max(totalTRYDisplay - cleaningTRYDisplay, 0);
 
   const prepayment = priceDetail
-    ? Math.round((totalTRYDisplay * prepaymentRate) / 100)
+    ? Math.round((stayTRYDisplay * prepaymentRate) / 100)
     : 0;
 
   /* ---------------------------------------------
@@ -842,7 +842,7 @@ export default function AdminReservationDetailPage() {
     total_price_try: totalTRYDisplay,
     prepayment_amount:
       prepayment ||
-      Math.round((totalTRYDisplay * prepaymentRate) / 100),
+      Math.round((stayTRYDisplay * prepaymentRate) / 100),
     payment_preference: data.payment_preference,
   });
   const payNowLabel = payment.isFullPayment

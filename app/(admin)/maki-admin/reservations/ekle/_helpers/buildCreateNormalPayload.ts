@@ -2,6 +2,7 @@ import {
   getPaymentDisplayValues,
   normalizePaymentPreference,
 } from "@/lib/payment.helper";
+import { accommodationBase } from "@/lib/price.engine";
 
 import type {
   ReservationCreateData,
@@ -106,7 +107,9 @@ export function buildCreateNormalPayload(
      paid_amount: 0 (ilk kayıtta; create page'de gönderilmiyor,
                      DB default kullanılıyor)
   ---------------------------------------------- */
-  const rawPrepayment = Math.round((totalTRY * prepaymentRate) / 100);
+  const rawPrepayment = Math.round(
+    (accommodationBase(totalTRY, cleaningTRY) * prepaymentRate) / 100
+  );
   const writePayment = getPaymentDisplayValues({
     total_price_try: totalTRY,
     prepayment_amount: rawPrepayment,
