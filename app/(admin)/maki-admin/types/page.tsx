@@ -8,8 +8,20 @@ import {
   deleteVillaType,
   setVillaTypeCover,
   setVillaTypeHomepage,
+  setVillaTypeSortOrders,
 } from "@/app/services/villa-type.service";
-import { Plus, Save, Trash2, Layers, ImagePlus } from "lucide-react";
+import {
+  Plus,
+  Save,
+  Trash2,
+  Layers,
+  ImagePlus,
+  GripVertical,
+} from "lucide-react";
+import {
+  SortableList,
+  type DragHandleProps,
+} from "@/app/components/admin/shared/SortableList";
 import {
   useNotify,
   useConfirm,
@@ -36,6 +48,13 @@ export default function TypesPage() {
      upload edilirse her birinin spinner state'i izole. */
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  /* 🔀 SORT MODE (migration 066) — inline sıralama. Snapshot YALNIZ moda
+     girerken alınır; İptal snapshot'a döner; Kaydet başarılı olursa commit
+     + snapshot temizlenir; RPC fail → snapshot'a geri dönülür. */
+  const [sortMode, setSortMode] = useState(false);
+  const [orderSnapshot, setOrderSnapshot] = useState<any[] | null>(null);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   async function load() {
     const data = await getVillaTypes();
@@ -203,39 +222,244 @@ export default function TypesPage() {
     revalidateMenu().catch(() => {});
   }
 
+  /* ── SORT MODE handlers ─────────────────────────────────────── */
+  function enterSortMode() {
+    setOrderSnapshot(types); // snapshot YALNIZ moda girerken
+    setSortMode(true);
+  }
+
+  function cancelSort() {
+    if (orderSnapshot) setTypes(orderSnapshot); // sırayı + listeyi geri yükle
+    setOrderSnapshot(null);
+    setSortMode(false);
+  }
+
+  async function saveSort() {
+    setSavingOrder(true);
+    const updates = types.map((t, idx) => ({
+      id: String(t.id),
+      sort_order: idx,
+    }));
+    const ok = await setVillaTypeSortOrders(updates);
+    setSavingOrder(false);
+
+    if (!ok) {
+      // RPC fail → snapshot'a otomatik geri dön + hata
+      if (orderSnapshot) setTypes(orderSnapshot);
+      toast.error("Sıralama kaydedilemedi", { id: "type-sort" });
+      return;
+    }
+
+    // başarı → yeni sıra commit + snapshot temizle + modu kapat
+    setOrderSnapshot(null);
+    setSortMode(false);
+    /* Public/SSR cache invalidation — CategoryCollection/arama/kiralik-villalar/
+       kisa-sureli-tarihler yeni sırayı görsün (tag "taxonomy"). */
+    await revalidateTaxonomy();
+    toast.success("Sıralama güncellendi", { id: "type-sort" });
+  }
+
+  /* Kart render — HER İKİ modda ORTAK. sortMode=false iken mevcut davranış
+     byte-identical (drag handle YOK, input editable, cover/checkbox aktif,
+     Kaydet/Sil görünür). sortMode=true iken: handle görünür, input readonly,
+     cover/checkbox disabled, Kaydet/Sil gizli. */
+  const renderTypeRow = (t: any, dragHandleProps?: DragHandleProps) => {
+    const coverUrl = getCategoryCoverPublicUrl(t?.cover_image);
+    const isUploading = uploadingId === t.id;
+    const hasSlug = !!String(t?.slug || "").trim();
+    return (
+      <div key={t.id} className="card-premium p-3 flex items-center gap-2">
+        {/* 🔀 DRAG HANDLE — yalnız Sort Mode. SADECE bu handle sürükler. */}
+        {sortMode && dragHandleProps && (
+          <button
+            type="button"
+            {...dragHandleProps.attributes}
+            {...dragHandleProps.listeners}
+            aria-label={`Sürükle: ${t.name} sırasını değiştir`}
+            title="Sürükle: sırala"
+            className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-md text-[var(--color-stone-400)] hover:text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)] cursor-grab active:cursor-grabbing transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
+          >
+            <GripVertical size={15} />
+          </button>
+        )}
+
+        {/* 🛡️ COVER THUMBNAIL — sade küçük kare. coverUrl varsa
+           image, yoksa boş placeholder. Tıklayınca file picker. */}
+        <button
+          type="button"
+          onClick={() => fileInputRefs.current[t.id]?.click()}
+          disabled={isUploading || !hasSlug || sortMode}
+          title={
+            !hasSlug
+              ? "Önce 'Kaydet' ile slug üret"
+              : coverUrl
+              ? "Görseli değiştir"
+              : "Görsel yükle"
+          }
+          className="relative w-12 h-12 rounded-lg overflow-hidden bg-[var(--color-sand-50)] border border-[var(--color-stone-200)] hover:border-[var(--color-champagne-500)] transition shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {coverUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={coverUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <span className="absolute inset-0 flex items-center justify-center text-[var(--color-stone-400)]">
+              <ImagePlus size={16} />
+            </span>
+          )}
+          {isUploading && (
+            <span className="absolute inset-0 flex items-center justify-center bg-white/70 text-[10px] font-medium text-[var(--color-stone-700)]">
+              …
+            </span>
+          )}
+        </button>
+        <input
+          ref={(el) => {
+            fileInputRefs.current[t.id] = el;
+          }}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleCoverUpload(t, f);
+          }}
+        />
+
+        {/* 🛡️ INPUT + SLUG SUBTEXT — Sort Mode'da readonly. */}
+        <div className="flex-1 min-w-0">
+          <input
+            value={t.name}
+            onChange={(e) => {
+              const updated = types.map((x) =>
+                x.id === t.id ? { ...x, name: e.target.value } : x
+              );
+              setTypes(updated);
+            }}
+            readOnly={sortMode}
+            className="input w-full"
+          />
+          {t.slug && (
+            <p className="text-[11px] text-[var(--color-stone-400)] tracking-[0.06em] font-mono truncate mt-1.5 pl-3">
+              /{t.slug}
+            </p>
+          )}
+        </div>
+
+        {/* 🛡️ Migration 061 — "Anasayfada Göster" toggle. Sort Mode'da disabled. */}
+        <label
+          className="inline-flex items-center gap-2 text-[12.5px] text-[var(--color-stone-600)] cursor-pointer select-none px-2 shrink-0"
+          title="Anasayfa Kategoriler slider'ında göster"
+        >
+          <input
+            type="checkbox"
+            checked={t.show_on_homepage !== false}
+            onChange={(e) => handleToggleHomepage(t.id, e.target.checked)}
+            disabled={sortMode}
+          />
+          <span className="hidden sm:inline">Anasayfada Göster</span>
+        </label>
+
+        {/* Kaydet + Sil — Sort Mode'da gizli */}
+        {!sortMode && (
+          <>
+            <button
+              onClick={() => handleUpdate(t.id, t.name)}
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-champagne-700)] hover:text-[var(--color-champagne-600)] px-3 py-2 rounded-lg hover:bg-[var(--color-sand-50)] transition"
+            >
+              <Save size={13} />
+              Kaydet
+            </button>
+
+            <button
+              onClick={() => handleDelete(t.id)}
+              className="inline-flex items-center gap-1.5 text-[13px] text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 transition"
+            >
+              <Trash2 size={13} />
+              Sil
+            </button>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8 w-full">
       {/* HEADER */}
-      <div>
-        <p className="eyebrow">Yönetim</p>
-        <h1 className="font-display text-3xl md:text-4xl text-[var(--color-stone-900)] mt-2 tracking-[-0.02em]">
-          Villa tipleri
-        </h1>
-        <p className="text-sm text-[var(--color-stone-500)] mt-2">
-          Anasayfa filtrelerinde ve villa kayıtlarında kullanılır.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="eyebrow">Yönetim</p>
+          <h1 className="font-display text-3xl md:text-4xl text-[var(--color-stone-900)] mt-2 tracking-[-0.02em]">
+            Villa tipleri
+          </h1>
+          <p className="text-sm text-[var(--color-stone-500)] mt-2">
+            Anasayfa filtrelerinde ve villa kayıtlarında kullanılır.
+          </p>
+        </div>
+
+        {/* 🔀 SORT MODE toggle — sağ üst. Kapalıyken tek buton; açıkken
+           Kaydet Sıralama + İptal. */}
+        <div className="shrink-0 flex items-center gap-2">
+          {!sortMode ? (
+            <button
+              type="button"
+              onClick={enterSortMode}
+              disabled={types.length < 2 || loading || uploadingId !== null}
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-champagne-700)] hover:text-[var(--color-champagne-600)] px-3 py-2 rounded-lg hover:bg-[var(--color-sand-50)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <GripVertical size={14} />
+              Sıralamayı Düzenle
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={saveSort}
+                disabled={savingOrder}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save size={14} />
+                {savingOrder ? "Kaydediliyor…" : "Kaydet Sıralama"}
+              </button>
+              <button
+                type="button"
+                onClick={cancelSort}
+                disabled={savingOrder}
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-stone-600)] hover:text-[var(--color-stone-900)] px-3 py-2 rounded-lg hover:bg-[var(--color-sand-50)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                İptal
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* ADD */}
-      <div className="card-premium p-5 flex gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Tip adı (Örn: Lüks Villa)"
-          className="input flex-1"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleAdd();
-          }}
-        />
-        <button
-          onClick={handleAdd}
-          disabled={loading || !name}
-          className="btn-primary"
-        >
-          <Plus size={15} />
-          {loading ? "Ekleniyor…" : "Ekle"}
-        </button>
-      </div>
+      {/* ADD — Sort Mode'da gizli */}
+      {!sortMode && (
+        <div className="card-premium p-5 flex gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Tip adı (Örn: Lüks Villa)"
+            className="input flex-1"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleAdd();
+            }}
+          />
+          <button
+            onClick={handleAdd}
+            disabled={loading || !name}
+            className="btn-primary"
+          >
+            <Plus size={15} />
+            {loading ? "Ekleniyor…" : "Ekle"}
+          </button>
+        </div>
+      )}
 
       {/* LIST */}
       {types.length === 0 ? (
@@ -250,121 +474,20 @@ export default function TypesPage() {
             Yukarıdan ilk villa tipini eklemeyi dene.
           </p>
         </div>
+      ) : sortMode ? (
+        /* 🔀 SORT MODE — dnd-kit (SortableList). Yalnız handle sürükler;
+           onReorder optimistic setTypes; kart tasarımı AYNEN (renderTypeRow). */
+        <SortableList
+          items={types}
+          getId={(t) => String(t.id)}
+          onReorder={setTypes}
+          className="space-y-2.5"
+        >
+          {(t, { dragHandleProps }) => renderTypeRow(t, dragHandleProps)}
+        </SortableList>
       ) : (
-        <div className="space-y-2.5">
-          {types.map((t) => {
-            const coverUrl = getCategoryCoverPublicUrl(t?.cover_image);
-            const isUploading = uploadingId === t.id;
-            const hasSlug = !!String(t?.slug || "").trim();
-            return (
-              <div
-                key={t.id}
-                className="card-premium p-3 flex items-center gap-2"
-              >
-                {/* 🛡️ COVER THUMBNAIL — sade küçük kare. coverUrl varsa
-                   image, yoksa boş placeholder. Tıklayınca file picker. */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRefs.current[t.id]?.click()}
-                  disabled={isUploading || !hasSlug}
-                  title={
-                    !hasSlug
-                      ? "Önce 'Kaydet' ile slug üret"
-                      : coverUrl
-                      ? "Görseli değiştir"
-                      : "Görsel yükle"
-                  }
-                  className="relative w-12 h-12 rounded-lg overflow-hidden bg-[var(--color-sand-50)] border border-[var(--color-stone-200)] hover:border-[var(--color-champagne-500)] transition shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {coverUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={coverUrl}
-                      alt=""
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="absolute inset-0 flex items-center justify-center text-[var(--color-stone-400)]">
-                      <ImagePlus size={16} />
-                    </span>
-                  )}
-                  {isUploading && (
-                    <span className="absolute inset-0 flex items-center justify-center bg-white/70 text-[10px] font-medium text-[var(--color-stone-700)]">
-                      …
-                    </span>
-                  )}
-                </button>
-                <input
-                  ref={(el) => {
-                    fileInputRefs.current[t.id] = el;
-                  }}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleCoverUpload(t, f);
-                  }}
-                />
-
-                {/* 🛡️ INPUT + SLUG SUBTEXT — Bölgeler sayfasındaki
-                   slug satırı pattern'i. Edit input korunur (business
-                   logic dokunulmadı), altında muted slug görünür.
-                   NULL slug'larda satır render edilmez (eski kayıtlar
-                   için graceful). uppercase YOK — kullanıcı isteği. */}
-                <div className="flex-1 min-w-0">
-                  <input
-                    value={t.name}
-                    onChange={(e) => {
-                      const updated = types.map((x) =>
-                        x.id === t.id ? { ...x, name: e.target.value } : x
-                      );
-                      setTypes(updated);
-                    }}
-                    className="input w-full"
-                  />
-                  {t.slug && (
-                    <p className="text-[11px] text-[var(--color-stone-400)] tracking-[0.06em] font-mono truncate mt-1.5 pl-3">
-                      /{t.slug}
-                    </p>
-                  )}
-                </div>
-
-                {/* 🛡️ Migration 061 — "Anasayfada Göster" toggle.
-                   show_on_homepage !== false → checked (DEFAULT true). */}
-                <label
-                  className="inline-flex items-center gap-2 text-[12.5px] text-[var(--color-stone-600)] cursor-pointer select-none px-2 shrink-0"
-                  title="Anasayfa Kategoriler slider'ında göster"
-                >
-                  <input
-                    type="checkbox"
-                    checked={t.show_on_homepage !== false}
-                    onChange={(e) =>
-                      handleToggleHomepage(t.id, e.target.checked)
-                    }
-                  />
-                  <span className="hidden sm:inline">Anasayfada Göster</span>
-                </label>
-
-                <button
-                  onClick={() => handleUpdate(t.id, t.name)}
-                  className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-champagne-700)] hover:text-[var(--color-champagne-600)] px-3 py-2 rounded-lg hover:bg-[var(--color-sand-50)] transition"
-                >
-                  <Save size={13} />
-                  Kaydet
-                </button>
-
-                <button
-                  onClick={() => handleDelete(t.id)}
-                  className="inline-flex items-center gap-1.5 text-[13px] text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 transition"
-                >
-                  <Trash2 size={13} />
-                  Sil
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        /* Normal mod — mevcut liste BYTE-IDENTICAL (dnd-kit tamamen kapalı). */
+        <div className="space-y-2.5">{types.map((t) => renderTypeRow(t))}</div>
       )}
     </div>
   );

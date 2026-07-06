@@ -14,9 +14,9 @@ import { slugifyTr } from "@/lib/slug";
        (uniqueness DB tarafında PARTIAL UNIQUE INDEX ile korunur).
    =============================================================== */
 
-// 📦 GET
+// 📦 GET — sort_order ASC (migration 066); admin /types + public ortak sıra.
 export async function getVillaTypes() {
-  const { data, error } = await villaTypeRepository.findAll();
+  const { data, error } = await villaTypeRepository.findAllBySortOrder();
 
   if (error) {
     console.error("❌ getVillaTypes error:", error.message);
@@ -26,13 +26,41 @@ export async function getVillaTypes() {
   return data || [];
 }
 
-// ➕ ADD
+// ➕ ADD — yeni tip HER ZAMAN en sona: sort_order = MAX(sort_order)+1.
 export async function addVillaType(name: string, slug?: string | null) {
   const finalSlug = (slug && slug.trim()) || slugifyTr(name) || null;
-  const { error } = await villaTypeRepository.insert({ name, slug: finalSlug });
+
+  /* 🛡️ Migration 066 — en sona ekle. Boş tabloda maybeSingle data=null
+     → -1 fallback → ilk tip sort_order=0. Hata durumunda 0'a düş
+     (insert yine de çalışır; sıralama admin tarafından düzeltilebilir). */
+  const { data: maxRow } = await villaTypeRepository.findMaxSortOrder();
+  const nextSortOrder =
+    (typeof maxRow?.sort_order === "number" ? maxRow.sort_order : -1) + 1;
+
+  const { error } = await villaTypeRepository.insert({
+    name,
+    slug: finalSlug,
+    sort_order: nextSortOrder,
+  });
 
   if (error) {
     console.error("❌ addVillaType error:", error.message);
+    return false;
+  }
+
+  return true;
+}
+
+/* 🔀 SORT — toplu sıralama persist (migration 066 RPC). FAZ 3 "Sıralama
+   Modu" Kaydet'i çağırır; caller başarı sonrası revalidateTaxonomy() yapar
+   (separation of concerns: service DB, caller UI/cache). */
+export async function setVillaTypeSortOrders(
+  updates: Array<{ id: string; sort_order: number }>
+): Promise<boolean> {
+  const { error } = await villaTypeRepository.rpcSetVillaTypeSortOrders(updates);
+
+  if (error) {
+    console.error("❌ setVillaTypeSortOrders error:", error.message);
     return false;
   }
 

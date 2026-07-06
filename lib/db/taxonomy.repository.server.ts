@@ -38,9 +38,15 @@ export const taxonomyServerRepository = {
       .select("id, name, slug, filter_group_name");
   },
 
-  /** villa_types — slim (id, name, slug), order YOK. */
+  /** villa_types — slim (id, name, slug), sort_order ASC (tie-break name
+   *  ASC). Migration 066: order-suz → sort_order (admin taxonomy dropdown'ları
+   *  villa tipi sırasını izler). */
   async findTypes() {
-    return await dbAdmin.from("villa_types").select("id, name, slug");
+    return await dbAdmin
+      .from("villa_types")
+      .select("id, name, slug")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
   },
 
   /** villa_features — slim (id, name), order YOK. */

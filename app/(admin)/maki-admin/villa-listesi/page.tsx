@@ -85,7 +85,7 @@ export default async function VillaListesiPage() {
   const [villasRes, locationsRes, typesRes, relationsRes] = await Promise.all([
     villaRepository.findActiveCuratorCards(),
     villaLocationRepository.findAllForFilter(),
-    villaTypeRepository.findAllIdNameByName(),
+    villaTypeRepository.findAllIdNameBySortOrder(),
     /* villa_type_relations: M:N junction. Tüm satırları çekiyoruz —
        admin scope (varsayım: <500 villa × birkaç kategori). Client
        tarafı bunu villa.id → categoryId[] map'ine dönüştürür ve

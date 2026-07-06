@@ -59,6 +59,16 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
         }}
       />
 
+      {/* ═══ SECTION HEADING — iki sütunu da kapsayan, ortalı başlık.
+             Tipografi "Kısa Süreli Fırsatlar" (ShortGapsSection) section
+             başlığıyla BİREBİR aynı sınıflar. Alttaki iki sütunlu grid +
+             kartlar + accordion AYNEN. ═══ */}
+      <div className="relative max-w-[1280px] mx-auto text-center mb-8 md:mb-12">
+        <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] leading-tight tracking-[-0.02em]">
+          Tatiliniz İçin Öneriler
+        </h2>
+      </div>
+
       <div className="relative max-w-[1280px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
         {/* ═══ LEFT — decorative info panel (navy + turquoise) ═══ */}
         <div className="lg:col-span-4">

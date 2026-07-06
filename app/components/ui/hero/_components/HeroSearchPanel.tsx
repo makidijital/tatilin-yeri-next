@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
    menuRepository. `db` barrel client-safe (isomorphic); aynı anon
    RLS context + birebir aynı SELECT shape (id, name, slug). */
 import { menuRepository } from "@/lib/db/menu.repository";
+import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 /* 🔎 Floating villa-adı arama — mevcut paylaşılan canlı arama component'i
    (debounce + searchByTitle + autocomplete dropdown). Kendi navigation
    logic'i var; burada yalnız tüketilir. */
@@ -99,7 +100,12 @@ export default function HeroSearchPanel() {
 
   useEffect(() => {
     const fetchFilters = async () => {
-      const { data: types } = await menuRepository.findAllVillaTypes();
+      /* 🔀 Migration 066 — Tip dropdown'u sort_order ASC (findAllForPublicTaxonomy).
+         Dönüş şekli (id, name, slug) findAllVillaTypes ile BİREBİR; UI değişmez.
+         Diğer public alanlarla (CategoryCollection/arama/kiralik/kisa-sureli)
+         aynı sıra. Bölge (locations) ve navbar menü sistemi ETKİLENMEZ. */
+      const { data: types } =
+        await villaTypeRepository.findAllForPublicTaxonomy();
       const { data: locations } =
         await menuRepository.findAllVillaLocations();
       if (types) setCategoryOptions(types);

@@ -16,30 +16,39 @@ import { db } from "@/lib/db";
 =============================================================== */
 
 export const villaTypeRepository = {
-  /** GET — tümü, created_at DESC. */
-  async findAll() {
+  /** GET — tümü, sort_order ASC (tie-break name ASC). Migration 066.
+   *  Admin /types listesi (getVillaTypes) VE public getCachedVillaTypes'ın
+   *  ORTAK kaynağı → tek source-of-truth. select("*") AYNEN (migration 061
+   *  show_on_homepage deploy-safe). Mapping/cover_v caller'da kalır. */
+  async findAllBySortOrder() {
     return await db
       .from("villa_types")
       .select("*")
-      .order("created_at", { ascending: false });
-  },
-
-  /** GET — tümü, name ASC. cache.helpers > getCachedVillaTypes (taxonomy
-   *  cache) için. `findAll`'dan TEK farkı sıralama (name ASC vs created_at
-   *  DESC); select("*") AYNEN (migration 061 show_on_homepage deploy-safe).
-   *  Mapping/cover_v timestamp caller (cache.helpers) tarafında kalır. */
-  async findAllByName() {
-    return await db
-      .from("villa_types")
-      .select("*")
+      .order("sort_order", { ascending: true })
       .order("name", { ascending: true });
   },
 
-  /** GET — public taxonomy slim projeksiyon (id, name, slug); order YOK.
-   *  app/api/public/taxonomies route için BİREBİR. `findAll`/`findAllByName`
-   *  select("*") + order kullanır; bu public dropdown için slim + order-suz. */
+  /** GET — en yüksek sort_order (yeni tip = max+1 hesabı için). sort_order
+   *  DESC + limit(1) + maybeSingle → boş tabloda data=null (caller -1
+   *  fallback ile 0'dan başlatır). */
+  async findMaxSortOrder() {
+    return await db
+      .from("villa_types")
+      .select("sort_order")
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+  },
+
+  /** GET — public taxonomy slim projeksiyon (id, name, slug), sort_order ASC
+   *  (tie-break name ASC). Migration 066: order-suz → sort_order. app/api/
+   *  public/taxonomies route için (public form dropdown'ları). */
   async findAllForPublicTaxonomy() {
-    return await db.from("villa_types").select("id, name, slug");
+    return await db
+      .from("villa_types")
+      .select("id, name, slug")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
   },
 
   /** GET — `select("*")` (order YOK). Admin villa edit page tip listesi.
@@ -48,14 +57,14 @@ export const villaTypeRepository = {
     return await db.from("villa_types").select("*");
   },
 
-  /** GET — slim (id, name), name ASC. Admin villa-listesi (concierge
-   *  curator) kategori dropdown'u. `findAllForPublicTaxonomy` (id,name,slug;
-   *  order YOK) ve `findAllByName` (select("*")) DEĞİL — bu slim + name ASC.
-   *  Native `{ data, error }` döner (caller kendi error-log'unu yapar). */
-  async findAllIdNameByName() {
+  /** GET — slim (id, name), sort_order ASC (tie-break name ASC). Migration
+   *  066: name ASC → sort_order. Admin villa-listesi (concierge curator)
+   *  kategori dropdown'u. Native `{ data, error }` döner. */
+  async findAllIdNameBySortOrder() {
     return await db
       .from("villa_types")
       .select("id, name")
+      .order("sort_order", { ascending: true })
       .order("name", { ascending: true });
   },
 
@@ -97,6 +106,17 @@ export const villaTypeRepository = {
 
   async insert(payload: Record<string, unknown>) {
     return await db.from("villa_types").insert(payload);
+  },
+
+  /** RPC — toplu sort_order güncelleme (migration 066). villa
+   *  `rpcSetVillaSortOrders` deseninin BİREBİR karşılığı; tek transaction.
+   *  Input: [{ id, sort_order }, ...]. */
+  async rpcSetVillaTypeSortOrders(
+    payload: Array<{ id: string; sort_order: number }>
+  ) {
+    return await db.rpc("set_villa_type_sort_orders", {
+      p_updates: payload,
+    });
   },
 
   /** UPDATE by id — name/slug, cover_image, show_on_homepage hepsi buradan. */

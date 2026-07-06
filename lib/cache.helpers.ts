@@ -646,7 +646,7 @@ export const getCachedVillaTypes = unstable_cache(
        select hata verirdi; "*" hata vermez, alan undefined gelir →
        CategoryCollection `!== false` ile undefined'ı görünür sayar →
        migration öncesi "hepsi görünür" davranışı korunur. */
-    const { data, error } = await villaTypeRepository.findAllByName();
+    const { data, error } = await villaTypeRepository.findAllBySortOrder();
     if (error) {
       console.error("[cache.villaTypes] FAILED", error.message);
       return [];
