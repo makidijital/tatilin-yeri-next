@@ -708,6 +708,12 @@ select.input {
   font-weight: 500 !important;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  /* 🔧 Kolon hizası — başlık hücresini gün hücresiyle (`__day`) BİREBİR
+     aynı ayak izine getir (em/11px daralmasını nötrler). Yalnız hizalama;
+     __day geometrisine ve availability renklerine dokunulmaz. */
+  width: 2.1rem !important;
+  line-height: 2.1rem !important;
+  margin: 0.15rem !important;
 }
 
 .react-datepicker__day {

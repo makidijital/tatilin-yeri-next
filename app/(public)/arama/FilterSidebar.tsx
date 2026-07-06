@@ -37,6 +37,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+/* react-datepicker v9 floating-ui tabanlıdır; `shift` middleware'i onun
+   doğrudan bağımlılığı (@floating-ui/react) — aynı sürüm, Middleware tipi
+   uyumlu. Yalnız mobilde popper'ı kenarlardan padding kadar uzak tutmak
+   için kullanılır (attachment + üçgen korunur). */
+import { shift } from "@floating-ui/react";
 import { tr } from "date-fns/locale";
 
 import MobileKbSafeInput from "@/app/components/ui/datepicker/MobileKbSafeInput";
@@ -265,6 +270,19 @@ export default function FilterSidebar({
     return () => window.clearTimeout(t);
   }, [mobileOpen]);
 
+  /* 📱 Yalnız telefon (max-639px; tablet ≥640 ve desktop HARİÇ) tespiti.
+     SADECE datepicker popper placement'ını mobilde "bottom" (input altında
+     ortalı) yapmak için — desktop "bottom-start" (mevcut default) kalır.
+     Popper mantığı/attachment/üçgen korunur; yalnız yatay hiza iyileşir. */
+  const [isMobileDp, setIsMobileDp] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsMobileDp(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
   /* ---------------- HANDLERS ---------------- */
 
   /* 🛡️ ID → preferred URL token (slug varsa, yoksa UUID).
@@ -419,12 +437,8 @@ export default function FilterSidebar({
       {/* HEADER — desktop'ta minimal eyebrow, mobile'da X button */}
       <div className="flex items-start justify-between gap-4 pb-6 border-b border-[var(--color-stone-100)]">
         <div>
-          <p className="text-[11px] tracking-[0.24em] uppercase font-medium text-[var(--color-stone-500)]">
-            <span className="inline-block w-6 h-px bg-[var(--color-stone-300)] align-middle mr-2" />
-            Filtrele
-          </p>
-          <h2 className="font-display text-[26px] md:text-[28px] text-[var(--color-stone-900)] mt-2 tracking-[-0.025em] leading-tight">
-            Aramayı daralt.
+          <h2 className="font-display text-[26px] md:text-[28px] text-[var(--color-stone-900)] tracking-[-0.025em] leading-tight">
+            Filtrele ve Tarih Seç
           </h2>
         </div>
 
@@ -454,52 +468,140 @@ export default function FilterSidebar({
          içeriği kadar büyür → overflow-y-auto hiç tetiklenmez →
          checkbox listesi card'ın rounded border'ından taşar. */}
       <div className="flex-1 min-h-0 overflow-y-auto py-6 space-y-8 pr-1 -mr-1">
-        {/* ============ 1) VİLLA TİPİ ============ */}
+        {/* ============ 1) TARİH ============ */}
         <FilterGroup
-          icon={<Tag size={14} className="text-[var(--color-champagne-500)]" />}
-          label="Villa Tipi"
+          icon={
+            <Calendar
+              size={14}
+              className="text-[var(--color-champagne-500)]"
+            />
+          }
+          label="Tarih"
           summary={
-            categories.length === 0
-              ? "Tümü"
-              : `${categories.length} seçili`
+            startDate && endDate
+              ? `${startDate.toLocaleDateString("tr-TR", {
+                  day: "numeric",
+                  month: "short",
+                })} – ${endDate.toLocaleDateString("tr-TR", {
+                  day: "numeric",
+                  month: "short",
+                })}`
+              : startDate
+              ? startDate.toLocaleDateString("tr-TR", {
+                  day: "numeric",
+                  month: "short",
+                })
+              : "Tarih seç"
           }
         >
-          {categoryOptions.length === 0 ? (
-            <p className="text-[13px] text-[var(--color-stone-400)]">
-              Tip yok.
-            </p>
-          ) : (
-            <ul className="space-y-1">
-              {categoryOptions.map((opt, i) => {
-                const checked = categories.includes(opt.id);
-                return (
-                  <li key={opt.id}>
-                    <label
-                      className={`flex items-center gap-3 text-[14px] px-3 py-2.5 rounded-xl cursor-pointer transition-colors motion-reduce:transition-none ${
-                        checked
-                          ? "bg-[var(--color-sand-50)] text-[var(--color-stone-900)]"
-                          : "text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)]"
-                      }`}
-                    >
-                      <input
-                        {...(i === 0 ? { "data-drawer-initial-focus": "" } : {})}
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() =>
-                          toggleInList(opt.id, categories, setCategories)
-                        }
-                        className="!w-4 !h-4 accent-[var(--color-champagne-500)] !rounded"
-                      />
-                      <span className="truncate">{opt.name}</span>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <div
+            data-drawer-initial-focus=""
+            tabIndex={-1}
+            className="rounded-xl border border-[var(--color-stone-100)] bg-white px-3 py-3 flex items-center gap-3 outline-none"
+          >
+            <DatePicker
+              selected={startDate}
+              onChange={(dates: any) => {
+                const [start, end] = dates as [Date | null, Date | null];
+                setStartDate(start);
+                setEndDate(end);
+              }}
+              startDate={startDate}
+              endDate={endDate}
+              selectsRange
+              locale="tr"
+              dateFormat="dd.MM.yyyy"
+              minDate={new Date()}
+              placeholderText="Giriş – Çıkış"
+              /* 🛡️ Mobilde input altında ORTALI aç (bottom); desktop mevcut
+                 default (bottom-start) aynen kalır. Popper attachment + üçgen
+                 korunur → takvim inputa bağlı kalır, yalnız yatay hiza
+                 dengelenir. Hero/villa-detay etkilenmez. */
+              popperPlacement={isMobileDp ? "bottom" : "bottom-start"}
+              /* 🛡️ Yalnız mobilde: shift middleware ile popper viewport
+                 kenarlarından en az 16px uzak tutulur → sola/sağa yapışmaz,
+                 taşmaz. react-datepicker default middleware'ine (flip/offset/
+                 arrow) EKLENİR; üçgen ve attachment bozulmaz. Desktop
+                 undefined → default davranış BİREBİR korunur. */
+              popperModifiers={
+                isMobileDp ? [shift({ padding: 16 })] : undefined
+              }
+              /* 🛡️ Kart içinde input'ta görünen tarih metni — SADECE
+                 display override. State (selected/startDate/endDate),
+                 onChange, URL (formatDateForUrl), filter querysi ve
+                 calendar internal'ı (dateFormat/selectsRange/locale/
+                 minDate) DOKUNULMADI. Summary (L565-580) ile birebir
+                 aynı format: tr-TR + day numeric + month short →
+                 "4 Haz – 11 Haz". Separator en-dash, placeholder ile
+                 tutarlı. */
+              value={
+                startDate && endDate
+                  ? `${startDate.toLocaleDateString("tr-TR", {
+                      day: "numeric",
+                      month: "short",
+                    })} – ${endDate.toLocaleDateString("tr-TR", {
+                      day: "numeric",
+                      month: "short",
+                    })}`
+                  : startDate
+                  ? startDate.toLocaleDateString("tr-TR", {
+                      day: "numeric",
+                      month: "short",
+                    })
+                  : ""
+              }
+              className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none w-full text-[14px] font-medium !text-[var(--color-stone-900)] placeholder-[var(--color-stone-400)] cursor-pointer outline-none"
+              /* 🛡️ Mobil klavye baskılama — customInput içinde
+                 inputMode="none". Display override için verilen
+                 value prop, react-datepicker tarafından customInput'a
+                 forward edilir; render değişmez. */
+              customInput={<MobileKbSafeInput />}
+            />
+            {(startDate || endDate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate(null);
+                  setEndDate(null);
+                }}
+                aria-label="Tarihi temizle"
+                className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[var(--color-stone-500)] hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)] transition-colors motion-reduce:transition-none"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
         </FilterGroup>
 
-        {/* ============ 2) BÖLGE ============ */}
+        {/* ============ 4) KİŞİ SAYISI ============
+            Tek sade counter — Airbnb Luxe tarzı minimal booking UX.
+            URL contract: ?guests=N (1 default → param yazılmaz). */}
+        <FilterGroup
+          icon={
+            <Users size={14} className="text-[var(--color-champagne-500)]" />
+          }
+          label="Kişi Sayısı"
+          summary={
+            guestCount > 1 ? `${guestCount} kişi` : "1 kişi"
+          }
+        >
+          <div className="space-y-3">
+            <CounterRow
+              label="Kişi"
+              hint="Toplam kapasite"
+              value={guestCount}
+              min={1}
+              max={20}
+              onChange={setGuestCount}
+            />
+            <p className="text-[11px] tracking-[0.04em] text-[var(--color-stone-400)] pt-1 leading-relaxed">
+              <span className="tabular-nums">{guestCount}</span>+ kişi
+              kapasitesi olan villalar gösterilir.
+            </p>
+          </div>
+        </FilterGroup>
+
+        {/* ============ 3) BÖLGE ============ */}
         <FilterGroup
           icon={<MapPin size={14} className="text-[var(--color-champagne-500)]" />}
           label="Bölge"
@@ -588,120 +690,48 @@ export default function FilterSidebar({
           )}
         </FilterGroup>
 
-        {/* ============ 3) TARİH ============ */}
+        {/* ============ 4) VİLLA TİPİ ============ */}
         <FilterGroup
-          icon={
-            <Calendar
-              size={14}
-              className="text-[var(--color-champagne-500)]"
-            />
-          }
-          label="Tarih"
+          icon={<Tag size={14} className="text-[var(--color-champagne-500)]" />}
+          label="Villa Tipi"
           summary={
-            startDate && endDate
-              ? `${startDate.toLocaleDateString("tr-TR", {
-                  day: "numeric",
-                  month: "short",
-                })} – ${endDate.toLocaleDateString("tr-TR", {
-                  day: "numeric",
-                  month: "short",
-                })}`
-              : startDate
-              ? startDate.toLocaleDateString("tr-TR", {
-                  day: "numeric",
-                  month: "short",
-                })
-              : "Tarih seç"
+            categories.length === 0
+              ? "Tümü"
+              : `${categories.length} seçili`
           }
         >
-          <div className="rounded-xl border border-[var(--color-stone-100)] bg-white px-3 py-3 flex items-center gap-3">
-            <DatePicker
-              selected={startDate}
-              onChange={(dates: any) => {
-                const [start, end] = dates as [Date | null, Date | null];
-                setStartDate(start);
-                setEndDate(end);
-              }}
-              startDate={startDate}
-              endDate={endDate}
-              selectsRange
-              locale="tr"
-              dateFormat="dd.MM.yyyy"
-              minDate={new Date()}
-              placeholderText="Giriş – Çıkış"
-              /* 🛡️ Kart içinde input'ta görünen tarih metni — SADECE
-                 display override. State (selected/startDate/endDate),
-                 onChange, URL (formatDateForUrl), filter querysi ve
-                 calendar internal'ı (dateFormat/selectsRange/locale/
-                 minDate) DOKUNULMADI. Summary (L565-580) ile birebir
-                 aynı format: tr-TR + day numeric + month short →
-                 "4 Haz – 11 Haz". Separator en-dash, placeholder ile
-                 tutarlı. */
-              value={
-                startDate && endDate
-                  ? `${startDate.toLocaleDateString("tr-TR", {
-                      day: "numeric",
-                      month: "short",
-                    })} – ${endDate.toLocaleDateString("tr-TR", {
-                      day: "numeric",
-                      month: "short",
-                    })}`
-                  : startDate
-                  ? startDate.toLocaleDateString("tr-TR", {
-                      day: "numeric",
-                      month: "short",
-                    })
-                  : ""
-              }
-              className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none w-full text-[14px] font-medium !text-[var(--color-stone-900)] placeholder-[var(--color-stone-400)] cursor-pointer outline-none"
-              /* 🛡️ Mobil klavye baskılama — customInput içinde
-                 inputMode="none". Display override için verilen
-                 value prop, react-datepicker tarafından customInput'a
-                 forward edilir; render değişmez. */
-              customInput={<MobileKbSafeInput />}
-            />
-            {(startDate || endDate) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setStartDate(null);
-                  setEndDate(null);
-                }}
-                aria-label="Tarihi temizle"
-                className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[var(--color-stone-500)] hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)] transition-colors motion-reduce:transition-none"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
-        </FilterGroup>
-
-        {/* ============ 4) KİŞİ SAYISI ============
-            Tek sade counter — Airbnb Luxe tarzı minimal booking UX.
-            URL contract: ?guests=N (1 default → param yazılmaz). */}
-        <FilterGroup
-          icon={
-            <Users size={14} className="text-[var(--color-champagne-500)]" />
-          }
-          label="Kişi Sayısı"
-          summary={
-            guestCount > 1 ? `${guestCount} kişi` : "1 kişi"
-          }
-        >
-          <div className="space-y-3">
-            <CounterRow
-              label="Kişi"
-              hint="Toplam kapasite"
-              value={guestCount}
-              min={1}
-              max={20}
-              onChange={setGuestCount}
-            />
-            <p className="text-[11px] tracking-[0.04em] text-[var(--color-stone-400)] pt-1 leading-relaxed">
-              <span className="tabular-nums">{guestCount}</span>+ kişi
-              kapasitesi olan villalar gösterilir.
+          {categoryOptions.length === 0 ? (
+            <p className="text-[13px] text-[var(--color-stone-400)]">
+              Tip yok.
             </p>
-          </div>
+          ) : (
+            <ul className="space-y-1">
+              {categoryOptions.map((opt) => {
+                const checked = categories.includes(opt.id);
+                return (
+                  <li key={opt.id}>
+                    <label
+                      className={`flex items-center gap-3 text-[14px] px-3 py-2.5 rounded-xl cursor-pointer transition-colors motion-reduce:transition-none ${
+                        checked
+                          ? "bg-[var(--color-sand-50)] text-[var(--color-stone-900)]"
+                          : "text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)]"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() =>
+                          toggleInList(opt.id, categories, setCategories)
+                        }
+                        className="!w-4 !h-4 accent-[var(--color-champagne-500)] !rounded"
+                      />
+                      <span className="truncate">{opt.name}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </FilterGroup>
       </div>
 
