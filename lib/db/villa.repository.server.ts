@@ -219,7 +219,10 @@ export const villaAdminRepository = {
      Slim projeksiyon (id, title, slug, is_active, deleted_at). Conditional:
        activeOnly → .eq("is_active", true).is("deleted_at", null)
                     .order("title", asc)   (homepage-collection consumer)
-       default    → filtresiz, order YOK   (reservation form consumer'ları)
+       default    → .is("deleted_at", null), order YOK (reservation form
+                    consumer'ları). 🐛 FIX: çöp kutusundaki (deleted_at != null)
+                    villalar rezervasyon seçim listelerinde görünmemeli; is_active
+                    filtresi YOK → pasif villalar seçilebilir kalır (davranış aynı).
      ⚠️ Conditional chain + select string BİREBİR. activeOnly parse
         caller (route) tarafında. */
   async findAdminSelectList(activeOnly: boolean) {
@@ -231,7 +234,7 @@ export const villaAdminRepository = {
           .eq("is_active", true)
           .is("deleted_at", null)
           .order("title", { ascending: true })
-      : baseQuery);
+      : baseQuery.is("deleted_at", null));
   },
 
   /* ===============================================================

@@ -435,11 +435,15 @@ export const villaRepository = {
       .maybeSingle();
   },
 
-  /* ALL id/title/slug — filtresiz, order YOK. Manual reservation "ekle"
-     sayfası villa dropdown'ı (TÜM villalar; is_active/deleted_at filtresi
-     YOK). Anon `db` (public_read). BİREBİR select. */
+  /* ALL id/title/slug — order YOK. Manual reservation "ekle" sayfası villa
+     dropdown'ı. 🐛 FIX: çöp kutusundaki (deleted_at != null) villalar seçim
+     listesinde görünmemeli → `.is("deleted_at", null)`. is_active filtresi
+     YOK (pasif villalar seçilebilir kalır — davranış korunur). Anon `db`. */
   async findAllIdTitleSlug() {
-    return await db.from("villa").select("id, title, slug");
+    return await db
+      .from("villa")
+      .select("id, title, slug")
+      .is("deleted_at", null);
   },
 
   /* SLUG BY ID — admin galeri sayfası (storage human-readable folder).
