@@ -50,6 +50,8 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 
 /* 🛡️ Central helper (manual UTC→Istanbul math, Intl-bypass-proof). */
 import { formatDateTimeTr } from "@/lib/date-format";
+/* 🐛 FIX — /maki-admin/villas aramasıyla aynı Türkçe-tolerant normalize. */
+import { normalizeSearchText } from "@/lib/search";
 
 function formatDateTime(value?: string) {
   return formatDateTimeTr(value);
@@ -116,7 +118,7 @@ export default function SystemLogsPage() {
 
   /* ----- FILTERED ----- */
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalizeSearchText(search);
     return logs.filter((l) => {
       // status filter
       if (filter === "sent" && l.status !== "sent") return false;
@@ -132,10 +134,10 @@ export default function SystemLogsPage() {
       }
       if (!q) return true;
       return (
-        (l.recipient || "").toLowerCase().includes(q) ||
-        (l.subject || "").toLowerCase().includes(q) ||
-        (l.mail_type || "").toLowerCase().includes(q) ||
-        (l.error_message || "").toLowerCase().includes(q)
+        normalizeSearchText(l.recipient || "").includes(q) ||
+        normalizeSearchText(l.subject || "").includes(q) ||
+        normalizeSearchText(l.mail_type || "").includes(q) ||
+        normalizeSearchText(l.error_message || "").includes(q)
       );
     });
   }, [logs, filter, search]);

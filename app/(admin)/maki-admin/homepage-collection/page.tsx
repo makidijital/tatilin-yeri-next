@@ -47,6 +47,8 @@ import {
   type HomepageCollectionItem,
 } from "@/app/services/homepage-collection.service";
 import { revalidateHomepage } from "@/app/services/revalidate.actions";
+/* 🐛 FIX — /maki-admin/villas aramasıyla aynı Türkçe-tolerant normalize. */
+import { normalizeSearchText } from "@/lib/search";
 
 /* ===============================================================
    🛡️ HOMEPAGE COLLECTION ADMIN — manuel curasyon UI
@@ -129,9 +131,9 @@ export default function HomepageCollectionPage() {
         .filter((v) =>
           search.trim().length === 0
             ? true
-            : (v.title || "")
-                .toLowerCase()
-                .includes(search.trim().toLowerCase())
+            : normalizeSearchText(v.title || "").includes(
+                normalizeSearchText(search)
+              )
         ),
     [allVillas, usedVillaIds, search]
   );

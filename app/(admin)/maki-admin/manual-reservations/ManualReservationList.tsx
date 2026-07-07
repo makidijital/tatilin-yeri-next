@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { deleteManualReservation } from "@/app/services/manualReservation.service";
+/* 🐛 FIX — Türkçe-tolerant arama; /maki-admin/villas + VillaCombobox ile
+   birebir aynı helper (yeni algoritma/helper YOK). */
+import { normalizeSearchText } from "@/lib/search";
 import {
   Calendar,
   Trash2,
@@ -95,21 +98,21 @@ export default function ManualReservationList({ initialData }: any) {
      ileride eklenirse otomatik kapsanır; yoksa boş string → no-op). */
   const [search, setSearch] = useState<string>("");
   const visibleItems = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalizeSearchText(search);
     if (!q) return data;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (data as any[]).filter((it) => {
-      const haystack = (
+      const haystack = normalizeSearchText(
         (it?.villa?.title || "") +
-        " " +
-        (it?.id || "") +
-        " " +
-        (it?.note || "") +
-        " " +
-        (it?.name || "") +
-        " " +
-        (it?.phone || "")
-      ).toLowerCase();
+          " " +
+          (it?.id || "") +
+          " " +
+          (it?.note || "") +
+          " " +
+          (it?.name || "") +
+          " " +
+          (it?.phone || "")
+      );
       return haystack.includes(q);
     });
   }, [data, search]);

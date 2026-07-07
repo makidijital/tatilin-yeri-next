@@ -46,6 +46,8 @@ import { logActivity } from "@/lib/activity-log.client";
 
 /* 🛡️ Central helper (manual UTC→Istanbul math, Intl-bypass-proof). */
 import { formatDateTimeTr } from "@/lib/date-format";
+/* 🐛 FIX — /maki-admin/villas aramasıyla aynı Türkçe-tolerant normalize. */
+import { normalizeSearchText } from "@/lib/search";
 
 function formatDateTime(value?: string | null) {
   return formatDateTimeTr(value);
@@ -110,14 +112,14 @@ export default function AdminUsersPage() {
 
   /* ---------------- FILTER ---------------- */
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalizeSearchText(search);
     return users.filter((u) => {
       if (statusFilter === "active" && !u.is_active) return false;
       if (statusFilter === "inactive" && u.is_active) return false;
       if (!q) return true;
       return (
-        (u.full_name || "").toLowerCase().includes(q) ||
-        (u.email || "").toLowerCase().includes(q)
+        normalizeSearchText(u.full_name || "").includes(q) ||
+        normalizeSearchText(u.email || "").includes(q)
       );
     });
   }, [users, search, statusFilter]);

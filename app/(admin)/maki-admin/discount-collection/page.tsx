@@ -44,6 +44,8 @@ import {
   type DiscountCollectionItem,
 } from "@/app/services/discount-collection.service";
 import { revalidateDiscount } from "@/app/services/revalidate.actions";
+/* 🐛 FIX — /maki-admin/villas aramasıyla aynı Türkçe-tolerant normalize. */
+import { normalizeSearchText } from "@/lib/search";
 
 /* ===============================================================
    🛡️ DISCOUNT COLLECTION ADMIN — "İndirimli Koleksiyon" curasyon UI
@@ -114,9 +116,9 @@ export default function DiscountCollectionPage() {
         .filter((v) =>
           search.trim().length === 0
             ? true
-            : (v.title || "")
-                .toLowerCase()
-                .includes(search.trim().toLowerCase())
+            : normalizeSearchText(v.title || "").includes(
+                normalizeSearchText(search)
+              )
         ),
     [allVillas, usedVillaIds, search]
   );

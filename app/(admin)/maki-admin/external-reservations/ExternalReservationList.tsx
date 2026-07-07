@@ -32,6 +32,8 @@ import { useNotify } from "@/app/components/admin/notifications/NotificationProv
 import AdminDateRangePicker from "@/app/components/admin/shared/AdminDateRangePicker";
 import { formatDateTr, formatDateTimeTr } from "@/lib/date-format";
 import { calculateNights } from "@/lib/price.engine";
+/* 🐛 FIX — /maki-admin/villas aramasıyla aynı Türkçe-tolerant normalize. */
+import { normalizeSearchText } from "@/lib/search";
 
 /* ===============================================================
    🛡️ FAZ 56G — iCAL REZERVASYONLARI ADMIN LIST
@@ -128,10 +130,10 @@ export default function ExternalReservationList() {
      external_uid (rezervasyon kodu), villa.slug.
      Boş aramada items birebir döner. */
   const visibleItems = useMemo(() => {
-    const q = clientSearch.trim().toLowerCase();
+    const q = normalizeSearchText(clientSearch);
     if (!q) return items;
     return items.filter((it) => {
-      const haystack = (
+      const haystack = normalizeSearchText(
         (it.summary || "") +
         " " +
         (it.villa?.title || "") +
@@ -139,7 +141,7 @@ export default function ExternalReservationList() {
         (it.villa?.slug || "") +
         " " +
         (it.external_uid || "")
-      ).toLowerCase();
+      );
       return haystack.includes(q);
     });
   }, [items, clientSearch]);

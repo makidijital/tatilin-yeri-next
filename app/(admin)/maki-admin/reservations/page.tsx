@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { logActivity } from "@/lib/activity-log.client";
+/* 🐛 FIX — /maki-admin/villas aramasıyla aynı Türkçe-tolerant normalize. */
+import { normalizeSearchText } from "@/lib/search";
 import {
   Plus,
   Trash2,
@@ -392,11 +394,11 @@ export default function AdminReservationsPage() {
   const filtered = !search.trim()
     ? data
     : data.filter((r: any) => {
-        const q = search.trim().toLowerCase();
+        const q = normalizeSearchText(search);
         return (
-          (r.name || "").toLowerCase().includes(q) ||
-          (r.phone || "").toLowerCase().includes(q) ||
-          (r.villa?.title || "").toLowerCase().includes(q)
+          normalizeSearchText(r.name || "").includes(q) ||
+          normalizeSearchText(r.phone || "").includes(q) ||
+          normalizeSearchText(r.villa?.title || "").includes(q)
         );
       });
 
