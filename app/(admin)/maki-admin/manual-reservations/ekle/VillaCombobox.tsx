@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Search, X, Check } from "lucide-react";
+/* 🐛 FIX — /maki-admin/villas aramasıyla BİREBİR aynı Türkçe-tolerant
+   normalizasyon. Aynı helper (lib/search) hem sunucu villa aramasında
+   (buildVillaSearchOrClause) hem villa-listesi client filtresinde kullanılıyor. */
+import { normalizeSearchText } from "@/lib/search";
 
 /* ===============================================================
    🛡️ VillaCombobox — searchable villa picker
@@ -63,16 +67,15 @@ export default function VillaCombobox({
     [villas, value]
   );
 
-  /* Filtreli liste — title + slug lowercase includes. */
+  /* Filtreli liste — title + slug, Türkçe-tolerant normalize includes
+     (/maki-admin/villas ile birebir aynı: normalizeSearchText). */
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = normalizeSearchText(query);
     if (!q) return villas;
     return villas.filter((v) => {
-      const haystack = (
-        (v.title || "") +
-        " " +
-        (v.slug || "")
-      ).toLowerCase();
+      const haystack = normalizeSearchText(
+        (v.title || "") + " " + (v.slug || "")
+      );
       return haystack.includes(q);
     });
   }, [villas, query]);
