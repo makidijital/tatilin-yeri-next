@@ -29,8 +29,10 @@ import {
    bazıları büyükse: valid'ler devam eder, büyükler skip, kullanıcıya
    hangileri olduğu liste halinde söylenir.
 =============================================================== */
-const MAX_UPLOAD_FILE_SIZE_BYTES = 8 * 1024 * 1024; // 8 MB
-const MAX_UPLOAD_FILE_SIZE_LABEL = "8 MB";
+const MAX_UPLOAD_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+const MAX_UPLOAD_FILE_SIZE_LABEL = "2 MB";
+/* 🛡️ BATCH COUNT CAP — tek seferde en fazla görsel adedi. */
+const MAX_UPLOAD_BATCH_COUNT = 50;
 import {
   updateImageOrder,
   setCoverImage,
@@ -283,7 +285,19 @@ export default function AdminGallery({
        filter'lar; ek mime guard eklemiyoruz (admin trust + browser
        filter yeterli; sunucu tarafı Supabase upload'ı `image/webp`
        contentType ile zorlar). */
-    const allFiles = Array.from(files);
+    const selectedFiles = Array.from(files);
+
+    /* 🛡️ BATCH COUNT LIMIT — tek seferde en fazla 50 görsel kabul edilir.
+       Fazladan seçilen dosyalar upload kuyruğuna EKLENMEZ; ilk 50 işlenir,
+       kalan sayısı kullanıcıya bildirilir (mevcut alert UX pattern'i). */
+    if (selectedFiles.length > MAX_UPLOAD_BATCH_COUNT) {
+      const skippedCount = selectedFiles.length - MAX_UPLOAD_BATCH_COUNT;
+      alert(
+        `Tek seferde en fazla ${MAX_UPLOAD_BATCH_COUNT} görsel yükleyebilirsiniz.\n\n` +
+          `Fazladan seçilen ${skippedCount} dosya yüklenmedi.`
+      );
+    }
+    const allFiles = selectedFiles.slice(0, MAX_UPLOAD_BATCH_COUNT);
     const validFiles: File[] = [];
     const oversizedFiles: string[] = [];
 
