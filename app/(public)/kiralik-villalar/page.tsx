@@ -240,16 +240,8 @@ export default async function KiralikVillalarPage({ searchParams }: PageProps) {
             { name: "Ana sayfa", href: "/" },
             { name: "Kiralık Villalar" },
           ]}
-          eyebrow="Akdeniz Collection"
-          title={
-            <>
-              Kiralık villalar.{" "}
-              <span className="text-[var(--color-stone-400)]">
-                Tek bir koleksiyon.
-              </span>
-            </>
-          }
-          description="Özel havuz, deniz manzarası ve butik konfor. Akdeniz'in seçkin köşelerinde, her detayı sessizce tasarlanmış kiralık villaların tam listesi."
+          eyebrow="Tüm Villalar"
+          title="Kiralık Villalar"
           stat={{ value: totalCount, label: "Aktif Villa" }}
         />
 
