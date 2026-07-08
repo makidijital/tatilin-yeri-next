@@ -32,7 +32,7 @@ import {
 const MAX_UPLOAD_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 const MAX_UPLOAD_FILE_SIZE_LABEL = "2 MB";
 /* 🛡️ BATCH COUNT CAP — tek seferde en fazla görsel adedi. */
-const MAX_UPLOAD_BATCH_COUNT = 50;
+const MAX_UPLOAD_BATCH_COUNT = 80;
 import {
   updateImageOrder,
   setCoverImage,
