@@ -36,7 +36,10 @@ import ContactForm from "./ContactForm";
    Schema.org Organization sameAs[]: instagram/facebook/youtube/
    tiktok URL'lerinden derlenir (boşlar filter edilir).
 
-   Premium editorial layout DOKUNULMADI (hero, map, FAQ, CTA strip).
+   UI: yalnız tasarım katmanı yenilendi (glass form + dekoratif
+   gradient blur + hover-animasyonlu kartlar). Business logic,
+   generateMetadata, JSON-LD, getCachedSettings, form submit akışı
+   ve harita iframe mantığı DEĞİŞMEDİ.
    =============================================================== */
 
 const PAGE_PATH = "/iletisim";
@@ -90,31 +93,31 @@ export default async function ContactPage() {
   const contactRows: Row[] = (
     [
       phone && {
-        icon: <Phone size={16} />,
+        icon: <Phone size={17} />,
         label: "Telefon",
         value: phone,
         href: `tel:${phone.replace(/\s/g, "")}`,
       },
       whatsappLink && {
-        icon: <MessageCircle size={16} />,
+        icon: <MessageCircle size={17} />,
         label: "WhatsApp",
         value: phone || whatsappLink,
         href: whatsappLink,
         external: true,
       },
       email && {
-        icon: <Mail size={16} />,
+        icon: <Mail size={17} />,
         label: "E-posta",
         value: email,
         href: `mailto:${email}`,
       },
       businessHours && {
-        icon: <Clock size={16} />,
+        icon: <Clock size={17} />,
         label: "Çalışma Saatleri",
         value: businessHours,
       },
       address && {
-        icon: <MapPin size={16} />,
+        icon: <MapPin size={17} />,
         label: "Lokasyon",
         value: address,
       },
@@ -125,28 +128,28 @@ export default async function ContactPage() {
   const socialRows: Row[] = (
     [
       instagram && {
-        icon: <AtSign size={16} />,
+        icon: <AtSign size={17} />,
         label: "Instagram",
         value: extractHandle(instagram) || instagram,
         href: instagram,
         external: true,
       },
       facebook && {
-        icon: <Globe size={16} />,
+        icon: <Globe size={17} />,
         label: "Facebook",
         value: extractHandle(facebook) || facebook,
         href: facebook,
         external: true,
       },
       youtube && {
-        icon: <Tv size={16} />,
+        icon: <Tv size={17} />,
         label: "YouTube",
         value: extractHandle(youtube) || youtube,
         href: youtube,
         external: true,
       },
       tiktok && {
-        icon: <Music2 size={16} />,
+        icon: <Music2 size={17} />,
         label: "TikTok",
         value: extractHandle(tiktok) || tiktok,
         href: tiktok,
@@ -184,72 +187,93 @@ export default async function ContactPage() {
       <PageHero
         breadcrumb={[{ name: "Ana sayfa", href: "/" }, { name: "İletişim" }]}
         eyebrow="İletişim"
-        title={
-          <>
-            Bizimle{" "}
-            <span className="text-[var(--color-stone-400)]">
-              iletişime geçin.
-            </span>
-          </>
-        }
-        description="Akdeniz villalarımız, özel tarihler veya kişiye özel koleksiyon talepleriniz için bir mesaj bırakın — ekibimiz aynı gün içinde dönüş yapsın."
-        badge={{
-          eyebrow: "Destek",
-          lines: ["Aynı Gün Geri Dönüş", "7/24 Destek"],
-        }}
+        title="İletişim & Destek"
+        description="Sorularınız, görüşleriniz veya rezervasyon talepleriniz için bize ulaşın. Size en kısa sürede yardımcı olmaktan memnuniyet duyarız."
       />
 
-      {/* CONTACT GRID */}
-      <section className="px-5 md:px-10 lg:px-16 pt-12 md:pt-16 pb-24 md:pb-32">
-        <div className="max-w-[1280px] mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-            <aside className="lg:col-span-5 space-y-2">
-              {hasContactRows && (
-                <>
-                  <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)] mb-6">
-                    <span className="inline-block w-6 h-px bg-[var(--color-stone-300)] align-middle mr-2" />
-                    Doğrudan ulaşın
-                  </p>
-                  {contactRows.map((r, i) => (
-                    <InfoRow key={`c-${i}`} {...r} />
-                  ))}
-                </>
-              )}
+      {/* ============================================================
+          CONTACT EXPERIENCE — dekoratif gradient + glass form
+      ============================================================ */}
+      <div className="relative overflow-hidden bg-gradient-to-b from-white via-[var(--color-sand-50)]/40 to-white">
+        {/* DECOR — hafif gradient blur küreler (pointer-events yok) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0"
+        >
+          <div className="absolute -top-40 -right-24 w-[560px] h-[560px] rounded-full bg-[var(--brand-coral)]/10 blur-[130px]" />
+          <div className="absolute top-1/3 -left-44 w-[520px] h-[520px] rounded-full bg-[var(--color-champagne-500)]/15 blur-[130px]" />
+          <div className="absolute bottom-10 right-1/4 w-[440px] h-[440px] rounded-full bg-[var(--color-sand-100)]/60 blur-[110px]" />
+        </div>
 
-              {/* SOSYAL MEDYA — sadece en az 1 link varsa */}
-              {hasSocialRows && (
-                <>
-                  <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)] mt-10 mb-6">
-                    <span className="inline-block w-6 h-px bg-[var(--color-stone-300)] align-middle mr-2" />
-                    Sosyal Medya
-                  </p>
-                  {socialRows.map((r, i) => (
-                    <InfoRow key={`s-${i}`} {...r} />
-                  ))}
-                </>
-              )}
-            </aside>
+        <div className="relative z-10">
 
-            {/* FORM */}
-            <div className="lg:col-span-7">
-              <div className="bg-white border border-[var(--color-stone-100)] rounded-3xl p-6 md:p-10 shadow-[0_8px_40px_-16px_rgb(27_26_23/0.12)]">
-                <div className="mb-6 md:mb-8">
-                  <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)]">
-                    <span className="inline-block w-6 h-px bg-[var(--color-stone-300)] align-middle mr-2" />
-                    Mesaj
-                  </p>
-                  <h2 className="font-display text-[28px] md:text-[36px] text-[var(--color-stone-900)] mt-4 leading-[1.1] tracking-[-0.025em]">
-                    Bir not bırakın.
-                  </h2>
+          {/* GRID — sol iletişim/sosyal, sağ glass form */}
+          <section className="px-5 md:px-10 lg:px-16 pt-12 md:pt-16 pb-24 md:pb-32">
+            <div className="max-w-[1280px] mx-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+                {/* LEFT — bilgi + sosyal kartlar */}
+                <aside className="lg:col-span-5 space-y-8">
+                  {hasContactRows && (
+                    <div>
+                      <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)] mb-5">
+                        <span className="inline-block w-6 h-px bg-[var(--color-stone-300)] align-middle mr-2" />
+                        Doğrudan ulaşın
+                      </p>
+                      <div className="space-y-3">
+                        {contactRows.map((r, i) => (
+                          <InfoRow key={`c-${i}`} {...r} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {hasSocialRows && (
+                    <div>
+                      <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)] mb-5">
+                        <span className="inline-block w-6 h-px bg-[var(--color-stone-300)] align-middle mr-2" />
+                        Sosyal Medya
+                      </p>
+                      <div className="space-y-3">
+                        {socialRows.map((r, i) => (
+                          <InfoRow key={`s-${i}`} {...r} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </aside>
+
+                {/* RIGHT — glass form kartı */}
+                <div className="lg:col-span-7">
+                  <div className="relative rounded-[28px] border border-white/70 bg-white/60 backdrop-blur-xl shadow-[0_28px_80px_-32px_rgba(27,26,23,0.28)] p-6 md:p-10">
+                    {/* iç parıltı */}
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent"
+                    />
+                    <div className="mb-7 md:mb-9">
+                      <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-champagne-700)]">
+                        <span className="inline-block w-6 h-px bg-[var(--color-champagne-500)]/60 align-middle mr-2" />
+                        Mesaj
+                      </p>
+                      <h2 className="font-display text-[28px] md:text-[38px] text-[var(--color-stone-900)] mt-4 leading-[1.08] tracking-[-0.025em]">
+                        Bir not bırakın.
+                      </h2>
+                      <p className="text-[14px] text-[var(--color-stone-500)] mt-3 leading-relaxed">
+                        Formu doldurun; en kısa sürede size dönelim.
+                      </p>
+                    </div>
+                    <ContactForm />
+                  </div>
                 </div>
-                <ContactForm />
               </div>
             </div>
-          </div>
+          </section>
         </div>
-      </section>
+      </div>
 
-      {/* MAP */}
+      {/* ============================================================
+          MAP — modern container
+      ============================================================ */}
       <section className="px-5 md:px-10 lg:px-16 pb-24 md:pb-32">
         <div className="max-w-[1280px] mx-auto">
           <div className="flex items-end justify-between gap-6 mb-8 md:mb-12">
@@ -258,53 +282,58 @@ export default async function ContactPage() {
                 <span className="inline-block w-6 h-px bg-[var(--color-stone-300)] align-middle mr-2" />
                 Harita
               </p>
-              <h2 className="font-display text-[28px] md:text-[40px] lg:text-[48px] text-[var(--color-stone-900)] mt-4 leading-[1.05] tracking-[-0.02em]">
+              <h2 className="font-display text-[28px] md:text-[42px] lg:text-[50px] text-[var(--color-stone-900)] mt-4 leading-[1.05] tracking-[-0.02em]">
                 Akdeniz koylarında.
               </h2>
             </div>
           </div>
-          <div className="relative aspect-[16/10] md:aspect-[21/9] rounded-3xl overflow-hidden border border-[var(--color-stone-100)] bg-[var(--color-sand-50)]">
-            <iframe
-              title="Lokasyon haritası"
-              src={
-                address
-                  ? `https://www.google.com/maps?q=${encodeURIComponent(address)}&z=11&output=embed`
-                  : "https://www.google.com/maps?q=Kalkan%2C+Kas%2C+Antalya&z=11&output=embed"
-              }
-              className="absolute inset-0 w-full h-full"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              allowFullScreen
-            />
+          <div className="relative rounded-[28px] p-1.5 bg-gradient-to-br from-[var(--color-sand-100)] via-white to-[var(--color-sand-50)] border border-[var(--color-stone-100)] shadow-[0_28px_80px_-40px_rgba(27,26,23,0.3)]">
+            <div className="relative aspect-[16/10] md:aspect-[21/9] rounded-[22px] overflow-hidden bg-[var(--color-sand-50)]">
+              <iframe
+                title="Lokasyon haritası"
+                src={
+                  address
+                    ? `https://www.google.com/maps?q=${encodeURIComponent(address)}&z=11&output=embed`
+                    : "https://www.google.com/maps?q=Kalkan%2C+Kas%2C+Antalya&z=11&output=embed"
+                }
+                className="absolute inset-0 w-full h-full"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* MINI FAQ */}
+      {/* ============================================================
+          FAQ — yeniden tasarım (numaralı premium kartlar)
+      ============================================================ */}
       <section className="px-5 md:px-10 lg:px-16 pb-24 md:pb-32">
         <div className="max-w-[1280px] mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12 md:mb-16">
-            <div>
-              <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)]">
-                <span className="inline-block w-6 h-px bg-[var(--color-stone-300)] align-middle mr-2" />
-                Sık Sorulanlar
-              </p>
-              <h2 className="font-display text-[32px] md:text-[48px] lg:text-[56px] text-[var(--color-stone-900)] mt-6 leading-[1.02] tracking-[-0.025em] max-w-xl">
-                Yanıtlar, sade.
-              </h2>
-            </div>
+          <div className="mb-12 md:mb-16">
+            <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)]">
+              <span className="inline-block w-6 h-px bg-[var(--color-stone-300)] align-middle mr-2" />
+              Sık Sorulanlar
+            </p>
+            <h2 className="font-display text-[32px] md:text-[48px] lg:text-[54px] text-[var(--color-stone-900)] mt-6 leading-[1.03] tracking-[-0.025em] max-w-xl">
+              Yanıtlar, sade.
+            </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 md:gap-x-12 gap-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
             <FaqBlock
+              index="01"
               q="Dönüş süreniz nedir?"
               a="Talepleriniz aynı gün içinde, en geç bir iş günü içinde yanıtlanır. Acil rezervasyonlar için WhatsApp önerilir."
             />
             <FaqBlock
+              index="02"
               q="Hangi tarihlerde gezebilirim?"
               a="Anasayfadaki villa kartlarından doğrudan tarih seçebilir; uygunluk takvimi ile boş dönemleri görebilirsiniz."
             />
             <FaqBlock
+              index="03"
               q="Özel taleplerim için kişiye özel teklif alabilir miyim?"
               a="Evet. Tarih, kişi sayısı ve beklenti detaylarınızı mesaj olarak iletin; küratörlüğümüzle koleksiyon önerisi hazırlarız."
             />
@@ -312,31 +341,38 @@ export default async function ContactPage() {
         </div>
       </section>
 
-      {/* CTA STRIP */}
+      {/* ============================================================
+          CTA — yeniden tasarım (premium koyu panel + coral aksan)
+      ============================================================ */}
       <section className="px-5 md:px-10 lg:px-16 pb-32 md:pb-44">
         <div className="max-w-[1100px] mx-auto">
-          <div className="rounded-3xl bg-gradient-to-br from-[var(--color-sand-100)] via-[var(--color-sand-50)] to-[var(--color-sand-100)] border border-[var(--color-stone-100)] px-8 md:px-14 py-14 md:py-20 text-center">
-            <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)]">
-              <span className="inline-block w-6 h-px bg-[var(--color-stone-300)] align-middle mr-2" />
-              Koleksiyon
-            </p>
-            <h2 className="font-display text-[32px] md:text-[56px] lg:text-[64px] text-[var(--color-stone-900)] mt-6 leading-[1.02] tracking-[-0.03em]">
-              Hayalinizdeki villayı
-              <br />
-              <span className="text-[var(--color-stone-400)]">
-                birlikte bulalım.
-              </span>
-            </h2>
-            <p className="text-[var(--color-stone-500)] mt-6 leading-relaxed max-w-xl mx-auto">
-              Akdeniz&apos;in seçkin villalarını keşfetmeye buradan başlayın.
-            </p>
-            <div className="mt-10">
-              <Link
-                href="/arama"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[var(--color-stone-900)] text-white text-[13.5px] font-medium tracking-[0.04em] hover:bg-[var(--color-stone-700)] transition-colors"
-              >
-                Tüm villaları gör <ArrowUpRight size={14} />
-              </Link>
+          <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-[#0B1F3A] to-[#132A46] px-8 md:px-16 py-16 md:py-24 text-center shadow-[0_40px_100px_-40px_rgba(11,31,58,0.6)]">
+            {/* dekoratif coral glow */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[520px] h-[320px] rounded-full bg-[var(--brand-coral)]/20 blur-[120px]"
+            />
+            <div className="relative">
+              <p className="inline-flex items-center gap-2 text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--brand-coral)]">
+                <span className="inline-block w-6 h-px bg-[var(--brand-coral)]/60" />
+                Koleksiyon
+              </p>
+              <h2 className="font-display text-[32px] md:text-[54px] lg:text-[60px] text-white mt-6 leading-[1.03] tracking-[-0.03em]">
+                Hayalinizdeki villayı
+                <br />
+                <span className="text-white/50">birlikte bulalım.</span>
+              </h2>
+              <p className="text-white/70 mt-6 leading-relaxed max-w-xl mx-auto">
+                Akdeniz&apos;in seçkin villalarını keşfetmeye buradan başlayın.
+              </p>
+              <div className="mt-10">
+                <Link
+                  href="/arama"
+                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-white text-[var(--color-stone-900)] text-[13.5px] font-medium tracking-[0.04em] hover:bg-white/90 transition-colors shadow-[0_18px_40px_-18px_rgba(0,0,0,0.5)]"
+                >
+                  Tüm villaları gör <ArrowUpRight size={14} />
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -346,7 +382,7 @@ export default async function ContactPage() {
 }
 
 /* ===============================================================
-   InfoRow — info panel item (icon + label + value + opt link)
+   InfoRow — hover-animasyonlu iletişim/sosyal kartı
 =============================================================== */
 function InfoRow({
   icon,
@@ -375,27 +411,27 @@ function InfoRow({
     <Wrapper
       {...linkProps}
       className={
-        "flex items-start gap-4 py-5 border-t border-[var(--color-stone-100)] first:border-t-0 group " +
+        "group relative flex items-center gap-4 rounded-2xl border border-[var(--color-stone-100)] bg-white/70 backdrop-blur-sm px-4 py-4 transition-all duration-300 motion-reduce:transition-none " +
         (isLink
-          ? "hover:bg-[var(--color-sand-50)]/50 -mx-2 px-2 rounded-xl transition-colors"
+          ? "hover:-translate-y-0.5 hover:border-[var(--color-champagne-500)]/40 hover:shadow-[0_18px_44px_-22px_rgba(27,26,23,0.28)] hover:bg-white"
           : "")
       }
     >
-      <span className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-full bg-[var(--color-sand-100)] text-[var(--color-champagne-700)] mt-0.5">
+      <span className="shrink-0 inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-br from-[var(--color-sand-100)] to-white ring-1 ring-[var(--color-stone-100)] text-[var(--color-champagne-700)] transition-colors duration-300 group-hover:from-[var(--brand-coral)] group-hover:to-[var(--brand-coral-deep)] group-hover:text-white group-hover:ring-transparent">
         {icon}
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[10.5px] tracking-[0.22em] uppercase font-medium text-[var(--color-stone-500)]">
           {label}
         </p>
-        <p className="text-[15px] md:text-[15.5px] text-[var(--color-stone-900)] mt-1.5 leading-[1.45] break-words whitespace-pre-line">
+        <p className="text-[15px] md:text-[15.5px] text-[var(--color-stone-900)] mt-1 leading-[1.4] break-words whitespace-pre-line">
           {value}
         </p>
       </div>
       {isLink ? (
         <span
           aria-hidden="true"
-          className="shrink-0 mt-1 inline-flex items-center justify-center w-7 h-7 rounded-full border border-[var(--color-stone-200)] text-[var(--color-stone-500)] group-hover:border-[var(--color-champagne-500)] group-hover:text-[var(--color-champagne-700)] transition-colors"
+          className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full border border-[var(--color-stone-200)] text-[var(--color-stone-400)] transition-all duration-300 group-hover:border-[var(--color-champagne-500)] group-hover:text-[var(--color-champagne-700)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
         >
           <ArrowUpRight size={13} />
         </span>
@@ -404,16 +440,25 @@ function InfoRow({
   );
 }
 
-function FaqBlock({ q, a }: { q: string; a: string }) {
+/* FAQ — numaralı premium kart */
+function FaqBlock({
+  index,
+  q,
+  a,
+}: {
+  index: string;
+  q: string;
+  a: string;
+}) {
   return (
-    <div>
-      <p className="text-[11px] tracking-[0.18em] uppercase font-medium text-[var(--color-champagne-700)]">
-        Soru
-      </p>
-      <h3 className="font-display text-[20px] md:text-[22px] text-[var(--color-stone-900)] mt-3 leading-[1.25] tracking-[-0.01em]">
+    <div className="group rounded-3xl border border-[var(--color-stone-100)] bg-white/70 backdrop-blur-sm p-6 md:p-7 transition-all duration-300 motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-[0_22px_50px_-26px_rgba(27,26,23,0.25)] hover:border-[var(--color-champagne-500)]/30">
+      <span className="font-display text-[15px] text-[var(--color-champagne-700)] tabular-nums">
+        {index}
+      </span>
+      <h3 className="font-display text-[19px] md:text-[21px] text-[var(--color-stone-900)] mt-3 leading-[1.25] tracking-[-0.01em]">
         {q}
       </h3>
-      <p className="text-[14.5px] md:text-[15px] leading-[1.7] text-[var(--color-stone-500)] mt-4">
+      <p className="text-[14px] md:text-[14.5px] leading-[1.7] text-[var(--color-stone-500)] mt-4">
         {a}
       </p>
     </div>

@@ -99,6 +99,9 @@ export default function SettingsGeneralPage() {
   );
   const [heroBadge, setHeroBadge] = useState("");
 
+  // PageHero (iç sayfa) arka planı — mig 067
+  const [pageHeroBg, setPageHeroBg] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -136,6 +139,7 @@ export default function SettingsGeneralPage() {
       setHeroSecondaryText(s.hero_secondary_cta_text || HERO_CTA_DEFAULTS.secondary.text);
       setHeroSecondaryHref(s.hero_secondary_cta_href || HERO_CTA_DEFAULTS.secondary.href);
       setHeroBadge(s.hero_badge_text || "");
+      setPageHeroBg(s.page_hero_background_image || null);
       setLoading(false);
     });
     return () => {
@@ -172,6 +176,7 @@ export default function SettingsGeneralPage() {
       hero_secondary_cta_text: heroSecondaryText.trim() || null,
       hero_secondary_cta_href: heroSecondaryHref.trim() || null,
       hero_badge_text: heroBadge.trim() || null,
+      page_hero_background_image: pageHeroBg,
     });
     setSaving(false);
     if (!ok) {
@@ -427,6 +432,26 @@ export default function SettingsGeneralPage() {
               disabled={loading || !heroEnabled}
             />
           </div>
+        </SettingsSection>
+
+        {/* İÇ SAYFA — PageHero arka planı (mig 067) */}
+        <SettingsSection
+          title="İç Sayfa Başlık Arka Planı (PageHero)"
+          description="Tüm iç sayfaların üst başlık bandında (PageHero) kullanılan tek ortak arka plan görseli. Güçlü beyaz/sand overlay, hafif blur ve gradient altında doku olarak gösterilir; başlık okunabilirliği her zaman korunur."
+        >
+          <UploadField
+            label="PageHero arka plan görseli"
+            currentUrl={pageHeroBg}
+            onChange={setPageHeroBg}
+            folder="hero"
+            slug="page-hero"
+            version={updatedAt}
+            disabled={loading}
+            hint="Bu görsel tüm iç sayfalarda kullanılan PageHero arka planıdır."
+          />
+          <p className="-mt-3 text-[11.5px] text-[var(--color-stone-400)]">
+            Önerilen boyut: 1920 × 640 px
+          </p>
         </SettingsSection>
 
         <div className="flex justify-end pt-2">

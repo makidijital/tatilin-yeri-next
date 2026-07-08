@@ -56,6 +56,12 @@ export type Settings = {
   hero_secondary_cta_href?: string | null;
   hero_badge_text?: string | null;
 
+  /* 🛡️ PAGE HERO ARKA PLAN (mig 067) — tüm public iç sayfaların PageHero
+     bandında kullanılan tek ortak arka plan görseli (site-assets relative
+     path). Güçlü beyaz/sand overlay + blur + gradient altında DOKU olarak
+     kullanılır. NULL → görsel yok. get_public_settings() whitelist'inde. */
+  page_hero_background_image?: string | null;
+
   /* ===============================================================
      🛡️ EXTENDED SETTINGS (migration applied — kolonlar DB'de mevcut)
      ===============================================================

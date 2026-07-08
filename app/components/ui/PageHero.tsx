@@ -1,29 +1,24 @@
 import Link from "next/link";
 
+import { getCachedSettings } from "@/lib/cache.helpers";
+import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
+
 /* ===============================================================
-   🛡️ PageHero — kompakt editorial liste/koleksiyon giriş bandı
+   🛡️ PageHero — "YazVillam Signature" (from-scratch)
    ===============================================================
-   Kategori / Bölge / Koleksiyon / Listeleme ve diğer public liste
-   sayfalarının üst alanı. Premium, içerik odaklı, 2-kolonlu kompakt
-   band (Villanovo / Airbnb Luxe tonu).
+   Sitenin tüm iç sayfalarının ortak premium kimliği. Klasik hero
+   veya sol-yazı/sağ-kart DEĞİL: ortalanmış editorial masthead.
 
-   KORUNAN (caller'dan prop): breadcrumb, başlık, açıklama, SEO
-   (JSON-LD caller'da kalır — bu component yalnız görsel).
+   İMZA:
+     - Başlık sayfanın gerçek odak noktası (büyük, zarif tipografi).
+     - Breadcrumb üstte, çok zarif, ortalanmış.
+     - Kutu yok; stat/badge tasarımın içine doğal meta olarak gömülü.
+     - Büyük boşluklar; sıcak Akdeniz wash (görünmeyecek kadar hafif).
+     - Premium page header hissi — devasa hero değil.
 
-   FAZ 2 POLISH:
-     - Sağ stat artık kompakt, premium "kart" (ince beyaz yüzey,
-       layered border, küçük coral aksan çizgi, güçlü tipografi).
-     - Pills daha küçük/premium, daha fazla nefes alanı.
-     - Başlık ↔ açıklama hiyerarşisi güçlendirildi (başlık daha
-       kuvvetli, açıklama daha sakin/açık ton).
-     - Çok ince grain texture (SVG feTurbulence, düşük opaklık) —
-       gradient show / neon / glassmorphism YOK.
-     - Hero → içerik geçişi yumuşatıldı (alt kenarda nazik fade).
-     - max-width editorial seviyeye çekildi (1400px).
-     - Yükseklik ARTIRILMADI — kompakt yapı korundu.
-
-   Mobilde dikey akış (breadcrumb → pills → başlık → açıklama →
-   stat). CTA/arama/form YOK.
+   KORUNAN (API — DEĞİŞMEZ): breadcrumb, eyebrow, title, description,
+   pills, stat, badge. stat öncelikli; badge yalnız stat yokken.
+   SEO/JSON-LD caller'da kalır — bu component yalnız görsel.
 =============================================================== */
 
 type Crumb = { name: string; href?: string };
@@ -39,14 +34,14 @@ type Props = {
   description?: string;
   /** Premium pill etiketleri (kategori/bölge/koleksiyon, filtreler). */
   pills?: string[];
-  /** Sağ üst istatistik rozeti (villa sayısı vb.) — listeleme/kategori/bölge. */
+  /** Sağ istatistik (villa sayısı vb.) — listeleme/kategori/bölge. */
   stat?: { value: string | number; label: string };
-  /** Sağ üst içerik rozeti (kurumsal/iletişim/hakkımızda marka kartı).
+  /** İçerik rozeti (kurumsal/iletişim/hakkımızda).
       stat varsa stat öncelikli; badge yalnız stat yoksa render edilir. */
   badge?: { eyebrow?: string; lines: string[] };
 };
 
-export default function PageHero({
+export default async function PageHero({
   breadcrumb,
   eyebrow,
   title,
@@ -56,189 +51,224 @@ export default function PageHero({
   badge,
 }: Props) {
   const hasBadge = !stat && !!badge && badge.lines.length > 0;
+  const hasAside = !!stat || hasBadge;
+
+  /* İç sayfa ortak arka plan görseli (settings singleton, mig 067).
+     ASLA çıplak gösterilmez: her zaman güçlü beyaz/sand overlay + hafif
+     blur + gradient altında DOKU olarak. Kolon/RPC yoksa null → yalnız
+     mevcut whisper wash kalır. updated_at ile cache-bust. */
+  const settings = await getCachedSettings().catch(() => null);
+  const bgUrl = resolveAssetUrlVersioned(
+    settings?.page_hero_background_image,
+    settings?.updated_at
+  );
+
   return (
-    <section className="px-5 md:px-10 lg:px-16 pt-6 md:pt-8">
-      <div className="max-w-[1400px] mx-auto">
+    <section className="relative overflow-hidden px-5 md:px-10 lg:px-16 pt-12 md:pt-20 pb-6 md:pb-10">
+      {/* SICAK AKDENİZ WASH — görünmeyecek kadar hafif; içerik öne çıkar */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10"
+      >
+        {/* DOKU KATMANI — arka plan görseli ASLA çıplak değil: blur'lu,
+           opaklığı düşük görsel + üstünde güçlü beyaz/sand overlay.
+           Amaç premium doku hissi; foto göstermek değil. */}
+        {bgUrl && (
+          <>
+            {/* Dekoratif görsel — object-cover (hero yüksekliğine göre
+               otomatik crop, mobil/desktop aynı), asla pointer/etkileşim
+               almaz (parent + kendi guard'ları), absolute + w/h-full →
+               layout shift YOK, decor -z-10 içinde → metnin önüne geçmez. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={bgUrl}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              className="pointer-events-none select-none absolute inset-0 w-full h-full object-cover"
+              style={{
+                filter: "blur(7px)",
+                transform: "scale(1.06)",
+                opacity: 0.6,
+              }}
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(250,247,242,0.8) 52%, rgba(255,255,255,0.92) 100%)",
+              }}
+            />
+          </>
+        )}
         <div
-          className="
-            relative overflow-hidden isolate
-            rounded-3xl
-            ring-1 ring-inset ring-[#E7DDD2]
-            shadow-[0_1px_0_0_rgba(255,255,255,0.7)_inset,0_20px_60px_rgba(120,90,60,0.06)]
-            px-6 py-8 md:px-12 md:py-10
-            min-h-[180px] md:min-h-[200px]
-            flex flex-col md:flex-row md:items-center md:justify-between gap-8 md:gap-10
-          "
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(250,247,242,0.7) 0%, rgba(255,255,255,0) 62%)",
+          }}
+        />
+        <div
+          className="absolute -top-28 left-1/2 -translate-x-1/2 w-[720px] h-[420px] rounded-full"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(212,180,140,0.10) 0%, rgba(212,180,140,0) 70%)",
+            filter: "blur(70px)",
+          }}
+        />
+        <div
+          className="absolute top-8 right-[12%] w-[360px] h-[360px] rounded-full"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(255,107,74,0.06) 0%, rgba(255,107,74,0) 70%)",
+            filter: "blur(70px)",
+          }}
+        />
+        <div
+          className="absolute inset-0 opacity-[0.02] mix-blend-multiply"
           style={{
             backgroundImage:
-              "linear-gradient(135deg, #FAF8F5 0%, #F7F2EC 52%, #F3ECE4 100%)",
+              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E\")",
           }}
+        />
+      </div>
+
+      <div className="max-w-[900px] mx-auto text-center">
+        {/* BREADCRUMB — zarif, ortalanmış */}
+        <nav
+          aria-label="Breadcrumb"
+          className="flex items-center justify-center flex-wrap gap-x-3 gap-y-1 text-[12px] text-[var(--color-stone-400)]"
         >
-          {/* WARM GLOWS — fark edilmeyen sıcak derinlik (coral + beige) */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -top-24 -left-24 w-80 h-80 -z-10 rounded-full"
-            style={{
-              background: "rgba(255,107,74,0.06)",
-              filter: "blur(120px)",
-            }}
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -bottom-24 -right-24 w-96 h-96 -z-10 rounded-full"
-            style={{
-              background: "rgba(212,180,140,0.08)",
-              filter: "blur(130px)",
-            }}
-          />
-
-          {/* GRAIN TEXTURE — malzeme hissi; görünür doku değil (opaklık düşük) */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 -z-10 opacity-[0.35] mix-blend-multiply"
-            style={{
-              backgroundImage:
-                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E\")",
-            }}
-          />
-
-          {/* SOL — breadcrumb + pills + başlık + açıklama */}
-          <div className="min-w-0 max-w-2xl">
-            <nav
-              aria-label="Breadcrumb"
-              className="flex items-center flex-wrap gap-2 text-[11px] tracking-[0.14em] uppercase font-medium text-[var(--color-stone-500)]"
+          {breadcrumb.map((c, i) => (
+            <span
+              key={`${c.name}-${i}`}
+              className="inline-flex items-center gap-x-3"
             >
-              {breadcrumb.map((c, i) => (
-                <span key={`${c.name}-${i}`} className="inline-flex items-center gap-2">
-                  {i > 0 && (
-                    <span aria-hidden="true" className="text-[var(--color-stone-300)]">
-                      /
-                    </span>
-                  )}
-                  {c.href ? (
-                    <Link
-                      href={c.href}
-                      className="hover:text-[var(--color-stone-900)] transition-colors motion-reduce:transition-none"
-                    >
-                      {c.name}
-                    </Link>
-                  ) : (
-                    <span className="text-[var(--color-stone-900)]">{c.name}</span>
-                  )}
+              {i > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="text-[var(--color-stone-300)]"
+                >
+                  ·
                 </span>
-              ))}
-            </nav>
+              )}
+              {c.href ? (
+                <Link
+                  href={c.href}
+                  className="hover:text-[var(--color-stone-900)] transition-colors motion-reduce:transition-none"
+                >
+                  {c.name}
+                </Link>
+              ) : (
+                <span className="text-[var(--color-stone-600)] font-medium">
+                  {c.name}
+                </span>
+              )}
+            </span>
+          ))}
+        </nav>
 
-            {/* PILLS — kategori/bölge/koleksiyon etiketleri (küçük, premium) */}
-            {pills && pills.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 mt-5">
-                {pills.map((p, i) => (
-                  <span
-                    key={`${p}-${i}`}
-                    className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/80 ring-1 ring-inset ring-black/[0.06] text-[var(--color-stone-600)] text-[10.5px] tracking-[0.08em] uppercase font-medium tabular-nums shadow-[0_1px_2px_-1px_rgba(27,26,23,0.12)]"
-                  >
-                    {p}
-                  </span>
-                ))}
+        {/* SIGNATURE EYEBROW — iki yandan ince coral hairline */}
+        {eyebrow && (
+          <div className="flex items-center justify-center gap-3 mt-9 md:mt-12">
+            <span
+              aria-hidden="true"
+              className="w-7 h-px bg-[var(--brand-coral)]/40"
+            />
+            <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--brand-coral)]">
+              {eyebrow}
+            </p>
+            <span
+              aria-hidden="true"
+              className="w-7 h-px bg-[var(--brand-coral)]/40"
+            />
+          </div>
+        )}
+
+        {/* BAŞLIK — sayfanın odak noktası */}
+        <h1
+          className={
+            "font-display font-medium text-[var(--color-stone-900)] leading-[1.02] tracking-[-0.035em] text-[40px] md:text-[58px] lg:text-[66px] mx-auto max-w-3xl " +
+            (eyebrow ? "mt-6" : "mt-9 md:mt-12")
+          }
+        >
+          {title}
+        </h1>
+
+        {/* DESCRIPTION — sakin, dar kolon */}
+        {description && (
+          <p className="mt-6 md:mt-7 text-[15px] md:text-[16px] text-[var(--color-stone-500)] leading-[1.75] max-w-xl mx-auto">
+            {description}
+          </p>
+        )}
+
+        {/* PILLS — ortalanmış, minimal */}
+        {pills && pills.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-8">
+            {pills.map((p, i) => (
+              <span
+                key={`${p}-${i}`}
+                className="inline-flex items-center px-3 py-1 rounded-full bg-white/60 ring-1 ring-inset ring-black/[0.05] text-[var(--color-stone-600)] text-[11px] tracking-[0.04em] font-medium tabular-nums"
+              >
+                {p}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* STAT / BADGE — kutu yok; akışa gömülü doğal meta */}
+        {hasAside && (
+          <div className="mt-10 md:mt-14 flex justify-center">
+            {stat && (
+              <div className="inline-flex flex-col items-center">
+                <span
+                  aria-hidden="true"
+                  className="w-8 h-px bg-[var(--brand-coral)]/50 mb-5"
+                />
+                <span className="font-display font-medium text-[44px] md:text-[52px] leading-none tracking-[-0.035em] text-[var(--color-stone-900)] tabular-nums">
+                  {stat.value}
+                </span>
+                <span className="mt-3 text-[11px] tracking-[0.22em] uppercase font-medium text-[var(--color-stone-500)]">
+                  {stat.label}
+                </span>
               </div>
             )}
 
-            {eyebrow && (
-              <p className="text-[10.5px] tracking-[0.24em] uppercase font-medium text-[var(--brand-coral)] mt-5">
-                {eyebrow}
-              </p>
-            )}
-
-            <h1 className="font-display font-medium text-[32px] md:text-[40px] lg:text-[44px] text-[var(--color-stone-900)] leading-[1.04] tracking-[-0.03em] mt-2.5">
-              {title}
-            </h1>
-
-            {description && (
-              <p className="mt-4 text-[13.5px] md:text-[14.5px] text-[var(--color-stone-400)] leading-[1.7] max-w-lg">
-                {description}
-              </p>
-            )}
-          </div>
-
-          {/* SAĞ — kompakt premium kart (stat ya da içerik rozeti) */}
-          {(stat || hasBadge) && (
-            <div className="relative shrink-0">
-              {/* KART ARKASI GLOW — kart havada duruyor hissi (fark edilmez) */}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 -z-10 scale-125 rounded-full"
-                style={{
-                  background: "rgba(255,107,74,0.05)",
-                  filter: "blur(60px)",
-                }}
-              />
-
-              {/* STAT KARTI — listeleme/kategori/bölge (sayı) */}
-              {stat && (
-                <div
-                  className="
-                    relative inline-flex flex-col items-start md:items-end
-                    rounded-2xl bg-white/70
-                    ring-1 ring-inset ring-black/[0.06]
-                    shadow-[0_1px_0_0_rgba(255,255,255,0.7)_inset,0_12px_28px_-22px_rgba(27,26,23,0.28)]
-                    px-6 py-5 md:px-7 md:py-6
-                  "
-                >
-                  <span
-                    aria-hidden="true"
-                    className="absolute top-5 left-0 md:left-auto md:right-0 w-6 h-px bg-[var(--brand-coral)]/70"
-                  />
-                  <p className="font-display font-medium text-[40px] md:text-[48px] text-[var(--color-stone-900)] leading-none tracking-[-0.03em] tabular-nums">
-                    {stat.value}
+            {hasBadge && badge && (
+              <div className="inline-flex flex-col items-center">
+                <span
+                  aria-hidden="true"
+                  className="w-8 h-px bg-[var(--brand-coral)]/50 mb-5"
+                />
+                {badge.eyebrow && (
+                  <p className="text-[11px] tracking-[0.24em] uppercase font-medium text-[var(--brand-coral)] mb-3.5">
+                    {badge.eyebrow}
                   </p>
-                  <p className="mt-2.5 text-[11px] tracking-[0.14em] uppercase font-medium text-[var(--color-stone-500)]">
-                    {stat.label}
-                  </p>
-                </div>
-              )}
-
-              {/* İÇERİK ROZETİ — kurumsal/iletişim/hakkımızda (etiket + satırlar) */}
-              {hasBadge && badge && (
-                <div
-                  className="
-                    relative flex flex-col items-start md:items-end
-                    rounded-2xl bg-white/70
-                    ring-1 ring-inset ring-black/[0.06]
-                    shadow-[0_1px_0_0_rgba(255,255,255,0.7)_inset,0_12px_28px_-22px_rgba(27,26,23,0.28)]
-                    px-6 py-5 md:px-7 md:py-6
-                    min-w-[180px]
-                  "
-                >
-                  <span
-                    aria-hidden="true"
-                    className="absolute top-5 left-0 md:left-auto md:right-0 w-6 h-px bg-[var(--brand-coral)]/70"
-                  />
-                  {badge.eyebrow && (
-                    <p className="text-[10.5px] tracking-[0.22em] uppercase font-medium text-[var(--brand-coral)]">
-                      {badge.eyebrow}
-                    </p>
-                  )}
-                  <div className="mt-3 flex flex-col gap-2 md:items-end">
-                    {badge.lines.map((line, i) => (
-                      <span
-                        key={`${line}-${i}`}
-                        className="font-display text-[15.5px] md:text-[16px] text-[var(--color-stone-900)] leading-none tracking-[-0.01em]"
-                      >
+                )}
+                <div className="flex items-center flex-wrap justify-center gap-x-3 gap-y-1.5">
+                  {badge.lines.map((line, i) => (
+                    <span
+                      key={`${line}-${i}`}
+                      className="inline-flex items-center gap-x-3"
+                    >
+                      {i > 0 && (
+                        <span
+                          aria-hidden="true"
+                          className="text-[var(--color-stone-300)]"
+                        >
+                          ·
+                        </span>
+                      )}
+                      <span className="font-display text-[15.5px] md:text-[16.5px] text-[var(--color-stone-800)] tracking-[-0.01em]">
                         {line}
                       </span>
-                    ))}
-                  </div>
+                    </span>
+                  ))}
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* ALT FADE — banttan içeriğe yumuşak geçiş */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-10 -z-10 bg-gradient-to-b from-transparent to-black/[0.015]"
-          />
-        </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );

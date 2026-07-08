@@ -175,7 +175,7 @@ export default function ContactForm() {
         onChange={setEmail}
         disabled={disabled}
       />
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <label className="text-[11px] tracking-[0.18em] uppercase font-medium text-[var(--color-stone-500)] block">
           Mesajınız
         </label>
@@ -186,19 +186,19 @@ export default function ContactForm() {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           disabled={disabled}
-          className="w-full px-4 py-3 rounded-2xl border border-[var(--color-stone-200)] bg-white text-[15px] text-[var(--color-stone-900)] placeholder:text-[var(--color-stone-400)] focus:outline-none focus:border-[var(--color-champagne-500)] focus:ring-2 focus:ring-[var(--color-champagne-500)]/20 transition leading-relaxed resize-none disabled:opacity-60"
+          className="w-full px-4 py-3.5 rounded-2xl border border-[var(--color-stone-200)] bg-white/70 backdrop-blur-sm text-[15px] text-[var(--color-stone-900)] placeholder:text-[var(--color-stone-400)] focus:outline-none focus:border-[var(--color-champagne-500)] focus:ring-4 focus:ring-[var(--color-champagne-500)]/15 focus:bg-white transition leading-relaxed resize-none disabled:opacity-60"
         />
       </div>
 
       {/* ERROR / SUCCESS bar (subtle, premium) */}
       {status === "error" && errorMsg && (
-        <div className="flex items-start gap-2.5 text-[13px] text-red-700 bg-red-50/60 border border-red-100 rounded-2xl px-4 py-3">
+        <div className="flex items-start gap-2.5 text-[13px] text-red-700 bg-red-50/70 border border-red-100 rounded-2xl px-4 py-3.5">
           <AlertCircle size={15} className="mt-0.5 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
       {status === "success" && (
-        <div className="flex items-start gap-2.5 text-[13px] text-[var(--color-stone-700)] bg-[var(--color-sand-50)] border border-[var(--color-stone-100)] rounded-2xl px-4 py-3">
+        <div className="flex items-start gap-2.5 text-[13px] text-[var(--color-stone-700)] bg-[var(--color-sand-50)]/80 border border-[var(--color-stone-100)] rounded-2xl px-4 py-3.5">
           <Check
             size={15}
             className="mt-0.5 shrink-0 text-[var(--color-champagne-700)]"
@@ -213,7 +213,7 @@ export default function ContactForm() {
         <button
           type="submit"
           disabled={disabled}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[var(--color-stone-900)] text-white text-[13.5px] font-medium tracking-[0.04em] hover:bg-[var(--color-stone-700)] transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+          className="inline-flex w-full sm:w-auto justify-center items-center gap-2 px-7 py-3.5 rounded-full bg-[var(--color-stone-900)] text-white text-[13.5px] font-medium tracking-[0.04em] hover:bg-[var(--color-stone-700)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-18px_rgba(27,26,23,0.5)] disabled:opacity-70 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
         >
           {status === "success" ? (
             <>
@@ -227,7 +227,7 @@ export default function ContactForm() {
             </>
           )}
         </button>
-        <p className="text-[11.5px] text-[var(--color-stone-400)] mt-3 leading-relaxed">
+        <p className="text-[11.5px] text-[var(--color-stone-400)] mt-4 leading-relaxed">
           Genellikle 1 iş günü içinde dönüş yapıyoruz. Gizlilik
           politikası kapsamında bilgilerinizi koruyoruz.
         </p>
@@ -254,7 +254,7 @@ function Field({
   disabled?: boolean;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <label className="text-[11px] tracking-[0.18em] uppercase font-medium text-[var(--color-stone-500)] block">
         {label}
       </label>
@@ -265,7 +265,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full px-4 py-3 rounded-2xl border border-[var(--color-stone-200)] bg-white text-[15px] text-[var(--color-stone-900)] placeholder:text-[var(--color-stone-400)] focus:outline-none focus:border-[var(--color-champagne-500)] focus:ring-2 focus:ring-[var(--color-champagne-500)]/20 transition disabled:opacity-60"
+        className="w-full px-4 py-3.5 rounded-2xl border border-[var(--color-stone-200)] bg-white/70 backdrop-blur-sm text-[15px] text-[var(--color-stone-900)] placeholder:text-[var(--color-stone-400)] focus:outline-none focus:border-[var(--color-champagne-500)] focus:ring-4 focus:ring-[var(--color-champagne-500)]/15 focus:bg-white transition disabled:opacity-60"
       />
     </div>
   );

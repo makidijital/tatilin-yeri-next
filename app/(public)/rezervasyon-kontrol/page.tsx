@@ -49,12 +49,9 @@ export default function ReservationCheckPage() {
           { name: "Ana Sayfa", href: "/" },
           { name: "Rezervasyon Kontrol" },
         ]}
+        eyebrow="Rezervasyon"
         title="Rezervasyonunuzu Sorgulayın."
         description="Rezervasyon kodunuz ve e-posta adresiniz ile rezervasyon durumunuzu görüntüleyebilirsiniz."
-        badge={{
-          eyebrow: "Rezervasyon",
-          lines: ["Güvenli Sorgulama", "Anlık Durum", "Kolay Erişim"],
-        }}
       />
 
       <section className="px-5 md:px-10 lg:px-16 pt-12 md:pt-16 pb-24 md:pb-32">

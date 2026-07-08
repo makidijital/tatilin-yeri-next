@@ -800,14 +800,12 @@ export default async function AramaPage({ searchParams }: Props) {
           { name: "Ana sayfa", href: "/" },
           { name: "Villalar" },
         ]}
-        eyebrow="Koleksiyon"
+        eyebrow="Kiralık Villalar"
         title={
           total > 0 ? (
             <>
-              <span className="tabular-nums">{total}</span> villa{" "}
-              <span className="text-[var(--color-stone-400)]">
-                keşfedilmeyi bekliyor.
-              </span>
+              <span className="tabular-nums">{total}</span> kiralık villa ve
+              yazlık bulundu
             </>
           ) : (
             <>

@@ -5,6 +5,7 @@ import { CalendarDays, ArrowUpRight } from "lucide-react";
 
 import { getBlogPosts } from "@/app/services/blog.service";
 import { resolveAssetUrl } from "@/lib/storage.helpers";
+import PageHero from "@/app/components/ui/PageHero";
 
 /* ===============================================================
    🛡️ BLOG INDEX — /blog (public, FAZ 3)
@@ -43,19 +44,18 @@ export default async function BlogIndexPage() {
   const posts = await getBlogPosts();
 
   return (
-    <main className="px-5 md:px-10 lg:px-16 py-12 md:py-20">
+    <>
+      <PageHero
+        breadcrumb={[
+          { name: "Ana sayfa", href: "/" },
+          { name: "Blog" },
+        ]}
+        eyebrow="Blog"
+        title="Blog & Rehber"
+        description="Villa kiralama, Kaş, Kalkan ve bölge rehberleri, seyahat ipuçları ve tatil önerilerini keşfedin."
+      />
+    <main className="px-5 md:px-10 lg:px-16 pt-8 md:pt-12 pb-12 md:pb-20">
       <div className="max-w-[1280px] mx-auto">
-        <header className="max-w-xl mb-10 md:mb-14">
-          <p className="text-[10.5px] tracking-[0.28em] uppercase font-medium text-[var(--brand-coral)]">
-            Blog
-          </p>
-          <h1 className="font-display font-medium text-[30px] md:text-[40px] leading-tight tracking-[-0.02em] text-[var(--color-stone-900)] mt-3">
-            Rehberler &amp; ilham
-          </h1>
-          <p className="mt-3 text-[15px] leading-relaxed text-[var(--color-stone-500)]">
-            Villa tatili rehberleri, bölge önerileri ve seyahat ipuçları.
-          </p>
-        </header>
 
         {posts.length === 0 ? (
           <div className="rounded-2xl border border-[var(--color-stone-200)] bg-white p-10 text-center text-[var(--color-stone-500)]">
@@ -119,5 +119,6 @@ export default async function BlogIndexPage() {
         )}
       </div>
     </main>
+    </>
   );
 }

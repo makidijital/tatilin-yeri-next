@@ -17,28 +17,46 @@ import {
    karttaki etiketi içerik tipine uyarlar (kod tekrarı yok, tek
    PageHero component'i; yalnız prop değişir).
    --------------------------------------------------------------- */
+/* Hakkımızda + politika/şart CMS sayfaları (slug ASCII olduğundan
+   Türkçe büyük-harf toLowerCase sorunu slug üzerinden bypass edilir). */
+const CMS_ABOUT_RE = /hakk|about|biz kim|kurumsal kimlik/;
+const CMS_POLICY_RE =
+  /gizlilik|kvkk|cerez|çerez|mesafeli|sozlesme|sözleşme|sart|şart|politika|policy|iade|teslimat|kosul|koşul|iptal|kullanim|kullanım/;
+
 function getCmsBadge(
   slug: string,
   title: string | null | undefined
 ): { eyebrow?: string; lines: string[] } {
   const key = `${slug} ${title ?? ""}`.toLowerCase();
-  if (/hakk|about|biz kim|kurumsal kimlik/.test(key)) {
-    return {
-      eyebrow: "Hakkımızda",
-      lines: ["Deneyim", "Yerel Uzmanlık", "Güvenilir Hizmet"],
-    };
+  /* Hakkımızda: sağ badge render edilmez (lines boş). Üst eyebrow
+     "Kurumsal" getCorporateEyebrow'dan gelir. */
+  if (CMS_ABOUT_RE.test(key)) {
+    return { lines: [] };
   }
   if (/sss|faq|sik sorul|sık sorul|yardim|yardım/.test(key)) {
     return { eyebrow: "Yardım", lines: ["Sık Sorulanlar"] };
   }
-  if (
-    /gizlilik|kvkk|cerez|çerez|mesafeli|sozlesme|sözleşme|sart|şart|politika|policy|iade|teslimat/.test(
-      key
-    )
-  ) {
-    return { eyebrow: "Kurumsal", lines: ["Politika & Şartlar"] };
+  /* Politika & şart sayfaları: badge yalnız "Politika & Şartlar";
+     üst eyebrow "Kurumsal" getCorporateEyebrow'dan gelir. */
+  if (CMS_POLICY_RE.test(key)) {
+    return { lines: ["Politika & Şartlar"] };
   }
-  return { eyebrow: "Kurumsal", lines: ["Bilgilendirme"] };
+  /* Diğer kurumsal/CMS PageHero sayfaları: badge yok. "Bilgilendirme"
+     artık kullanılmaz; üst eyebrow "Kurumsal" getCorporateEyebrow'dan. */
+  return { lines: [] };
+}
+
+/* SSS hariç kurumsal CMS sayfalarının tümü. */
+const CMS_SSS_RE = /sss|faq|sik sorul|sık sorul|yardim|yardım/;
+
+/* Küçük mavi üst eyebrow — SSS dışındaki tüm kurumsal CMS sayfalarında
+   her zaman "Kurumsal". Yalnız SSS mevcut hâliyle kalır (undefined). */
+function getCorporateEyebrow(
+  slug: string,
+  title: string | null | undefined
+): string | undefined {
+  const key = `${slug} ${title ?? ""}`.toLowerCase();
+  return CMS_SSS_RE.test(key) ? undefined : "Kurumsal";
 }
 
 /* Kurumsal/yasal/bilgilendirme sayfaları (Hakkımızda, SSS, KVKK,
@@ -184,6 +202,11 @@ export default async function CmsPage({ params }: Props) {
   const hasBody =
     typeof body === "string" && body.trim().length > 0;
 
+  /* CMS içerik rozeti + eyebrow. lines boşsa (yalnız Hakkımızda) badge
+     render edilmez ve eyebrow üstteki PageHero eyebrow'una taşınır. */
+  const cmsBadge = getCmsBadge(slug, page.title);
+  const heroEyebrow = getCorporateEyebrow(slug, page.title);
+
   /* SEO: BreadcrumbList JSON-LD */
   const breadcrumbLd = buildBreadcrumb([
     { name: "Ana sayfa", url: "/" },
@@ -258,9 +281,10 @@ export default async function CmsPage({ params }: Props) {
             { name: "Ana sayfa", href: "/" },
             { name: page.title || "Sayfa" },
           ]}
+          eyebrow={heroEyebrow}
           title={page.title || "Sayfa"}
           description={excerpt || undefined}
-          badge={getCmsBadge(slug, page.title)}
+          badge={cmsBadge}
         />
       )}
 
