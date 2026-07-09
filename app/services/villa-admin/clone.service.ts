@@ -136,6 +136,12 @@ export async function cloneVilla(
     "created_at",
     "sort_order",
     "private_access_token",
+    /* 🛡️ GENERATED ALWAYS kolon (mig 065) — DB `title`'dan otomatik
+       hesaplar. select("*") bunu getirdiği için blacklist'e eklenir;
+       INSERT'e değer gitse Postgres "cannot insert a non-DEFAULT value
+       into column search_title" reddi verir. Hariç tutulunca PostgreSQL
+       clone sonrası yeniden üretir. */
+    "search_title",
   ]);
   const corePayload: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(original)) {
