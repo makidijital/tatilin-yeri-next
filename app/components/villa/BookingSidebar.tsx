@@ -35,7 +35,6 @@ import {
   Calendar,
   Users,
   ChevronDown,
-  Check,
 } from "lucide-react";
 
 import { type VillaPriceEmbed } from "@/lib/villa-row.types";
@@ -48,6 +47,14 @@ import { useBookingEngine } from "@/app/components/villa/booking/useBookingEngin
 import BookingCalendar from "@/app/components/villa/booking/BookingCalendar";
 import BookingSummary from "@/app/components/villa/booking/BookingSummary";
 import BookingMinStayWarning from "@/app/components/villa/booking/BookingMinStayWarning";
+
+/* "Öne Çıkan" bilgi kartı metinleri — statik; API/DB/sayı/emoji YOK.
+   Sayfa açılışında rastgele biri seçilir (client mount), sonra sabit. */
+const FEATURED_NOTES = [
+  "Bu bölgenin öne çıkan villa seçeneklerinden biri.",
+  "Misafirlerin en çok ilgi gösterdiği villalar arasında yer alıyor.",
+  "Son dönemde en çok incelenen villalar arasında.",
+] as const;
 
 type Props = {
   villaSlug: string;
@@ -117,7 +124,6 @@ export default function BookingSidebar({
     result,
     prepayment,
     convertedDeposit,
-    startingPrice,
     parseLocalDate,
     handleReservation,
     /* 🛡️ alert() yerine inline banner — null → gizli. */
@@ -129,6 +135,19 @@ export default function BookingSidebar({
   const [openCalendar, setOpenCalendar] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const guestsRef = useRef<HTMLDivElement>(null);
+
+  /* Öne Çıkan bilgi kartı — sayfa ilk açıldığında rastgele TEK metin
+     seçilir (client mount → SSR/hydration mismatch yok) ve sayfa boyunca
+     sabit kalır. Business logic / fiyat / API / storage YOK. */
+  const [featuredNote, setFeaturedNote] = useState<string | null>(null);
+  useEffect(() => {
+    /* Client-only rastgele seçim (SSR'de null → hydration-safe). Bu
+       yüzden set-state-in-effect bilinçli ve gerekli. */
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFeaturedNote(
+      FEATURED_NOTES[Math.floor(Math.random() * FEATURED_NOTES.length)]
+    );
+  }, []);
 
   /* currentMonth: takvim ilk açıldığında hangi ayı göstereceği.
      initialStart varsa o ay açılır → kullanıcı tarihlerini
@@ -174,38 +193,6 @@ export default function BookingSidebar({
         space-y-5
       "
     >
-      {/* PRICE HEAD */}
-      <div className="pb-5 border-b border-[var(--color-stone-100)]">
-        <p className="text-[10.5px] tracking-[0.16em] uppercase font-semibold text-[var(--color-stone-400)]">
-          Başlangıç
-        </p>
-        <div className="flex items-baseline gap-1.5 mt-1.5">
-          <span className="font-display text-[34px] md:text-4xl text-[var(--color-stone-900)] tracking-[-0.03em] leading-none">
-            {startingPrice}
-          </span>
-          <span className="text-[var(--color-stone-500)] text-sm font-medium">
-            / gece
-          </span>
-        </div>
-      </div>
-
-      {/* MICRO TRUST ROW — Premium/viewers rozetleri kaldırıldı,
-          görsel denge için subtle güven satırı. Salt-sunum. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] font-medium text-[var(--color-stone-500)] -mt-1">
-        <span className="inline-flex items-center gap-1">
-          <Check size={12} className="text-emerald-500" aria-hidden />
-          Güvenli Rezervasyon
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Check size={12} className="text-emerald-500" aria-hidden />
-          Anında Onay
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Check size={12} className="text-emerald-500" aria-hidden />
-          Destek Ekibi
-        </span>
-      </div>
-
       {/* DATE */}
       <div ref={ref} className="relative">
         <div
@@ -395,6 +382,23 @@ export default function BookingSidebar({
       <p className="text-[11px] text-[var(--color-stone-400)] text-center leading-relaxed">
         Ücret seçilen tarihlere göre otomatik hesaplanır
       </p>
+
+      {/* ÖNE ÇIKAN — bağımsız minimal bilgi kartı (statik metin, rastgele) */}
+      {featuredNote && (
+        <div className="relative mt-5 overflow-hidden rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 via-white to-cyan-50 px-5 py-4 shadow-sm">
+          {/* Sol mavi accent çizgisi — 4px genişlik, 4px radius */}
+          <span
+            aria-hidden="true"
+            className="absolute left-2 top-3 bottom-3 w-1 rounded-[4px] bg-sky-500"
+          />
+          <p className="text-[11px] tracking-[0.25em] uppercase text-sky-700 font-semibold">
+            Öne Çıkan
+          </p>
+          <p className="mt-1.5 text-[15px] leading-relaxed text-slate-700 font-medium">
+            {featuredNote}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
