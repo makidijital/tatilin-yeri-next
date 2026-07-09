@@ -551,7 +551,12 @@ export function useBookingEngine(
        - Yalnız normalde reddedilecek (selectedNights < threshold)
          seçimde devreye girer → diğer tüm tarihlerde min_stay AYNEN.
        - `minimum_stay_nights` verisi DEĞİŞMEZ; yalnız doğrulama eşiği
-         bu seçim için dinamikleşir. */
+         bu seçim için dinamikleşir.
+       - GAP BAŞLANGICI GENİŞLETİLDİ: sol sınır ya bir bloğun ÇIKIŞ günü
+         (mevcut davranış), YA DA `today`'dir. Geçmiş tarihler satılamadığı
+         için "bugün" de rezervasyon checkout'u gibi KAPALI SINIR sayılır →
+         "bugün → sonraki checkin" boşluğu da gap kabul edilir. Sağ sınır
+         yine mutlaka gerçek checkin; rezervasyon↔rezervasyon dalı AYNEN. */
   const isExactGapFill =
     !!startDate &&
     !!endDate &&
@@ -559,9 +564,10 @@ export function useBookingEngine(
     selectedNights > 0 &&
     selectedNights < minStayThreshold &&
     !hasConflict(startDate, endDate) &&
-    mergedCheckoutDates.some(
+    (mergedCheckoutDates.some(
       (d) => d.toDateString() === startDate.toDateString()
-    ) &&
+    ) ||
+      startDate.toDateString() === today.toDateString()) &&
     mergedCheckinDates.some(
       (d) => d.toDateString() === endDate.toDateString()
     );
