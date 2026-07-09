@@ -759,42 +759,56 @@ export default function ReservationForm({
 
             <div className="bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-4 space-y-2.5 text-sm">
 
+              {/* Konaklama Tutarı — gece sayısı dinamik (mevcut result.stay) */}
+              <div className="flex justify-between text-[var(--color-stone-600)]">
+                <span>Konaklama Tutarı ({getNights()} Gece)</span>
+                <span className="text-[var(--color-stone-900)] font-medium">
+                  {formatCurrency(result?.stay || 0, currency)}
+                </span>
+              </div>
+
               {(result?.cleaning || 0) > 0 && (
-                <div className="flex justify-between text-[var(--color-stone-700)]">
-                  <span>Temizlik</span>
-                  <span>
+                <div className="flex justify-between text-[var(--color-stone-600)]">
+                  <span>Temizlik Ücreti</span>
+                  <span className="text-[var(--color-stone-900)] font-medium">
                     {formatCurrency((result as any).cleaning || 0, currency)}
                   </span>
                 </div>
               )}
-              <div className="flex justify-between text-[var(--color-stone-700)]">
-                <span>Toplam</span>
-                <span className="font-display text-base text-[var(--color-stone-900)]">
+
+              {/* TOPLAM TUTAR — yeşil */}
+              <div className="border-t border-[var(--color-sand-100)] pt-3 flex justify-between font-semibold text-base text-green-700">
+                <span>Toplam Tutar</span>
+                <span className="font-display text-lg">
                   {formatCurrency(totalPrice, currency)}
                 </span>
               </div>
 
-              {/* 🔥 ŞİMDİ ÖDENECEK — payment_preference'a göre */}
+              {/* 🔥 ŞİMDİ ÖDENECEK — payment_preference'a göre (dal DEĞİŞMEZ) */}
               {form.payment_preference === "full_payment" ? (
                 <>
-                  <div className="flex justify-between text-[var(--color-champagne-700)] font-semibold">
+                  {/* Şimdi ödenecek — mor */}
+                  <div className="flex justify-between text-purple-700 font-semibold">
                     <span>Şimdi ödenecek (Tüm tutar)</span>
                     <span>{formatCurrency(totalPrice, currency)}</span>
                   </div>
 
-                  <div className="flex justify-between text-xs text-[var(--color-stone-500)]">
+                  {/* Girişte ödenecek — turuncu */}
+                  <div className="flex justify-between text-orange-600 text-xs">
                     <span>Girişte ödenecek</span>
                     <span>{formatCurrency(0, currency)}</span>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="flex justify-between text-[var(--color-champagne-700)] font-semibold">
+                  {/* Ön ödeme — mor */}
+                  <div className="flex justify-between text-purple-700 font-semibold">
                     <span>Ön ödeme (%{prepaymentRate})</span>
                     <span>{formatCurrency(prepayment, currency)}</span>
                   </div>
 
-                  <div className="flex justify-between text-xs text-[var(--color-stone-500)]">
+                  {/* Girişte ödenecek — turuncu */}
+                  <div className="flex justify-between text-orange-600 text-xs">
                     <span>Girişte ödenecek</span>
                     <span>
                       {formatCurrency(totalPrice - prepayment, currency)}

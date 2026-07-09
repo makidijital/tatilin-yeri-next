@@ -71,14 +71,7 @@ export default async function ReservationPage({
           { name: "Kiralık Villalar", href: "/kiralik-villalar" },
           { name: "Rezervasyon" },
         ]}
-        title={
-          <>
-            Son adım —{" "}
-            <span className="text-[var(--color-stone-400)]">
-              bilgilerini paylaş.
-            </span>
-          </>
-        }
+        title="Kişisel Bilgilerinizi Girin"
         description="Rezervasyon talebini aldıktan sonra ekibimiz seninle iletişime geçecek."
         badge={{
           eyebrow: "Rezervasyon",

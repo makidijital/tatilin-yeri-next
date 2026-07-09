@@ -6,12 +6,13 @@
    PURE UI: BookingSidebar'daki "SUMMARY" bloğunun birebir karşılığı.
    Sidebar ve modal AYNI bu component'i kullanır.
 
-   BYTE-IDENTICAL KONTRAT (BookingSidebar pre-refactor ile):
-     - className string'leri
-     - Row order (Gece → Konaklama → Ekstra temizlik → Hasar depo →
-       Toplam → Ön ödeme → Girişte ödenecek)
-     - formatCurrency çağrı semantic'i
-     - Conditional render kuralları (result.cleaning > 0; deposit > 0)
+   KONTRAT (yalnız UI/metin/sıralama/renk):
+     - formatCurrency çağrı semantic'i DEĞİŞMEZ (tüm değerler aynı).
+     - Conditional render kuralları DEĞİŞMEZ (result.cleaning > 0; deposit > 0).
+     - Row order (UI): Konaklama Tutarı (N Gece) → Temizlik Ücreti →
+       [ayraç] Toplam Tutar (yeşil) → Ön ödeme (mor) → Girişte ödenecek
+       (turuncu) → [ayraç] Hasar Depozitosu (ayrı blok + açıklama).
+     - Hasar depozitosu görsel olarak ayrı; toplama EKLENMEZ (hesap aynı).
    =============================================================== */
 
 import { formatCurrency } from "@/lib/currency";
@@ -38,42 +39,53 @@ export default function BookingSummary({
 
   return (
     <div className="bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-4 space-y-2.5 text-sm">
-      <Row label="Gece" value={`${result.nights} gece`} />
+      {/* Konaklama Tutarı — gece sayısı dinamik (Gece satırı kaldırıldı) */}
       <Row
-        label="Konaklama"
+        label={`Konaklama Tutarı (${result.nights} Gece)`}
         value={formatCurrency(result.stay, currency)}
       />
       {result.cleaning > 0 && (
         <Row
-          label="Ekstra temizlik"
+          label="Temizlik Ücreti"
           value={formatCurrency(result.cleaning, currency)}
         />
       )}
-      {deposit > 0 && (
-        <Row
-          label="Hasar depozitosu"
-          value={formatCurrency(convertedDeposit, currency)}
-        />
-      )}
 
-      <div className="border-t border-[var(--color-sand-100)] pt-3 flex justify-between text-[var(--color-stone-900)] font-semibold text-base">
-        <span>Toplam</span>
+      {/* TOPLAM TUTAR — yeşil */}
+      <div className="border-t border-[var(--color-sand-100)] pt-3 flex justify-between font-semibold text-base text-green-700">
+        <span>Toplam Tutar</span>
         <span className="font-display text-lg">
           {formatCurrency(result.total, currency)}
         </span>
       </div>
 
-      <div className="flex justify-between text-[var(--color-champagne-700)] font-semibold">
+      {/* ÖN ÖDEME — mor */}
+      <div className="flex justify-between text-purple-700 font-semibold">
         <span>Ön ödeme (%{prepaymentRate})</span>
         <span>{formatCurrency(prepayment, currency)}</span>
       </div>
 
-      <div className="flex justify-between text-[var(--color-stone-500)] text-xs">
+      {/* GİRİŞTE ÖDENECEK — turuncu */}
+      <div className="flex justify-between text-orange-600 text-xs">
         <span>Girişte ödenecek</span>
         <span>
           {formatCurrency(result.total - prepayment, currency)}
         </span>
       </div>
+
+      {/* HASAR DEPOZİTOSU — ayrı blok (toplama dahil değil, hesap aynı) */}
+      {deposit > 0 && (
+        <div className="border-t border-[var(--color-sand-100)] pt-3">
+          <div className="flex justify-between text-[var(--color-stone-900)] font-medium">
+            <span>Hasar Depozitosu</span>
+            <span>{formatCurrency(convertedDeposit, currency)}</span>
+          </div>
+          <p className="mt-1.5 text-xs text-[var(--color-stone-500)] leading-relaxed">
+            Girişte hasar depozitosu ek olarak alınır. Villada herhangi bir
+            hasar oluşmaması durumunda çıkışta eksiksiz olarak iade edilir.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
