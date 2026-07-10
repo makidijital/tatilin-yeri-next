@@ -8,6 +8,8 @@ import { villaRepository } from "@/lib/db/villa.repository";
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { getCachedVillaLocations, getCachedVillaTypes } from "@/lib/cache.helpers";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+/* 🛡️ Kart başlangıç fiyatı — TÜM public kartlarla aynı ortak mantık. */
+import { getStartingPrice } from "@/lib/price.engine";
 import {
   resolveBucketMonthFromSlug,
   parseGapNights,
@@ -284,13 +286,16 @@ export default async function ShortGapListingPage({
           start_date: p.start_date,
           end_date: p.end_date,
         }));
+      /* Kart başlangıç fiyatı = villa_prices MIN nightly (getStartingPrice,
+         ortak mantık). villa.price kolonu KULLANILMAZ. */
+      const starting = getStartingPrice(prices);
       return {
         id: v.id,
         slug: v.slug ?? "",
         title: v.title ?? "",
         location: v.location?.name ?? "",
-        price: v.price,
-        currency: v.currency || "TRY",
+        price: starting?.price ?? null,
+        currency: starting?.currency || "TRY",
         images,
         badge: v.badge ?? undefined,
         bedrooms: v.bedrooms || 1,

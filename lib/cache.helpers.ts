@@ -1,6 +1,10 @@
 import { unstable_cache } from "next/cache";
 
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+/* 🛡️ Kart "…'den başlayan" fiyatı — TÜM public kartlarda TEK ortak
+   mantık: villa_prices içindeki MIN nightly (getStartingPrice). Eskiden
+   koleksiyon mapper'ları villa_prices[0] kullanıyordu → tutarsız. */
+import { getStartingPrice } from "@/lib/price.engine";
 import { villaRepository } from "@/lib/db/villa.repository";
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { villaLocationRepository } from "@/lib/db/villa-location.repository";
@@ -288,10 +292,10 @@ export const getCachedHomepageCollectionVillas = unstable_cache(
         );
 
       /* 🛡️ price/currency mapVilla pattern'i (villa.service.ts):
-         villa_prices array'inin ilk satırı kullanılır. Boş ise
-         price null, currency "TRY" fallback. */
+         villa_prices içindeki MIN nightly (getStartingPrice — ortak
+         mantık). Boş ise price null, currency "TRY" fallback. */
       const rawPrices = Array.isArray(v.villa_prices) ? v.villa_prices : [];
-      const firstPrice = rawPrices[0];
+      const firstPrice = getStartingPrice(rawPrices);
 
       /* 🛡️ FAZ 35 — Review aggregate inject; count===0 ise alanlar
          undefined kalır → VillaCard meta satırını render etmez. */
@@ -402,7 +406,7 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
         );
 
       const rawPrices = Array.isArray(v.villa_prices) ? v.villa_prices : [];
-      const firstPrice = rawPrices[0];
+      const firstPrice = getStartingPrice(rawPrices);
 
       const s = statsMap[v.id];
       const hasReviews = !!s && s.count > 0;
