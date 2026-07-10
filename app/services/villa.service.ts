@@ -25,6 +25,10 @@ import { villaRepository } from "@/lib/db/villa.repository";
 import { getVillaReviewStatsBatch } from "./villa-review.service";
 import { normalizeYouTubeVideos } from "@/lib/youtube.helper";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+/* 🛡️ Kart "…'den başlayan" fiyatı — villa_prices içindeki MIN nightly
+   (getStartingPrice mevcut, min hesaplar). Eskiden villa_prices[0]
+   (embed sırasındaki ilk satır) kullanılıyordu → yanlış "başlangıç". */
+import { getStartingPrice } from "@/lib/price.engine";
 import {
   normalizeBedroomLayout,
   normalizeBathroomLayout,
@@ -340,8 +344,10 @@ function mapVilla(
         );
   }
 
-  const firstPrice =
-    villa.villa_prices?.[0];
+  /* 🔥 Kart başlangıç fiyatı = villa_prices içindeki MIN nightly.
+     getStartingPrice mevcut helper; en düşük fiyatı döndürür. */
+  const startingPrice =
+    getStartingPrice(villa.villa_prices ?? []);
 
   return {
     id: villa.id,
@@ -362,10 +368,10 @@ function mapVilla(
 
     // 🔥 FİYAT
     price:
-      firstPrice?.price ?? 0,
+      startingPrice?.price ?? 0,
 
     currency:
-      firstPrice?.currency || "TRY",
+      startingPrice?.currency || "TRY",
 
     guests:
       villa.guests ?? 0,

@@ -564,27 +564,17 @@ export default async function AramaPage({ searchParams }: Props) {
     const stats = reviewStatsMap[String(v.id)];
     const hasReviews = !!stats && stats.count > 0;
 
-    /* 🛡️ STARTING PRICE FALLBACK — listing kart "gecelik başlangıç"
-       gösterimi için. Date search YOK iken VillaCard `price` prop'unu
-       "Fiyat sorunuz" fallback'inden kurtarır:
-         1) Raw `villa.price` > 0 ise onu kullan (eski davranış)
-         2) Boş/null/0 ise villa_prices içindeki MIN nightly price'a
-            düş — anasayfa mantığıyla aynı semantik (kart "X / gece'den
-            başlayan" hissi).
-       Date search VAR iken caller stayStart/stayEnd/prices üçlüsünü
-       ayrıca pass eder; VillaCard `calculateGrandTotal` ile total
-       hesaplar — bu fallback'in etkisi YOK. Conversion VillaCard
-       seviyesinde convertPrice(...) ile yapılır; helper currency'yi
-       aynen iletir. */
-    const rawPrice = Number(v.price);
-    const hasRawPrice = Number.isFinite(rawPrice) && rawPrice > 0;
-    const startingFallback = hasRawPrice ? null : getStartingPrice(prices);
-    const villaPrice: number | null = hasRawPrice
-      ? rawPrice
-      : startingFallback?.price ?? null;
-    const villaCurrency: string | null = hasRawPrice
-      ? v.currency ?? "TRY"
-      : startingFallback?.currency ?? v.currency ?? null;
+    /* 🛡️ STARTING PRICE — listing kart "gecelik başlangıç" gösterimi.
+       DAİMA villa_prices içindeki MIN nightly (getStartingPrice); artık
+       `villa.price` kolonu ÖNCELENMEZ → mapVilla (homepage/kategori/bölge)
+       ile birebir aynı minimum fiyat semantiği. Date search VAR iken caller
+       stayStart/stayEnd/prices üçlüsünü ayrıca pass eder; VillaCard
+       `calculateGrandTotal` ile total hesaplar — bu değerin etkisi YOK.
+       Conversion VillaCard seviyesinde convertPrice(...) ile yapılır. */
+    const startingFallback = getStartingPrice(prices);
+    const villaPrice: number | null = startingFallback?.price ?? null;
+    const villaCurrency: string | null =
+      startingFallback?.currency ?? v.currency ?? null;
 
     return {
       id: v.id,
