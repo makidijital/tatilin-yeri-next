@@ -36,8 +36,8 @@ const MAX_UPLOAD_BATCH_COUNT = 80;
 import {
   updateImageOrder,
   setCoverImage,
-  type VillaImage,
-} from "@/app/services/villa-image.service";
+} from "@/app/services/villa-image/villa-image.mutations";
+import type { VillaImage } from "@/app/services/villa-image/villa-image.types";
 import {
   VILLA_IMAGES_BUCKET,
   buildVillaImagePath,

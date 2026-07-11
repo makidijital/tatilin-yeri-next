@@ -9,27 +9,25 @@ import {
 import type { StorageProvider } from "./storage.provider";
 import type {
   StorageRemoveResult,
-  StorageSignedUrlResult,
   StorageUploadOptions,
   StorageUploadResult,
 } from "./storage.types";
 import { resolveCdnPublicUrl } from "./cdn.config";
 
 /* ===============================================================
-   🛡️ FAZ C / ADIM 1 — S3-COMPATIBLE STORAGE PROVIDER (server-only)
+   🛡️ S3-COMPATIBLE STORAGE PROVIDER (server-only) — CLOUDFLARE R2
    ===============================================================
    AMAÇ:
-     Provider-agnostic WRITE/REMOVE katmanı (R2 / AWS S3 / B2 / MinIO /
-     Hetzner — hepsi aynı S3 API). YALNIZ server tarafında kullanılır
-     (route handler'lar). Secret (`S3_SECRET_ACCESS_KEY`) NEXT_PUBLIC
-     DEĞİL → client bundle'a sızmaz; `import "server-only"` ile
-     build-time guard.
+     Storage WRITE/REMOVE katmanı (R2; aynı S3 API B2/MinIO/Hetzner
+     ile de uyumlu). YALNIZ server tarafında kullanılır. Secret
+     (`S3_SECRET_ACCESS_KEY`) NEXT_PUBLIC DEĞİL → client bundle'a
+     sızmaz; `import "server-only"` ile build-time guard.
 
-   ⚠️ ADIM 1 KAPSAMI — ALTYAPI, DORMANT:
-     Bu dosya HİÇBİR yere bağlı değil. Hiçbir mevcut ekran/akış bunu
-     çağırmaz. `storageProvider` (barrel) AYNEN Supabase'de
-     (upload/remove). Sistem %100 Supabase çalışmaya devam eder.
-     Bağlama (seam switch) sonraki adımda yapılacak.
+   ⚠️ BAĞLANTI (TEK YOL):
+     - Server remove: `lib/storage/server.ts > removeServer` bu
+       provider'ı DOĞRUDAN çağırır (hardDelete cleanup).
+     - Browser upload/remove: barrel (index.ts) →
+       `/api/admin/storage/{upload,remove}` route → bu provider.
 
    ⚠️ LAZY INIT:
      S3Client yalnız ilk gerçek upload/remove çağrısında kurulur
@@ -42,7 +40,7 @@ import { resolveCdnPublicUrl } from "./cdn.config";
      S3_ACCESS_KEY_ID
      S3_SECRET_ACCESS_KEY
 
-   ⚠️ DAVRANIŞ PARİTESİ (supabase-storage.provider ile):
+   ⚠️ DAVRANIŞ:
      remove → bulk + 3 attempt + exponential backoff (200ms/400ms) +
               idempotent ("not found" / eksik key success sayılır).
      upload → result envelope; throw etmez.
@@ -136,7 +134,6 @@ export const s3StorageProvider: StorageProvider = {
      ===============================================================
      S3 DeleteObjects eksik key'de hata vermez (idempotent). Kısmi
      hata `res.Errors` ile gelir; başarısız key'ler retry edilir.
-     Davranış supabase-storage.provider.remove ile parite.
   =============================================================== */
   async remove(
     bucket: string,
@@ -205,34 +202,11 @@ export const s3StorageProvider: StorageProvider = {
   /* ===============================================================
      PUBLIC URL — read CDN (Faz B) ile aynı formül
      ===============================================================
-     Bu provider read için kullanılmıyor (barrel getPublicUrl Faz B'de
-     CDN-aware); yine de interface bütünlüğü için CDN base'e delege
-     eder. STORAGE_DRIVER=supabase iken null döner.
+     Bu provider read için birincil değil (barrel getPublicUrl CDN
+     base'inden üretir); yine de interface bütünlüğü için aynı CDN
+     base'e delege eder. CDN base yoksa null döner.
   =============================================================== */
   getPublicUrl(bucket: string, path: string): string | null {
     return resolveCdnPublicUrl(bucket, path);
-  },
-
-  /* ===============================================================
-     SIGNED URL — Adım 1'de NOT-IMPLEMENTED (caller yok; public bucket)
-  =============================================================== */
-  async createSignedUrl(
-    _bucket: string,
-    _path: string,
-    _expiresIn: number
-  ): Promise<StorageSignedUrlResult> {
-    void _bucket;
-    void _path;
-    void _expiresIn;
-    return {
-      ok: false,
-      error: "[storage.s3.createSignedUrl] NOT_IMPLEMENTED (Faz C Adım 1)",
-    };
-  },
-
-  async exists(_bucket: string, _path: string): Promise<boolean> {
-    void _bucket;
-    void _path;
-    throw new Error("[storage.s3.exists] NOT_IMPLEMENTED (Faz C Adım 1)");
   },
 };

@@ -12,8 +12,8 @@ import {
 import {
   type AdminBrandingFileKey,
   getAdminBrandingUrl,
-  uploadAdminBranding,
 } from "@/lib/admin-branding";
+import { uploadAdminBranding } from "@/lib/admin-branding.client";
 import { useNotify } from "@/app/components/admin/notifications/NotificationProvider";
 
 /* ===============================================================

@@ -33,14 +33,3 @@ export type StorageRemoveResult = {
 export type StorageUploadResult =
   | { ok: true }
   | { ok: false; error: string };
-
-/** Signed URL sonuç envelope. */
-export type StorageSignedUrlResult =
-  | { ok: true; signedUrl: string }
-  | { ok: false; error: string };
-
-/** URL parse sonucu: bucket + bucket-relative path. */
-export type StoragePathParts = {
-  bucket: string;
-  path: string;
-};

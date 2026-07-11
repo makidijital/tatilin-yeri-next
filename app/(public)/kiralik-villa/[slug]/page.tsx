@@ -53,7 +53,7 @@ import CollapsibleDescription from "@/app/components/villa/CollapsibleDescriptio
 import AccommodationLayout from "@/app/components/villa/AccommodationLayout";
 
 import { getVillaBySlug } from "@/app/services/villa.service";
-import { getVillaImages } from "@/app/services/villa-image.service";
+import { getVillaImages } from "@/app/services/villa-image/villa-image.read";
 import {
   resolveVillaImageUrl,
   resolveAssetUrlVersioned,

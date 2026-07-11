@@ -1,47 +1,27 @@
 import { STORAGE_BUCKETS, type StorageBucket } from "./storage.constants";
 
 /* ===============================================================
-   🛡️ FAZ B — STORAGE READ LAYER: CDN CONFIG (client-safe)
+   🛡️ STORAGE READ LAYER — CDN CONFIG (client-safe) — R2
    ===============================================================
    AMAÇ:
-     Read (public URL) tarafını provider-agnostic CDN'e taşımak.
-     `STORAGE_DRIVER=r2` iken `getPublicUrl` Supabase SDK yerine
-     bucket başına CDN base URL'i üretir:
+     Read (public URL) tarafı. `getPublicUrl` bucket başına CDN base
+     URL'inden absolute R2 URL üretir:
        villa-images → NEXT_PUBLIC_CDN_BASE_VILLA_IMAGES (cdn.villayagel.com)
        site-assets  → NEXT_PUBLIC_CDN_BASE_SITE_ASSETS  (assets.villayagel.com)
 
-   ⚠️ FAZ B KAPSAMI — yalnız READ:
-     upload / remove / createSignedUrl AYNEN Supabase'de kalır
-     (bu dosya onlara dokunmaz). Bu faz yalnız okuma URL'lerini
-     CDN'e yönlendirir.
+   ⚠️ KAPSAM — yalnız READ (public URL üretimi):
+     upload / remove bu dosyaya dokunmaz.
 
-   ⚠️ ROLLBACK-SAFE DEFAULT:
-     `NEXT_PUBLIC_STORAGE_DRIVER` tanımsız → "supabase" → bu modül
-     resolveCdnPublicUrl'de daima `null` döner → caller Supabase
-     getPublicUrl'e düşer → davranış BYTE-IDENTICAL. Üretimde CDN'e
-     geçiş yalnız env flip ile; geri alma da env ile.
+   ⚠️ TEK YOL — FALLBACK YOK:
+     CDN base tanımlıysa absolute R2 URL; tanımlı değilse `null`.
+     Başka bir provider'a düşme yoktur. Üretimde CDN base env'leri
+     tanımlı olmalıdır.
 
    ⚠️ CLIENT-SAFE:
      `import "server-only"` YOK — getPublicUrl hem RSC hem browser
-     (VillaCard vs.) bağlamında çalışır. Bu yüzden tüm env'ler
-     `NEXT_PUBLIC_` prefix'li (secret değil; yalnız public CDN host).
+     (VillaCard vs.) bağlamında çalışır. Env'ler `NEXT_PUBLIC_`
+     prefix'li (secret değil; yalnız public CDN host).
    =============================================================== */
-
-/** Aktif storage sürücüsü. Default "supabase" (rollback-safe). */
-export const STORAGE_DRIVER = (
-  process.env.NEXT_PUBLIC_STORAGE_DRIVER || "supabase"
-)
-  .trim()
-  .toLowerCase();
-
-/** CDN-read açık mı? (yalnız read; upload her hâlükârda Supabase — Faz B). */
-export function isCdnReadEnabled(): boolean {
-  return (
-    STORAGE_DRIVER === "r2" ||
-    STORAGE_DRIVER === "s3" ||
-    STORAGE_DRIVER === "cdn"
-  );
-}
 
 /* Bucket → CDN base URL (trailing slash temizlenir; boş → undefined). */
 const CDN_BASES: Record<string, string | undefined> = {
@@ -63,17 +43,14 @@ export function getCdnBaseForBucket(bucket: string): string | null {
 }
 
 /**
- * Driver=r2 VE bucket için CDN base tanımlıysa absolute CDN URL döner.
- * Aksi halde `null` → caller Supabase `getPublicUrl`'e düşer (rollback-safe).
- *   resolveCdnPublicUrl("villa-images", "villas/x/y.webp")
- *     → "https://cdn.villayagel.com/villas/x/y.webp"   (driver=r2)
- *     → null                                            (driver=supabase)
+ * Bucket için CDN base tanımlıysa absolute R2 URL döner; aksi halde null.
+ *   resolveCdnPublicUrl("yazvillam-villa-images", "villas/x/y.webp")
+ *     → "https://cdn.villayagel.com/villas/x/y.webp"
  */
 export function resolveCdnPublicUrl(
   bucket: string,
   path: string
 ): string | null {
-  if (!isCdnReadEnabled()) return null;
   if (!path || typeof path !== "string") return null;
   const trimmed = path.trim().replace(/^\/+/, "");
   if (!trimmed) return null;

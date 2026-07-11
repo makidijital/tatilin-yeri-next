@@ -4,13 +4,13 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { villaRepository } from "@/lib/db/villa.repository";
+import { getVillaImages } from "@/app/services/villa-image/villa-image.read";
+import { addVillaImage } from "@/app/services/villa-image/villa-image.mutations";
 import {
-  getVillaImages,
-  addVillaImage,
   deleteVillaImage,
   deleteAllVillaImages,
-  type VillaImage,
-} from "@/app/services/villa-image.service";
+} from "@/app/services/villa-image/villa-image.delete";
+import type { VillaImage } from "@/app/services/villa-image/villa-image.types";
 import AdminGallery from "@/app/components/villa/AdminGallery";
 import { ChevronLeft } from "lucide-react";
 

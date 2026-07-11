@@ -374,22 +374,21 @@ export function isNewVillaImagePath(path: string | null | undefined): boolean {
 }
 
 /* ===============================================================
-   🛡️ STORAGE CLEANUP — idempotent retry helper
+   🛡️ STORAGE CLEANUP RESULT — shared type (client-safe)
    ===============================================================
-   `villa-image.service > deleteVillaImage` ve
-   `villa-admin.service > hardDeleteVilla` storage-side cleanup için
-   tek source-of-truth. Önceki inline `.from().remove([path])` çağrıları
-   network blip'lerinde tek-shot fail veriyordu; bu helper:
-     - Bulk remove (tek round-trip per attempt)
-     - 3 deneme, exponential backoff (200ms, 400ms)
-     - "not found" → idempotent success
-     - Sonuçta hangi path'lerin başarısız olduğu raporlanır
+   Bulk remove sonuç envelope'u. Yalnız TİP (runtime kod yok) →
+   client-safe; hem pure helper tüketicileri hem server-only I/O
+   modülü (`lib/villa-image.storage.server.ts`) bu tek tanımı
+   paylaşır.
 
-   PRODUCTION SEMANTIC:
-     Helper başarısız olursa caller'a `false` döner ama caller'ın
-     DB-level operasyonları zaten tamamlanmış olur (DB-first sıralama).
-     Orphan dosyalar UX'i kırmaz; yalnız storage costu üretir. Loglar
-     diagnostic için yazılır.
+   ⚠️ AYRIŞTIRMA (client/server sprinti):
+     `removeVillaStorageFiles` + `removeVillaImageByUrl` storage I/O
+     fonksiyonları bu dosyadan `lib/villa-image.storage.server.ts`
+     (server-only) modülüne TAŞINDI. Böylece bu dosya YALNIZ
+     pure/client-safe path + parse + sequence helper'ı olarak kalır
+     ve AdminGallery gibi client bileşenleri güvenle import eder.
+     DAVRANIŞ DEĞİŞMEDİ — fonksiyonlar gövdeleriyle birebir taşındı,
+     yalnız KONUM değişti.
    =============================================================== */
 
 export type StorageRemoveResult = {
@@ -399,49 +398,3 @@ export type StorageRemoveResult = {
   failed: string[];
   attempts: number;
 };
-
-/**
- * Storage'dan bulk remove + retry + idempotent.
- *
- * FAZ 38: Implementation provider'a (`storageProvider.remove`)
- * taşındı. Bu wrapper backward-compat: aynı imza, aynı sonuç
- * envelope, aynı tag pattern (provider içinde
- * `[storage.supabase.remove] FAILED_AFTER_RETRY` emit edilir;
- * mevcut `[villa-image.storage.remove]` tag'i artık emit
- * EDİLMEZ — provider tek noktada log atar, duplicate log
- * önlenir). Caller davranışı (ok/failed/attempts) byte-identical.
- *
- * @param bucket bucket adı (örn. `villa-images`)
- * @param paths bucket-relative path dizisi (boş → instant ok)
- * @param _maxAttempts ⚠️ Faz 38'de **YOK SAYILIR**; provider
- *                     implementation içinde sabit 3 attempt. Eski
- *                     caller'lar parametre geçse bile davranış
- *                     değişmez (mevcut codebase'de override eden
- *                     caller YOK; mapping audit'i ile doğrulandı).
- */
-export async function removeVillaStorageFiles(
-  bucket: string,
-  paths: string[],
-  _maxAttempts?: number
-): Promise<StorageRemoveResult> {
-  void _maxAttempts;
-  return storageProvider.remove(bucket, paths);
-}
-
-/**
- * Tek URL/path girdisinden bucket+path parse edip remove eder.
- *  Helper'lar parse + cleanup pipeline'ını tek çağrıya indirir;
- *  caller başarı / orphan ayrımını boolean ile alır.
- */
-export async function removeVillaImageByUrl(
-  urlOrPath: string | null | undefined
-): Promise<StorageRemoveResult> {
-  const parsed = parseVillaStorageUrl(urlOrPath);
-  if (!parsed) {
-    console.warn("[villa-image.storage.remove] PATH_PARSE_FAILED", {
-      input: urlOrPath,
-    });
-    return { ok: false, failed: [], attempts: 0 };
-  }
-  return removeVillaStorageFiles(parsed.bucket, [parsed.path]);
-}

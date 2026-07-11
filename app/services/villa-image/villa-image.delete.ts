@@ -1,107 +1,37 @@
 import { villaImageRepository } from "@/lib/db/villa-image.repository";
 import {
-  removeVillaImageByUrl,
-  removeVillaStorageFiles,
   parseVillaStorageUrl,
   VILLA_IMAGES_BUCKET,
 } from "@/lib/villa-image.helpers";
+import {
+  removeVillaImageByUrl,
+  removeVillaStorageFiles,
+} from "@/lib/villa-image.storage.server";
 
-export type VillaImage = {
-  id: string;
-  villa_id: string;
-  image_url: string;
-  sort_order?: number;
-  is_cover?: boolean;
-  created_at?: string;
-};
+/* ===============================================================
+   🛡️ VILLA IMAGE — DELETE ORCHESTRATION (delete / deleteAll)
+   ===============================================================
+   SORUMLULUK: DB-first silme + best-effort storage cleanup zinciri.
+     Storage I/O `lib/villa-image.storage.server.ts` seam'ine
+     delege edilir (retry + idempotent).
 
-//
-// 📦 GET IMAGES
-//
-export async function getVillaImages(
-  villaId: string
-): Promise<VillaImage[]> {
-  if (!villaId) return [];
+   ⚠️ BAĞLAM (server-only guard'ın NEDEN henüz eklenemediği):
+     Bu iki fonksiyonun TEK çağıranı admin galeri CLIENT sayfası
+     (`app/(admin)/maki-admin/villas/[id]/galeri/page.tsx`,
+     "use client"). Silme yazma RLS'i `villa_images_admin_write`
+     → `authenticated` + `is_active_admin()` gerektirir; bu koşul
+     admin'in cookie-backed session'ıyla YALNIZ browser'da sağlanır.
+     Silmeyi bir server action / API route'a taşımak, server-side
+     anon `db`'nin cookie okumaması (lib/supabase.ts Faz-4 notu)
+     nedeniyle auth.uid()=NULL → is_active_admin()=false → RLS
+     silmeyi BLOKLAR → DAVRANIŞ BOZULUR. Bu yüzden execution modeli
+     KORUNDU (browser'da çalışır) ve bu modül client-reachable kaldı;
+     `villa-image.storage.server.ts`'e `import "server-only"` bu
+     sebeple henüz eklenemez (bkz. sprint raporu — kalan engel:
+     server-side admin auth / Faz-4).
 
-  const { data, error } = await villaImageRepository.findByVillaIdOrdered(
-    villaId
-  );
-
-  if (error) {
-    console.error("❌ getVillaImages error:", error.message);
-    return [];
-  }
-
-  return data || [];
-}
-
-//
-// ➕ ADD IMAGE (safe + cover fix)
-//
-export async function addVillaImage(
-  villaId: string,
-  imageUrl: string
-): Promise<boolean> {
-  if (!villaId || !imageUrl) return false;
-
-  // 🔥 son sırayı bul (hata vermez)
-  const { data: last } = await villaImageRepository.findMaxSortOrder(villaId);
-
-  const nextOrder =
-    last?.sort_order !== undefined ? last.sort_order + 1 : 0;
-
-  // 🔥 cover var mı kontrol et
-  const { data: cover } = await villaImageRepository.findCoverId(villaId);
-
-  const { error } = await villaImageRepository.insert({
-    villa_id: villaId,
-    image_url: imageUrl,
-    sort_order: nextOrder,
-    is_cover: !cover, // 🔥 cover yoksa ilk görsel cover olur
-  });
-
-  if (error) {
-    console.error("❌ addVillaImage error:", error.message);
-    return false;
-  }
-
-  return true;
-}
-
-//
-// 🔥 UPDATE ORDER
-//
-export async function updateImageOrder(
-  updates: { id: string; sort_order: number }[]
-) {
-  try {
-    const promises = updates.map((u) =>
-      villaImageRepository.updateSortOrderById(u.id, u.sort_order)
-    );
-
-    await Promise.all(promises);
-  } catch (err) {
-    console.error("❌ updateImageOrder error:", err);
-  }
-}
-
-//
-// ⭐ SET COVER IMAGE
-//
-export async function setCoverImage(
-  id: string,
-  villaId: string
-) {
-  try {
-    // hepsini false yap
-    await villaImageRepository.clearCoverByVilla(villaId);
-
-    // seçileni true yap
-    await villaImageRepository.setCoverById(id);
-  } catch (err) {
-    console.error("❌ setCoverImage error:", err);
-  }
-}
+   ⚠️ DAVRANIŞ DEĞİŞMEDİ — gövdeler eski servisten birebir taşındı.
+   =============================================================== */
 
 /* ===============================================================
    🛡️ DELETE IMAGE — production-hardened lifecycle

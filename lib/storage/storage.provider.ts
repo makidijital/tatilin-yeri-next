@@ -1,6 +1,5 @@
 import type {
   StorageRemoveResult,
-  StorageSignedUrlResult,
   StorageUploadOptions,
   StorageUploadResult,
 } from "./storage.types";
@@ -21,11 +20,6 @@ import type {
                        sorumluluğunda (Supabase impl 3x exponential).
      getPublicUrl   → senkron; bucket-relative path → absolute URL.
                        Yoksa ya da geçersizse null.
-     createSignedUrl→ async; expires-in seconds. Result envelope.
-     exists         → optional probe (storage layer'da listing/head
-                       Supabase API'sinde native değil — Faz 38'de
-                       NOT-IMPLEMENTED placeholder; gerçek kullanım
-                       için sonraki cycle).
 
    ⚠️ Repository pattern'iyle paralel: provider sessiz hata yönetir,
    business policy (throw mesajları, console tag'leri) caller
@@ -50,17 +44,4 @@ export interface StorageProvider {
   /** Senkron public URL builder. Bucket-relative path → absolute
    *  HTTPS URL. Yoksa/empty/invalid → null. */
   getPublicUrl(bucket: string, path: string): string | null;
-
-  /** Pre-signed URL — `expiresIn` seconds.
-   *  Result envelope; throw etmez. */
-  createSignedUrl(
-    bucket: string,
-    path: string,
-    expiresIn: number
-  ): Promise<StorageSignedUrlResult>;
-
-  /** Optional probe — Faz 38'de NOT-IMPLEMENTED (Supabase API'sinde
-   *  native exists yok). Sonraki cycle'da `list({ search: path })`
-   *  veya HEAD via createSignedUrl ile çözülür. */
-  exists?(bucket: string, path: string): Promise<boolean>;
 }
