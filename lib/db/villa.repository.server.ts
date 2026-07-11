@@ -1,9 +1,6 @@
 import "server-only";
 
-/* 🛡️ NATIVE CUTOVER — server-only villa admin repo'su artık native
-   PostgreSQL provider'ı üzerinden çalışır (dbAdminNative → from/rpc →
-   QueryBuilder). Public method yüzeyi + dönüş şekli aynen. */
-import { dbAdminNative as dbAdmin } from "@/lib/db/native";
+import { dbAdmin } from "@/lib/db/server";
 
 /* ===============================================================
    🛡️ FAZ 2 STABILIZATION — VILLA ADMIN REPOSITORY (SERVER-ROLE)

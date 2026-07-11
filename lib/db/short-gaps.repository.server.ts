@@ -1,6 +1,6 @@
 import "server-only";
 
-import { dbAdminNative as dbAdmin } from "@/lib/db/native";
+import { dbAdmin } from "@/lib/db/server";
 
 /* ===============================================================
    🛡️ SHORT GAPS — SERVER-ONLY REPOSITORY (service-role)

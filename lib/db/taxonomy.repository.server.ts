@@ -1,9 +1,12 @@
 import "server-only";
 
-/* 🛡️ NATIVE CUTOVER — server-only taxonomy repo'su artık native
-   PostgreSQL provider'ı üzerinden çalışır (dbAdminNative → from/rpc →
-   QueryBuilder). Public method yüzeyi + dönüş şekli aynen. */
-import { dbAdminNative as dbAdmin } from "@/lib/db/native";
+/* 🛡️ PRODUCTION RESTORE — Villa Ekle > Bölge dropdown (+ tip/özellik/
+   kural/fiyat-dahil listeleri) native provider'ın (DATABASE_URL/SSL)
+   doğrulanmamış bağlantısı yüzünden boş dönüyordu (regresyon: commit
+   f2a199a). Bu repo geçici olarak production Supabase yoluna (`dbAdmin`
+   = service-role) geri alındı. Native altyapı KORUNUR (silinmez);
+   bağlantı birebir doğrulanınca yeniden `@/lib/db/native`'e alınacak. */
+import { dbAdmin } from "@/lib/db/server";
 
 /* ===============================================================
    🛡️ TAXONOMY — SERVER-ONLY READ AGGREGATOR (service-role)
