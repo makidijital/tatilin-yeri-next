@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { villaImageRepository } from "@/lib/db/villa-image.repository";
 import {
   parseVillaStorageUrl,
@@ -8,6 +10,10 @@ import {
   removeVillaStorageFiles,
 } from "@/lib/villa-image.storage.server";
 
+/* Opsiyonel session-aware client (geriye uyumlu, default anon `db`).
+   Server action bağlamında admin RLS session'ı taşımak için geçilir. */
+type WriteClient = Pick<SupabaseClient, "from">;
+
 /* ===============================================================
    🛡️ VILLA IMAGE — DELETE ORCHESTRATION (delete / deleteAll)
    ===============================================================
@@ -15,22 +21,17 @@ import {
      Storage I/O `lib/villa-image.storage.server.ts` seam'ine
      delege edilir (retry + idempotent).
 
-   ⚠️ BAĞLAM (server-only guard'ın NEDEN henüz eklenemediği):
-     Bu iki fonksiyonun TEK çağıranı admin galeri CLIENT sayfası
-     (`app/(admin)/maki-admin/villas/[id]/galeri/page.tsx`,
-     "use client"). Silme yazma RLS'i `villa_images_admin_write`
-     → `authenticated` + `is_active_admin()` gerektirir; bu koşul
-     admin'in cookie-backed session'ıyla YALNIZ browser'da sağlanır.
-     Silmeyi bir server action / API route'a taşımak, server-side
-     anon `db`'nin cookie okumaması (lib/supabase.ts Faz-4 notu)
-     nedeniyle auth.uid()=NULL → is_active_admin()=false → RLS
-     silmeyi BLOKLAR → DAVRANIŞ BOZULUR. Bu yüzden execution modeli
-     KORUNDU (browser'da çalışır) ve bu modül client-reachable kaldı;
-     `villa-image.storage.server.ts`'e `import "server-only"` bu
-     sebeple henüz eklenemez (bkz. sprint raporu — kalan engel:
-     server-side admin auth / Faz-4).
+   ⚠️ BAĞLAM (server-side, session-aware DI):
+     Bu fonksiyonlar artık galeri write SERVER ACTION'larından
+     çağrılır (`gallery.action.ts`). Opsiyonel `client` parametresiyle
+     server tarafında `createSupabaseServerClient` (session-aware)
+     geçilir → admin RLS session'ı server tarafında da taşınır →
+     `is_active_admin()` BUGÜNKÜ gibi geçer (yetki aynen). Storage
+     temizliği `villa-image.storage.server.ts` (server-only) →
+     `removeServer` ile R2'den yapılır. Client-reachable DEĞİL.
 
-   ⚠️ DAVRANIŞ DEĞİŞMEDİ — gövdeler eski servisten birebir taşındı.
+   ⚠️ DAVRANIŞ DEĞİŞMEDİ — gövdeler birebir; yalnız client parametresi
+     ve execution yeri (server action) eklendi.
    =============================================================== */
 
 /* ===============================================================
@@ -71,12 +72,15 @@ import {
      - Race koşullarında (zaten silinmiş) eski false → yeni true.
        Bu davranış strict improvement: success/failure ayrımı netleşir.
    =============================================================== */
-export async function deleteVillaImage(id: string): Promise<boolean> {
+export async function deleteVillaImage(
+  id: string,
+  client?: WriteClient
+): Promise<boolean> {
   if (!id) return false;
 
   /* 1) Fetch — image_url storage cleanup için lazım. */
   const { data: image, error: fetchError } =
-    await villaImageRepository.findImageUrlById(id);
+    await villaImageRepository.findImageUrlById(id, client);
 
   if (fetchError) {
     console.error("[villa-image.delete] FETCH_FAILED", {
@@ -93,7 +97,7 @@ export async function deleteVillaImage(id: string): Promise<boolean> {
   }
 
   /* 2) DB DELETE — defansif önce. */
-  const { error: dbError } = await villaImageRepository.deleteById(id);
+  const { error: dbError } = await villaImageRepository.deleteById(id, client);
 
   if (dbError) {
     console.error("[villa-image.delete] DB_FAILED", {
@@ -157,7 +161,10 @@ export async function deleteVillaImage(id: string): Promise<boolean> {
      { ok: false, removed: 0, orphans: [] }      — DB delete fail
                                                    (storage'a dokunulmadı)
    =============================================================== */
-export async function deleteAllVillaImages(villaId: string): Promise<{
+export async function deleteAllVillaImages(
+  villaId: string,
+  client?: WriteClient
+): Promise<{
   ok: boolean;
   removed: number;
   orphans: string[];
@@ -166,7 +173,7 @@ export async function deleteAllVillaImages(villaId: string): Promise<{
 
   /* 1) Fetch — storage cleanup için image_url'ler lazım. */
   const { data: imgs, error: fetchError } =
-    await villaImageRepository.findImageUrlsByVilla(villaId);
+    await villaImageRepository.findImageUrlsByVilla(villaId, client);
 
   if (fetchError) {
     console.error("[villa-image.deleteAll] FETCH_FAILED", {
@@ -185,7 +192,10 @@ export async function deleteAllVillaImages(villaId: string): Promise<{
   const count = imgs.length;
 
   /* 2) DB BATCH DELETE — tek query, sadece bu villa. */
-  const { error: dbError } = await villaImageRepository.deleteByVilla(villaId);
+  const { error: dbError } = await villaImageRepository.deleteByVilla(
+    villaId,
+    client
+  );
 
   if (dbError) {
     console.error("[villa-image.deleteAll] DB_FAILED", {

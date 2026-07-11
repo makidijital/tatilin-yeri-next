@@ -9,11 +9,10 @@ import {
 } from "react";
 import { Loader2 } from "lucide-react";
 
-import { villaRepository } from "@/lib/db/villa.repository";
-import {
-  getVillaPrices,
-  setVillaPrices,
-} from "@/app/services/villa-price.service";
+/* 🛡️ Fiyat okuma/yazma artık server action üzerinden (villa.repository /
+   villa-price.service / @/lib/db client bundle'a girmez). Write server
+   tarafında session-aware client ile → RLS admin session aynen korunur. */
+import { loadPricingData, savePricingData } from "./pricing.action";
 
 import {
   formatLocalDate,
@@ -129,7 +128,7 @@ export default function PricingCalendarCanvas({
       // EDIT mode: villa_prices DB tablosuna yaz.
       // CREATE mode: DB write YOK; sadece parent'a notify.
       if (villaId) {
-        await setVillaPrices(
+        await savePricingData(
           villaId,
           updated.map((r) => ({
             start_date: r.start_date,
@@ -150,16 +149,14 @@ export default function PricingCalendarCanvas({
     try {
       if (villaId) {
         // EDIT mode — DB load
-        const [villaRes, pricesData] = await Promise.all([
-          villaRepository.findIdTitleCurrencyById(villaId),
-          getVillaPrices(villaId),
-        ]);
+        const { villa: villaData, prices: pricesData } =
+          await loadPricingData(villaId);
 
-        if (villaRes.data) {
+        if (villaData) {
           setVilla({
-            id: villaRes.data.id,
-            title: villaRes.data.title || null,
-            currency: villaRes.data.currency || "TRY",
+            id: villaData.id,
+            title: villaData.title || null,
+            currency: villaData.currency || "TRY",
           });
         }
 

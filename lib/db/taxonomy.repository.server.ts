@@ -1,6 +1,9 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — server-only taxonomy repo'su artık native
+   PostgreSQL provider'ı üzerinden çalışır (dbAdminNative → from/rpc →
+   QueryBuilder). Public method yüzeyi + dönüş şekli aynen. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ TAXONOMY — SERVER-ONLY READ AGGREGATOR (service-role)

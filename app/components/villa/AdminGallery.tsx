@@ -33,10 +33,13 @@ const MAX_UPLOAD_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 const MAX_UPLOAD_FILE_SIZE_LABEL = "2 MB";
 /* 🛡️ BATCH COUNT CAP — tek seferde en fazla görsel adedi. */
 const MAX_UPLOAD_BATCH_COUNT = 80;
+/* 🛡️ Sıralama + kapak yazmaları server action üzerinden (villa-image.
+   mutations / @/lib/db client bundle'a girmez); server'da session-aware
+   client → RLS admin yetkisi aynen. */
 import {
-  updateImageOrder,
-  setCoverImage,
-} from "@/app/services/villa-image/villa-image.mutations";
+  reorderGalleryImages,
+  setGalleryCover,
+} from "./admin-gallery.action";
 import type { VillaImage } from "@/app/services/villa-image/villa-image.types";
 import {
   VILLA_IMAGES_BUCKET,
@@ -417,7 +420,7 @@ export default function AdminGallery({
       sort_order: i,
     }));
 
-    await updateImageOrder(payload);
+    await reorderGalleryImages(payload);
     await onReorder();
   }
 
@@ -521,7 +524,7 @@ export default function AdminGallery({
             <div className="absolute bottom-2 left-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
               <button
                 onClick={async () => {
-  await setCoverImage(img.id, img.villa_id);
+  await setGalleryCover(img.id, img.villa_id);
   await onReorder(); // 🔥 UI anında güncellenir
 }}
                 className="flex-1 bg-white text-xs py-1 rounded hover:bg-gray-200"

@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-/* 🛡️ EXIT HARDENING — inline `supabase.from()` yerine mevcut
-   menuRepository. `db` barrel client-safe (isomorphic); aynı anon
-   RLS context + birebir aynı SELECT shape (id, name, slug). */
-import { menuRepository } from "@/lib/db/menu.repository";
-import { villaTypeRepository } from "@/lib/db/villa-type.repository";
+/* 🛡️ Public taksonomi + bölge yüklemesi artık server action üzerinden
+   (menu/villa-type repository + @/lib/db client bundle'a girmez);
+   aynı SELECT/order shape, aynı UI davranışı. */
+import { loadHeroFilters } from "./hero-filters.action";
 /* 🔎 Floating villa-adı arama — mevcut paylaşılan canlı arama component'i
    (debounce + searchByTitle + autocomplete dropdown). Kendi navigation
    logic'i var; burada yalnız tüketilir. */
@@ -104,10 +103,7 @@ export default function HeroSearchPanel() {
          Dönüş şekli (id, name, slug) findAllVillaTypes ile BİREBİR; UI değişmez.
          Diğer public alanlarla (CategoryCollection/arama/kiralik/kisa-sureli)
          aynı sıra. Bölge (locations) ve navbar menü sistemi ETKİLENMEZ. */
-      const { data: types } =
-        await villaTypeRepository.findAllForPublicTaxonomy();
-      const { data: locations } =
-        await menuRepository.findAllVillaLocations();
+      const { types, locations } = await loadHeroFilters();
       if (types) setCategoryOptions(types);
       /* 🛡️ Migration 050 — Hero bölge dropdown'ı yalnız ANA BÖLGELERİ
          (grup kökü: name === filter_group_name) gösterir. Alt bölgeler

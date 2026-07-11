@@ -1,6 +1,6 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ VILLA PRICE — SERVER-ONLY REPOSITORY (service-role; cleanup)

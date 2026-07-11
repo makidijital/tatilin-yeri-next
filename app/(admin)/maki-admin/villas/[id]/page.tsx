@@ -1,11 +1,8 @@
 "use client";
 
-import { villaRepository } from "@/lib/db/villa.repository";
-import { villaLocationRepository } from "@/lib/db/villa-location.repository";
-import { villaTypeRepository } from "@/lib/db/villa-type.repository";
-import { villaFeatureRepository } from "@/lib/db/villa-feature.repository";
-import { ruleItemRepository } from "@/lib/db/rule-item.repository";
-import { priceIncludeItemRepository } from "@/lib/db/price-include-item.repository";
+/* 🛡️ Tüm okumalar server action üzerinden (6 repository + 2 service +
+   @/lib/db client bundle'a girmez); orchestration-only, mantık aynen. */
+import { loadVillaEditData } from "./villa-edit.action";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -20,8 +17,6 @@ import Link from "next/link";
    Davranış BYTE-IDENTICAL: service orchestration sırası, validation,
    relation/distance/price/rule/price-include RPC çağrıları AYNEN. */
 import { adminFetch } from "@/lib/admin-fetch";
-import { getVillaDistances } from "@/app/services/villa-distance.service";
-import { getVillaPrices } from "@/app/services/villa-price.service";
 import { useNotify } from "@/app/components/admin/notifications/NotificationProvider";
 import { logActivity } from "@/lib/activity-log.client";
 import { slugifyTr } from "@/lib/slug";
@@ -172,129 +167,62 @@ export default function EditVilla() {
      karakter map'i (büyük harfler dahil) + NFKD diakritik strip +
      trim. Migration backfill ile birebir aynı semantic. */
 
+  /* 🛡️ TÜM OKUMALAR TEK SERVER ACTION ile (orchestration-only). Hidrate/
+     filter/map mantığı BYTE-IDENTICAL; yalnız veri kaynağı server action.
+     `id` route param sabit → önceki `[]`/`[id]` effect'leri tek [id]
+     altında birleşti (davranış aynı). */
   useEffect(() => {
-    const fetchVilla = async () => {
-      const { data } = await villaRepository.findRawByIdSingle(id);
+    if (!id) return;
+    const load = async () => {
+      const d = await loadVillaEditData(id);
 
-      if (!data) return;
+      const data = d.villa;
+      if (data) {
+        setForm((prev) => ({ ...prev, ...(data as Partial<VillaFormData>) }));
+        setSelectedLocation(
+          hydrateVillaLocationIdFromRow(data as Record<string, unknown>)
+        );
+        setSlug(hydrateVillaSlugFromRow(data as Record<string, unknown>));
+        setMapData(hydrateVillaMapDataFromRow(data as Record<string, unknown>));
+        setYoutubeVideos(
+          hydrateVillaYouTubeVideosFromRow(data as Record<string, unknown>)
+        );
+        setBedroomLayout(
+          hydrateVillaBedroomLayoutFromRow(data as Record<string, unknown>)
+        );
+        setBathroomLayout(
+          hydrateVillaBathroomLayoutFromRow(data as Record<string, unknown>)
+        );
+      }
 
-      /* 🛡️ FAZ 2 — hydrate helper'larından typed slice'lar.
-         setForm spread BYTE-IDENTICAL: DB row form alanlarını override
-         eder. Diğer setter'lar pure hydrate helper'larından akar. */
-      setForm((prev) => ({ ...prev, ...(data as Partial<VillaFormData>) }));
-      setSelectedLocation(
-        hydrateVillaLocationIdFromRow(data as Record<string, unknown>)
-      );
-      setSlug(hydrateVillaSlugFromRow(data as Record<string, unknown>));
-      setMapData(
-        hydrateVillaMapDataFromRow(data as Record<string, unknown>)
-      );
-      /* 🛡️ YouTube videos hidrate — DB JSONB (null veya array) →
-         normalizeYouTubeVideos ile güvenli VillaYouTubeVideo[] türetilir.
-         Eski villalarda kolon NULL → [] gelir → form state boş başlar. */
-      setYoutubeVideos(
-        hydrateVillaYouTubeVideosFromRow(data as Record<string, unknown>)
-      );
-      /* 🛡️ Konaklama Düzeni hidrate (mig 047). Eski villalar NULL → []. */
-      setBedroomLayout(
-        hydrateVillaBedroomLayoutFromRow(data as Record<string, unknown>)
-      );
-      setBathroomLayout(
-        hydrateVillaBathroomLayoutFromRow(data as Record<string, unknown>)
-      );
-    };
-    if (id) fetchVilla();
-  }, [id]);
-
-  useEffect(() => {
-    villaLocationRepository
-      .findAllStar()
-      .then(({ data }) =>
-        /* 🛡️ Migration 050 — grup köklerini (name === filter_group_name)
-           lokasyon seçicisinden gizle (ekle ekranıyla aynı kural).
-           select("*") filter_group_name'i zaten getirir. */
-        setLocations(
-          (data || []).filter((l: { name?: string; filter_group_name?: string | null }) => {
+      /* 🛡️ Migration 050 — grup köklerini gizle (AYNEN). */
+      setLocations(
+        (d.locations || []).filter(
+          (l: { name?: string; filter_group_name?: string | null }) => {
             const g = (l.filter_group_name ?? "").toString().trim();
             return !(g.length > 0 && l.name === g);
-          })
+          }
         )
       );
-  }, []);
 
-  useEffect(() => {
-    if (!id) return;
-    villaTypeRepository
-      .findAllStarUnordered()
-      .then(({ data }) => setTypes(data || []));
-    villaTypeRepository
-      .findTypeIdsByVilla(id)
-      .then(({ data }) =>
-        setSelectedTypes(data?.map((x) => x.type_id) || [])
+      setTypes(d.types || []);
+      setSelectedTypes(d.selectedTypes?.map((x) => x.type_id) || []);
+
+      setFeatures(d.features || []);
+      setSelectedFeatures(d.selectedFeatures?.map((x) => x.feature_id) || []);
+
+      setDistances(d.distances);
+      setPrices(d.prices);
+
+      setRuleItems(d.ruleItems || []);
+      setSelectedRules((d.selectedRules || []).map((x: any) => x.rule_id));
+
+      setPriceIncludeItems(d.priceIncludeItems || []);
+      setSelectedPriceIncludes(
+        (d.selectedIncludes || []).map((x: any) => x.include_id)
       );
-  }, [id]);
-
-  useEffect(() => {
-    if (!id) return;
-    villaFeatureRepository
-      .findAllStar()
-      .then(({ data }) => setFeatures(data || []));
-    villaFeatureRepository
-      .findFeatureIdsByVilla(id)
-      .then(({ data }) =>
-        setSelectedFeatures(data?.map((x) => x.feature_id) || [])
-      );
-  }, [id]);
-
-  useEffect(() => {
-    if (!id) return;
-    getVillaDistances(id as string).then(setDistances);
-  }, [id]);
-
-  useEffect(() => {
-    if (!id) return;
-    getVillaPrices(id as string).then(setPrices);
-  }, [id]);
-
-  /* ---------------------------------------------
-     🔥 RULES — master items + selected relations
-     ⚠️ DB kolonu "title" — "name" DEĞİL.
-  ---------------------------------------------- */
-  useEffect(() => {
-    ruleItemRepository
-      .findAllOrderedAsc()
-      .then(({ data }) => setRuleItems(data || []));
-  }, []);
-
-  useEffect(() => {
-    if (!id) return;
-    ruleItemRepository
-      .findRuleIdsByVilla(id)
-      .then(({ data }) =>
-        setSelectedRules((data || []).map((x: any) => x.rule_id))
-      );
-  }, [id]);
-
-  /* ---------------------------------------------
-     🔥 PRICE INCLUDES — master items + selected relations
-     ⚠️ DB kolonu "title" — "name" DEĞİL.
-  ---------------------------------------------- */
-  useEffect(() => {
-    priceIncludeItemRepository
-      .findAllOrderedAsc()
-      .then(({ data }) => setPriceIncludeItems(data || []));
-  }, []);
-
-  useEffect(() => {
-    if (!id) return;
-    /* ⚠️ Relation kolonu "include_id" — "price_include_id" DEĞİL. */
-    priceIncludeItemRepository
-      .findIncludeIdsByVilla(id)
-      .then(({ data }) =>
-        setSelectedPriceIncludes(
-          (data || []).map((x: any) => x.include_id)
-        )
-      );
+    };
+    load();
   }, [id]);
 
   /* 🛡️ FAZ 4 — Wizard step component'leri `VillaFormShape` loose

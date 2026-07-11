@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { villaAdminRepository } from "@/lib/db/villa.repository";
 
 // 🔥 DATE FORMAT
@@ -45,7 +47,11 @@ export async function setVillaPrices(
     price: number;
 
     currency?: string;
-  }[]
+  }[],
+  /* Opsiyonel client — verilmezse anon `db` (mevcut davranış). Server
+     action bağlamında session-aware client geçilir (admin write RLS
+     session'ı server tarafında da taşınsın). */
+  client?: Pick<SupabaseClient, "rpc">
 ) {
 
   // RPC payload'ı hazırla — villa_id RPC parametresi olarak ayrı geçer.
@@ -72,7 +78,8 @@ export async function setVillaPrices(
      ("sv-SE") + currency fallback ("TRY") service edge'de aynen. */
   const { error } = await villaAdminRepository.rpcReplaceVillaPrices(
     villaId,
-    payload
+    payload,
+    client
   );
 
   if (error) {

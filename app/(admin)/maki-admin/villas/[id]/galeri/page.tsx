@@ -3,13 +3,16 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { villaRepository } from "@/lib/db/villa.repository";
-import { getVillaImages } from "@/app/services/villa-image/villa-image.read";
-import { addVillaImage } from "@/app/services/villa-image/villa-image.mutations";
+/* 🛡️ Tüm DB (okuma + yazma) server action üzerinden (villa-image.* /
+   villa.repository / @/lib/db client bundle'a girmez). Yazmalar server'da
+   session-aware client ile → RLS admin yetkisi aynen korunur. */
 import {
-  deleteVillaImage,
-  deleteAllVillaImages,
-} from "@/app/services/villa-image/villa-image.delete";
+  loadGalleryImages,
+  loadGallerySlug,
+  addGalleryImage,
+  deleteGalleryImage,
+  deleteAllGalleryImages,
+} from "./gallery.action";
 import type { VillaImage } from "@/app/services/villa-image/villa-image.types";
 import AdminGallery from "@/app/components/villa/AdminGallery";
 import { ChevronLeft } from "lucide-react";
@@ -37,7 +40,7 @@ export default function AdminVillaGallery() {
   const [villaSlug, setVillaSlug] = useState<string | null>(null);
 
   async function loadImages() {
-    const data = await getVillaImages(id);
+    const data = await loadGalleryImages(id);
     setImages(data);
   }
 
@@ -45,8 +48,7 @@ export default function AdminVillaGallery() {
      Başarısız olursa null kalır → AdminGallery generic prefix kullanır;
      shortId villa.id'den deterministic ve stable kalır. */
   async function loadVillaSlug() {
-    const { data } = await villaRepository.findSlugById(id);
-    setVillaSlug((data?.slug as string | null) ?? null);
+    setVillaSlug(await loadGallerySlug(id));
   }
 
   useEffect(() => {
@@ -58,13 +60,13 @@ export default function AdminVillaGallery() {
   /* 🛡️ Return boolean → AdminGallery storage rollback için.
      addVillaImage zaten boolean dönüyor; transparently bubble. */
   async function handleUploaded(url: string): Promise<boolean> {
-    const ok = await addVillaImage(id, url);
+    const ok = await addGalleryImage(id, url);
     if (ok) await loadImages();
     return ok;
   }
 
   async function handleDelete(imageId: string) {
-    await deleteVillaImage(imageId);
+    await deleteGalleryImage(imageId);
     await loadImages();
   }
 
@@ -74,7 +76,7 @@ export default function AdminVillaGallery() {
      Başarı/başarısızlık AdminGallery'deki toast.success/error
      ile gösterilir. UI state `loadImages()` ile temizlenir. */
   async function handleDeleteAll(): Promise<boolean> {
-    const result = await deleteAllVillaImages(id);
+    const result = await deleteAllGalleryImages(id);
     if (result.ok) await loadImages();
     return result.ok;
   }

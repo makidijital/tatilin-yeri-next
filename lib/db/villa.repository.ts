@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { db } from "@/lib/db";
 import { normalizeSearchText, escapeLikePattern } from "@/lib/search";
 
@@ -1265,9 +1267,13 @@ export const villaAdminRepository = {
       end_date: string;
       price: number;
       currency: string;
-    }>
+    }>,
+    /* Opsiyonel client — verilmezse anon `db` (mevcut davranış). Server
+       bağlamında session-aware bir client geçilebilir (RLS admin session
+       server tarafında da taşınsın). */
+    client: Pick<SupabaseClient, "rpc"> = db
   ) {
-    return await db.rpc("replace_villa_prices", {
+    return await client.rpc("replace_villa_prices", {
       p_villa_id: villaId,
       p_prices: payload,
     });

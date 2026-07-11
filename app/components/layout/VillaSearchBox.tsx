@@ -4,10 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 
-/* 🛡️ EXIT HARDENING — canlı arama sorgusu villaRepository.searchByTitle
-   (client-safe barrel; aynı anon RLS + birebir aynı SELECT/filter/ilike/
-   limit). */
-import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Canlı arama artık server action üzerinden (villa.repository +
+   @/lib/db client bundle'a girmez); aynı SELECT/filter/ilike/limit. */
+import { searchVillas } from "./villa-search.action";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 
 /* ===============================================================
@@ -54,7 +53,7 @@ export default function VillaSearchBox({
     const timeout = setTimeout(async () => {
       if (cancelled) return;
       setLoading(true);
-      const data = await villaRepository.searchByTitle(search, 5);
+      const data = await searchVillas(search, 5);
       if (cancelled) return;
       setResults(data || []);
       setLoading(false);

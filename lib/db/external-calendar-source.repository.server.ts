@@ -1,6 +1,6 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ EXTERNAL CALENDAR SOURCES — SERVER-ONLY REPOSITORY (service-role)
