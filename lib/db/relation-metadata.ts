@@ -89,13 +89,22 @@ export const RELATION_METADATA: Readonly<Record<string, ReadonlyArray<RelationDe
     },
   ],
 
-  /* reservations → villa (operations + reservation detay embed'i). */
+  /* reservations → villa (operations + reservation detay embed'i) +
+     payment_method (mail snapshot read'leri: request/cancelled mail
+     `payment_method:payment_method_id ( name[, type] )` embed'i). */
   reservations: [
     {
       alias: "villa",
       table: "villa",
       cardinality: "one",
       localKey: "villa_id",
+      foreignKey: "id",
+    },
+    {
+      alias: "payment_method",
+      table: "payment_methods",
+      cardinality: "one",
+      localKey: "payment_method_id",
       foreignKey: "id",
     },
   ],

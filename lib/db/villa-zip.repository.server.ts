@@ -1,6 +1,6 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ VILLA ZIP LINKS — SERVER-ONLY REPOSITORY (service-role)
@@ -154,8 +154,14 @@ export const villaZipRepository = {
   /** Token doğrula + atomik download_count++ → villa_id | null.
    *  Geçersiz/revoked/expired token → null (RPC içinde WHERE filtreli). */
   async consumeToken(token: string) {
-    return await dbAdmin.rpc("consume_villa_zip_token", {
+    const { data, error } = await dbAdmin.rpc<{
+      consume_villa_zip_token: string;
+    }>("consume_villa_zip_token", {
       p_token: token,
     });
+    /* Scalar-döndüren fonksiyon: native rpc satır döndürür; villa_id'yi
+       tek satırın tek kolonundan çıkar. Sözleşme AYNEN: `data` = villa_id
+       (string) | null (Supabase rpc data-shape'iyle birebir). */
+    return { data: data?.[0]?.consume_villa_zip_token ?? null, error };
   },
 };

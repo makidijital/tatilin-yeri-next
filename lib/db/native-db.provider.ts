@@ -48,12 +48,24 @@ export type DbResult<T> = {
   status?: number;
 };
 
-/** Tek-satır sonuç zarfı. */
+/** Tek-satır sonuç zarfı. `.maybeSingle()` semantiği: 0 satır →
+ *  `{ data: null, error: null }` GEÇERLİDİR (yokluk hata değildir).
+ *  Bu yüzden `data` ile `error` bağımsız nullable'dır. */
 export type DbSingleResult<T> = {
   data: T | null;
   error: DbError | null;
   status?: number;
 };
+
+/** Tek-satır KESİN sonuç zarfı (`queryOne` / `.single()`): satır ya
+ *  VARDIR (`data: T`, `error: null`) ya da HATA döner (`data: null`,
+ *  `error`). 0 veya >1 satır burada hatadır (yokluk tolere edilmez).
+ *  Discriminated union olduğundan `error` guard'ından sonra `data`
+ *  non-null'a DARALIR — bu, tek-satır sorgusunun doğal değişmezidir
+ *  (vendor-bağımsız `Result<T, E>` modeli; PostgREST/Supabase alanı YOK). */
+export type DbEnforcedSingleResult<T> =
+  | { data: T; error: null; status?: number }
+  | { data: null; error: DbError; status?: number };
 
 /** DB seam kontratı — veri erişim yüzeyi. */
 export interface NativeDbProvider {
@@ -63,11 +75,12 @@ export interface NativeDbProvider {
     params?: ReadonlyArray<unknown>
   ): Promise<DbResult<T>>;
 
-  /** Tam 1 satır bekler (0 veya >1 → error). */
+  /** Tam 1 satır bekler (0 veya >1 → error). Discriminated union:
+   *  error yoksa `data` non-null garantidir. */
   queryOne<T extends QueryResultRow = QueryResultRow>(
     text: string,
     params?: ReadonlyArray<unknown>
-  ): Promise<DbSingleResult<T>>;
+  ): Promise<DbEnforcedSingleResult<T>>;
 
   /** 0 veya 1 satır (0 → data:null; >1 → error). */
   queryMaybeOne<T extends QueryResultRow = QueryResultRow>(
@@ -128,7 +141,7 @@ export const nativeDbProvider: NativeDbProvider = {
   async queryOne<T extends QueryResultRow>(
     text: string,
     params?: ReadonlyArray<unknown>
-  ): Promise<DbSingleResult<T>> {
+  ): Promise<DbEnforcedSingleResult<T>> {
     const { data, error } = await runQuery<T>(text, params);
     if (error) return { data: null, error };
     const rows = data ?? [];

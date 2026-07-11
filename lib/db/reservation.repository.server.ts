@@ -1,6 +1,9 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — server-only reservation write/read repo'su artık
+   native PostgreSQL provider'ı üzerinden çalışır (dbAdminNative → from/rpc
+   → QueryBuilder). Public method yüzeyi + dönüş şekli aynen. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 import {
   SELECT_RESERVATION_DETAIL,
@@ -36,13 +39,35 @@ import {
        { insertRepository: reservationServerRepository })
    =============================================================== */
 
+/* ===============================================================
+   🛡️ GEÇİŞSEL TİP KÖPRÜSÜ (DI kontratı) — server repo → anon repo tipi
+   ===============================================================
+   Service DI interface'leri `Pick<typeof reservationRepository, ...>`
+   (app/services/reservation/*.service.ts) ANON repository'ye bağlıdır;
+   anon repo HENÜZ Supabase-tipli olduğundan bu 5 paylaşılan method'un
+   dönüş tipi Supabase response şeklindedir. Server repo (native) bu
+   method'ları aynı dönüş tipiyle yüzeyler → DI kontratı (route call
+   site'ları) DEĞİŞMEDEN sağlanır. Consumer'lar yalnız `{ data, error }`
+   (+ `error.message`/`error.code`) okur; native runtime bunları birebir
+   sağlar. Köprü YALNIZ tip düzeyinde (`import(...)` type-query → runtime
+   import YOK, vendor-neutral native provider KİRLENMEZ). Anon repo
+   native'e geçince DI interface'leri native tipe döner ve bu köprü kalkar.
+   =============================================================== */
+type AnonReservationRepo =
+  typeof import("@/lib/db/reservation.repository").reservationRepository;
+type SharedReturn<K extends "insert" | "findById" | "updateById" | "deleteById" | "findPaidAmount"> =
+  Awaited<ReturnType<AnonReservationRepo[K]>>;
+
 export const reservationServerRepository = {
-  async insert(payload: Record<string, unknown>) {
-    return await dbAdmin
+  async insert(
+    payload: Record<string, unknown>
+  ): Promise<SharedReturn<"insert">> {
+    const res = await dbAdmin
       .from("reservations")
       .insert(payload)
       .select()
       .single();
+    return res as unknown as SharedReturn<"insert">;
   },
 
   /* ===============================================================
@@ -59,12 +84,13 @@ export const reservationServerRepository = {
      anon SELECT 0 row → PGRST116 silent fail; service-role bypass ile
      gerçek row dönüyor.
   =============================================================== */
-  async findById(id: string) {
-    return await dbAdmin
+  async findById(id: string): Promise<SharedReturn<"findById">> {
+    const res = await dbAdmin
       .from("reservations")
       .select(SELECT_RESERVATION_DETAIL)
       .eq("id", id)
       .single();
+    return res as unknown as SharedReturn<"findById">;
   },
 
   /* ===============================================================
@@ -81,11 +107,15 @@ export const reservationServerRepository = {
      dependency injection ile services'e geçer → byte-identical
      UPDATE artık service-role ile yapılır.
   =============================================================== */
-  async updateById(id: string, partial: Record<string, unknown>) {
-    return await dbAdmin
+  async updateById(
+    id: string,
+    partial: Record<string, unknown>
+  ): Promise<SharedReturn<"updateById">> {
+    const res = await dbAdmin
       .from("reservations")
       .update(partial)
       .eq("id", id);
+    return res as unknown as SharedReturn<"updateById">;
   },
 
   /* ===============================================================
@@ -98,11 +128,12 @@ export const reservationServerRepository = {
      Hard delete; 040 admin-only RLS altında anon DELETE 0 row etkiler
      (silent fail) → service-role bypass.
   =============================================================== */
-  async deleteById(id: string) {
-    return await dbAdmin
+  async deleteById(id: string): Promise<SharedReturn<"deleteById">> {
+    const res = await dbAdmin
       .from("reservations")
       .delete()
       .eq("id", id);
+    return res as unknown as SharedReturn<"deleteById">;
   },
 
   /* ===============================================================
@@ -117,12 +148,13 @@ export const reservationServerRepository = {
      → canConfirmReservation(undefined) === false → guard yanlışlıkla
      throw eder. Service-role ile gerçek paid_amount okunur.
   =============================================================== */
-  async findPaidAmount(id: string) {
-    return await dbAdmin
+  async findPaidAmount(id: string): Promise<SharedReturn<"findPaidAmount">> {
+    const res = await dbAdmin
       .from("reservations")
       .select("paid_amount")
       .eq("id", id)
       .maybeSingle();
+    return res as unknown as SharedReturn<"findPaidAmount">;
   },
 
   /* ===============================================================

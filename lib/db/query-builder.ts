@@ -16,6 +16,7 @@ import {
   nativeDbProvider,
   type DbResult,
   type DbSingleResult,
+  type DbEnforcedSingleResult,
 } from "./native-db.provider";
 
 /* ===============================================================
@@ -45,13 +46,14 @@ type OrderOptions = {
   referencedTable?: string;
 };
 
-/** Tek satır bekleyen terminal (`.single()` / `.maybeSingle()`). */
-class SingleResultBuilder<T> implements PromiseLike<DbSingleResult<T>> {
-  constructor(private readonly run: () => Promise<DbSingleResult<T>>) {}
-  then<TResult1 = DbSingleResult<T>, TResult2 = never>(
-    onfulfilled?:
-      | ((v: DbSingleResult<T>) => TResult1 | PromiseLike<TResult1>)
-      | null,
+/** Tek satır bekleyen terminal (`.single()` / `.maybeSingle()`).
+ *  Sonuç zarfı tipi `R` ile parametreli: `.single()` KESİN zarfı
+ *  (`DbEnforcedSingleResult`, discriminated), `.maybeSingle()` nullable
+ *  zarfı (`DbSingleResult`) yüzeyler. Tek gövde/tek kod yolu. */
+class SingleResultBuilder<R> implements PromiseLike<R> {
+  constructor(private readonly run: () => Promise<R>) {}
+  then<TResult1 = R, TResult2 = never>(
+    onfulfilled?: ((v: R) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
   ): PromiseLike<TResult1 | TResult2> {
     return this.run().then(onfulfilled, onrejected);
@@ -230,14 +232,14 @@ export class QueryBuilder<T extends QueryResultRow = QueryResultRow>
 
   /* ---------------- TERMİNALLER ---------------- */
 
-  single(): SingleResultBuilder<T> {
-    return new SingleResultBuilder<T>(() =>
+  single(): SingleResultBuilder<DbEnforcedSingleResult<T>> {
+    return new SingleResultBuilder<DbEnforcedSingleResult<T>>(() =>
       nativeDbProvider.queryOne<T>(...this.compiled())
     );
   }
 
-  maybeSingle(): SingleResultBuilder<T> {
-    return new SingleResultBuilder<T>(() =>
+  maybeSingle(): SingleResultBuilder<DbSingleResult<T>> {
+    return new SingleResultBuilder<DbSingleResult<T>>(() =>
       nativeDbProvider.queryMaybeOne<T>(...this.compiled())
     );
   }
