@@ -1,6 +1,11 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — native provider (pilotlar PASS). rpc scalar parity
+   hazır: refresh_villa_short_gaps (returns integer) → data = integer
+   (rpc-metadata "scalar"); cron `Number(data)` birebir çalışır. Method
+   yüzeyi + dönüş şekli aynen. Runtime testi yeşil olmadan production'a
+   deploy edilmemeli. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ SHORT GAPS — SERVER-ONLY REPOSITORY (service-role)

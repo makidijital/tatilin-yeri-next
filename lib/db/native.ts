@@ -3,7 +3,7 @@ import "server-only";
 import type { QueryResultRow } from "pg";
 
 import { QueryBuilder } from "./query-builder";
-import { nativeDbProvider, type DbResult } from "./native-db.provider";
+import { nativeDbProvider, type DbRpcResult } from "./native-db.provider";
 
 /* ===============================================================
    🛡️ NATIVE DB PROVIDER — from() + rpc() (server-only)
@@ -30,10 +30,10 @@ export const dbNative = {
   ): QueryBuilder<T> {
     return new QueryBuilder<T>(table);
   },
-  rpc<T extends QueryResultRow = QueryResultRow>(
+  rpc<T = unknown>(
     fn: string,
     args?: Record<string, unknown>
-  ): Promise<DbResult<T>> {
+  ): Promise<DbRpcResult<T>> {
     return nativeDbProvider.rpc<T>(fn, args);
   },
 };

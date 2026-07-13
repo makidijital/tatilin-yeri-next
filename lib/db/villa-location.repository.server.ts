@@ -1,12 +1,12 @@
 import "server-only";
 
-/* 🛡️ PRODUCTION RESTORE — Admin Bölgeler ekranı native provider'ın
-   (DATABASE_URL/SSL) doğrulanmamış bağlantısı yüzünden boş dönüyordu
-   (regresyon: commit f2a199a). Bu repo geçici olarak production
-   Supabase yoluna (`dbAdmin` = service-role) geri alındı. Native
-   altyapı KORUNUR (silinmez); bu repo bağlantı birebir doğrulanınca
-   yeniden `@/lib/db/native`'e alınacak. */
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER (PILOT) — native provider parity tamamlandı
+   (tip-parser'lar, single/maybeSingle, PGRST116, rpc, search_path).
+   Bu repo, native provider'ın gerçek Supabase PostgreSQL'e karşı İLK
+   doğrulama pilotu. Method yüzeyi + dönüş şekli aynen. Runtime testi
+   (Admin Bölgeler + insert/update/delete) yeşil olmadan PRODUCTION'a
+   deploy EDİLMEMELİ; sorun çıkarsa yalnız native provider düzeltilir. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ VILLA LOCATIONS — SERVER-ONLY REPOSITORY (service-role)

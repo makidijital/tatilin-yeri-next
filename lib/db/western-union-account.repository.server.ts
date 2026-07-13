@@ -1,6 +1,12 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — native provider (pilotlar PASS). payment-account
+   kardeşiyle aynı desen: maybeSingle + order/limit + numeric/jsonb read +
+   error(code/details/hint) parity hazır. `status` (PostgREST HTTP
+   artefaktı) native'de yok, consumer yalnız log'da okur (fonksiyonel etki
+   YOK). Method yüzeyi + dönüş şekli aynen. Runtime testi yeşil olmadan
+   production'a deploy edilmemeli. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ WESTERN UNION ACCOUNT — SERVER-ONLY READ REPOSITORY (service-role)

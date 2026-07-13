@@ -1,6 +1,14 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — native provider (parity doğrulandı: or/is/not,
+   single→PGRST116, bulk insert, rpc void [replace_villa_* + set_villa_sort_
+   orders], jsonb encoder [youtube_videos/bedroom_layout/bathroom_layout →
+   JSON + jsonb cast; villa'da gerçek array kolonu yok], numeric/date/
+   timestamptz/uuid parser, SQLSTATE). Servisler repo'yu doğrudan çağırır →
+   type bridge GEREKMEZ (discriminated-union data narrowing). Method yüzeyi +
+   dönüş şekli aynen. Runtime testi yeşil olmadan production'a deploy
+   edilmemeli. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ FAZ 2 STABILIZATION — VILLA ADMIN REPOSITORY (SERVER-ROLE)

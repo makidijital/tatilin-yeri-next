@@ -1,6 +1,10 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — native provider (pilotlar PASS). bulk upsert
+   (onConflict "villa_id,external_uid") + delete/update RETURNING +
+   PostgREST IN-list (.not in) parity hazır; method yüzeyi + dönüş şekli
+   aynen. Runtime testi yeşil olmadan production'a deploy edilmemeli. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ EXTERNAL CALENDAR EVENTS — SERVER-ONLY REPOSITORY (service-role)

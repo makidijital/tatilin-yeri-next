@@ -1,6 +1,11 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — native provider (pilotlar PASS). insert (jsonb
+   before_data/after_data → ::jsonb; diff_summary text[] → registry ile
+   pg-literal) + count(exact)+range + delete({count}) parity hazır. Method
+   yüzeyi + dönüş şekli aynen. Runtime testi yeşil olmadan production'a
+   deploy edilmemeli. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ ADMIN ACTIVITY LOG — SERVER-ONLY REPOSITORY (service-role; write + admin read)

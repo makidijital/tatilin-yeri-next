@@ -15,6 +15,8 @@
      - Teknoloji-bağımsız: hiçbir dış servis/istemci ismi taşımaz.
    =============================================================== */
 
+import { isRealArrayColumn } from "./pg-array-columns";
+
 /** Derlenmiş SQL — metin + sıralı parametre değerleri. */
 export interface CompiledSql {
   readonly text: string;
@@ -156,6 +158,44 @@ class ParamBag {
   list(): unknown[] {
     return this.values;
   }
+}
+
+/* ---------------------------------------------------------------
+   INSERT/UPDATE DEĞER KODLAYICI — jsonb parity (Supabase/PostgREST)
+   ---------------------------------------------------------------
+   node-pg JS dizisini array-literal (`{a,b}`), plain objeyi ise JSON'a
+   serialize eder. Dizi tutan `jsonb` kolonlar (ör. sidebar_permissions)
+   JSON bekler → array-literal HATA verir. Bu yüzden:
+     • JS dizisi → GERÇEK array kolonuysa (registry) pg-literal; değilse
+       jsonb kabul edilip JSON metni + `::jsonb`.
+     • plain obje → jsonb (JSON metni + `::jsonb`) — Supabase ile birebir.
+     • null/undefined/scalar/Date → node-pg default (dokunulmaz).
+   Böylece jsonb (dizi+obje) doğru, gerçek text[]/uuid[] korunur. */
+function isPlainObject(v: unknown): boolean {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    !Array.isArray(v) &&
+    !(v instanceof Date) &&
+    Object.getPrototypeOf(v) === Object.prototype
+  );
+}
+
+function addColumnValue(
+  table: string,
+  column: string,
+  value: unknown,
+  params: ParamBag
+): string {
+  if (value !== null && value !== undefined) {
+    const asJsonb =
+      isPlainObject(value) ||
+      (Array.isArray(value) && !isRealArrayColumn(table, column));
+    if (asJsonb) {
+      return `${params.add(JSON.stringify(value))}::jsonb`;
+    }
+  }
+  return params.add(value);
 }
 
 /* ---------------------------------------------------------------
@@ -342,7 +382,9 @@ function compileInsert(q: InsertDescriptor): CompiledSql {
 
   const valuesSql = q.rows
     .map((row) => {
-      const cells = columns.map((c) => params.add(row[c]));
+      const cells = columns.map((c) =>
+        addColumnValue(q.table, c, row[c], params)
+      );
       return `(${cells.join(", ")})`;
     })
     .join(", ");
@@ -375,7 +417,9 @@ function compileUpdate(q: UpdateDescriptor): CompiledSql {
     throw new Error("UPDATE: en az bir kolon gerekli.");
   }
   const assignments = columns
-    .map((c) => `${quoteIdent(c)} = ${params.add(q.set[c])}`)
+    .map(
+      (c) => `${quoteIdent(c)} = ${addColumnValue(q.table, c, q.set[c], params)}`
+    )
     .join(", ");
 
   let text = `UPDATE ${quoteIdent(q.table)} SET ${assignments}`;

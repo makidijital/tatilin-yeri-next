@@ -2,6 +2,8 @@ import "server-only";
 
 import { Pool, type PoolConfig } from "pg";
 
+import { registerPgTypeParsers } from "./pg-type-parsers";
+
 /* ===============================================================
    🛡️ NATIVE POSTGRESQL — CONNECTION POOL (server-only)
    ===============================================================
@@ -52,6 +54,12 @@ function buildConfig(): PoolConfig {
     idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30_000),
     connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS || 10_000),
     ssl: resolveSsl(),
+    /* DETERMİNİSTİK search_path — query-compiler tabloları ŞEMASIZ
+       ("villa_locations") üretir; PostgREST/Supabase `public` şemasında
+       çalışır. Pooler kullanıcısının default search_path'ine bağlı
+       kalmadan `public` sabitlenir → şemasız çözümleme Supabase ile
+       BİREBİR. (Tüm tablo + RPC fonksiyonları public'te.) */
+    options: "-c search_path=public",
   };
 }
 
@@ -62,6 +70,9 @@ function buildConfig(): PoolConfig {
  */
 export function getPgPool(): Pool {
   if (pool) return pool;
+  /* PostgREST/Supabase JSON-shape parity: numeric→number, tarih/zaman
+     tipleri → string (Date DEĞİL). Pool kurulmadan ÖNCE register. */
+  registerPgTypeParsers();
   const created = new Pool(buildConfig());
   created.on("error", (err: Error) => {
     console.error("[pg.pool] idle client error", err);

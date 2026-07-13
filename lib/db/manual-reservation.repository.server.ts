@@ -1,6 +1,11 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — native provider (pilotlar PASS). embed
+   (manual_reservations→villa kayıtlı) + maybeSingle + rpc scalar
+   (cleanup_past_manual_reservations → integer) parity hazır. Method
+   yüzeyi + dönüş şekli aynen. Runtime testi yeşil olmadan production'a
+   deploy edilmemeli. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ MANUAL RESERVATION — SERVER-ONLY READ REPOSITORY (service-role)

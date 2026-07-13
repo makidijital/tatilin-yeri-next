@@ -1,12 +1,10 @@
 import "server-only";
 
-/* 🛡️ PRODUCTION RESTORE — Villa Ekle > Bölge dropdown (+ tip/özellik/
-   kural/fiyat-dahil listeleri) native provider'ın (DATABASE_URL/SSL)
-   doğrulanmamış bağlantısı yüzünden boş dönüyordu (regresyon: commit
-   f2a199a). Bu repo geçici olarak production Supabase yoluna (`dbAdmin`
-   = service-role) geri alındı. Native altyapı KORUNUR (silinmez);
-   bağlantı birebir doğrulanınca yeniden `@/lib/db/native`'e alınacak. */
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — villa-location pilotu PASS sonrası taxonomy
+   aggregator native provider'a alındı (findLocations/Types/Features/
+   RuleItems/PriceIncludeItems). Method yüzeyi + dönüş şekli aynen.
+   Runtime testi yeşil olmadan production'a deploy edilmemeli. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ TAXONOMY — SERVER-ONLY READ AGGREGATOR (service-role)

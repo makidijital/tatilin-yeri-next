@@ -1,6 +1,11 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — native provider (pilotlar PASS). maybeSingle +
+   embed (villa:villa_id(title) + payment_method:payment_method_id(name),
+   ikisi de relation-metadata'da kayıtlı) + numeric/tarih read parity
+   hazır. Method yüzeyi + dönüş şekli aynen. Runtime testi yeşil olmadan
+   production'a deploy edilmemeli. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ VOUCHER REPOSITORY (Phase 1 — repo consolidation)

@@ -1,6 +1,9 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — native provider (pilotlar PASS). maybeSingle()/
+   single()/SQLSTATE(23505)/text[] parity hazır; method yüzeyi + dönüş
+   şekli aynen. Runtime testi yeşil olmadan production'a deploy edilmemeli. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ ADMIN USERS — SERVER-ONLY REPOSITORY (service-role)

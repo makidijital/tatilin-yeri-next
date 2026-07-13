@@ -1,6 +1,10 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — native provider (pilotlar PASS). delete({count})
+   parity hazır (mail-log deleteOlderThan ile aynı sınıf, kanıtlı):
+   affectedCount → { count }. Method yüzeyi + dönüş şekli aynen. Runtime
+   testi yeşil olmadan production'a deploy edilmemeli. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ VILLA PRICE — SERVER-ONLY REPOSITORY (service-role; cleanup)

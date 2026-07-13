@@ -1,10 +1,13 @@
 import "server-only";
 
-/* 🛡️ PRODUCTION RESTORE — native provider'ın (DATABASE_URL/SSL)
-   doğrulanmamış bağlantısı yüzünden bu repo geçici olarak production
-   Supabase yoluna (`dbAdmin` = service-role) geri alındı. Native altyapı
-   KORUNUR; bağlantı birebir doğrulanınca yeniden native'e alınacak. */
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — native provider (pilotlar PASS). rpc scalar
+   (consume_villa_zip_token → uuid; rpc-metadata "scalar" → data=uuid|null,
+   route `villaId as string` birebir) + single/insert + .or() (ISO
+   timestamp + not.is.null) + uuid/timestamptz parity hazır. `consumeToken`
+   temiz rpc çağrısı (manuel unwrap YOK — registry çözer). Method yüzeyi +
+   dönüş şekli aynen. Runtime testi yeşil olmadan production'a deploy
+   edilmemeli. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ VILLA ZIP LINKS — SERVER-ONLY REPOSITORY (service-role)

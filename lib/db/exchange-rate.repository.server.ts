@@ -1,6 +1,9 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — native provider (pilotlar PASS). Method yüzeyi +
+   dönüş şekli aynen (upsert onConflict "code" dahil). Runtime testi
+   yeşil olmadan production'a deploy edilmemeli. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ EXCHANGE RATES — SERVER-ONLY REPOSITORY (service-role)

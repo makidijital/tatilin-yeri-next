@@ -3,6 +3,7 @@ import "server-only";
 import type { QueryResultRow } from "pg";
 
 import { getPgPool } from "./pg.client";
+import { getRpcReturnKind, isJsonbRpcArg } from "./rpc-metadata";
 
 /* ===============================================================
    🛡️ POSTGRESQL DB PROVIDER (server-only)
@@ -67,6 +68,16 @@ export type DbEnforcedSingleResult<T> =
   | { data: T; error: null; status?: number }
   | { data: null; error: DbError; status?: number };
 
+/** RPC sonuç zarfı — Supabase `.rpc()` parity'si. `data` fonksiyonun
+ *  RETURNS türüne göre şekillenir (scalar→değer, setof→dizi,
+ *  table→satır dizisi, void→null); satır-dizisi DEĞİL. `T` çağıranın
+ *  beklediği tam dönüş tipidir (ör. `boolean`, `string[]`, `Row[]`). */
+export type DbRpcResult<T> = {
+  data: T | null;
+  error: DbError | null;
+  status?: number;
+};
+
 /** DB seam kontratı — veri erişim yüzeyi. */
 export interface NativeDbProvider {
   /** Parametreli ham SQL → çok satır. */
@@ -88,11 +99,13 @@ export interface NativeDbProvider {
     params?: ReadonlyArray<unknown>
   ): Promise<DbSingleResult<T>>;
 
-  /** PostgreSQL fonksiyon çağrısı (named-arg). */
-  rpc<T extends QueryResultRow = QueryResultRow>(
+  /** PostgreSQL fonksiyon çağrısı (named-arg). Sonuç, fonksiyonun
+   *  RETURNS türüne göre Supabase `.rpc()` ile aynı şekle sokulur
+   *  (scalar→değer, setof→dizi, table→satır dizisi, void→null). */
+  rpc<T = unknown>(
     fn: string,
     args?: Record<string, unknown>
-  ): Promise<DbResult<T>>;
+  ): Promise<DbRpcResult<T>>;
 
   /** Statement'ı çalıştırır, ETKİLENEN satır sayısını döndürür
    *  (DELETE/UPDATE sayımı; RETURNING gerektirmez). */
@@ -118,6 +131,55 @@ function toError(err: unknown): DbError {
   dbErr.details = pg.detail ?? null;
   dbErr.hint = pg.hint ?? null;
   return dbErr;
+}
+
+/** Supabase `.single()` PARITY: 0 veya >1 satırda PostgREST `PGRST116`
+ *  hatası döndürür (`error.code === "PGRST116"`, sabit mesaj). Tüketiciler
+ *  (pages/blog/settings/reservation) bu koda/branch'e bağlı → native
+ *  `queryOne` de birebir aynı zarfı üretir. */
+function pgrst116(details: string): DbError {
+  const err = new Error(
+    "JSON object requested, multiple (or no) rows returned"
+  ) as DbError;
+  err.code = "PGRST116";
+  err.details = details;
+  err.hint = null;
+  return err;
+}
+
+/** Plain JS objesi mi (jsonb arg adayı; dizi/Date/null hariç). */
+function isPlainObjectArg(v: unknown): boolean {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    !Array.isArray(v) &&
+    !(v instanceof Date) &&
+    Object.getPrototypeOf(v) === Object.prototype
+  );
+}
+
+/** RPC ham satırlarını fonksiyonun RETURNS türüne göre Supabase
+ *  `.rpc()` şekline sokar (rpc-metadata registry'sinden):
+ *    void       → null
+ *    scalar     → tek satır/tek kolon değeri (yoksa null)
+ *    scalar_set → her satırın tek kolonu → değer dizisi
+ *    table      → ham satır dizisi (değişmeden)
+ *  `SELECT * FROM fn()` scalar fonksiyonlarda kolon adını fonksiyondan
+ *  alır; kolon adına bağlı kalmamak için ilk kolonun DEĞERİ okunur. */
+function shapeRpcResult<T>(fn: string, rows: QueryResultRow[]): T | null {
+  switch (getRpcReturnKind(fn)) {
+    case "void":
+      return null;
+    case "scalar":
+      return (rows.length > 0
+        ? (Object.values(rows[0])[0] as T)
+        : null) as T | null;
+    case "scalar_set":
+      return rows.map((r) => Object.values(r)[0]) as unknown as T;
+    case "table":
+    default:
+      return rows as unknown as T;
+  }
 }
 
 async function runQuery<T extends QueryResultRow>(
@@ -146,12 +208,12 @@ export const nativeDbProvider: NativeDbProvider = {
     if (error) return { data: null, error };
     const rows = data ?? [];
     if (rows.length === 0) {
-      return { data: null, error: new Error("queryOne: satır bulunamadı (0)") };
+      return { data: null, error: pgrst116("The result contains 0 rows") };
     }
     if (rows.length > 1) {
       return {
         data: null,
-        error: new Error(`queryOne: birden fazla satır (${rows.length})`),
+        error: pgrst116(`The result contains ${rows.length} rows`),
       };
     }
     return { data: rows[0], error: null };
@@ -174,25 +236,43 @@ export const nativeDbProvider: NativeDbProvider = {
     return { data: rows[0], error: null };
   },
 
-  async rpc<T extends QueryResultRow>(
+  async rpc<T = unknown>(
     fn: string,
     args?: Record<string, unknown>
-  ): Promise<DbResult<T>> {
+  ): Promise<DbRpcResult<T>> {
     if (!IDENT_RE.test(fn)) {
-      return { data: null, error: new Error(`rpc: geçersiz fonksiyon adı "${fn}"`) };
+      return { data: null, error: toError(new Error(`rpc: geçersiz fonksiyon adı "${fn}"`)) };
     }
     const entries = Object.entries(args ?? {});
     const params: unknown[] = [];
     const named: string[] = [];
     for (const [key, value] of entries) {
       if (!IDENT_RE.test(key)) {
-        return { data: null, error: new Error(`rpc: geçersiz argüman adı "${key}"`) };
+        return { data: null, error: toError(new Error(`rpc: geçersiz argüman adı "${key}"`)) };
       }
-      params.push(value);
-      named.push(`${key} => $${params.length}`);
+      /* jsonb argüman parity: `jsonb` tipli arg'a JS dizisi/objesi
+         geçilirse node-pg array-literal üretir → "invalid input syntax
+         for type json". Registry'deki jsonb arg (veya plain obje) →
+         JSON.stringify + `::jsonb`. uuid[]/text[] arg'lar (registry'de
+         DEĞİL) → ham (node-pg array-literal, doğru). */
+      if (
+        value !== null &&
+        value !== undefined &&
+        (isJsonbRpcArg(fn, key) || isPlainObjectArg(value))
+      ) {
+        params.push(JSON.stringify(value));
+        named.push(`${key} => $${params.length}::jsonb`);
+      } else {
+        params.push(value);
+        named.push(`${key} => $${params.length}`);
+      }
     }
     const text = `SELECT * FROM ${fn}(${named.join(", ")})`;
-    return runQuery<T>(text, params);
+    const { data: rows, error } = await runQuery(text, params);
+    if (error) return { data: null, error };
+    /* Supabase `.rpc()` PARITY: fonksiyonun RETURNS türüne göre şekil.
+       scalar→değer, setof→dizi, table→satır dizisi, void→null. */
+    return { data: shapeRpcResult<T>(fn, rows ?? []), error: null };
   },
 
   async affectedCount(

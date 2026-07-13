@@ -334,7 +334,10 @@ export class QueryBuilder<T extends QueryResultRow = QueryResultRow>
       const [text, params] = this.compiledCount();
       const r = await nativeDbProvider.query<CountRow>(text, params);
       if (r.error) return { data: null, error: r.error, count: null };
-      return { data: [], error: null, count: r.data?.[0]?.count ?? 0 };
+      /* Supabase `.select(col,{head:true,count})` PARITY: head isteği
+         gövde döndürmez → `data: null` (dizi DEĞİL). Yalnız `count`
+         anlamlıdır. */
+      return { data: null, error: null, count: r.data?.[0]?.count ?? 0 };
     }
 
     const [text, params] = this.compiled();
@@ -456,13 +459,45 @@ function resolveEmbeds(
 /* ---------------------------------------------------------------
    `.not(col,"in","(a,b,c)")` — tuple string → değer dizisi.
    --------------------------------------------------------------- */
+/* PostgREST IN-list tuple parser — `("a","b,c","d""e")` → ['a','b,c','d"e'].
+   ⚠️ PARITY: PostgREST çift-tırnağı DELIMITER olarak kullanır (virgül/özel
+   karakter içeren değerler için); tırnaklar değerin PARÇASI DEĞİLDİR ve
+   içteki `""` → `"` unescape edilir. Eski parser yalnız virgülle bölüp
+   trim ediyordu → tırnaklı değerler (`"uid"`) tırnakla kalıp yanlış
+   eşleşiyordu. Bu parser tırnak-duyarlı böler + unquote eder. */
 function parseTupleValues(tuple: string): string[] {
-  return tuple
-    .replace(/^\s*\(/, "")
-    .replace(/\)\s*$/, "")
-    .split(",")
-    .map((v) => v.trim())
-    .filter((v) => v.length > 0);
+  const inner = tuple.replace(/^\s*\(/, "").replace(/\)\s*$/, "");
+  const out: string[] = [];
+  let cur = "";
+  let inQuotes = false;
+  let quoted = false; // bu token tırnakla mı geldi (→ trim/empty-filter yok)
+  for (let i = 0; i < inner.length; i++) {
+    const ch = inner[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (inner[i + 1] === '"') {
+          cur += '"'; // "" → "
+          i++;
+        } else {
+          inQuotes = false; // kapanış tırnağı
+        }
+      } else {
+        cur += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+      quoted = true;
+    } else if (ch === ",") {
+      out.push(quoted ? cur : cur.trim());
+      cur = "";
+      quoted = false;
+    } else {
+      cur += ch;
+    }
+  }
+  out.push(quoted ? cur : cur.trim());
+  /* Boş token'ları at (ör. sondaki virgül). Repo boş uid geçmez. */
+  return out.filter((v) => v.length > 0);
 }
 
 /* ---------------------------------------------------------------

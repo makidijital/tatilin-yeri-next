@@ -1,6 +1,12 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ NATIVE CUTOVER — native provider (pilotlar PASS). maybeSingle +
+   order/limit + numeric/jsonb read + error(code/details/hint) parity
+   hazır. `status` PostgREST HTTP artefaktı olup native'de yoktur
+   (consumer yalnız log'da okur; fonksiyonel etki YOK). Method yüzeyi +
+   dönüş şekli aynen. Runtime testi yeşil olmadan production'a deploy
+   edilmemeli. */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ PAYMENT ACCOUNT — SERVER-ONLY READ REPOSITORY (service-role)
