@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
 import type { VillaWizardStep } from "./types";
 
 /* ===============================================================
@@ -25,8 +29,27 @@ export default function WizardStepBar({
   allowFreeNav?: boolean;
 }) {
   const totalSteps = steps.length;
+
+  /* 🔥 UX — step değişiminde (İleri/Geri veya step chip) yeni adımın en
+     üstüne yumuşak scroll. `scrollIntoView` (window.scrollTo DEĞİL) +
+     block:"start"; sticky admin header (h-16) için root'ta scroll-mt-24.
+     İlk mount'ta ÇALIŞMAZ (yalnız currentStep değişiminde). Validation/
+     state/form davranışı DEĞİŞMEZ — yalnız görsel scroll. */
+  const barRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    barRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [currentStep]);
+
   return (
-    <div className="card-premium p-4 flex flex-wrap items-center gap-3">
+    <div
+      ref={barRef}
+      className="card-premium p-4 flex flex-wrap items-center gap-3 scroll-mt-24"
+    >
       <span className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] mr-1">
         Adım {currentStep} / {totalSteps}
       </span>
