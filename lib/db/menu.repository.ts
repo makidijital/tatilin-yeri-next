@@ -1,4 +1,30 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 2 — anon repo) — importer zinciri KANITLI
+   client-safe (Header/Footer RSC + menu.service + hero-filters.action
+   [server-action] + RSC page'ler + cache.helpers; hiçbir "use client"
+   yok). 4 düz okuma; embed/rpc/write yok. `order` rezerve kelime →
+   compiler tırnaklıyor. Provider değişmedi. `server-only` defansif
+   sınır. Dönüş şekli aynen. */
+import { dbNative as db } from "@/lib/db/native";
+
+/* Native `from()` varsayılan `QueryResultRow`; anon Supabase `Database`
+   generic'iyle domain row tipliyordu. Tüketiciler (hero-filters.action →
+   HeroSearchPanel) alan-tipli erişir → sorgular domain row tipiyle
+   parametrelenir (davranış değişmez). */
+import type {
+  MenuRow,
+  PageRow,
+  VillaTypeRow,
+  VillaLocationRow,
+} from "@/types/database";
+
+/* villa_locations projeksiyonu: VillaLocationRow mirror'ı `filter_group_name`
+   (migration 050 additive) içermiyor; menu/hero bu alanı kullanır. Sorgu
+   onu seçtiği için tip tamamlanır (types/database.ts'e dokunmadan, repo-lokal). */
+type MenuVillaLocationRow = VillaLocationRow & {
+  filter_group_name: string | null;
+};
 
 /* ===============================================================
    🛡️ FAZ 40 — MENU REPOSITORY
@@ -25,7 +51,7 @@ export const menuRepository = {
   /** menu satırları — tree builder ham input. */
   async findAll() {
     return await db
-      .from("menu")
+      .from<MenuRow>("menu")
       .select(
         "id, name, href, order, parent_id, source_type, source_id"
       );
@@ -34,7 +60,7 @@ export const menuRepository = {
   /** Active pages — menu resolver lookup map'i + auto-include. */
   async findActivePagesForMenu() {
     return await db
-      .from("pages")
+      .from<PageRow>("pages")
       .select(
         "id, title, slug, menu_order, menu_parent_id, is_active, show_in_menu"
       )
@@ -44,7 +70,7 @@ export const menuRepository = {
   /** Villa types — category source lookup. */
   async findAllVillaTypes() {
     return await db
-      .from("villa_types")
+      .from<VillaTypeRow>("villa_types")
       .select("id, name, slug");
   },
 
@@ -54,7 +80,7 @@ export const menuRepository = {
       yok sayar — davranış değişmez). */
   async findAllVillaLocations() {
     return await db
-      .from("villa_locations")
+      .from<MenuVillaLocationRow>("villa_locations")
       .select("id, name, slug, filter_group_name");
   },
 };

@@ -1,4 +1,11 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 2 — anon repo) — importer zinciri KANITLI
+   client-safe (ShortGapsSection RSC + public sayfalar; hiçbir "use
+   client" yok). rpc get_short_gap_counts → rpc-metadata "table" (satır
+   dizisi, Supabase parity) + düz okuma; write/embed/jsonb yok →
+   provider değişmedi. `server-only` defansif sınır. Dönüş şekli aynen. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ SHORT GAPS REPOSITORY (anon / public)

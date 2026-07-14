@@ -1,4 +1,12 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 2 — anon repo) — importer zinciri KANITLI
+   client-safe (exchange-rate.service + 2 public RSC page + price-verify
+   [server-only]; hiçbir "use client" yok). Salt-okunur 2 düz metod;
+   write/upsert/rpc/embed yok (upsert server sürümünde, PASS). numeric
+   (rate) / timestamptz (updated_at) parser hazır → provider değişmedi.
+   `server-only` defansif sınır. Dönüş şekli aynen. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ EXCHANGE RATES REPOSITORY (Phase 1 — repo consolidation)

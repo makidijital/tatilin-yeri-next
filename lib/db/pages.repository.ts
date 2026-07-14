@@ -1,4 +1,11 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 2 — anon repo) — importer zinciri KANITLI
+   client-safe (Footer RSC + page.service + sitemap + RSC page'ler;
+   hiçbir "use client" yok). Okuma; embed/rpc/write yok. single()→
+   PGRST116, jsonb (sections/body) read-parser hazır → provider
+   değişmedi. `server-only` defansif sınır. Dönüş şekli aynen. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ FAZ 40 — PAGES REPOSITORY

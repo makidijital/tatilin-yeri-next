@@ -1,10 +1,23 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 2 — anon repo) — importer zinciri KANITLI
+   client-safe (yalnız route/RSC/server-only/server-action; hiçbir
+   "use client" yok). Düz okuma; embed/rpc/write yok → provider
+   değişmedi. `server-only` defansif sınır (client bundle'a sızarsa
+   BUILD HATA). Method yüzeyi + dönüş şekli aynen. */
+import { dbNative as db } from "@/lib/db/native";
+
+/* Native `from()` varsayılan `QueryResultRow` döndürür; anon Supabase
+   `Database` generic'iyle `VillaLocationRow` tipliyordu. Tüketiciler
+   (ör. villa-edit action → client setLocations) bu tipi bekliyor →
+   sorgular domain row tipiyle parametrelenir (davranış değişmez). */
+import type { VillaLocationRow } from "@/types/database";
 
 /* ===============================================================
    🛡️ VILLA LOCATIONS REPOSITORY (Phase 1 — repo consolidation)
    ===============================================================
    `villa_locations` tablosu — read-side taxonomy. cache.helpers >
-   getCachedVillaLocations'ın inline `supabase.from("villa_locations")`
+   getCachedVillaLocations'ın inline `supabase.from<VillaLocationRow>("villa_locations")`
    sorgusunun BİREBİR taşınmış hali.
 
    ⚠️ NEDEN AYRI REPO:
@@ -26,7 +39,7 @@ export const villaLocationRepository = {
    *  getCachedVillaLocations için BİREBİR (select + order). */
   async findAllForTaxonomy() {
     return await db
-      .from("villa_locations")
+      .from<VillaLocationRow>("villa_locations")
       .select(
         "id, name, slug, cover_image, show_in_filter, filter_group_name"
       )
@@ -39,14 +52,14 @@ export const villaLocationRepository = {
    *  show_in_filter YOK + order YOK (public form dropdown'ları). */
   async findAllForPublicTaxonomy() {
     return await db
-      .from("villa_locations")
+      .from<VillaLocationRow>("villa_locations")
       .select("id, name, slug, filter_group_name");
   },
 
   /** GET — `select("*")` (filter/order YOK). Admin villa edit page
    *  location seçici (grup-kök filtresi caller'da). BİREBİR. */
   async findAllStar() {
-    return await db.from("villa_locations").select("*");
+    return await db.from<VillaLocationRow>("villa_locations").select("*");
   },
 
   /** GET — slim (id, name, filter_group_name), name ASC. Admin
@@ -56,7 +69,7 @@ export const villaLocationRepository = {
    *  slim + name ASC. Native `{ data, error }` döner. */
   async findAllForFilter() {
     return await db
-      .from("villa_locations")
+      .from<VillaLocationRow>("villa_locations")
       .select("id, name, filter_group_name")
       .order("name", { ascending: true });
   },

@@ -1,4 +1,12 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 2 — anon repo) — importer zinciri KANITLI
+   client-safe (blog.service + sitemap + public blog RSC page'ler; hiçbir
+   "use client" yok). Salt-okunur 3 metod; write/insert/update/delete yok
+   (server sürümünde, PASS). single()→PGRST116, timestamptz parser hazır;
+   jsonb/numeric yok → provider değişmedi. `server-only` defansif sınır.
+   Dönüş şekli aynen. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ BLOG REPOSITORY (FAZ 1) — read-side DB I/O
