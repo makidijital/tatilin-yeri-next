@@ -501,13 +501,20 @@ function parseTupleValues(tuple: string): string[] {
 }
 
 /* ---------------------------------------------------------------
-   `.or()` FİLTRE STRING PARSER
+   `.or()` FİLTRE STRING PARSER — PostgREST mantık ağacı (recursive)
    ---------------------------------------------------------------
-   Yalnız bu projenin `.or()` kullanımına özgü sınırlı gramer:
-     `col.op.value` (op: eq|neq|gt|gte|lt|lte|like|ilike)
-     `col.is.null|true|false` ve `col.not.is.…`
-   Değer `"…"` ile sarılıysa taşıma-tırnağı çıkarılır. Genel amaçlı
-   filtre dili DEĞİL. */
+   PostgREST `.or(...)` gramerini destekler:
+     • Yaprak (leaf): `col.op.value` (op: eq|neq|gt|gte|lt|lte|like|ilike),
+       `col.is.null|true|false`, `col.not.is.…`, `col.not.in.(...)`
+     • Mantık grupları: `and(a,b,...)`, `or(a,b,...)` — İÇ İÇE (nested),
+       recursive; her eleman yeniden yaprak veya grup olabilir.
+     • Grup negasyonu: `not.and(...)`, `not.or(...)`.
+   Top-level `.or(x,y,z)` → OR(x,y,z). Virgül bölmesi parantez-derinliği
+   ve `"…"` tırnaklarını korur → grup içi virgüller bölünmez.
+
+   ⚠️ GERİYE UYUMLU: düz filtreler (slug.eq.x,slug.ilike.x-%),
+     is/not/in yaprakları AYNEN çalışır (parseOrSegment leaf parser'ı
+     korundu). Yalnız and(...)/or(...) grup tanıma eklendi. */
 
 const OR_OP_MAP: Readonly<Record<string, CompareOp>> = {
   eq: "=",
@@ -521,7 +528,39 @@ const OR_OP_MAP: Readonly<Record<string, CompareOp>> = {
 };
 
 function parseOrFilter(filter: string): WhereCondition[] {
-  return splitTopLevelOr(filter).map(parseOrSegment);
+  return splitTopLevelOr(filter).map(parseOrElement);
+}
+
+/** Bir `.or()`/grup elemanını çözer: `and(...)`/`or(...)` grubu (nested)
+ *  ise recursive alt-ağaç; değilse yaprak (`parseOrSegment`). Baştaki
+ *  `not.` + `and(`/`or(` → grup negasyonu (`not.<col>...` yaprak
+ *  negasyonuyla karışmaz; yaprakta `not.` kolondan SONRA gelir). */
+function parseOrElement(element: string): WhereCondition {
+  const seg = element.trim();
+
+  /* Grup negasyonu: yalnız `not.` DOĞRUDAN `and(`/`or(`'dan önceyse. */
+  let negated = false;
+  let body = seg;
+  if (body.startsWith("not.")) {
+    const afterNot = body.slice(4);
+    if (afterNot.startsWith("and(") || afterNot.startsWith("or(")) {
+      negated = true;
+      body = afterNot;
+    }
+  }
+
+  let cond: WhereCondition;
+  if (body.startsWith("and(") && body.endsWith(")")) {
+    const inner = body.slice(4, -1);
+    cond = { kind: "and", conditions: splitTopLevelOr(inner).map(parseOrElement) };
+  } else if (body.startsWith("or(") && body.endsWith(")")) {
+    const inner = body.slice(3, -1);
+    cond = { kind: "or", conditions: splitTopLevelOr(inner).map(parseOrElement) };
+  } else {
+    cond = parseOrSegment(body); // yaprak (col.op.value / is / not / in)
+  }
+
+  return negated ? { kind: "not", condition: cond } : cond;
 }
 
 /** Virgülle böl — `"…"` tırnak ve parantez içini korur. */

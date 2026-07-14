@@ -34,7 +34,8 @@ export type WhereCondition =
   | { readonly kind: "in"; readonly column: string; readonly values: ReadonlyArray<unknown> }
   | { readonly kind: "is"; readonly column: string; readonly value: null | boolean; readonly negated: boolean }
   | { readonly kind: "not"; readonly condition: WhereCondition }
-  | { readonly kind: "or"; readonly conditions: ReadonlyArray<WhereCondition> };
+  | { readonly kind: "or"; readonly conditions: ReadonlyArray<WhereCondition> }
+  | { readonly kind: "and"; readonly conditions: ReadonlyArray<WhereCondition> };
 
 /** ORDER BY terimi. */
 export interface OrderTerm {
@@ -225,6 +226,12 @@ function compileCondition(cond: WhereCondition, params: ParamBag): string {
       if (cond.conditions.length === 0) return "TRUE";
       const parts = cond.conditions.map((c) => compileCondition(c, params));
       return `(${parts.join(" OR ")})`;
+    }
+    case "and": {
+      /* Boş AND → nötr eleman TRUE (WHERE'i etkilemez). */
+      if (cond.conditions.length === 0) return "TRUE";
+      const parts = cond.conditions.map((c) => compileCondition(c, params));
+      return `(${parts.join(" AND ")})`;
     }
   }
 }
