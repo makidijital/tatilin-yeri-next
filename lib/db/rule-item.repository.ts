@@ -1,14 +1,23 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
+   provider'a alındı. Admin CRUD artık rules/rules.action ("use server")
+   üzerinden; villa edit read'leri villa-edit.action ("use server")
+   üzerinden; public villa embed read'i server component'ten. Supabase
+   importu tamamen kaldırıldı. `server-only` defansif sınır. Method yüzeyi
+   + embed select string'leri + dönüş şekli AYNEN. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
-   🛡️ RULE ITEMS REPOSITORY (Phase 1 — repo consolidation)
+   🛡️ RULE ITEMS REPOSITORY (native)
    ===============================================================
    `rule-item.service.ts` içindeki inline `supabase.from(...)`
    çağrılarının BİREBİR taşınmış hali. Davranış değişmez:
-     - `db` = supabaseDbProvider (anon, RLS aktif) → service'in
-       kullandığı `@/lib/supabase` ile aynı PostgrestQueryBuilder.
-     - Method'lar ham native sonucu (`{ data, error }`) döner;
-       embed-map / trim-validation / return / log SERVICE'te.
+     - `db` = native provider (`dbNative`); tek app rolü → RLS/session-DI
+       YOK. Method'lar ham `{ data, error }` döner; embed-map /
+       trim-validation / return / log SERVICE'te.
+     - `findRulesByVilla` embed (`rule_items(...)`) relation-metadata'daki
+       `villa_rule_relations → rule_items` kaydından çözülür.
 
    ⚠️ DB kolonu "title" (name DEĞİL).
    ⚠️ M:N — villa_rule_relations read/write'ları DISCRETE method;
@@ -28,8 +37,11 @@ export const ruleItemRepository = {
   /** GET — (id, title), created_at ASC. Admin villa edit page kural
    *  listesi. ⚠️ `findAll`'dan farkı: order ASC (DESC DEĞİL). BİREBİR. */
   async findAllOrderedAsc() {
+    /* Native `.from<T>()` — tüketici (villa-edit.action → villas/[id]
+       page) `{ id, title }` (VillaRuleItemRowLite) bekliyor; cast'siz
+       tip-parity için satır tipi burada verilir. */
     return await db
-      .from("rule_items")
+      .from<{ id: string; title: string }>("rule_items")
       .select("id, title")
       .order("created_at", { ascending: true });
   },

@@ -30,13 +30,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { getFinanceKpiSnapshotAction as getFinanceKpiSnapshot } from "./finance.action";
 import {
-  getFinanceKpiSnapshot,
   FINANCE_RANGE_PRESETS,
   DEFAULT_FINANCE_RANGE,
-  type FinanceKpiSnapshot,
   type FinanceRangePreset,
-} from "@/app/services/finance.service";
+} from "@/app/services/finance.constants";
+import type { FinanceKpiSnapshot } from "@/app/services/finance.service";
 
 /* TR locale TRY formatter — 0 ondalık (foundation seviyesinde
    kuruşa girmiyoruz; ileride options'a parametre eklenebilir). */

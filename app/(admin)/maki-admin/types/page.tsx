@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  getVillaTypes,
-  addVillaType,
-  updateVillaType,
-  deleteVillaType,
-  setVillaTypeCover,
-  setVillaTypeHomepage,
-  setVillaTypeSortOrders,
-} from "@/app/services/villa-type.service";
+  getVillaTypesAction as getVillaTypes,
+  addVillaTypeAction as addVillaType,
+  updateVillaTypeAction as updateVillaType,
+  deleteVillaTypeAction as deleteVillaType,
+  setVillaTypeCoverAction as setVillaTypeCover,
+  setVillaTypeHomepageAction as setVillaTypeHomepage,
+  setVillaTypeSortOrdersAction as setVillaTypeSortOrders,
+} from "./types.action";
 import {
   Plus,
   Save,

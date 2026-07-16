@@ -1,32 +1,30 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import "server-only";
 
-import { db } from "@/lib/db";
+/* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
+   provider'a alındı. Admin okuma/yazma artık offer-requests.action ("use
+   server") üzerinden; public create route'tan native default ile.
+   Supabase importu + SupabaseClient DI tamamen kaldırıldı. `server-only`
+   defansif sınır. Method yüzeyi (create/findAll/findById/updateById/
+   deleteById) + dönüş şekli AYNEN. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
-   🛡️ OFFER REQUESTS REPOSITORY (Phase 1 — repo consolidation)
+   🛡️ OFFER REQUESTS REPOSITORY (native)
    ===============================================================
    `offer-request.service.ts` içindeki inline `supabase.from(...)`
    çağrılarının BİREBİR taşınmış hali (single table: offer_requests).
    Davranış değişmez:
-     - `db` = supabaseDbProvider (anon, RLS aktif); `db.from` ≡
-       `supabase.from` (bind) → byte-identical.
-     - Method'lar ham native sonucu (`{ data, error }`) döner;
-       sanitize / validation / echo-diff / return / log SERVICE'te.
-
-   ⚠️ CLIENT INJECTION KORUNDU — `createOfferRequest(input, { client })`
-      public route (api/public/offer-requests) RLS context'i için kendi
-      client'ını geçer. `create(payload, client?)`: client verilirse o,
-      yoksa `db` (eski `?? supabase` davranışıyla aynı). select("...")
-      echo projeksiyonu ve `.single()` AYNEN.
+     - `db` = native provider (`dbNative`); method'lar ham `{ data, error }`
+       döner; sanitize / validation / echo-diff / return / log SERVICE'te.
+     - Tek app rolü → RLS/session-DI YOK (public create native default ile;
+       admin okuma/yazma server action arkasında). select("...") echo
+       projeksiyonu ve `.single()` AYNEN.
 =============================================================== */
 
 export const offerRequestRepository = {
-  /** Public insert + canonical echo SELECT (.single()). client opsiyonel. */
-  async create(
-    payload: Record<string, unknown>,
-    client?: Pick<SupabaseClient, "from">
-  ) {
-    return await (client ?? db)
+  /** Public insert + canonical echo SELECT (.single()) — native. */
+  async create(payload: Record<string, unknown>) {
+    return await db
       .from("offer_requests")
       .insert(payload)
       .select(

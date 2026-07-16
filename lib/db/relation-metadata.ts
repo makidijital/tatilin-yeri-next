@@ -142,13 +142,25 @@ export const RELATION_METADATA: Readonly<Record<string, ReadonlyArray<RelationDe
     },
   ],
 
-  /* external_calendar_events → villa (admin liste: villa:villa_id(...)). */
+  /* external_calendar_events → villa (admin liste: villa:villa_id(...)) +
+     source (external_calendar_sources) — anon event-repo embed'i
+     `source:source_id ( source_name[, id, is_active, last_success_at,
+     last_error] )`; her event TEK source'a bağlanır → cardinality "one".
+     external-calendar-event.repository (findActiveWithSourceByVilla / list)
+     tüketir. */
   external_calendar_events: [
     {
       alias: "villa",
       table: "villa",
       cardinality: "one",
       localKey: "villa_id",
+      foreignKey: "id",
+    },
+    {
+      alias: "source",
+      table: "external_calendar_sources",
+      cardinality: "one",
+      localKey: "source_id",
       foreignKey: "id",
     },
   ],
@@ -171,6 +183,47 @@ export const RELATION_METADATA: Readonly<Record<string, ReadonlyArray<RelationDe
       table: "villa",
       cardinality: "one",
       localKey: "villa_id",
+      foreignKey: "id",
+    },
+  ],
+
+  /* villa_rule_relations → rule_items (public villa sayfası kural embed'i:
+     `rule_items ( id, title )`; her relation satırı TEK rule_item'a bağlanır
+     → cardinality "one"). rule-item.repository.findRulesByVilla tüketir. */
+  villa_rule_relations: [
+    {
+      alias: "rule_items",
+      table: "rule_items",
+      cardinality: "one",
+      localKey: "rule_id",
+      foreignKey: "id",
+    },
+  ],
+
+  /* villa_price_include_relations → price_include_items (public villa sayfası
+     "fiyata dahil" embed'i: `price_include_items ( id, title )`; her relation
+     satırı TEK item'a bağlanır → cardinality "one"). relation kolonu
+     "include_id". price-include-item.repository.findIncludesByVilla tüketir. */
+  villa_price_include_relations: [
+    {
+      alias: "price_include_items",
+      table: "price_include_items",
+      cardinality: "one",
+      localKey: "include_id",
+      foreignKey: "id",
+    },
+  ],
+
+  /* villa_feature_relations → villa_features (public villa sayfası olanak
+     embed'i: `villa_features ( id, name )`; her relation satırı TEK feature'a
+     bağlanır → cardinality "one"). relation kolonu "feature_id".
+     villa-feature.repository.findFeaturesByVilla tüketir. */
+  villa_feature_relations: [
+    {
+      alias: "villa_features",
+      table: "villa_features",
+      cardinality: "one",
+      localKey: "feature_id",
       foreignKey: "id",
     },
   ],

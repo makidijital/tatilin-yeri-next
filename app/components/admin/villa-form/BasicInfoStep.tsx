@@ -6,10 +6,8 @@ import Label from "./shared/Label";
 import RichTextEditor from "./RichTextEditor";
 import VillaCombobox from "@/app/(admin)/maki-admin/manual-reservations/ekle/VillaCombobox";
 
-import {
-  getPropertyOwnersForSelect,
-  type PropertyOwner,
-} from "@/app/services/property-owner.service";
+import { getPropertyOwnersForSelectAction as getPropertyOwnersForSelect } from "@/app/services/property-owner.action";
+import type { PropertyOwner } from "@/app/services/property-owner.service";
 
 import type {
   VillaFormShape,

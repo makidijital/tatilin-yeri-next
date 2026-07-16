@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import {
-  getRuleItems,
-  addRuleItem,
-  updateRuleItem,
-  deleteRuleItem,
-} from "@/app/services/rule-item.service";
+  getRuleItemsAction as getRuleItems,
+  addRuleItemAction as addRuleItem,
+  updateRuleItemAction as updateRuleItem,
+  deleteRuleItemAction as deleteRuleItem,
+} from "./rules.action";
 import { Plus, Save, Trash2, ShieldCheck } from "lucide-react";
 import {
   useNotify,

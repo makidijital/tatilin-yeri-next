@@ -1,14 +1,20 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
+   provider'a alındı. Public create artık favoriler/shared-favorites.action
+   ("use server") üzerinden; token read server component'ten. Supabase
+   importu tamamen kaldırıldı. `server-only` defansif sınır. Method yüzeyi
+   (create/findByToken) + dönüş şekli AYNEN. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
-   🛡️ SHARED FAVORITES REPOSITORY (Phase 1 — repo consolidation)
+   🛡️ SHARED FAVORITES REPOSITORY (native)
    ===============================================================
    `shared-favorites.service.ts` içindeki inline `supabase.from(...)`
    çağrılarının BİREBİR taşınmış hali (single table:
    shared_favorite_lists). Davranış değişmez:
-     - `db` = supabaseDbProvider (anon, RLS aktif); `db.from` ≡
-       `supabase.from` (bind) → byte-identical.
-     - Method'lar ham native sonucu (`{ data, error }` / maybeSingle) döner.
+     - `db` = native provider (`dbNative`); method'lar ham `{ data, error }`
+       / maybeSingle döner. Tek app rolü → RLS/session-DI YOK.
 
    TOKEN / EXPIRY KORUNUR:
      - token üretimi (~48-bit), collision retry (23505 kontrolü),

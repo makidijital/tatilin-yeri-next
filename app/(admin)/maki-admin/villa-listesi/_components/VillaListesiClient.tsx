@@ -17,7 +17,7 @@ import AdminDateRangePicker from "@/app/components/admin/shared/AdminDateRangePi
    RPC (mig 039, SECURITY DEFINER, PII-safe, anon'dan da çağrılabilir).
    Reservations(pending/confirmed) + manual_reservations + external
    (is_active) half-open [start,end) overlap birleşimi. */
-import { getBlockedVillaIds } from "@/lib/availability.helper";
+import { getBlockedVillaIdsAction } from "@/lib/availability.action";
 import { normalizeSearchText } from "@/lib/search";
 
 import VillaCard from "@/app/components/villa/VillaCard";
@@ -33,12 +33,12 @@ import {
   type PublicSort,
 } from "@/lib/pagination";
 import { useCurrency } from "@/app/context/CurrencyContext";
+import { createSharedVillaListAction as createSharedVillaList } from "./shared-villa-list.action";
 import {
-  createSharedVillaList,
   DEFAULT_EXPIRATION_KEY,
   type ExpirationKey,
-  type SharedSearchParams,
-} from "@/app/services/shared-villa-list.service";
+} from "@/app/services/shared-villa-list.constants";
+import type { SharedSearchParams } from "@/app/services/shared-villa-list.service";
 
 /* Pill select label table — frontend kullanır, server-side
    ALLOWED_EXPIRATIONS map ile zaten sınırlı (key allow-list). */
@@ -228,7 +228,9 @@ export default function VillaListesiClient({
     const candidateIds = villas.map((v) => v.id);
     (async () => {
       try {
-        const set = await getBlockedVillaIds(start, end, candidateIds);
+        const set = new Set(
+          await getBlockedVillaIdsAction(start, end, candidateIds)
+        );
         if (!cancelled) setBlockedSet(set);
       } catch {
         if (!cancelled) setBlockedSet(new Set()); // fail-soft

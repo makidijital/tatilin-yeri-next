@@ -1,3 +1,5 @@
+import "server-only";
+
 import { reservationRepository } from "@/lib/db/reservation.repository";
 import { manualReservationRepository } from "@/lib/db/manual-reservation.repository";
 import { parseLocalDate } from "@/lib/date-format";

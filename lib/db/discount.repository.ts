@@ -1,11 +1,21 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
+   provider'a alındı. Admin CRUD artık discount-collection/discount-collection
+   .action ("use server") üzerinden; public read cache.helpers/homepage
+   (server) üzerinden. Supabase importu tamamen kaldırıldı. `server-only`
+   defansif sınır. Embed select string'leri (villa:villa_id nested) + SQL
+   davranışı AYNEN; embed relation-metadata (discount_collections → villa →
+   location/villa_images/villa_prices) kaydından çözülür. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
-   🛡️ DISCOUNT COLLECTIONS REPOSITORY (migration 062)
+   🛡️ DISCOUNT COLLECTIONS REPOSITORY (native)
    ===============================================================
    `discount_collections` tablosu — "İndirimli Koleksiyon" curasyon
    master. homepage.repository.ts'in BİREBİR klonu; tek fark tablo
    adı (`discount_collections`). Raw I/O; karar service tarafında.
+   `db` = native provider (`dbNative`); tek app rolü → RLS/session-DI YOK.
 
    ⚠️ KESIN KURAL (homepage paralel):
      - List embed shape (villa:villa_id (..., villa_images (...)))

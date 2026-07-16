@@ -1,5 +1,4 @@
 import { offerRequestRepository } from "@/lib/db/offer-request.repository";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   OfferRequestRow,
   OfferRequestStatus,
@@ -73,8 +72,7 @@ function pruneTokens(arr: string[] | undefined): string[] {
    PUBLIC WRITE — guest form submit
 =============================================================== */
 export async function createOfferRequest(
-  input: CreateOfferRequestInput,
-  deps?: { client?: SupabaseClient }
+  input: CreateOfferRequestInput
 ): Promise<OfferRequestResultWithId> {
   const fullName = sanitize(input.full_name);
   if (fullName.length < 2 || fullName.length > MAX_NAME) {
@@ -139,10 +137,7 @@ export async function createOfferRequest(
      değer payload'tan farklıysa (örn. kolon yok, default override, vs.)
      console'a net bir uyumsuzluk raporu düşür. Production'da side-effect
      yok — sadece anormal durumda log. */
-  const { data, error } = await offerRequestRepository.create(
-    insertPayload,
-    deps?.client
-  );
+  const { data, error } = await offerRequestRepository.create(insertPayload);
 
   if (error || !data) {
     console.error("[offerRequest.create] FAILED", {
@@ -275,10 +270,7 @@ export async function deleteOfferRequest(
   return { ok: true };
 }
 
-/* Status label helper — UI tarafı bunu kullanır. */
-export const OFFER_STATUS_LABEL: Record<OfferRequestStatus, string> = {
-  pending: "Bekliyor",
-  contacted: "İletişime Geçildi",
-  offered: "Villa Önerildi",
-  closed: "Kapandı",
-};
+/* NOT: `OFFER_STATUS_LABEL` (UI-facing sabit) client-safe modüle taşındı:
+   app/(admin)/maki-admin/offer-requests/offer-request-labels.ts.
+   Bu service native repo (server-only) import ettiği için client bundle'a
+   sızmamalı; sabit ayrı client-safe dosyada. */

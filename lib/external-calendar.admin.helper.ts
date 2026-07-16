@@ -1,5 +1,12 @@
+import "server-only";
+
 import { externalCalendarEventRepository } from "@/lib/db/external-calendar-event.repository";
 import { parseLocalDate, formatLocalDate } from "@/lib/date-format";
+import {
+  type ExternalEventDetail,
+  type ExternalCalendarAdminArrays,
+  EMPTY_EXTERNAL_ADMIN_ARRAYS,
+} from "@/lib/external-calendar.admin.types";
 
 /* ===============================================================
    🛡️ FAZ 56H-A — EXTERNAL CALENDAR ARRAYS (ADMIN, client-side)
@@ -28,29 +35,8 @@ import { parseLocalDate, formatLocalDate } from "@/lib/date-format";
      render etkilenmez.
 =============================================================== */
 
-export type ExternalEventDetail = {
-  source_name: string;
-  summary: string | null;
-  status: string | null;
-  start_date: string;
-  end_date: string;
-  last_seen_at: string | null;
-};
-
-export type ExternalCalendarAdminArrays = {
-  externalCheckinDates: Date[];
-  externalCheckoutDates: Date[];
-  externalMiddleDates: Date[];
-  /** "YYYY-MM-DD" → o güne ait İLK external event detayı (tooltip). */
-  detailByDate: Record<string, ExternalEventDetail>;
-};
-
-export const EMPTY_EXTERNAL_ADMIN_ARRAYS: ExternalCalendarAdminArrays = {
-  externalCheckinDates: [],
-  externalCheckoutDates: [],
-  externalMiddleDates: [],
-  detailByDate: {},
-};
+/* Tipler + EMPTY sabiti client-safe `external-calendar.admin.types`
+   modülüne taşındı (yukarıda import edildi). Değerler/şekiller AYNEN. */
 
 export async function fetchExternalCalendarArraysForVillaAdmin(
   villaId: string

@@ -1,5 +1,10 @@
 import { financeRepository } from "@/lib/db/finance.repository";
 
+import {
+  DEFAULT_FINANCE_RANGE,
+  type FinanceRangePreset,
+} from "./finance.constants";
+
 /* ===============================================================
    🛡️ FINANCE SERVICE — read-only aggregation layer
    ===============================================================
@@ -49,19 +54,10 @@ const FINANCE_BLOCKING_STATUSES = ["pending", "confirmed"] as const;
      - Tek query: aynı SELECT'e koşullu `.gte("created_at", ...)`
        ekleniyor; duplicate fetch yok.
    =============================================================== */
-export type FinanceRangePreset = "7d" | "30d" | "1y" | "all";
-
-export const DEFAULT_FINANCE_RANGE: FinanceRangePreset = "30d";
-
-export const FINANCE_RANGE_PRESETS: ReadonlyArray<{
-  key: FinanceRangePreset;
-  label: string;
-}> = [
-  { key: "7d", label: "Son 7 Gün" },
-  { key: "30d", label: "Son 30 Gün" },
-  { key: "1y", label: "Son 1 Yıl" },
-  { key: "all", label: "Tüm Zamanlar" },
-];
+/* FinanceRangePreset / DEFAULT_FINANCE_RANGE / FINANCE_RANGE_PRESETS
+   client-safe modüle taşındı (./finance.constants) — client bundle bu
+   service'i (native repo/server-only) çekmesin diye. Değerler AYNEN;
+   burada import edilip kullanılır. */
 
 /* Preset → ISO start string. "all" → undefined (filter uygulanmaz).
    Pure helper; SSR-safe; side effect yok. */

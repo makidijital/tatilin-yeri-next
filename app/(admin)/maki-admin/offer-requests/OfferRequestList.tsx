@@ -13,11 +13,11 @@ import {
 } from "lucide-react";
 
 import {
-  deleteOfferRequest,
-  getOfferRequests,
-  OFFER_STATUS_LABEL,
-  updateOfferRequestStatus,
-} from "@/app/services/offer-request.service";
+  getOfferRequestsAction as getOfferRequests,
+  updateOfferRequestStatusAction as updateOfferRequestStatus,
+  deleteOfferRequestAction as deleteOfferRequest,
+} from "./offer-requests.action";
+import { OFFER_STATUS_LABEL } from "./offer-request-labels";
 import type {
   OfferRequestRow,
   OfferRequestStatus,

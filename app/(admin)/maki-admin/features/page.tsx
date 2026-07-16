@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import {
-  getVillaFeatures,
-  addVillaFeature,
-  updateVillaFeature,
-  deleteVillaFeature,
-} from "@/app/services/villa-feature.service";
+  getVillaFeaturesAction as getVillaFeatures,
+  addVillaFeatureAction as addVillaFeature,
+  updateVillaFeatureAction as updateVillaFeature,
+  deleteVillaFeatureAction as deleteVillaFeature,
+} from "./features.action";
 import { Plus, Save, Trash2, Sparkles } from "lucide-react";
 import {
   useNotify,

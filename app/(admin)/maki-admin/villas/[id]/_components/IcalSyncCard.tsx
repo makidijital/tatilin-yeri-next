@@ -14,11 +14,11 @@ import {
 } from "lucide-react";
 
 import {
-  createExternalCalendarSource,
-  listExternalCalendarSources,
-  setExternalCalendarSourceActive,
-  type ExternalCalendarSource,
-} from "@/app/services/external-calendar-source.service";
+  createExternalCalendarSourceAction as createExternalCalendarSource,
+  listExternalCalendarSourcesAction as listExternalCalendarSources,
+  setExternalCalendarSourceActiveAction as setExternalCalendarSourceActive,
+} from "./ical-sync.action";
+import type { ExternalCalendarSource } from "@/app/services/external-calendar-source.service";
 import { adminFetch } from "@/lib/admin-fetch";
 import {
   useConfirm,

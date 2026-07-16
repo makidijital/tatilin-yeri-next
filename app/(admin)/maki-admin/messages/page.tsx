@@ -15,10 +15,10 @@ import {
 } from "lucide-react";
 
 import {
-  listMessages,
-  markAsRead,
-  archiveMessage,
-} from "@/app/services/contact-message.service";
+  listMessagesAction as listMessages,
+  markAsReadAction as markAsRead,
+  archiveMessageAction as archiveMessage,
+} from "./messages.action";
 import { useNotify } from "@/app/components/admin/notifications/NotificationProvider";
 import type { ContactMessageRow } from "@/types/database";
 import { formatDateTimeTr } from "@/lib/date-format";

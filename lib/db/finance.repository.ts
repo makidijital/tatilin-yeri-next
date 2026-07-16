@@ -1,16 +1,20 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
+   provider'a alındı. Admin okuma artık maki-finans/finance.action ("use
+   server") üzerinden. Supabase importu tamamen kaldırıldı. `server-only`
+   defansif sınır. Method yüzeyi + dönüş şekli AYNEN. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
-   🛡️ FINANCE REPOSITORY (Phase 1 — repo consolidation)
+   🛡️ FINANCE REPOSITORY (native)
    ===============================================================
    `finance.service.ts` içindeki inline `supabase.from("reservations")`
    read'inin BİREBİR taşınmış hali (read-only KPI aggregate kaynağı).
    Davranış değişmez:
-     - `db` = supabaseDbProvider (anon, RLS aktif → authenticated admin
-       session ile is_active_admin policy match); `db.from` ≡
-       `supabase.from` (bind) → byte-identical.
-     - Method ham native sonucu (`{ data, error }`) döner; tüm finans
-       aggregation/sum/count/gate SERVICE'te.
+     - `db` = native provider (`dbNative`); tek app rolü → RLS/session-DI
+       YOK. Method ham `{ data, error }` döner; tüm finans aggregation/
+       sum/count/gate SERVICE'te.
 
    DAVRANIŞ:
      - SELECT "status, total_price_try, reservation_commission_amount"

@@ -1,5 +1,10 @@
 import { sharedVillaListRepository } from "@/lib/db/shared-villa-list.repository";
 
+import {
+  ALLOWED_EXPIRATIONS,
+  DEFAULT_EXPIRATION_KEY,
+  type ExpirationKey,
+} from "./shared-villa-list.constants";
 import { getVillasByIds, type VillaDTO } from "./villa.service";
 
 /* ===============================================================
@@ -58,16 +63,10 @@ const TOKEN_RETRY_LIMIT = 2;
    Default: "24h" (admin form initial). pg_cron migration 036
    her saat başı `expires_at < now()` kayıtlarını siler.
 --------------------------------------------------------------- */
-export const ALLOWED_EXPIRATIONS = {
-  "1h": 1,
-  "3h": 3,
-  "6h": 6,
-  "24h": 24,
-} as const;
-
-export type ExpirationKey = keyof typeof ALLOWED_EXPIRATIONS;
-
-export const DEFAULT_EXPIRATION_KEY: ExpirationKey = "24h";
+/* ALLOWED_EXPIRATIONS / ExpirationKey / DEFAULT_EXPIRATION_KEY client-safe
+   modüle taşındı (./shared-villa-list.constants) — client bundle bu
+   service'i (native repo/server-only) çekmesin diye. Değerler AYNEN;
+   burada import edilip kullanılır. */
 
 /* Allow-list aware coerce — bilinmeyen / null / undefined → default.
    Type-narrow değildir (raw string'i de kabul eder); caller

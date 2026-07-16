@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { getDayStyle } from "@/lib/calendar.engine";
 import { parseLocalDate, formatLocalDate } from "@/lib/date-format";
-import type { ExternalEventDetail } from "@/lib/external-calendar.admin.helper";
+import type { ExternalEventDetail } from "@/lib/external-calendar.admin.types";
 /* 🛡️ FAZ 28 — calculateNights reuse (lib/price.engine).
    BookingSidebar, PricingCalendarCanvas (Faz 27), VillaCard,
    /arama, reservation create — tüm yüzeyler aynı helper'ı

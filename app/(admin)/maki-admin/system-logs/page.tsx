@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  listMailLogs,
-  type MailLog,
-} from "@/app/services/mail-log.service";
+  listMailLogsAction as listMailLogs,
+} from "./system-logs.action";
+import type { MailLog } from "@/app/services/mail-log.service";
 import {
   Activity,
   Search,

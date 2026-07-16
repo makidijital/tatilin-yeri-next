@@ -1,11 +1,19 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
+   provider'a alındı. Admin okuma/yazma artık faqs/faqs.action ("use
+   server") üzerinden; public read cache.helpers/homepage (server) üzerinden.
+   Supabase importu tamamen kaldırıldı. `server-only` defansif sınır.
+   Method yüzeyi + dönüş şekli AYNEN. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
-   🛡️ FAZ 40 — FAQ REPOSITORY
+   🛡️ FAQ REPOSITORY (native)
    ===============================================================
    `faqs` tablosu — global SSS master. Replace-all pattern (DELETE
    + bulk INSERT) service'te orchestrate edilir; repository sadece
-   raw query'leri yapar.
+   raw query'leri yapar. `db` = native provider (`dbNative`); tek app
+   rolü → RLS/session-DI YOK.
 
    ⚠️ KESIN KURAL:
      - Public path: is_active=true + sort_order ASC

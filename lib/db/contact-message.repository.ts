@@ -1,6 +1,12 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import "server-only";
 
-import { db } from "@/lib/db";
+/* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
+   provider'a alındı. Admin okuma/yazma artık messages.action ("use
+   server") üzerinden; public create route'tan native default ile.
+   Supabase importu + SupabaseClient DI tamamen kaldırıldı. `server-only`
+   defansif sınır. Method yüzeyi (create/findAll/updateById) + dönüş şekli
+   aynen. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ CONTACT MESSAGES REPOSITORY (Phase 1 — repo consolidation)
@@ -8,25 +14,18 @@ import { db } from "@/lib/db";
    `contact-message.service.ts` içindeki inline `supabase.from(...)`
    çağrılarının BİREBİR taşınmış hali (single table: contact_messages).
    Davranış değişmez:
-     - `db` = supabaseDbProvider (anon, RLS aktif); `db.from` ≡
-       `supabase.from` (bind) → byte-identical.
-     - Method'lar ham native sonucu (`{ data, error }`) döner;
-       trim-validation / payload / return / log SERVICE'te.
-
-   ⚠️ CLIENT INJECTION KORUNDU — `createContactMessage(input, { client })`
-      public route service-role client geçer (RLS bypass). `create`
-      client verilirse onu, yoksa `db` (eski `?? supabase` ile aynı).
+     - `db` = native provider (`dbNative`); method'lar ham `{ data, error }`
+       döner; trim-validation / payload / return / log SERVICE'te.
+     - Tek app rolü → RLS/session-DI YOK (public create native default ile;
+       admin okuma/yazma server action arkasında).
    ⚠️ `findAll` koşullu `.is("archived_at", null)` chain'i AYNEN
       (includeArchived false → archived hariç).
 =============================================================== */
 
 export const contactMessageRepository = {
-  /** Public insert; client opsiyonel (RLS context için enjekte edilebilir). */
-  async create(
-    payload: Record<string, unknown>,
-    client?: Pick<SupabaseClient, "from">
-  ) {
-    return await (client ?? db).from("contact_messages").insert(payload);
+  /** Public insert (native; tek app rolü — RLS/session DI gerekmez). */
+  async create(payload: Record<string, unknown>) {
+    return await db.from("contact_messages").insert(payload);
   },
 
   /** Admin listing — created_at DESC; includeArchived değilse archived hariç. */

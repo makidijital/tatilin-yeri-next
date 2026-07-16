@@ -8,7 +8,7 @@ import VillaCard from "@/app/components/villa/VillaCard";
 import { useFavorites } from "@/hooks/use-favorites";
 import { getVillasByIds, type VillaDTO } from "@/app/services/villa.service";
 /* 🛡️ FAZ 37 — Paylaşılabilir favori listesi service (DB snapshot). */
-import { createSharedFavoritesList } from "@/app/services/shared-favorites.service";
+import { createSharedFavoritesListAction as createSharedFavoritesList } from "./shared-favorites.action";
 
 /* ===============================================================
    🛡️ FAZ 36 — FAVORITES GRID (client island)

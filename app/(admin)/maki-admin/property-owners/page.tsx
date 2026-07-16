@@ -13,12 +13,14 @@ import { useEffect, useState, useCallback } from "react";
 import { Plus, Pencil, Trash2, X, Save, Users2 } from "lucide-react";
 
 import {
-  getPropertyOwners,
-  addPropertyOwner,
-  updatePropertyOwner,
-  deletePropertyOwner,
-  type PropertyOwnerWithCount,
-  type PropertyOwnerInput,
+  getPropertyOwnersAction as getPropertyOwners,
+  addPropertyOwnerAction as addPropertyOwner,
+  updatePropertyOwnerAction as updatePropertyOwner,
+  deletePropertyOwnerAction as deletePropertyOwner,
+} from "@/app/services/property-owner.action";
+import type {
+  PropertyOwnerWithCount,
+  PropertyOwnerInput,
 } from "@/app/services/property-owner.service";
 import {
   useNotify,

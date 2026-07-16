@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { applyRateLimit } from "@/lib/rate-limit";
 import {
   createContactMessage,
@@ -11,17 +10,15 @@ import {
    🛡️ POST /api/public/contact — PUBLIC İLETİŞİM FORMU (server)
    ===============================================================
    AMAÇ:
-     /iletisim formunun client-side anon Supabase insert'ini sunucu
-     tarafına taşır. Akış:
+     /iletisim formunun insert'ini sunucu tarafına taşır. Akış:
        Browser → applyRateLimit("contact") → honeypot/time-trap →
-       server validation → service-role insert → contact_messages
+       server validation → native insert → contact_messages
 
    MİMARİ (mevcut pattern paritesi):
      - Rate-limit: mevcut applyRateLimit (yeni "contact" bucket,
        5/10dk/IP). Yeni rate-limit sistemi YOK.
-     - Insert: mevcut createContactMessage service'i; service-role
-       client enjekte edilir (getSupabaseAdmin) → RLS bypass →
-       contact_messages_public_insert policy kaldırılsa bile çalışır.
+     - Insert: mevcut createContactMessage service'i → native repo
+       (tek app rolü; RLS yok, session-DI gerekmez).
      - Validation: ContactForm'daki honeypot ("website") + time-trap
        (MIN_SUBMIT_MS) sunucuda da uygulanır (DOM'u baypas eden bota
        karşı; client guard'ları aynen korunur).
@@ -91,10 +88,8 @@ export async function POST(req: Request): Promise<Response> {
     source_page: (body.source_page ?? "").toString().trim() || null,
   };
 
-  /* SERVICE-ROLE INSERT — mevcut service, enjekte edilmiş client. */
-  const result = await createContactMessage(input, {
-    client: getSupabaseAdmin(),
-  });
+  /* NATIVE INSERT — service native repo'ya yazar (tek app rolü; RLS yok). */
+  const result = await createContactMessage(input);
 
   if (!result.ok) {
     console.error("[api.public.contact] insert FAILED:", result.error);

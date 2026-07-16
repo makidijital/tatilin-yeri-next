@@ -1,13 +1,17 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 4 S1 — external-calendar domaini) — native
+   provider'a alındı. CRUD yolları artık server action arkasında
+   (ical-sync.action / external-reservations.action). Supabase importu
+   tamamen kaldırıldı. `server-only` defansif sınır. Method yüzeyi +
+   embed (villa:villa_id) + count/head/not/maybeSingle/single + SQL AYNEN. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
-   🛡️ EXTERNAL CALENDAR SOURCES — REPOSITORY (anon / RLS-authenticated)
+   🛡️ EXTERNAL CALENDAR SOURCES — REPOSITORY (native, CRUD)
    ===============================================================
-   `external_calendar_sources` tablosu CRUD I/O (admin browser context).
-   `app/services/external-calendar-source.service.ts` ve
-   `app/services/external-calendar-events.service.ts` bu repo üzerinden
-   anon `db` client ile okur/yazar — RLS authenticated full CRUD
-   (migration 029) admin session JWT ile açık; service-role GEREKMEZ.
+   `external_calendar_sources` tablosu CRUD I/O. `db` = native provider
+   (`dbNative`); tek app rolü → RLS/session-DI YOK.
 
    ⚠️ AUTH PATH KORUNUR:
      `db` = supabaseDbProvider (anon, RLS aktif) → service'in kullandığı

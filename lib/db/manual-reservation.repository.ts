@@ -1,4 +1,11 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 4 S2 — reservation core) — native provider'a
+   alındı. Tüm tüketiciler server (manualReservation.service, handler-inputs,
+   fetchBlockedDates [server-only]). Supabase importu tamamen kaldırıldı.
+   `server-only` defansif sınır. Metod gövdeleri + embed + half-open overlap
+   (.lt/.gt) + insert/update .select().single() (RETURNING) + SQL AYNEN. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ FAZ 34 — MANUAL RESERVATION REPOSITORY (Data Access Layer)
@@ -168,7 +175,7 @@ export const manualReservationRepository = {
         (manual asimetrisi). */
   async findBlockDateRangesByVilla(villaId: string) {
     return await db
-      .from("manual_reservations")
+      .from<{ start_date: string; end_date: string }>("manual_reservations")
       .select("start_date, end_date")
       .eq("villa_id", villaId);
   },

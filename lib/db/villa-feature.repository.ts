@@ -1,14 +1,24 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
+   provider'a alındı. Admin CRUD artık features/features.action ("use
+   server") üzerinden; villa edit read'leri villa-edit.action ("use server")
+   üzerinden; public taxonomy read'i api/public/taxonomies route'tan; public
+   villa embed read'i server component'ten. Supabase importu tamamen
+   kaldırıldı. `server-only` defansif sınır. Method yüzeyi + embed select
+   string'leri + SQL davranışı AYNEN. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
-   🛡️ VILLA FEATURES REPOSITORY (Phase 1 — repo consolidation)
+   🛡️ VILLA FEATURES REPOSITORY (native)
    ===============================================================
    `villa-feature.service.ts` içindeki inline `supabase.from(...)`
    çağrılarının BİREBİR taşınmış hali. Davranış değişmez:
-     - `db` = supabaseDbProvider (anon, RLS aktif) → service'in
-       kullandığı `@/lib/supabase` ile aynı PostgrestQueryBuilder.
-     - Method'lar ham native sonucu (`{ data, error }`) döner;
-       embed-map / validation / return / log SERVICE'te.
+     - `db` = native provider (`dbNative`); tek app rolü → RLS/session-DI
+       YOK. Method'lar ham `{ data, error }` döner; embed-map / validation /
+       return / log SERVICE'te.
+     - `findFeaturesByVilla` embed (`villa_features(...)`) relation-metadata'
+       daki `villa_feature_relations → villa_features` kaydından çözülür.
 
    ⚠️ M:N — villa_feature_relations write/read'leri DISCRETE method:
        relation logic merge EDİLMEZ. Relation-delete-first ordering
@@ -18,8 +28,10 @@ import { db } from "@/lib/db";
 export const villaFeatureRepository = {
   /** Admin — tüm feature'lar (id, name), created_at DESC. */
   async findAll() {
+    /* Native `.from<T>()` — service.getVillaFeatures cast'siz `data`'yı
+       `Feature[]` ({id,name}) döndürüyor; tip-parity için satır tipi burada. */
     return await db
-      .from("villa_features")
+      .from<{ id: string; name: string }>("villa_features")
       .select("id, name")
       .order("created_at", { ascending: false });
   },
@@ -35,7 +47,10 @@ export const villaFeatureRepository = {
    *  `findAll` (id,name + order created_at DESC) DEĞİL — bu `*` order-suz.
    *  BİREBİR. */
   async findAllStar() {
-    return await db.from("villa_features").select("*");
+    /* Native `.from<T>()` — tüketici (villa-edit.action → villas/[id]
+       page) `{ id, name }` (VillaFeatureRowLite) bekliyor; cast'siz
+       tip-parity için satır tipi burada verilir (SQL yine `select *`). */
+    return await db.from<{ id: string; name: string }>("villa_features").select("*");
   },
 
   /** GET — villa'nın seçili feature_id'leri (villa_feature_relations).

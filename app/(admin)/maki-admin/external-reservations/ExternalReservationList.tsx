@@ -17,11 +17,13 @@ import {
 } from "lucide-react";
 
 import {
-  countInactiveEventsForSource,
+  listExternalCalendarEventsAction as listExternalCalendarEvents,
+  getExternalCalendarKpiAction as getExternalCalendarKpi,
+  getExternalCalendarFilterOptionsAction as getExternalCalendarFilterOptions,
+  countInactiveEventsForSourceAction as countInactiveEventsForSource,
+} from "./external-reservations.action";
+import {
   deactivateExternalCalendarEvent,
-  getExternalCalendarFilterOptions,
-  getExternalCalendarKpi,
-  listExternalCalendarEvents,
   purgeInactiveEventsForSource,
   type ExternalCalendarKpi,
   type ExternalEventListItem,

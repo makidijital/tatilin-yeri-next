@@ -1,29 +1,24 @@
-import { externalCalendarEventRepository } from "@/lib/db/external-calendar-event.repository";
-import { externalCalendarSourceRepository } from "@/lib/db/external-calendar-source.repository";
 import { adminFetch } from "@/lib/admin-fetch";
 
 /* ===============================================================
-   🛡️ FAZ 56G — EXTERNAL CALENDAR EVENTS (admin read-only)
+   🛡️ EXTERNAL CALENDAR EVENTS — MUTATIONS (admin, client-safe)
    ===============================================================
-   /maki-admin/external-reservations admin ekranı için listeleme +
-   KPI helper'ları. RLS authenticated SELECT zaten açık (migration
-   029) → admin browser session JWT ile direct okur. Anon erişim
-   YOK.
+   /maki-admin/external-reservations admin ekranının MUTASYON
+   helper'ları — YALNIZ `adminFetch` (client-session Bearer) ile
+   korunan admin route'larına gider (purge-inactive / deactivate).
+   Route service-role ile yazar; auth/sync davranışı BİREBİR korunur.
 
-   READ-ONLY contract:
-     • Bu service yalnız SELECT yapar.
-     • INSERT/UPDATE/DELETE policy YOK (sync pipeline service-role
-       sorumluluğu — admin client buradan yazamaz).
-     • External event'ler reservation lifecycle'a hiç bağlanmaz;
-       payment/mail/status pipeline tetiklenmez.
+   ⚠️ FAZ 4 S1 — READ helper'ları (list/kpi/filter/count) native repo
+     kullandığı için server action'a taşındı:
+       → app/(admin)/maki-admin/external-reservations/external-reservations.action.ts
+     Bu modül repo IMPORT ETMEZ → client-safe kalır (ExternalReservationList
+     purge/deactivate'i doğrudan buradan çağırır; adminFetch tarayıcı
+     session'ıyla çalışır).
 
-   EMBED:
-     external_calendar_events
-       └── source: external_calendar_sources (source_name, is_active,
-                                              last_success_at, last_error)
-       └── villa:  villa (id, title, slug)
+   READ-side tip'ler burada TANIMLI kalır (client + action ortak tüketir).
 =============================================================== */
 
+/* ---------------- READ-side tip'ler (action + client ortak) ---------------- */
 export type ExternalEventListItem = {
   id: string;
   villa_id: string;
@@ -68,41 +63,6 @@ export type ExternalEventListResult = {
   total: number;
 };
 
-const DEFAULT_LIMIT = 50;
-const MAX_LIMIT = 200;
-
-export async function listExternalCalendarEvents(
-  filters: ExternalEventListFilters = {}
-): Promise<ExternalEventListResult> {
-  const limit = Math.max(
-    1,
-    Math.min(MAX_LIMIT, Number(filters.limit) || DEFAULT_LIMIT)
-  );
-  const offset = Math.max(0, Number(filters.offset) || 0);
-
-  const { data, error, count } = await externalCalendarEventRepository.list({
-    limit,
-    offset,
-    villa_id: filters.villa_id,
-    source_id: filters.source_id,
-    is_active: filters.is_active,
-    from: filters.from,
-    to: filters.to,
-    search: filters.search,
-  });
-  if (error) {
-    console.error("[external-calendar-events.list] FAILED", error.message);
-    return { items: [], total: 0 };
-  }
-
-  /* Embed-select TS narrowing — Supabase returns unknown shape. */
-  const items = ((data as unknown) as ExternalEventListItem[]) || [];
-  return { items, total: count ?? 0 };
-}
-
-/* ===============================================================
-   KPI — admin ekran header kartları
-=============================================================== */
 export type ExternalCalendarKpi = {
   activeEventsCount: number;
   activeSourcesCount: number;
@@ -110,117 +70,15 @@ export type ExternalCalendarKpi = {
   errorSourcesCount: number;
 };
 
-export async function getExternalCalendarKpi(): Promise<ExternalCalendarKpi> {
-  /* Tek round-trip yerine 4 paralel head-count query — minimal payload. */
-  const [eventsRes, activeSourcesRes, errorSourcesRes, latestSourceRes] =
-    await Promise.all([
-      externalCalendarEventRepository.countActive(),
-      externalCalendarSourceRepository.countActive(),
-      externalCalendarSourceRepository.countWithError(),
-      externalCalendarSourceRepository.findLatestSuccessAt(),
-    ]);
-
-  return {
-    activeEventsCount: eventsRes.count ?? 0,
-    activeSourcesCount: activeSourcesRes.count ?? 0,
-    errorSourcesCount: errorSourcesRes.count ?? 0,
-    lastSuccessAt:
-      (latestSourceRes.data as { last_success_at: string | null } | null)
-        ?.last_success_at ?? null,
-  };
-}
-
-/* ===============================================================
-   FILTER OPTIONS — villa + source selector listeleri
-   Hafif: yalnız id+name; admin select'lerinde dropdown.
-=============================================================== */
 export type FilterOption = { id: string; label: string; is_active?: boolean };
-
-export async function getExternalCalendarFilterOptions(): Promise<{
-  villas: FilterOption[];
-  sources: FilterOption[];
-}> {
-  const [villasRes, sourcesRes] = await Promise.all([
-    /* Yalnız external event'i olan villaları getirmek için DISTINCT
-       gerekir; alternatif olarak tüm aktif villaları çekmek daha
-       basit ama dropdown'ı kalabalıklaştırır. İlk PR'da basit yol:
-       Yalnız external_calendar_sources'ı olan villaları join'le. */
-    externalCalendarSourceRepository.findActiveVillaEmbeds(),
-    /* FAZ 56G+ — is_active da çekilir → "Pasifleri Temizle" buton'unun
-       enable/disable kararında kullanılır. Aktif kaynaklar purge edilemez. */
-    externalCalendarSourceRepository.findAllWithVillaTitle(),
-  ]);
-
-  type VillaRow = { villa: { id: string; title: string | null } | null };
-  type SourceRow = {
-    id: string;
-    source_name: string;
-    is_active: boolean | null;
-    villa: { title: string | null } | null;
-  };
-
-  const villaMap = new Map<string, FilterOption>();
-  for (const r of ((villasRes.data as unknown) as VillaRow[]) || []) {
-    const v = r?.villa;
-    if (v?.id) {
-      villaMap.set(v.id, { id: v.id, label: v.title || v.id });
-    }
-  }
-
-  const sources: FilterOption[] = (
-    ((sourcesRes.data as unknown) as SourceRow[]) || []
-  ).map((s) => ({
-    id: s.id,
-    label:
-      s.source_name +
-      (s.villa?.title ? " · " + s.villa.title : ""),
-    is_active: s.is_active ?? true,
-  }));
-
-  return {
-    villas: Array.from(villaMap.values()).sort((a, b) =>
-      a.label.localeCompare(b.label, "tr")
-    ),
-    sources,
-  };
-}
-
-/* ===============================================================
-   🛡️ FAZ 56G+ — INACTIVE EVENT COUNT (per source)
-   ===============================================================
-   "Pasifleri Temizle (N)" buton label'ı için. authenticated SELECT
-   (RLS migration 029'da açık) → admin client doğrudan head-count
-   query'si atar. */
-export async function countInactiveEventsForSource(
-  sourceId: string
-): Promise<number> {
-  const id = (sourceId || "").toString().trim();
-  if (!id) return 0;
-  const { count, error } =
-    await externalCalendarEventRepository.countInactiveBySource(id);
-  if (error) {
-    console.warn(
-      "[external-calendar-events.countInactive] FAILED",
-      error.message
-    );
-    return 0;
-  }
-  return count ?? 0;
-}
 
 /* ===============================================================
    🛡️ FAZ 56G+ — PURGE INACTIVE (source-scoped, hard delete)
    ===============================================================
-   YALNIZ:
-     source.is_active = false   (kaynak tamamen pasif — frozen state)
-     event.is_active  = false   (event zaten pasif)
-   KORUMA:
-     • Aktif kaynaklar source-of-truth — purge edilemez (sync geri getirir)
-     • Aktif eventler ASLA silinmez
-     • UPDATE/DELETE policy yok → admin client direkt yazamaz; route
-       service-role ile çalışır
+   YALNIZ: source.is_active=false + event.is_active=false. Aktif kaynaklar/
+   eventler dokunulmaz. UPDATE/DELETE policy yok → admin client direkt
+   yazamaz; route service-role ile çalışır. (adminFetch → client Bearer.)
 =============================================================== */
-
 export type PurgeInactiveEventsResult =
   | { ok: true; sourceId: string; deletedCount: number }
   | { ok: false; error: string };
@@ -261,30 +119,11 @@ export async function purgeInactiveEventsForSource(
 /* ===============================================================
    🛡️ FAZ 56G+ — DEACTIVATE EVENT (admin soft toggle)
    ===============================================================
-   Yalnız soft-deactivate. Hard delete YOK. Yeni satır:
-     is_active = false
-     manually_deactivated = true   (migration 032)
-     updated_at = now()
-   Migration 032'nin `manually_deactivated` bayrağı sonraki sync'lerin
-   event'i geri diriltememesini garanti eder (sync post-upsert sweep
-   bu flag'i okuyup is_active'i tekrar false'a düşürür).
-
-   RLS:
-     external_calendar_events tablosu authenticated INSERT/UPDATE/DELETE
-     policy yok → admin client direkt UPDATE yapamaz. Bu helper bir
-     admin route (POST /api/admin/external-calendars/events/:id/
-     deactivate) çağırır; route service-role ile UPDATE atar.
-
-   IDEMPOTENT:
-     Zaten is_active=false ise yine başarılı; route response'da
-     `already_inactive: true` döner.
-
-   ACTIVITY LOG:
-     `external_calendar_event.deactivated` route içinde fail-safe
-     loglanır; bu helper UI tarafından çağrılır, log endpoint
-     üzerinden tetiklenir.
+   Soft-deactivate. Route (POST .../events/:id/deactivate) service-role
+   ile UPDATE atar (manually_deactivated=true, migration 032). IDEMPOTENT:
+   zaten pasifse `already_inactive:true`. Activity log route içinde.
+   (adminFetch → client Bearer.)
 =============================================================== */
-
 export type DeactivateExternalEventResult =
   | { ok: true; id: string; alreadyInactive: boolean }
   | { ok: false; error: string };

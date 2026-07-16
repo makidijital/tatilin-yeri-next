@@ -1,11 +1,21 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
+   provider'a alındı. Admin CRUD artık homepage-collection/homepage-collection
+   .action ("use server") üzerinden; public read cache.helpers/VillaList
+   (server) üzerinden. Supabase importu tamamen kaldırıldı. `server-only`
+   defansif sınır. Embed select string'leri (villa:villa_id nested) + SQL
+   davranışı AYNEN; embed relation-metadata (homepage_collections → villa →
+   location/villa_images/villa_prices) kaydından çözülür. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
-   🛡️ FAZ 40 — HOMEPAGE COLLECTIONS REPOSITORY
+   🛡️ HOMEPAGE COLLECTIONS REPOSITORY (native)
    ===============================================================
    `homepage_collections` tablosu — admin curasyon master.
    Reorder paralel update + add (max-order + 1) pattern'i service
-   tarafında; repository sadece raw I/O.
+   tarafında; repository sadece raw I/O. `db` = native provider
+   (`dbNative`); tek app rolü → RLS/session-DI YOK.
 
    ⚠️ KESIN KURAL:
      - List embed shape (villa:villa_id (..., villa_images (...)))

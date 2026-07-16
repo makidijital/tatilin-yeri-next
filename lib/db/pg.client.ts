@@ -30,7 +30,15 @@ import { registerPgTypeParsers } from "./pg-type-parsers";
      PG_CONNECT_TIMEOUT_MS   (default 10000)
    =============================================================== */
 
-let pool: Pool | null = null;
+/* ⚠️ HMR-SAFE SINGLETON — `pool` modül-değişkeni Next.js dev'de her hot
+   reload'da SIFIRLANIR → her reload yeni `Pool` (yeni bağlantı seti) açar
+   → Supabase Session Pooler'ın client limiti dolar ("max clients reached
+   in session mode" / EMAXCONNSESSION). Bu yüzden Pool referansı `globalThis`
+   üzerinde tutulur: HMR modülü yeniden yükleyince bile AYNI Pool kullanılır.
+   Production'da modül tek kez yüklenir → davranış aynı (tek singleton). */
+const globalForPg = globalThis as typeof globalThis & {
+  __yazVillamPgPool?: Pool;
+};
 
 function resolveSsl(): PoolConfig["ssl"] {
   const mode = (process.env.PGSSLMODE || "").trim().toLowerCase();
@@ -69,7 +77,7 @@ function buildConfig(): PoolConfig {
  * event'i yakalanır (loglanır, yeni bağlantı havuzdan alınır).
  */
 export function getPgPool(): Pool {
-  if (pool) return pool;
+  if (globalForPg.__yazVillamPgPool) return globalForPg.__yazVillamPgPool;
   /* PostgREST/Supabase JSON-shape parity: numeric→number, tarih/zaman
      tipleri → string (Date DEĞİL). Pool kurulmadan ÖNCE register. */
   registerPgTypeParsers();
@@ -77,8 +85,8 @@ export function getPgPool(): Pool {
   created.on("error", (err: Error) => {
     console.error("[pg.pool] idle client error", err);
   });
-  pool = created;
-  return pool;
+  globalForPg.__yazVillamPgPool = created;
+  return created;
 }
 
 /**
@@ -86,8 +94,8 @@ export function getPgPool(): Pool {
  * `getPgPool()` çağrılırsa yeni pool kurulur.
  */
 export async function closePgPool(): Promise<void> {
-  if (!pool) return;
-  const current = pool;
-  pool = null;
+  const current = globalForPg.__yazVillamPgPool;
+  if (!current) return;
+  globalForPg.__yazVillamPgPool = undefined;
   await current.end();
 }

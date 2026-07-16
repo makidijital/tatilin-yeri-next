@@ -1,5 +1,4 @@
 import { contactMessageRepository } from "@/lib/db/contact-message.repository";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ContactMessageRow } from "@/types/database";
 
 /* ===============================================================
@@ -24,13 +23,10 @@ export type ContactMessageInput = {
 };
 
 /* ----- CREATE (public form submit) -----
-   🛡️ DI: opsiyonel `client` (createReservation pattern paritesi).
-   Default anon `supabase` (geriye dönük byte-identical); public API
-   route'u service-role client enjekte eder → RLS bypass + anon insert
-   policy kaldırılsa bile çalışır. Validation/payload AYNEN. */
+   Native provider (tek app rolü) → RLS/session-DI gerekmez; validation/
+   payload AYNEN. Public API route'u bu fonksiyonu doğrudan çağırır. */
 export async function createContactMessage(
-  input: ContactMessageInput,
-  deps?: { client?: SupabaseClient }
+  input: ContactMessageInput
 ): Promise<{ ok: boolean; error?: string }> {
   const payload = {
     full_name: input.full_name.trim(),
@@ -40,10 +36,7 @@ export async function createContactMessage(
     source_page: input.source_page?.trim() || null,
     is_read: false,
   };
-  const { error } = await contactMessageRepository.create(
-    payload,
-    deps?.client
-  );
+  const { error } = await contactMessageRepository.create(payload);
   if (error) {
     console.error("❌ createContactMessage error:", error.message);
     return { ok: false, error: error.message };

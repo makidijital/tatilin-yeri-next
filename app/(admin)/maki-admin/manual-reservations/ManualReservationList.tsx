@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { deleteManualReservation } from "@/app/services/manualReservation.service";
+import { deleteManualReservationAction as deleteManualReservation } from "@/app/(admin)/maki-admin/manual-reservations/manual-reservation.action";
 /* 🐛 FIX — Türkçe-tolerant arama; /maki-admin/villas + VillaCombobox ile
    birebir aynı helper (yeni algoritma/helper YOK). */
 import { normalizeSearchText } from "@/lib/search";

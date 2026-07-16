@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import {
-  getPriceIncludeItems,
-  addPriceIncludeItem,
-  updatePriceIncludeItem,
-  deletePriceIncludeItem,
-} from "@/app/services/price-include-item.service";
+  getPriceIncludeItemsAction as getPriceIncludeItems,
+  addPriceIncludeItemAction as addPriceIncludeItem,
+  updatePriceIncludeItemAction as updatePriceIncludeItem,
+  deletePriceIncludeItemAction as deletePriceIncludeItem,
+} from "./price-includes.action";
 import { Plus, Save, Trash2, BadgeCheck } from "lucide-react";
 import {
   useNotify,

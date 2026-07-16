@@ -1,14 +1,24 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
+   provider'a alındı. Admin CRUD artık price-includes/price-includes.action
+   ("use server") üzerinden; villa edit read'leri villa-edit.action ("use
+   server") üzerinden; public villa embed read'i server component'ten.
+   Supabase importu tamamen kaldırıldı. `server-only` defansif sınır. Method
+   yüzeyi + embed select string'leri + dönüş şekli AYNEN. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
-   🛡️ PRICE INCLUDE ITEMS REPOSITORY (Phase 1 — repo consolidation)
+   🛡️ PRICE INCLUDE ITEMS REPOSITORY (native)
    ===============================================================
    `price-include-item.service.ts` içindeki inline `supabase.from(...)`
    çağrılarının BİREBİR taşınmış hali. Davranış değişmez:
-     - `db` = supabaseDbProvider (anon, RLS aktif) → service'in
-       kullandığı `@/lib/supabase` ile aynı PostgrestQueryBuilder.
-     - Method'lar ham native sonucu (`{ data, error }`) döner;
-       embed-map / trim-validation / return / log SERVICE'te.
+     - `db` = native provider (`dbNative`); tek app rolü → RLS/session-DI
+       YOK. Method'lar ham `{ data, error }` döner; embed-map /
+       trim-validation / return / log SERVICE'te.
+     - `findIncludesByVilla` embed (`price_include_items(...)`) relation-
+       metadata'daki `villa_price_include_relations → price_include_items`
+       kaydından çözülür.
 
    ⚠️ DB kolonu "title"; relation kolonu "include_id".
    ⚠️ M:N — villa_price_include_relations read/write'ları DISCRETE
@@ -29,8 +39,11 @@ export const priceIncludeItemRepository = {
   /** GET — (id, title), created_at ASC. Admin villa edit page fiyata-dahil
    *  listesi. ⚠️ `findAll`'dan farkı: order ASC (DESC DEĞİL). BİREBİR. */
   async findAllOrderedAsc() {
+    /* Native `.from<T>()` — tüketici (villa-edit.action → villas/[id]
+       page) `{ id, title }` (VillaPriceIncludeItemRowLite) bekliyor;
+       cast'siz tip-parity için satır tipi burada verilir. */
     return await db
-      .from("price_include_items")
+      .from<{ id: string; title: string }>("price_include_items")
       .select("id, title")
       .order("created_at", { ascending: true });
   },

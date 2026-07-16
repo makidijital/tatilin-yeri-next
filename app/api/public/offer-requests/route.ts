@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { applyRateLimit } from "@/lib/rate-limit";
 import {
   createOfferRequest,
@@ -14,15 +13,14 @@ import {
      /teklif-al formunun client-side anon Supabase insert'ini sunucu
      tarafına taşır. Akış:
        Browser → applyRateLimit("offer") → honeypot/time-trap →
-       service validation → service-role insert → offer_requests
+       service validation → native insert → offer_requests
 
    MİMARİ (mevcut pattern paritesi):
      - Rate-limit: mevcut applyRateLimit (yeni "offer" bucket,
        5/10dk/IP).
      - Insert: mevcut createOfferRequest service'i (sanitize + MAX
-       uzunluk doğrulamaları AYNEN); service-role client enjekte
-       edilir (getSupabaseAdmin) → RLS bypass → offer_requests_anon_
-       insert policy kaldırılsa bile çalışır.
+       uzunluk doğrulamaları AYNEN) → native repo (tek app rolü;
+       session-DI gerekmez).
      - Honeypot ("website") + time-trap (MIN_SUBMIT_MS) — iletişim
        formuyla aynı koruma, teklif tarafına da eklendi.
 
@@ -84,11 +82,9 @@ export async function POST(req: Request): Promise<Response> {
     note: (body.note ?? null) as string | null,
   };
 
-  /* SERVICE-ROLE INSERT — mevcut service, enjekte edilmiş client.
+  /* NATIVE INSERT — mevcut service native repo'ya yazar (tek app rolü).
      Result shape (ok/id/error) AYNEN form'a döner → UX değişmez. */
-  const result = await createOfferRequest(input, {
-    client: getSupabaseAdmin(),
-  });
+  const result = await createOfferRequest(input);
 
   if (!result.ok) {
     return NextResponse.json(

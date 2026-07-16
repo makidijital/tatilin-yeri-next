@@ -1,13 +1,20 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
+   provider'a alındı. Admin CRUD artık types/types.action ("use server")
+   üzerinden; villa edit + villa-listesi + public taxonomy/arama/kısa-gap +
+   cache.helpers read'leri server modüllerinden. Supabase importu tamamen
+   kaldırıldı. `server-only` defansif sınır. Method yüzeyi + SQL davranışı +
+   RPC (`set_villa_type_sort_orders`) AYNEN. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
-   🛡️ VILLA TYPES REPOSITORY (Phase 1 — repo consolidation)
+   🛡️ VILLA TYPES REPOSITORY (native)
    ===============================================================
    `villa-type.service.ts` içindeki inline `supabase.from(...)`
    çağrılarının BİREBİR taşınmış hali. Davranış değişmez:
-     - `db` = supabaseDbProvider (anon, RLS aktif) → service'in
-       kullandığı `@/lib/supabase` ile aynı PostgrestQueryBuilder.
-     - Method'lar ham native sonucu (`{ data, error }`) döner.
+     - `db` = native provider (`dbNative`); tek app rolü → RLS/session-DI
+       YOK. Method'lar ham `{ data, error }` döner.
      - slug üretimi (slugifyTr), validation, return/log SERVICE'te.
      - `updateById` generic'tir: updateVillaType / setVillaTypeCover /
        setVillaTypeHomepage HEPSİ `villa_types.update(payload).eq("id")`
@@ -44,8 +51,10 @@ export const villaTypeRepository = {
    *  (tie-break name ASC). Migration 066: order-suz → sort_order. app/api/
    *  public/taxonomies route için (public form dropdown'ları). */
   async findAllForPublicTaxonomy() {
+    /* Native `.from<T>()` — tüketici (hero-filters.action → HeroSearchPanel
+       FilterOption) `{ id, name, slug }` bekliyor; cast'siz tip-parity. */
     return await db
-      .from("villa_types")
+      .from<{ id: string; name: string; slug: string | null }>("villa_types")
       .select("id, name, slug")
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true });
@@ -54,7 +63,10 @@ export const villaTypeRepository = {
   /** GET — `select("*")` (order YOK). Admin villa edit page tip listesi.
    *  `findAll` (order created_at DESC) DEĞİL — bu order-suz. BİREBİR. */
   async findAllStarUnordered() {
-    return await db.from("villa_types").select("*");
+    /* Native `.from<T>()` — tüketici (villa-edit.action → villas/[id]
+       page) `{ id, name }` (VillaTypeRowLite) bekliyor; cast'siz tip-parity
+       (SQL yine `select *`). */
+    return await db.from<{ id: string; name: string }>("villa_types").select("*");
   },
 
   /** GET — slim (id, name), sort_order ASC (tie-break name ASC). Migration

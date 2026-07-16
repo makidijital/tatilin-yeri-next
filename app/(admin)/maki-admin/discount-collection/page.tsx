@@ -35,14 +35,14 @@ import {
   useConfirm,
 } from "@/app/components/admin/notifications/NotificationProvider";
 import {
-  listDiscountCollection,
-  addToDiscountCollection,
-  removeFromDiscountCollection,
-  toggleDiscountCollectionActive,
-  updateDiscountCollectionItem,
-  reorderDiscountCollection,
-  type DiscountCollectionItem,
-} from "@/app/services/discount-collection.service";
+  listDiscountCollectionAction as listDiscountCollection,
+  addToDiscountCollectionAction as addToDiscountCollection,
+  removeFromDiscountCollectionAction as removeFromDiscountCollection,
+  toggleDiscountCollectionActiveAction as toggleDiscountCollectionActive,
+  updateDiscountCollectionItemAction as updateDiscountCollectionItem,
+  reorderDiscountCollectionAction as reorderDiscountCollection,
+} from "./discount-collection.action";
+import type { DiscountCollectionItem } from "@/app/services/discount-collection.service";
 import { revalidateDiscount } from "@/app/services/revalidate.actions";
 /* 🐛 FIX — /maki-admin/villas aramasıyla aynı Türkçe-tolerant normalize. */
 import { normalizeSearchText } from "@/lib/search";

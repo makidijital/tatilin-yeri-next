@@ -44,11 +44,11 @@ import { logActivity } from "@/lib/activity-log.client";
    ve `_helpers/computeCustomPriceToggle.ts` içinde kullanılır; page-level
    import gerekmiyor. */
 
+import { fetchExternalCalendarArraysForVillaAdminAction as fetchExternalCalendarArraysForVillaAdmin } from "@/lib/external-calendar.admin.action";
 import {
-  fetchExternalCalendarArraysForVillaAdmin,
   EMPTY_EXTERNAL_ADMIN_ARRAYS,
   type ExternalCalendarAdminArrays,
-} from "@/lib/external-calendar.admin.helper";
+} from "@/lib/external-calendar.admin.types";
 
 /* FAZ 1+2: extracted section + helper component'leri. */
 import NoteCard from "./_components/NoteCard";
@@ -126,7 +126,7 @@ import { computeVillaChangeReset } from "./_helpers/computeVillaChangeReset";
 import { computeCustomPriceToggle } from "./_helpers/computeCustomPriceToggle";
 import { computeCustomPriceAmountChange } from "./_helpers/computeCustomPriceAmountChange";
 import { computeReservationPriceRecalc } from "./_helpers/computeReservationPriceRecalc";
-import { fetchBlockedDates } from "./_effects/fetchBlockedDates";
+import { fetchBlockedDatesAction as fetchBlockedDates } from "./_effects/fetchBlockedDates.action";
 import { dispatchStatusChangeMail as dispatchStatusChangeMailHelper } from "./_orchestrators/dispatchStatusChangeMail";
 import { triggerPaymentConfirmation } from "./_orchestrators/triggerPaymentConfirmation";
 import { sendPaymentRequest as sendPaymentRequestHelper } from "./_orchestrators/sendPaymentRequest";

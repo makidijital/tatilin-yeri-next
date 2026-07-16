@@ -1,4 +1,12 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 4 S2 — reservation core) — native provider'a
+   alındı. Tüm tüketiciler server (reservation/* servisleri, availability.
+   helper, blocked-ranges route, fetchBlockedDates [server-only]). Supabase
+   importu tamamen kaldırıldı. `server-only` defansif sınır. Metod gövdeleri +
+   RPC (check_villa_availability_conflict / get_villa_blocked_ranges /
+   get_blocked_villa_ids) + embed + half-open overlap SQL davranışı AYNEN. */
+import { dbNative as db } from "@/lib/db/native";
 
 import {
   SELECT_RESERVATION_DETAIL,
@@ -295,7 +303,9 @@ export const reservationRepository = {
     excludeReservationId: string
   ) {
     return await db
-      .from("reservations")
+      .from<{ start_date: string; end_date: string; status: string | null }>(
+        "reservations"
+      )
       .select("start_date, end_date, status")
       .eq("villa_id", villaId)
       .in("status", statuses as unknown as string[])

@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { Plus, X, HelpCircle, Loader2, Sparkles } from "lucide-react";
 
 import {
-  getFaqsForAdmin,
-  replaceFaqs,
-  type FaqInput,
-} from "@/app/services/faq.service";
+  getFaqsForAdminAction as getFaqsForAdmin,
+  replaceFaqsAction as replaceFaqs,
+} from "./faqs.action";
+import type { FaqInput } from "@/app/services/faq.service";
 import { revalidateFaqs } from "@/app/services/revalidate.actions";
 import { useNotify } from "@/app/components/admin/notifications/NotificationProvider";
 

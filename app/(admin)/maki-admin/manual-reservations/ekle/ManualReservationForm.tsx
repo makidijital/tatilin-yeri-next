@@ -3,19 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  createManualReservation,
-  updateManualReservation,
-  deleteManualReservation,
-  getVillaAvailabilitySnapshot,
-} from "@/app/services/manualReservation.service";
+  createManualReservationAction as createManualReservation,
+  updateManualReservationAction as updateManualReservation,
+  deleteManualReservationAction as deleteManualReservation,
+  getVillaAvailabilitySnapshotAction as getVillaAvailabilitySnapshot,
+} from "@/app/(admin)/maki-admin/manual-reservations/manual-reservation.action";
 import { Save, Home as HomeIcon, X, CalendarRange } from "lucide-react";
 import { formatDateTr, parseLocalDate } from "@/lib/date-format";
 import ReservationCalendar from "@/app/components/admin/reservation-form/ReservationCalendar";
+import { fetchExternalCalendarArraysForVillaAdminAction as fetchExternalCalendarArraysForVillaAdmin } from "@/lib/external-calendar.admin.action";
 import {
-  fetchExternalCalendarArraysForVillaAdmin,
   EMPTY_EXTERNAL_ADMIN_ARRAYS,
   type ExternalCalendarAdminArrays,
-} from "@/lib/external-calendar.admin.helper";
+} from "@/lib/external-calendar.admin.types";
 import {
   useNotify,
   useConfirm,

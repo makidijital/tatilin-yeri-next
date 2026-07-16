@@ -54,11 +54,11 @@ import type { ReservationPriceDetail } from "@/app/components/admin/reservation-
    Reservation logic, modifier arrayleri, fullyBlockedDates
    ve getValidEndDate semantiği AYNEN korundu. */
 import ReservationCalendar from "@/app/components/admin/reservation-form/ReservationCalendar";
+import { fetchExternalCalendarArraysForVillaAdminAction as fetchExternalCalendarArraysForVillaAdmin } from "@/lib/external-calendar.admin.action";
 import {
-  fetchExternalCalendarArraysForVillaAdmin,
   EMPTY_EXTERNAL_ADMIN_ARRAYS,
   type ExternalCalendarAdminArrays,
-} from "@/lib/external-calendar.admin.helper";
+} from "@/lib/external-calendar.admin.types";
 
 /* 🔥 Reservation form wizard step components — pure presentational.
    Tüm state/effects/handlers page (orchestrator) içinde kalır. */

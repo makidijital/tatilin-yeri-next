@@ -38,14 +38,14 @@ import {
   useConfirm,
 } from "@/app/components/admin/notifications/NotificationProvider";
 import {
-  listHomepageCollection,
-  addToHomepageCollection,
-  removeFromHomepageCollection,
-  toggleHomepageCollectionActive,
-  updateHomepageCollectionItem,
-  reorderHomepageCollection,
-  type HomepageCollectionItem,
-} from "@/app/services/homepage-collection.service";
+  listHomepageCollectionAction as listHomepageCollection,
+  addToHomepageCollectionAction as addToHomepageCollection,
+  removeFromHomepageCollectionAction as removeFromHomepageCollection,
+  toggleHomepageCollectionActiveAction as toggleHomepageCollectionActive,
+  updateHomepageCollectionItemAction as updateHomepageCollectionItem,
+  reorderHomepageCollectionAction as reorderHomepageCollection,
+} from "./homepage-collection.action";
+import type { HomepageCollectionItem } from "@/app/services/homepage-collection.service";
 import { revalidateHomepage } from "@/app/services/revalidate.actions";
 /* 🐛 FIX — /maki-admin/villas aramasıyla aynı Türkçe-tolerant normalize. */
 import { normalizeSearchText } from "@/lib/search";

@@ -1,15 +1,22 @@
-import { db } from "@/lib/db";
+import "server-only";
+
+/* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
+   provider'a alındı. Admin okuma/yazma artık property-owner.action ("use
+   server") üzerinden. Supabase importu tamamen kaldırıldı. `server-only`
+   defansif sınır. Method yüzeyi (findAll/findLinkedVillaOwnerIds/
+   findAllForSelect/insert/updateById/deleteById) + dönüş şekli AYNEN. */
+import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
-   🛡️ PROPERTY OWNERS REPOSITORY (Phase 1 — repo consolidation)
+   🛡️ PROPERTY OWNERS REPOSITORY (native)
    ===============================================================
    `property-owner.service.ts` içindeki inline `supabase.from(...)`
    çağrılarının BİREBİR taşınmış hali. Davranış değişmez:
-     - `db` = supabaseDbProvider (anon, RLS aktif) → service'in
-       kullandığı `@/lib/supabase` ile aynı PostgrestQueryBuilder.
-     - Method'lar ham query sonucunu (`{ data, error }`) döner;
-       mapping / count / business logic SERVICE'te kalır.
-   Select projeksiyonları, order, filter clause'ları AYNEN.
+     - `db` = native provider (`dbNative`); method'lar ham `{ data, error }`
+       döner; mapping / count / business logic SERVICE'te kalır. Tek app
+       rolü → RLS/session-DI YOK.
+   Select projeksiyonları, order, filter clause'ları (`.not(...,"is",null)`)
+   AYNEN.
 =============================================================== */
 
 type PropertyOwnerWritePayload = {
