@@ -8,7 +8,7 @@
    - DEBUG: tüm checkpoint'ler [mail] prefix ile loglanır
    =============================================================== */
 
-import type { Settings } from "@/app/services/settings.service";
+import type { Settings } from "@/app/services/settings.types";
 import { settingsServerRepository } from "@/lib/db/settings.repository.server";
 import { resolveAssetUrl } from "@/lib/storage.helpers";
 

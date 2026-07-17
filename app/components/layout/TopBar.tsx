@@ -10,9 +10,9 @@ import {
 import { ChevronDown } from "lucide-react";
 
 import {
-  getPublicSettings,
-  type Settings,
-} from "@/app/services/settings.service";
+  getPublicSettingsAction as getPublicSettings,
+} from "@/app/services/settings.action";
+import type { Settings } from "@/app/services/settings.types";
 import { useCurrency } from "@/app/context/CurrencyContext";
 
 /* 🛡️ Para birimi seçenekleri — bayraklar LOCAL SVG asset (public/flags).

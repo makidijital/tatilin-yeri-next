@@ -45,7 +45,7 @@ import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from
 import { useCurrency } from "@/app/context/CurrencyContext";
 import { convertPrice, formatCurrency } from "@/lib/currency";
 
-import { getPublicSettings } from "@/app/services/settings.service";
+import { getPublicSettingsAction as getPublicSettings } from "@/app/services/settings.action";
 
 import {
   calculateGrandTotal,

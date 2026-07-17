@@ -1,6 +1,6 @@
 "use client";
 
-import type { WatermarkPosition } from "@/app/services/settings.service";
+import type { WatermarkPosition } from "@/app/services/settings.types";
 
 /* ===============================================================
    🔥 WATERMARK OVERLAY

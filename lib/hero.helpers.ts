@@ -1,4 +1,4 @@
-import type { Settings } from "@/app/services/settings.service";
+import type { Settings } from "@/app/services/settings.types";
 import { resolveAssetUrl } from "@/lib/storage.helpers";
 
 /* ===============================================================

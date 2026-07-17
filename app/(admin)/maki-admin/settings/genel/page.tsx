@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import {
   getSettings,
   updateSettings,
-  type WatermarkPosition,
 } from "@/app/services/settings.service";
+import type { WatermarkPosition } from "@/app/services/settings.types";
 import { useNotify } from "@/app/components/admin/notifications/NotificationProvider";
 import { revalidateSettings } from "@/app/services/revalidate.actions";
 /* 🔗 CTA placeholder default'ları Hero fallback'i ile TEK source-of-truth. */

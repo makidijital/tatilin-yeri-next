@@ -9,8 +9,8 @@ import {
 
 import {
   getPublicSettings,
-  type Settings,
 } from "@/app/services/settings.service";
+import type { Settings } from "@/app/services/settings.types";
 import { menuRepository } from "@/lib/db/menu.repository";
 import { pagesRepository } from "@/lib/db/pages.repository";
 import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";

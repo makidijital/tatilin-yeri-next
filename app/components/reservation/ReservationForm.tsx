@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 /* 🛡️ FAZ 2 frontend purge — `import { supabase }` KALDIRILDI.
    payment_methods fetch artık /api/public/payment-methods route'u
    üzerinden (aynı anon RLS bağlamı, aynı select shape). */
-import { getPublicSettings } from "@/app/services/settings.service";
+import { getPublicSettingsAction as getPublicSettings } from "@/app/services/settings.action";
 import { Country, State } from "country-state-city";
 import { getCountryLabel } from "@/lib/country.helper";
 import { Calendar, Users, CreditCard, CheckCircle2 } from "lucide-react";

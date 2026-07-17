@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import WatermarkOverlay from "./WatermarkOverlay";
-import type { WatermarkPosition } from "@/app/services/settings.service";
+import type { WatermarkPosition } from "@/app/services/settings.types";
 
 type WatermarkProps = {
   logo?: string | null;
