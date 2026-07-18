@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 
 import {
-  getSettings,
-  updateSettings,
-} from "@/app/services/settings.service";
+  getSettingsClient as getSettings,
+  updateSettingsClient as updateSettings,
+} from "@/app/services/settings.client";
 import type { WatermarkPosition } from "@/app/services/settings.types";
 import { useNotify } from "@/app/components/admin/notifications/NotificationProvider";
 import { revalidateSettings } from "@/app/services/revalidate.actions";

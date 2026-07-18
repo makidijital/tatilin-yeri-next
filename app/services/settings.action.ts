@@ -12,7 +12,12 @@ import type { Settings } from "@/app/services/settings.types";
 
    ⚠️ İNCE WRAPPER: iş mantığı YOK — yalnız delege eder. Dönüş
      (`Settings | null`) BİREBİR; RPC/SQL/repository/service değişmedi.
-     `Settings` düz obje → server action sınırında sorunsuz serileşir.
+
+   ⚠️ ADMIN oku/yaz S3'te server action DEĞİL: secret (resend_api_key)
+     yetkilendirmesi RLS `is_active_admin` (JWT) yerine service-role
+     kullanınca zayıflardı. Bu yüzden admin tarafı app'in secure pattern'i
+     ile `/api/admin/settings` (authorizeAdminCaller Bearer) üzerinden gider
+     → `app/services/settings.client.ts` (adminFetch). Bkz. S3.
    =============================================================== */
 
 export async function getPublicSettingsAction(): Promise<Settings | null> {

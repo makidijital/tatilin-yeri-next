@@ -78,4 +78,17 @@ export const settingsServerRepository = {
       .select("*")
       .single();
   },
+
+  /** UPDATE by id — service-role (RLS bypass). Anon repo `updateById` ile
+   *  BYTE-IDENTICAL (`.update(values).eq("id", id)`); tek fark dbAdmin →
+   *  admin settings edit server action'ları (getSettingsAction/
+   *  updateSettingsAction) RLS-gated browser JWT olmadan yazabilsin. RLS
+   *  politikası (042 settings_admin_only) DEĞİŞMEDİ; service-role bypass
+   *  eder. Return shape native `{ data, error }`; caller boolean'a çevirir. */
+  async updateById(id: string, values: Record<string, unknown>) {
+    return await dbAdmin
+      .from("settings")
+      .update(values)
+      .eq("id", id);
+  },
 };

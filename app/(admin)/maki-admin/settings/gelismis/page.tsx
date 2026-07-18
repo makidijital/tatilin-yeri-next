@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSettings, updateSettings } from "@/app/services/settings.service";
+import { getSettingsClient as getSettings, updateSettingsClient as updateSettings } from "@/app/services/settings.client";
 import { useNotify } from "@/app/components/admin/notifications/NotificationProvider";
 import { revalidateSettings } from "@/app/services/revalidate.actions";
 import {
