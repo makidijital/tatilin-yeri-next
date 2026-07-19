@@ -51,6 +51,7 @@ const DISTANCE_ICON_MAP: Record<DistanceIconKey, LucideIcon> = {
 import PriceList from "@/app/components/villa/PriceList";
 import CollapsibleDescription from "@/app/components/villa/CollapsibleDescription";
 import AccommodationLayout from "@/app/components/villa/AccommodationLayout";
+import CheckInOutTimes from "@/app/components/villa/CheckInOutTimes";
 
 import { getVillaBySlug } from "@/app/services/villa.service";
 import { getVillaImages } from "@/app/services/villa-image/villa-image.read";
@@ -739,6 +740,11 @@ export default async function VillaDetail({
               })()
             }
           />
+
+          {/* 🕓 GİRİŞ & ÇIKIŞ SAATLERİ (statik) — Konaklama Düzeni'nin
+              HEMEN üstünde. Hardcoded (16:00 / 10:00); admin/DB yok.
+              space-y container'ında tek kardeş → aynı dikey ritim. */}
+          <CheckInOutTimes />
 
           {/* 🛡️ KONAKLAMA DÜZENİ (mig 047) — Airbnb tarzı oda/banyo
               kartları. Veri yoksa (eski villalar / boş) component

@@ -348,18 +348,6 @@ export default async function Footer() {
                     WhatsApp&apos;tan Yazın
                   </a>
                 )}
-                <Link
-                  href="/teklif-al"
-                  className="group inline-flex items-center gap-2 h-12 px-6 rounded-full bg-[var(--brand-coral)] text-white font-medium text-[13.5px] hover:bg-[var(--brand-coral-deep)] transition-colors duration-300 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/50"
-                >
-                  Teklif Al
-                  <ArrowRight
-                    size={15}
-                    strokeWidth={1.75}
-                    aria-hidden
-                    className="transition-transform duration-300 motion-reduce:transition-none group-hover:translate-x-[2px]"
-                  />
-                </Link>
               </div>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import { blogServerRepository } from "@/lib/db/blog.repository.server";
@@ -123,6 +124,11 @@ export async function POST(req: Request): Promise<NextResponse> {
       { status: dup ? 409 : 500 }
     );
   }
+
+  /* 🛡️ ON-DEMAND INVALIDATION — yeni yazı sonrası statik /blog liste
+     Full Route Cache'i temizlenir; sonraki ziyaretçi yeni listeyi hemen
+     görür. Detay (force-dynamic) etkilenmez; cache mimarisi korunur. */
+  revalidatePath("/blog");
 
   return NextResponse.json({ ok: true, id: data?.id });
 }

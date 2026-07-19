@@ -1,4 +1,5 @@
-import { Phone } from "lucide-react";
+import Link from "next/link";
+import { Phone, Sparkles } from "lucide-react";
 
 import { getCachedSettings } from "@/lib/cache.helpers";
 
@@ -7,9 +8,10 @@ import { getCachedSettings } from "@/lib/cache.helpers";
    ===============================================================
    AMAÇ:
      Public site genelinde sağ alt köşede sabit (fixed) duran
-     premium iletişim dock'u. 2 stacked CTA: "Hemen Ara" (tel:)
-     ve "WhatsApp" (wa.me). Sosyal ikon stack'i (Instagram/YouTube)
-     kaldırıldı — yalnız hızlı iletişim aksiyonları.
+     premium iletişim dock'u. 3 stacked CTA (üstten alta):
+     "Villa Önerisi Al" (/teklif-al — eski Footer "Teklif Al"),
+     "Hemen Ara" (tel:) ve "WhatsApp" (wa.me). Sosyal ikon stack'i
+     (Instagram/YouTube) kaldırıldı — yalnız hızlı aksiyonlar.
 
    VERİ KAYNAĞI (mevcut alanlar — YENİ ŞEMA / YENİ LİNK YOK):
      - settings.phone          → `tel:` linki (Footer paterni AYNEN)
@@ -49,10 +51,10 @@ export default async function FloatingSocial() {
     settings?.whatsapp_link?.trim() ||
     (phoneDigits ? `https://wa.me/${phoneDigits}` : null);
 
-  /* İkisi de boşsa hiç render etme — DOM'a temiz biçimde dokunma. */
-  if (!phoneHref && !whatsappHref) {
-    return null;
-  }
+  /* NOT: "Villa Önerisi Al" CTA (/teklif-al) her zaman gösterilir
+     (eski Footer "Teklif Al" butonu buraya taşındı) → dock artık
+     koşulsuz render edilir. Phone/WhatsApp yine kendi href'lerine
+     bağlı olarak koşullu görünür. */
 
   return (
     <aside
@@ -64,6 +66,32 @@ export default async function FloatingSocial() {
         print:hidden
       "
     >
+      {/* VILLA ÖNERİSİ AL — premium coral CTA (/teklif-al). Eski Footer
+          "Teklif Al" butonunun aynı hedefi; stack'in EN ÜSTÜ. FAB
+          tasarımı (boyut/animasyon/hover/shadow/radius/spacing) AYNEN. */}
+      <Link
+        href="/teklif-al"
+        aria-label="Villa Önerisi Al"
+        className="
+          group inline-flex items-center gap-2.5
+          rounded-3xl pl-2.5 pr-2.5 sm:pr-4 py-2.5
+          bg-[var(--brand-coral)] text-white
+          ring-1 ring-white/10
+          shadow-[0_16px_34px_-12px_rgba(2,170,229,0.55)]
+          hover:scale-[1.03] hover:shadow-[0_22px_42px_-12px_rgba(2,170,229,0.7)]
+          transition-transform duration-200
+          motion-reduce:transition-none motion-reduce:hover:scale-100
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/50
+        "
+      >
+        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white text-[var(--brand-coral)] shrink-0">
+          <Sparkles size={15} strokeWidth={2} aria-hidden />
+        </span>
+        <span className="hidden sm:inline pr-1 text-[13px] font-semibold tracking-wide whitespace-nowrap">
+          Villa Önerisi Al
+        </span>
+      </Link>
+
       {/* HEMEN ARA — dark navy CTA (tel:) */}
       {phoneHref && (
         <a

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import { blogServerRepository } from "@/lib/db/blog.repository.server";
@@ -149,6 +150,11 @@ export async function PATCH(
     );
   }
 
+  /* 🛡️ ON-DEMAND INVALIDATION — güncelleme sonrası statik /blog liste
+     Full Route Cache'i temizlenir (kart başlık/özet/kapak taze gelir).
+     Detay force-dynamic → zaten taze. Cache mimarisi korunur. */
+  revalidatePath("/blog");
+
   return NextResponse.json({ ok: true });
 }
 
@@ -192,5 +198,11 @@ export async function DELETE(
       { status: 500 }
     );
   }
+
+  /* 🛡️ ON-DEMAND INVALIDATION — silme sonrası statik /blog liste Full
+     Route Cache'i temizlenir; silinen yazı listeden hemen kalkar.
+     Cache mimarisi korunur. */
+  revalidatePath("/blog");
+
   return NextResponse.json({ ok: true });
 }
