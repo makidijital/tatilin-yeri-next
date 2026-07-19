@@ -520,6 +520,19 @@ export default function AdminGallery({
               </span>
             )}
 
+            {/* 🏡 ANA SAYFA ÖNİZLEME — 2. görsel (index === 1).
+                Anasayfa "İndirimli" kartındaki sağ-alt mini önizleme
+                bu görseldir. YALNIZ bilgilendirme rozeti; sıralama/
+                cover/upload/drag-drop mantığı DEĞİŞMEZ. Kapak badge'i
+                ile aynı tasarım (radius/padding/font/shadow), yalnız
+                accent farklı (brand-coral). Kapak normalde index 0 →
+                çakışma olmaz. */}
+            {index === 1 && (
+              <span className="absolute top-2 left-2 bg-[#ff7a59] text-white text-xs px-2 py-1 rounded">
+                Anasayfa İndirimli Önizleme
+              </span>
+            )}
+
             {/* 🔥 ACTIONS */}
             <div className="absolute bottom-2 left-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
               <button
