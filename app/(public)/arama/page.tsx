@@ -5,7 +5,10 @@
    tablolarda zaten anon allow → runtime farkı yok; gelecekte admin-only
    tabloya yazma/okuma eklenirse session cookies otomatik akar. */
 import { cookies } from "next/headers";
-import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S5B — findSearchResults native embed'e taşındı. Bu
+   sayfa server RSC + villaRepository'yi YALNIZ findSearchResults için
+   kullanıyor → server-only native repo import'u güvenli, tek call-site. */
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
@@ -382,7 +385,7 @@ export default async function AramaPage({ searchParams }: Props) {
      tüm villa yorumlarının aggregate'i. main villa query ile
      Promise.all → ek RTT yok (net latency = max of two). */
   const [villaRes, reviewStatsMap] = await Promise.all([
-    villaRepository.findSearchResults({
+    villaAdminRepository.findSearchResults({
       categoryVillaIds,
       expandedRegions,
       guests,

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S3 — findAvailabilityConfigById native'e taşındı.
+   Bu route server-only (API handler) → server-only native repo import'u
+   güvenli. Diğer villaRepository çağrısı bu route'ta YOK (yalnız bu
+   method). Provider/DTO/mapping AYNEN; yalnız bu tek read native. */
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import {
   fetchExternalCalendarStringsForVilla,
   EMPTY_EXTERNAL_STRING_ARRAYS,
@@ -130,7 +134,7 @@ export async function GET(
             sayfa server-fetch'i ile birebir aynı service çağrısı
          3. external_calendar_events (service role, helper internal) */
     const [configRes, prices, externalBlocks] = await Promise.all([
-      villaRepository.findAvailabilityConfigById(id),
+      villaAdminRepository.findAvailabilityConfigById(id),
       getVillaPrices(id),
       fetchExternalCalendarStringsForVilla(id),
     ]);

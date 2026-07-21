@@ -6,7 +6,11 @@ import { Heart, Trash2, Share2, Check, AlertCircle } from "lucide-react";
 
 import VillaCard from "@/app/components/villa/VillaCard";
 import { useFavorites } from "@/hooks/use-favorites";
-import { getVillasByIds, type VillaDTO } from "@/app/services/villa.service";
+/* 🛡️ Villa Migration S1 — client boundary: runtime villa.service import'u
+   yerine server action. Tip (VillaDTO) type-only import → erase edilir,
+   client bundle'a villa.service SIZMAZ. Call-site alias ile değişmez. */
+import { getVillasByIdsAction as getVillasByIds } from "@/app/services/villa.action";
+import type { VillaDTO } from "@/app/services/villa.service";
 /* 🛡️ FAZ 37 — Paylaşılabilir favori listesi service (DB snapshot). */
 import { createSharedFavoritesListAction as createSharedFavoritesList } from "./shared-favorites.action";
 

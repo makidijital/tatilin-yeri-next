@@ -4,7 +4,10 @@ import { notFound } from "next/navigation";
 import VillaCard from "@/app/components/villa/VillaCard";
 import { JsonLd, buildItemList } from "@/app/components/seo/StructuredData";
 import { shortGapsRepository } from "@/lib/db/short-gaps.repository";
-import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S5E — findShortGapVillas native embed'e taşındı. Bu
+   sayfa server RSC + villaRepository'yi YALNIZ findShortGapVillas için
+   kullanıyor → server-only native repo import'u güvenli, tek call-site. */
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { getCachedVillaLocations, getCachedVillaTypes } from "@/lib/cache.helpers";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
@@ -239,7 +242,7 @@ export default async function ShortGapListingPage({
       ];
     }
 
-    const { data: villaData } = await villaRepository.findShortGapVillas({
+    const { data: villaData } = await villaAdminRepository.findShortGapVillas({
       gapVillaIds,
       expandedRegions,
       typeIdFilter,

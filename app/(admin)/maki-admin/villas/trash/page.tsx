@@ -12,7 +12,10 @@ import {
   MapPin,
 } from "lucide-react";
 
-import { getTrashedVillas } from "@/app/services/villa.service";
+/* 🛡️ Villa Migration S1 — client boundary: runtime villa.service import'u
+   yerine server action (call-site alias ile değişmez). Provider/repository/
+   Supabase AYNEN; yalnız client bundle'dan villa.service çıkarıldı. */
+import { getTrashedVillasAction as getTrashedVillas } from "@/app/services/villa.action";
 /* 🛡️ FAZ 2 frontend purge — TÜM villa-admin service runtime import'ları
    KALDIRILDI. Önceki turda `restoreVilla` deep import edilmişti
    (`villa-admin/visibility.service`); ama FAZ 2 STABILIZATION sonrası

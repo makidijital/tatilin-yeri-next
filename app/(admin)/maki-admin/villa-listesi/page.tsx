@@ -1,4 +1,7 @@
-import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S5F — findActiveCuratorCards native embed'e taşındı.
+   Bu sayfa server RSC + villaRepository'yi YALNIZ findActiveCuratorCards
+   için kullanıyor → server-only native repo import'u güvenli, tek call-site. */
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { villaLocationRepository } from "@/lib/db/villa-location.repository";
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
@@ -83,7 +86,7 @@ export default async function VillaListesiPage() {
      fetch. SELECT pattern /arama ve villaRepository.listPublic ile
      birebir aynı (yıldız + embed). */
   const [villasRes, locationsRes, typesRes, relationsRes] = await Promise.all([
-    villaRepository.findActiveCuratorCards(),
+    villaAdminRepository.findActiveCuratorCards(),
     villaLocationRepository.findAllForFilter(),
     villaTypeRepository.findAllIdNameBySortOrder(),
     /* villa_type_relations: M:N junction. Tüm satırları çekiyoruz —

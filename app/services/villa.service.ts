@@ -22,6 +22,11 @@
    =============================================================== */
 
 import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S4A — findBySlug native embed'e taşındı. villa.service
+   S1 sonrası hiçbir client tarafından import edilmiyor → server-only native
+   repo import'u güvenli. Diğer villaRepository çağrıları (listPublic vs.)
+   AYNEN Supabase; yalnız getVillaBySlug'ın tek findBySlug çağrısı native. */
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { getVillaReviewStatsBatch } from "./villa-review.service";
 import { normalizeYouTubeVideos } from "@/lib/youtube.helper";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
@@ -538,7 +543,7 @@ function mapVilla(
 // yeni opsiyonel alanlar (review_average / review_count) kullanılır.
 export async function getVillas(): Promise<VillaDTO[]> {
   const [rows, statsMap] = await Promise.all([
-    villaRepository.listPublic(),
+    villaAdminRepository.listPublic(),
     getVillaReviewStatsBatch(),
   ]);
   return (rows as unknown as Villa[]).map((row) => {
@@ -642,7 +647,7 @@ export async function getVillasForAdminPage(opts: {
 
    🛡️ FAZ 32 — Query repository'ye taşındı; davranış birebir aynı. */
 export async function getTrashedVillas(): Promise<VillaDTO[]> {
-  const rows = await villaRepository.listTrashed();
+  const rows = await villaAdminRepository.listTrashed();
   return (rows as unknown as Villa[]).map(mapVilla);
 }
 
@@ -656,7 +661,7 @@ export async function getTrashedVillas(): Promise<VillaDTO[]> {
 export async function getVillaById(
   id: string
 ): Promise<VillaDTO | null> {
-  const row = await villaRepository.findById(id);
+  const row = await villaAdminRepository.findById(id);
   return row ? mapVilla(row as unknown as Villa) : null;
 }
 
@@ -671,7 +676,7 @@ export async function getVillaById(
 export async function getVillaBySlug(
   slug: string
 ): Promise<VillaDTO | null> {
-  const row = await villaRepository.findBySlug(slug);
+  const row = await villaAdminRepository.findBySlug(slug);
   if (!row) {
     console.warn("⚠️ Villa bulunamadı:", slug);
     return null;
@@ -747,6 +752,6 @@ export async function getVillaByPrivateToken(
   /* 🛡️ FAZ 32 — Query repository'ye taşındı; davranış birebir aynı.
      Empty/whitespace guard zaten repository içinde defansif olarak
      duplicate ediliyor; service tarafında ek guard gerek yok. */
-  const row = await villaRepository.findByPrivateToken(token);
+  const row = await villaAdminRepository.findByPrivateToken(token);
   return row ? mapVilla(row as unknown as Villa) : null;
 }

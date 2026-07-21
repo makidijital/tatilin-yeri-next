@@ -2,7 +2,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Sparkles, Users, MapPin, CalendarRange } from "lucide-react";
 
-import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S5C — findCardsByIds native embed'e taşındı. Bu sayfa
+   server RSC + villaRepository'yi YALNIZ findCardsByIds için kullanıyor →
+   server-only native repo import'u güvenli, tek call-site. */
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import VillaCard from "@/app/components/villa/VillaCard";
 import { getStartingPrice } from "@/lib/price.engine";
@@ -120,7 +123,7 @@ export default async function SharedVillaListPage({
   }
 
   const { data: rawVillas, error: rawErr } =
-    await villaRepository.findCardsByIds(snapshotIds);
+    await villaAdminRepository.findCardsByIds(snapshotIds);
 
   /* Silent failure → server log'a yansıt. UI fall-through olur:
      boş listede notFound zaten çağrılıyor, ops debug için neden

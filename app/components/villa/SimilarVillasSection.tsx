@@ -1,5 +1,8 @@
 import VillaCard from "@/app/components/villa/VillaCard";
-import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S5D — findSimilarCards native embed'e taşındı. Bu
+   server component villaRepository'yi YALNIZ findSimilarCards için
+   kullanıyor → server-only native repo import'u güvenli, tek call-site. */
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getStartingPrice } from "@/lib/price.engine";
 
@@ -55,7 +58,7 @@ async function fetchCardVillas(
   opts: { locationId: string | null; excludeIds: string[]; limit: number }
 ): Promise<SimilarRow[]> {
   if (opts.limit <= 0) return [];
-  const { data } = await villaRepository.findSimilarCards(opts);
+  const { data } = await villaAdminRepository.findSimilarCards(opts);
   return Array.isArray(data) ? (data as SimilarRow[]) : [];
 }
 

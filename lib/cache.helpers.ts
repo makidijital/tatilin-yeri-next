@@ -6,6 +6,11 @@ import { resolveVillaImageUrl } from "@/lib/storage.helpers";
    koleksiyon mapper'ları villa_prices[0] kullanıyordu → tutarsız. */
 import { getStartingPrice } from "@/lib/price.engine";
 import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S2 — findActiveLocationIds native'e taşındı.
+   cache.helpers zaten server-only (unstable_cache) → server-only
+   native repo import'u güvenli. Diğer villaRepository çağrıları
+   (getCachedVillas vs.) AYNEN Supabase; yalnız bu tek read native. */
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { villaLocationRepository } from "@/lib/db/villa-location.repository";
 import { homepageRepository } from "@/lib/db/homepage.repository";
@@ -614,7 +619,7 @@ export const getCachedCategoryCovers = unstable_cache(
 =============================================================== */
 export const getCachedLocationVillaCounts = unstable_cache(
   async (): Promise<Record<string, number>> => {
-    const { data, error } = await villaRepository.findActiveLocationIds();
+    const { data, error } = await villaAdminRepository.findActiveLocationIds();
 
     if (error || !data) {
       if (error) {

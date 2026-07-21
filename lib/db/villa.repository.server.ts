@@ -93,6 +93,584 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 export const villaAdminRepository = {
   /* ===============================================================
+     READ — active villa location_id list (NATIVE twin, Migration S2)
+     ===============================================================
+     Anon `villaRepository.findActiveLocationIds` (Supabase) karşılığı.
+     BYTE-IDENTICAL sorgu — tek fark `db` (anon) → `dbAdmin` (native):
+       .from("villa").select("location_id")
+         .eq("is_active", true).is("deleted_at", null)
+     ⚠️ SONUÇ KÜMESİ PARITY: filtre `is_active=true AND deleted_at IS
+        NULL` = villa public-görünür kümesi. Anon path'te RLS de aynı
+        kümeyi döndürür → dbAdmin (RLS bypass) ile satır kümesi BİREBİR
+        (RLS bypass etkisiz; filtre zaten kısıtlıyor).
+     Return shape native `{ data, error }`; caller (cache.helpers >
+     getCachedLocationVillaCounts) JS-side aggregate (Record<lid,count>)
+     AYNEN. `location_id` uuid → string (pg-type-parsers) — anon ile
+     field parity.
+  =============================================================== */
+  async findActiveLocationIds() {
+    return await dbAdmin
+      .from("villa")
+      .select("location_id")
+      .eq("is_active", true)
+      .is("deleted_at", null);
+  },
+
+  /* ===============================================================
+     READ — public availability config by id (NATIVE twin, Migration S3)
+     ===============================================================
+     Anon `villaRepository.findAvailabilityConfigById` (Supabase) karşılığı.
+     BYTE-IDENTICAL — tek fark `db` (anon) → `dbAdmin` (native):
+       .select("deposit, cleaning_fee, cleaning_currency, cleaning_limit,
+                custom_prepayment_rate, minimum_stay_nights")
+       .eq("id", id).maybeSingle()
+     ⚠️ PARITY: villa BASE tablosunda restrictive RLS YOK (mig 019: anon
+        role villa'ya blanket SELECT; görünürlük filtresi app-query
+        katmanında). Bu method yalnız `.eq("id")` filtreler → anon (blanket
+        SELECT) ve dbAdmin (RLS bypass) ANY villa için AYNI satırı döndürür
+        (is_active/deleted_at'ten bağımsız) → RLS bypass inert, sapma yok.
+     ⚠️ maybeSingle parity: 0 satır → { data: null, error: null }; 1 satır
+        → { data: row, error: null }; >1 → error. Native queryMaybeOne
+        BİREBİR. Alan tipleri: deposit/cleaning_fee/cleaning_limit/
+        custom_prepayment_rate/minimum_stay_nights numeric→number,
+        cleaning_currency text→string (pg-type-parsers) → anon ile field
+        parity. Mapping/fallback caller'da (route) AYNEN.
+  =============================================================== */
+  async findAvailabilityConfigById(id: string) {
+    return await dbAdmin
+      .from("villa")
+      .select(
+        "deposit, cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate, minimum_stay_nights"
+      )
+      .eq("id", id)
+      .maybeSingle();
+  },
+
+  /* ===============================================================
+     READ — public detail by slug (NATIVE EMBED twin, Migration S4A)
+     ===============================================================
+     Anon `villaRepository.findBySlug` karşılığı — İLK native embed.
+     BYTE-IDENTICAL embed-select + filtre + maybeSingle; tek fark
+     `db` (anon) → `dbAdmin` (native). KONTRAT da birebir: unwrap +
+     error→null + `Record<string,unknown> | null` (caller `getVillaBySlug`
+     call-site'ı DEĞİŞMEZ).
+
+     EMBED'LER (yalnız 2; referencedTable/limit YOK — detail path TÜM
+     image array'i):
+       location:villa_locations(name)   [cardinality one]
+       villa_images (image_url, is_cover, sort_order)  [cardinality many]
+     relation-metadata (villa.location / villa.villa_images) native JSON
+     korelasyon-subquery'ye çevirir; villa_images json_agg ORDER BY
+     is_cover DESC + sort_order ASC (metadata default). ⚠️ Anon sorgu bu
+     order'ı vermez ama `mapVilla` (villa.service) villa_images'ı AYNI
+     kanona (is_cover önce, sort_order asc) JS-side re-sort eder → çıktı
+     PARITY (dizi sırası maskeleniyor).
+
+     PARITY (RLS): villa base'de restrictive RLS YOK (mig 019) + sorgu
+     `is_active=true AND deleted_at IS NULL` explicit → dbAdmin bypass
+     inert; anon (blanket SELECT + filtre) ile satır kümesi birebir.
+     maybeSingle: 0→null, 1→row, >1→error (native queryMaybeOne = Supabase).
+  =============================================================== */
+  async findBySlug(slug: string): Promise<Record<string, unknown> | null> {
+    const { data, error } = await dbAdmin
+      .from("villa")
+      .select(
+        `
+        *,
+        location:villa_locations(name),
+        villa_images (
+          image_url,
+          is_cover,
+          sort_order
+        )
+      `
+      )
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[villa.repo.server.findBySlug] FAILED", error.message);
+      return null;
+    }
+    return (data as Record<string, unknown> | null) || null;
+  },
+
+  /* ===============================================================
+     READ — admin edit by id (NATIVE EMBED twin, Migration S4B)
+     ===============================================================
+     Anon `villaRepository.findById` karşılığı. BYTE-IDENTICAL embed-
+     select (SELECT_BASIC: location + villa_images) + filtre + maybeSingle;
+     tek fark `db` → `dbAdmin`. Kontrat birebir: unwrap + error→null +
+     `Record<string,unknown> | null` (caller call-site DEĞİŞMEZ).
+
+     ⚠️ findBySlug'dan TEK FARK: `is_active` filtresi YOK (admin pasif
+     villayı da edit edebilmeli); `deleted_at IS NULL` KORUNUR. Embed'ler
+     AYNI 2 (location one / villa_images many); referencedTable/limit/
+     villa_prices YOK. mapVilla villa_images re-sort → array parity.
+     PARITY (RLS): villa base restrictive RLS yok → anon (blanket SELECT)
+     ve dbAdmin (bypass) aynı satırı döndürür; is_active filtresizliği
+     iki tarafta da AYNI (bypass inert). maybeSingle: 0→null,1→row,>1→error.
+  =============================================================== */
+  async findById(id: string): Promise<Record<string, unknown> | null> {
+    const { data, error } = await dbAdmin
+      .from("villa")
+      .select(
+        `
+        *,
+        location:villa_locations(name),
+        villa_images (
+          image_url,
+          is_cover,
+          sort_order
+        )
+      `
+      )
+      .eq("id", id)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[villa.repo.server.findById] FAILED", error.message);
+      return null;
+    }
+    return (data as Record<string, unknown> | null) || null;
+  },
+
+  /* ===============================================================
+     READ — private/off-market by token (NATIVE EMBED twin, Migration S4B)
+     ===============================================================
+     Anon `villaRepository.findByPrivateToken` karşılığı. BYTE-IDENTICAL:
+     boş/whitespace token guard → null; SELECT_BASIC embed (location +
+     villa_images) + `.eq("private_access_token")` + `.is("deleted_at",null)`
+     + maybeSingle; tek fark `db` → `dbAdmin`. Kontrat birebir (unwrap +
+     error→null + `Record<string,unknown> | null`) → caller call-site DEĞİŞMEZ.
+
+     ⚠️ is_active filtresi YOK (off-market/VIP preview esası — pasif villa
+     token ile görünür); `deleted_at IS NULL` KORUNUR. Embed'ler AYNI 2;
+     referencedTable/limit/villa_prices YOK. mapVilla villa_images re-sort
+     → array parity. PARITY (RLS): villa base restrictive RLS yok → anon
+     zaten is_active=false satırları token ile okuyabiliyor (bu method'un
+     tasarım kanıtı); dbAdmin bypass ile satır kümesi birebir.
+  =============================================================== */
+  async findByPrivateToken(
+    token: string
+  ): Promise<Record<string, unknown> | null> {
+    if (typeof token !== "string" || token.trim().length === 0) {
+      return null;
+    }
+    const { data, error } = await dbAdmin
+      .from("villa")
+      .select(
+        `
+        *,
+        location:villa_locations(name),
+        villa_images (
+          image_url,
+          is_cover,
+          sort_order
+        )
+      `
+      )
+      .eq("private_access_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (error) {
+      console.error(
+        "[villa.repo.server.findByPrivateToken] FAILED",
+        error.message
+      );
+      return null;
+    }
+    return (data as Record<string, unknown> | null) || null;
+  },
+
+  /* ===============================================================
+     READ — trash list (NATIVE EMBED twin, Migration S4B.3)
+     ===============================================================
+     Anon `villaRepository.listTrashed` karşılığı. BYTE-IDENTICAL:
+     SELECT_BASIC embed (location + villa_images) + `.not("deleted_at",
+     "is", null)` + `.order("deleted_at", { ascending:false })`; tek fark
+     `db` → `dbAdmin`. Kontrat birebir: LIST (array) — unwrap + error→[] +
+     `Record<string,unknown>[]` (caller call-site DEĞİŞMEZ).
+
+     ⚠️ LIST davranışı (maybeSingle YOK): yalnız soft-deleted satırlar
+     (`deleted_at IS NOT NULL` → compiler negated-is, query-compiler:221)
+     `deleted_at` DESC TOP-LEVEL order (referencedTable DEĞİL). Embed'ler
+     AYNI 2; referencedTable/limit/villa_prices YOK. Trash kümesi küçük →
+     per-row embed subquery maliyeti ihmal. mapVilla villa_images re-sort
+     → array parity. PARITY (RLS): villa base restrictive RLS yok → anon
+     zaten silinmiş satırları okuyabiliyor (trash bugün çalışıyor); dbAdmin
+     bypass ile satır kümesi birebir.
+  =============================================================== */
+  async listTrashed(): Promise<Record<string, unknown>[]> {
+    const { data, error } = await dbAdmin
+      .from("villa")
+      .select(
+        `
+        *,
+        location:villa_locations(name),
+        villa_images (
+          image_url,
+          is_cover,
+          sort_order
+        )
+      `
+      )
+      .not("deleted_at", "is", null)
+      .order("deleted_at", { ascending: false });
+
+    if (error) {
+      console.error("[villa.repo.server.listTrashed] FAILED", error.message);
+      return [];
+    }
+    return (data || []) as Record<string, unknown>[];
+  },
+
+  /* ===============================================================
+     READ — public list + COVER-SLIM (NATIVE EMBED twin, Migration S5A)
+     ===============================================================
+     Anon `villaRepository.listPublic` karşılığı — İLK büyük LIST + ilk
+     cover-slim (per-parent LIMIT 1) native embed. BYTE-IDENTICAL sorgu
+     (SELECT_WITH_PRICES + filtre + referencedTable order + limit1 +
+     top-level order); tek fark `db` → `dbAdmin`. Kontrat birebir: LIST
+     (array) — unwrap + error→[] + `Record<string,unknown>[]` (caller
+     call-site DEĞİŞMEZ).
+
+     EMBED (3):
+       location:villa_locations(name)             [one]
+       villa_images(image_url,is_cover,sort_order) [many · COVER-SLIM]
+       villa_prices(price,currency,start_date)     [many]
+
+     ⚠️ COVER-SLIM byte-identical: `.order(is_cover desc/sort_order asc,
+        {referencedTable:"villa_images"})` QueryBuilder:208 ile top-level'a
+        EKLENMEZ; embed order relation-metadata'dan gelir ve villa_images
+        metadata orderBy = `[is_cover desc, sort_order asc]` = bu order'la
+        BİREBİR. `.limit(1,{referencedTable})` → embedLimits → compiler
+        derived-table `... ORDER BY is_cover DESC, sort_order ASC LIMIT 1`
+        + json_agg → per-villa TEK cover (1-elemanlı array). Anon ile aynı.
+     ⚠️ villa_prices: order/limit yok → json_agg tüm satırlar (unordered);
+        mapVilla getStartingPrice sıradan bağımsız min alır → parity.
+     ⚠️ Top-level order: sort_order ASC, created_at DESC (drag-drop kontratı).
+        Filtre is_active=true + deleted_at IS NULL → dbAdmin bypass inert.
+     ⚠️ PERF (WARNING): N villa × 3 korelasyon-subquery; villa_images/
+        villa_prices `.villa_id` FK index'i CI'de doğrulanmalı (ölçek).
+  =============================================================== */
+  async listPublic(): Promise<Record<string, unknown>[]> {
+    const { data, error } = await dbAdmin
+      .from("villa")
+      .select(
+        `
+        *,
+        location:villa_locations(name),
+        villa_images (
+          image_url,
+          is_cover,
+          sort_order
+        ),
+        villa_prices (
+          price,
+          currency,
+          start_date
+        )
+      `
+      )
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("is_cover", {
+        referencedTable: "villa_images",
+        ascending: false,
+      })
+      .order("sort_order", {
+        referencedTable: "villa_images",
+        ascending: true,
+      })
+      .limit(1, { referencedTable: "villa_images" })
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[villa.repo.server.listPublic] FAILED", error.message);
+      return [];
+    }
+    return (data || []) as Record<string, unknown>[];
+  },
+
+  /* ===============================================================
+     READ — public /arama results (NATIVE EMBED twin, Migration S5B)
+     ===============================================================
+     Anon `villaRepository.findSearchResults` karşılığı. BYTE-IDENTICAL:
+     CARD-style embed (villa_prices'ta `end_date` DAHİL) + cover-slim
+     (villa_images is_cover desc/sort_order asc + limit1) + koşullu
+     filtreler AYNI SIRAYLA + top-level order; tek fark `db` → `dbAdmin`.
+
+     ⚠️ KONTRAT: `return await q` — HAM `{ data, error }` (unwrap YOK;
+        caller `arama/page.tsx` `const { data, error } = villaRes` ile
+        destructure eder). Bu yüzden listPublic'ten FARKLI: burada zarf
+        ham döner.
+     ⚠️ SEARCH: `.or()`/`.ilike()` YOK — arama caller'da hesaplanan
+        `categoryVillaIds` + `expandedRegions` + `guests` üzerinden
+        `.in("id")` / `.in("location_id")` / `.gte("guests")` (koşullu).
+     ⚠️ COVER-SLIM listPublic ile aynı mekanizma (embedLimits + metadata
+        orderBy `[is_cover desc, sort_order asc]`); top-level limit YOK.
+        Filtre is_active=true + deleted_at IS NULL → dbAdmin bypass inert.
+  =============================================================== */
+  async findSearchResults(opts: {
+    categoryVillaIds: string[] | null;
+    expandedRegions: string[];
+    guests: number | null;
+  }) {
+    let q = dbAdmin
+      .from("villa")
+      .select(
+        `
+        *,
+        location:villa_locations(name),
+        villa_images (
+          image_url,
+          is_cover,
+          sort_order
+        ),
+        villa_prices (
+          price,
+          currency,
+          start_date,
+          end_date
+        )
+      `
+      )
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("is_cover", {
+        referencedTable: "villa_images",
+        ascending: false,
+      })
+      .order("sort_order", {
+        referencedTable: "villa_images",
+        ascending: true,
+      })
+      .limit(1, { referencedTable: "villa_images" });
+    if (opts.categoryVillaIds && opts.categoryVillaIds.length > 0) {
+      q = q.in("id", opts.categoryVillaIds);
+    }
+    if (opts.expandedRegions.length) {
+      q = q.in("location_id", opts.expandedRegions);
+    }
+    if (opts.guests) {
+      q = q.gte("guests", opts.guests);
+    }
+    q = q
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+    return await q;
+  },
+
+  /* ===============================================================
+     READ — cards by ids / shared-list (NATIVE EMBED twin, Migration S5C)
+     ===============================================================
+     Anon `villaRepository.findCardsByIds` karşılığı (/liste/[token]).
+     BYTE-IDENTICAL: card embed (villa_prices `end_date` dahil) + `.in("id")`
+     + is_active/deleted_at + cover-slim (villa_images referencedTable order
+     + limit1); tek fark `db` → `dbAdmin`.
+
+     ⚠️ findSearchResults / listPublic'ten FARK: **top-level order YOK**
+        (snapshot-order re-sort caller'da /liste sayfası). Native'de de
+        top-level order eklenmez → array DB sırasında döner, caller
+        yeniden sıralar → parity.
+     ⚠️ Boş `ids`: method guard YOK; native `.in("id",[])` compiler'da
+        `FALSE` emit eder (query-compiler:211-213) → boş sonuç, SQL hatası
+        YOK → PostgREST empty-in ile PARITY.
+     ⚠️ KONTRAT: `return await q` — ham `{ data, error }` (caller `rawErr`
+        ile destructure). COVER-SLIM listPublic ile birebir (embedLimits +
+        metadata orderBy). Filtre is_active+deleted_at → dbAdmin bypass inert.
+  =============================================================== */
+  async findCardsByIds(ids: string[]) {
+    return await dbAdmin
+      .from("villa")
+      .select(
+        `
+      *,
+      location:villa_locations(name),
+      villa_images (image_url, is_cover, sort_order),
+      villa_prices (price, currency, start_date, end_date)
+    `
+      )
+      .in("id", ids)
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("is_cover", {
+        referencedTable: "villa_images",
+        ascending: false,
+      })
+      .order("sort_order", {
+        referencedTable: "villa_images",
+        ascending: true,
+      })
+      .limit(1, { referencedTable: "villa_images" });
+  },
+
+  /* ===============================================================
+     READ — similar villa cards (NATIVE EMBED twin, Migration S5D)
+     ===============================================================
+     Anon `villaRepository.findSimilarCards` karşılığı (villa detay
+     "Benzer Villalar"). BYTE-IDENTICAL: card embed + cover-slim + koşullu
+     `.eq("location_id")` + koşullu `.not("id","in","(...)")` (exclude) +
+     top-level `.limit(opts.limit)`; tek fark `db` → `dbAdmin`.
+
+     ⚠️ YENİ ELEMANLAR (önceki LIST sprintlerinde yoktu):
+       • `.not("id","in","(id1,id2,…)")` → QueryBuilder (QB:188-192)
+         `parseTupleValues` ile `[id1,id2]`'e ayrıştırıp `{not:{in}}`
+         üretir; compiler `NOT (id IN ($n,…))` (query-compiler:223-224).
+         Boş excludeIds'te caller `.not` çağırmaz (guard). PARITY.
+       • Top-level `.limit(opts.limit)` → `limitValue` (QB:223) → `LIMIT n`.
+     ⚠️ TOP-LEVEL ORDER YOK: `.limit(n)` ama `ORDER BY` yok → dönen ALT
+        KÜME (aday > limit ise) DB-plan'a bağlı arbitrary. Bu non-determinism
+        anon (PostgREST) tarafında da AYNI ŞEKİLDE var (regresyon DEĞİL);
+        yalnız aday>limit uçlarında iki taraf FARKLI arbitrary alt küme
+        döndürebilir → görsel CI doğrulaması önerilir. Filtre/kontrat birebir.
+     ⚠️ COVER-SLIM listPublic ile byte-identical (embedLimits + metadata
+        orderBy). KONTRAT: `return await q` ham `{data,error}` (caller
+        `const { data } = ...`). Filtre is_active+deleted_at → bypass inert.
+  =============================================================== */
+  async findSimilarCards(opts: {
+    locationId: string | null;
+    excludeIds: string[];
+    limit: number;
+  }) {
+    let q = dbAdmin
+      .from("villa")
+      .select(
+        `
+  *,
+  location:villa_locations(name),
+  villa_images ( image_url, is_cover, sort_order ),
+  villa_prices ( price, currency, start_date, end_date )
+`
+      )
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("is_cover", { referencedTable: "villa_images", ascending: false })
+      .order("sort_order", { referencedTable: "villa_images", ascending: true })
+      .limit(1, { referencedTable: "villa_images" })
+      .limit(opts.limit);
+    if (opts.locationId) q = q.eq("location_id", opts.locationId);
+    if (opts.excludeIds.length > 0) {
+      q = q.not("id", "in", `(${opts.excludeIds.join(",")})`);
+    }
+    return await q;
+  },
+
+  /* ===============================================================
+     READ — short-gap villa cards (NATIVE EMBED twin, Migration S5E)
+     ===============================================================
+     Anon `villaRepository.findShortGapVillas` karşılığı (/kisa-sureli-
+     tarihler/[ay]/[gece]). BYTE-IDENTICAL: card embed + cover-slim + base
+     `.in("id", gapVillaIds)` + koşullu region/type/guests; tek fark `db` →
+     `dbAdmin`.
+
+     ⚠️ TARİH/GAP filtresi bu method'da YOK: gap havuzu (`gapVillaIds`)
+        caller'da availability'den hesaplanıp geçilir. RPC YOK, JOIN YOK
+        (embed'ler korelasyon-subquery). Top-level order/limit YOK.
+     ⚠️ İKİ `.in("id",…)` (base gapVillaIds + koşullu typeIdFilter) → her
+        `.in` ayrı condition; compiler hepsini AND'ler (compileWhere) →
+        `id IN(gap) AND id IN(type)` = KESİŞİM → PostgREST iki-`.in` AND
+        semantiğiyle PARITY. Boş `.in([])` → compiler `FALSE` (empty-in
+        guard) → boş sonuç, SQL hatası yok → parity.
+     ⚠️ COVER-SLIM listPublic ile byte-identical. KONTRAT: `return await q`
+        ham `{data,error}` (caller `const { data } = …`). Filtre is_active+
+        deleted_at → dbAdmin bypass inert.
+  =============================================================== */
+  async findShortGapVillas(opts: {
+    gapVillaIds: string[];
+    expandedRegions: string[];
+    typeIdFilter: string[] | null;
+    guests: number;
+  }) {
+    let q = dbAdmin
+      .from("villa")
+      .select(
+        `
+      *,
+      location:villa_locations(name),
+      villa_images (image_url, is_cover, sort_order),
+      villa_prices (price, currency, start_date, end_date)
+    `
+      )
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .in("id", opts.gapVillaIds)
+      .order("is_cover", {
+        referencedTable: "villa_images",
+        ascending: false,
+      })
+      .order("sort_order", {
+        referencedTable: "villa_images",
+        ascending: true,
+      })
+      .limit(1, { referencedTable: "villa_images" });
+    if (opts.expandedRegions.length) {
+      q = q.in("location_id", opts.expandedRegions);
+    }
+    if (opts.typeIdFilter) {
+      q = q.in("id", opts.typeIdFilter);
+    }
+    if (opts.guests > 0) {
+      q = q.gte("guests", opts.guests);
+    }
+    return await q;
+  },
+
+  /* ===============================================================
+     READ — admin curator cards (NATIVE EMBED twin, Migration S5F)
+     ===============================================================
+     Anon `villaRepository.findActiveCuratorCards` karşılığı (/maki-admin/
+     villa-listesi). BYTE-IDENTICAL: SLIM kolon projeksiyonu + card embed +
+     cover-slim + top-level order; tek fark `db` → `dbAdmin`.
+
+     ⚠️ YENİ ELEMAN: top-level **SLIM kolon listesi** (`*` DEĞİL) — id, slug,
+        title, location_id, badge, guests, bedrooms, bathrooms, cleaning_fee,
+        cleaning_currency, cleaning_limit. compiler `compileColumns` her
+        kolonu quote'lar (query-compiler:257); FROM villa tek tablo + embed
+        subquery → qualification/ambiguity yok. PostgREST slim select ile
+        aynı key kümesi → field parity.
+     ⚠️ AKTİF CURATOR filtresi: yalnız `is_active=true AND deleted_at IS NULL`
+        (özel curator filtresi yok). id filtresi/limit/count/range YOK.
+        Top-level order: sort_order ASC, created_at DESC (listPublic ile aynı).
+     ⚠️ COVER-SLIM listPublic ile byte-identical. villa_prices `end_date`
+        dahil (card). KONTRAT: `return await q` ham `{data,error}` (caller
+        `villasRes.error`). Filtre → dbAdmin bypass inert.
+  =============================================================== */
+  async findActiveCuratorCards() {
+    return await dbAdmin
+      .from("villa")
+      .select(
+        `
+        id, slug, title, location_id, badge,
+        guests, bedrooms, bathrooms,
+        cleaning_fee, cleaning_currency, cleaning_limit,
+        location:villa_locations(name),
+        villa_images (image_url, is_cover, sort_order),
+        villa_prices (price, currency, start_date, end_date)
+      `
+      )
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("is_cover", {
+        referencedTable: "villa_images",
+        ascending: false,
+      })
+      .order("sort_order", {
+        referencedTable: "villa_images",
+        ascending: true,
+      })
+      .limit(1, { referencedTable: "villa_images" })
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+  },
+
+  /* ===============================================================
      READ — slug collision (create/update slug guard)
      ===============================================================
      Orijinal (anon repo):
