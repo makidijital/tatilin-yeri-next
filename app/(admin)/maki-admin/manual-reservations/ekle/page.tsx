@@ -1,5 +1,9 @@
 import ManualReservationForm from "./ManualReservationForm";
-import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S8F — findAllIdTitleSlug native twin'e (S8E, byte-
+   identical, ARRAY) repoint. Server Component → server-only native repo
+   import'u güvenli. villaRepository yalnız findAllIdTitleSlug için
+   kullanılıyor; call-site aynı (villaAdminRepository → villaRepository alias). */
+import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
 
 async function getVillas() {
   const { data, error } = await villaRepository.findAllIdTitleSlug();

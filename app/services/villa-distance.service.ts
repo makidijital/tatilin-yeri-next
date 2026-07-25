@@ -1,4 +1,9 @@
-import { villaAdminRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S7B — anon villa.repository yerine native
+   villa.repository.server. findVillaDistances (byte-identical twin) +
+   rpcReplaceVillaDistances (native byte-identical) ikisi de native.
+   Bu service yalnız server (public detay RSC + villa-edit.action) →
+   server-only native repo import'u güvenli. */
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import {
   normalizeDistanceValue,
   parseDistance,

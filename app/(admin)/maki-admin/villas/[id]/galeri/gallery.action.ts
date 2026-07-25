@@ -6,7 +6,11 @@ import {
   deleteVillaImage,
   deleteAllVillaImages,
 } from "@/app/services/villa-image/villa-image.delete";
-import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S8D — findSlugById native twin'e (S8C, byte-identical)
+   repoint. Bu dosya "use server" → server-only native repo import'u güvenli.
+   villaRepository yalnız findSlugById için kullanılıyor; method adı aynı
+   (villaAdminRepository → villaRepository alias). */
+import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /* ===============================================================

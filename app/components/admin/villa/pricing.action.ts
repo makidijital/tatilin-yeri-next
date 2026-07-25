@@ -1,6 +1,10 @@
 "use server";
 
-import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S8B — findIdTitleCurrencyById native twin'e (S8A,
+   byte-identical) repoint. Bu dosya "use server" (server action) →
+   server-only native repo import'u güvenli. villaRepository yalnız bu
+   method için kullanılıyor; method adı aynı. */
+import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
 import {
   getVillaPrices,
   setVillaPrices,

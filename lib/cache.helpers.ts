@@ -5,12 +5,17 @@ import { resolveVillaImageUrl } from "@/lib/storage.helpers";
    mantık: villa_prices içindeki MIN nightly (getStartingPrice). Eskiden
    koleksiyon mapper'ları villa_prices[0] kullanıyordu → tutarsız. */
 import { getStartingPrice } from "@/lib/price.engine";
-import { villaRepository } from "@/lib/db/villa.repository";
-/* 🛡️ Villa Migration S2 — findActiveLocationIds native'e taşındı.
-   cache.helpers zaten server-only (unstable_cache) → server-only
-   native repo import'u güvenli. Diğer villaRepository çağrıları
-   (getCachedVillas vs.) AYNEN Supabase; yalnız bu tek read native. */
-import { villaAdminRepository } from "@/lib/db/villa.repository.server";
+/* 🛡️ Villa Migration S2 + S8L — findActiveLocationIds (S2) +
+   findActiveImagesByIds (S8L) native'e taşındı. cache.helpers zaten
+   server-only (unstable_cache) → server-only native repo import'u güvenli.
+   `villaRepository` alias'ı native villaAdminRepository'ye bağlanır →
+   call-site'lar (villaRepository.findActiveImagesByIds /
+   villaAdminRepository.findActiveLocationIds) DEĞİŞMEZ. Anon
+   villa.repository import'u kaldırıldı (cache.helpers tamamen native). */
+import {
+  villaAdminRepository,
+  villaAdminRepository as villaRepository,
+} from "@/lib/db/villa.repository.server";
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { villaLocationRepository } from "@/lib/db/villa-location.repository";
 import { homepageRepository } from "@/lib/db/homepage.repository";

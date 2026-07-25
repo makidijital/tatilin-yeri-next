@@ -1,4 +1,8 @@
-import { villaAdminRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S7A3 — anon findSlugCollision yerine native
+   findSlugExact (byte-identical: SELECT id · WHERE slug=$1 [AND id<>$2] ·
+   LIMIT 1 · ham {data,error}). Bu helper server (create/update/clone
+   service) → server-only native repo import'u güvenli. */
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { slugifyTr } from "@/lib/slug";
 
 /* ===============================================================
@@ -30,7 +34,7 @@ export async function generateUniqueSlug(
        delege. Predicate (.eq("slug") + .limit(1) + .neq("id", excludeId)
        conditional) repo içinde aynen; service infinite-loop +
        increment + excludeId policy AYNEN. */
-    const { data } = await villaAdminRepository.findSlugCollision(
+    const { data } = await villaAdminRepository.findSlugExact(
       slug,
       excludeId
     );

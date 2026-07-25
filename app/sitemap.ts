@@ -5,7 +5,11 @@ import type { MetadataRoute } from "next";
    (is_active=true & deleted_at IS NULL, slug+created_at) ve pages
    (is_active=true) aynı filtre + fail-soft. createSupabaseServerClient
    artık gerekmez (RLS anon context repository `db` üzerinden aynen). */
-import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S8H — listPublicSlugs native twin'e (S8G, byte-
+   identical chunked-loop, unwrapped {slug,created_at}[]) repoint. sitemap
+   server → server-only native repo import'u güvenli. villaRepository yalnız
+   listPublicSlugs için; call-site aynı (villaAdminRepository → villaRepository alias). */
+import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
 import { pagesRepository } from "@/lib/db/pages.repository";
 /* 🛡️ Blog (FAZ 3) — yayında olan blog yazıları sitemap'e dahil. */
 import { blogRepository } from "@/lib/db/blog.repository";

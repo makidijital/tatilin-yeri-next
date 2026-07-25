@@ -1,6 +1,10 @@
 "use server";
 
-import { villaRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S8J — findRawByIdSingle native twin'e (S8I, byte-
+   identical `.single()` + PGRST116) repoint. Bu dosya "use server" →
+   server-only native repo import'u güvenli. villaRepository yalnız
+   findRawByIdSingle için; call-site aynı (villaAdminRepository → villaRepository alias). */
+import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
 import { villaLocationRepository } from "@/lib/db/villa-location.repository";
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { villaFeatureRepository } from "@/lib/db/villa-feature.repository";

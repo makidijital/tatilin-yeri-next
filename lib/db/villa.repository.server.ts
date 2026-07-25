@@ -9,6 +9,16 @@ import "server-only";
    dönüş şekli aynen. Runtime testi yeşil olmadan production'a deploy
    edilmemeli. */
 import { dbAdminNative as dbAdmin } from "@/lib/db/native";
+/* 🛡️ Villa Migration S6A — listForAdmin server-side search için. Anon
+   repo'daki `buildVillaSearchOrClause` ile BYTE-IDENTICAL replika (aşağıda);
+   native→anon ters bağımlılık yaratmamak için helper burada; yalnız pure
+   `normalizeSearchText` import edilir (client-safe TR-fold). */
+import { normalizeSearchText, escapeLikePattern } from "@/lib/search";
+/* 🛡️ Villa Migration S7C2 — YALNIZ tip (erased; runtime Supabase bağımlılığı
+   YOK). `rpcReplaceVillaPrices`'ın anon ile byte-identical imzası için
+   opsiyonel `client?` parametresinin tipi. Native gövde client'ı KULLANMAZ
+   (dbAdminNative sabit) — yalnız API/imza uyumluluğu (S7C1 DECISION A). */
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /* ===============================================================
    🛡️ FAZ 2 STABILIZATION — VILLA ADMIN REPOSITORY (SERVER-ROLE)
@@ -90,6 +100,25 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
      ile sorunsuz). Mutation flow harici client-side caller'lar
      etkilenmesin diye dahil edilmedi.
    =============================================================== */
+
+/* ===============================================================
+   🛡️ SEARCH .or() QUOTING — anon `buildVillaSearchOrClause` BYTE-IDENTICAL
+   ===============================================================
+   listForAdmin server-side search (S6A). Escape sırası + quoting anon repo
+   ile BİREBİR: (1) backslash→\\, (2) ILIKE wildcard %_→\%\_, (3) "→\", (4)
+   `"..."` sarma. Title normalize (TR-fold), slug HAM. Native `.or` parser
+   `unquoteOrValue` bu quoting'i tersine çevirir → ILIKE pattern anon ile aynı.
+=============================================================== */
+function buildVillaSearchOrClauseNative(q: string): string {
+  const escapeOrValue = (v: string) =>
+    v
+      .replace(/\\/g, "\\\\")
+      .replace(/[%_]/g, (m) => `\\${m}`)
+      .replace(/"/g, '\\"');
+  const titleQuoted = `"%${escapeOrValue(normalizeSearchText(q))}%"`;
+  const slugQuoted = `"%${escapeOrValue(q)}%"`;
+  return `search_title.ilike.${titleQuoted},slug.ilike.${slugQuoted}`;
+}
 
 export const villaAdminRepository = {
   /* ===============================================================
@@ -671,6 +700,142 @@ export const villaAdminRepository = {
   },
 
   /* ===============================================================
+     READ — admin list + search + pagination (NATIVE, Migration S6A)
+     ===============================================================
+     Anon `villaRepository.listForAdmin` karşılığı. BYTE-IDENTICAL:
+     SELECT_WITH_PRICES embed + cover-slim + koşullu `.eq(is_active)` /
+     `.not/.is(tourism_document_number)` / `.or(buildVillaSearchOrClause)` +
+     top-level order + koşullu `.range`; tek fark `db` → `dbAdmin`. Return
+     UNWRAPPED `Record<string,unknown>[]` (error→[]); count YOK (countForAdmin
+     ayrı). opts undefined → tam liste (range yok), byte-identical eski davranış.
+
+     ⚠️ SEARCH: `.or(buildVillaSearchOrClauseNative(q))` — anon helper ile
+        BYTE-IDENTICAL escape (backslash→\\, %_→\%\_, "→\", `"..."` sarma;
+        title normalize, slug ham). Native `.or` parser `unquoteOrValue` ile
+        taşıma-tırnağını strip + `\"`/`\\` unescape eder → ILIKE pattern anon
+        ile aynı (query-builder unquoteOrValue). `.range`→LIMIT/OFFSET (query-
+        compiler:375-376). Filtre → dbAdmin bypass inert.
+  =============================================================== */
+  async listForAdmin(opts?: {
+    limit?: number;
+    offset?: number;
+    q?: string;
+    active?: boolean;
+    document?: "licensed" | "unlicensed";
+  }): Promise<Record<string, unknown>[]> {
+    let query = dbAdmin
+      .from("villa")
+      .select(
+        `
+        *,
+        location:villa_locations(name),
+        villa_images (
+          image_url,
+          is_cover,
+          sort_order
+        ),
+        villa_prices (
+          price,
+          currency,
+          start_date
+        )
+      `
+      )
+      .is("deleted_at", null);
+
+    if (opts?.active !== undefined) {
+      query = query.eq("is_active", opts.active);
+    }
+
+    if (opts?.document === "licensed") {
+      query = query.not("tourism_document_number", "is", null);
+    } else if (opts?.document === "unlicensed") {
+      query = query.is("tourism_document_number", null);
+    }
+
+    if (opts?.q && opts.q.trim().length > 0) {
+      query = query.or(buildVillaSearchOrClauseNative(opts.q.trim()));
+    }
+
+    query = query
+      .order("is_cover", {
+        referencedTable: "villa_images",
+        ascending: false,
+      })
+      .order("sort_order", {
+        referencedTable: "villa_images",
+        ascending: true,
+      })
+      .limit(1, { referencedTable: "villa_images" })
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+
+    if (
+      typeof opts?.limit === "number" &&
+      typeof opts?.offset === "number" &&
+      opts.limit > 0
+    ) {
+      query = query.range(opts.offset, opts.offset + opts.limit - 1);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("[villa.repo.server.listForAdmin] FAILED", error.message);
+      return [];
+    }
+    return (data || []) as Record<string, unknown>[];
+  },
+
+  /* ===============================================================
+     READ — admin count (exact, NATIVE, Migration S6B)
+     ===============================================================
+     Anon `villaRepository.countForAdmin` karşılığı. BYTE-IDENTICAL:
+     `.select("id", { count: "exact", head: true })` + AYNI koşullu filtreler
+     (deleted_at + is_active + tourism_document_number + or(search)) +
+     `buildVillaSearchOrClauseNative` (listForAdmin ile AYNI helper → count↔
+     items filter parity); tek fark `db` → `dbAdmin`. Return `number` (error→0).
+
+     ⚠️ COUNT: native builder headOnly branch (query-builder:333-341) →
+        `SELECT count(*)::int AS "count" FROM villa WHERE …` (embed/order YOK,
+        compiler:343-345) → `{ data:null, error, count:N }`. Supabase
+        `.select(col,{head:true,count:"exact"})` ile BİREBİR. EXACT count
+        (count(*)::int; planned/estimated DEĞİL). Order/pagination YOK →
+        gereksiz ORDER BY eklenmez. Filtre → dbAdmin bypass inert.
+  =============================================================== */
+  async countForAdmin(opts?: {
+    q?: string;
+    active?: boolean;
+    document?: "licensed" | "unlicensed";
+  }): Promise<number> {
+    let query = dbAdmin
+      .from("villa")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null);
+
+    if (opts?.active !== undefined) {
+      query = query.eq("is_active", opts.active);
+    }
+
+    if (opts?.document === "licensed") {
+      query = query.not("tourism_document_number", "is", null);
+    } else if (opts?.document === "unlicensed") {
+      query = query.is("tourism_document_number", null);
+    }
+
+    if (opts?.q && opts.q.trim().length > 0) {
+      query = query.or(buildVillaSearchOrClauseNative(opts.q.trim()));
+    }
+
+    const { count, error } = await query;
+    if (error) {
+      console.error("[villa.repo.server.countForAdmin] FAILED", error.message);
+      return 0;
+    }
+    return count || 0;
+  },
+
+  /* ===============================================================
      READ — slug collision (create/update slug guard)
      ===============================================================
      Orijinal (anon repo):
@@ -683,6 +848,36 @@ export const villaAdminRepository = {
       .from("villa")
       .select("id, slug")
       .or(`slug.eq.${slug},slug.ilike.${slug}-%`);
+    if (excludeId) {
+      q = q.neq("id", excludeId);
+    }
+    return await q;
+  },
+
+  /* ===============================================================
+     READ — EXACT slug collision (NATIVE twin, Migration S7A2)
+     ===============================================================
+     Anon `villaRepository/villaAdminRepository.findSlugCollision`
+     (villa.repository.ts) — EXACT-match existence check — ile BYTE-
+     IDENTICAL. `generateUniqueSlug` (slug.ts) tam olarak bu davranışa
+     bağlı: exact slug var mı + suffix increment. Mevcut native
+     `findSlugCollision` (yukarıda) FARKLI amaç (slug=X OR slug ILIKE
+     'X-%', +slug kolonu, LIMIT yok) → o'na repoint edilemez; bu twin
+     onun yerine anon'u birebir karşılar.
+
+     ⚠️ BYTE-IDENTICAL (anon ile):
+       SELECT id · WHERE slug = $1 [AND id <> $2] · LIMIT 1
+       → `SELECT "id" FROM "villa" WHERE "slug" = $1 [AND "id" <> $2] LIMIT 1`
+     deleted_at/is_active filtresi YOK, ILIKE YOK, slug-% YOK, ORDER BY
+     YOK. Return HAM `{ data, error }` (unwrap YOK) — anon ile aynı.
+     Tek fark `db` (anon) → `dbAdmin` (native).
+  =============================================================== */
+  async findSlugExact(slug: string, excludeId?: string) {
+    let q = dbAdmin
+      .from("villa")
+      .select("id")
+      .eq("slug", slug)
+      .limit(1);
     if (excludeId) {
       q = q.neq("id", excludeId);
     }
@@ -749,6 +944,195 @@ export const villaAdminRepository = {
       .maybeSingle();
   },
 
+  /* ===============================================================
+     READ — raw full row by id, `.single()` (NATIVE twin, Migration S8I)
+     ===============================================================
+     Anon `villaRepository.findRawByIdSingle` (villa.repository.ts) ile
+     BYTE-IDENTICAL — villa edit hydrate (`villa-edit.action` → `villa.data`,
+     consumer `as Record<string,unknown>` cast eder).
+     ⚠️ findRawById'den FARKLI RESOLVER: bu `.single()` (satır yoksa/çoklu →
+       PGRST116 error); findRawById `.maybeSingle()` (0 → data:null). → reuse
+       EDİLEMEZ.
+       SELECT * · WHERE id = $1 · single() (embed/JOIN/order/limit YOK).
+     Return HAM `{ data, error }` (unwrap YOK). Row-tip generic
+     `Record<string,unknown>` (= anon VillaRawRow; consumer cast target ile
+     aynı). Tek fark `db` → `dbAdmin`.
+  =============================================================== */
+  async findRawByIdSingle(id: string) {
+    return await dbAdmin
+      .from<Record<string, unknown>>("villa")
+      .select("*")
+      .eq("id", id)
+      .single();
+  },
+
+  /* ===============================================================
+     READ — active villas (id + images embed) by ids (NATIVE, S8K)
+     ===============================================================
+     Anon `villaRepository.findActiveImagesByIds` (villa.repository.ts) ile
+     BYTE-IDENTICAL — cache.helpers `getCachedCategoryCovers` 2-step join'inin
+     2. adımı (id + villa_images okur; caller JS-side cover heuristic sort).
+       SELECT id, villa_images(image_url,is_cover,sort_order)  [embed, many]
+       WHERE id IN (...) AND is_active=true AND deleted_at IS NULL
+     ⚠️ EMBED order/limit YOK → tüm image'lar; native json_agg metadata
+       orderBy (is_cover desc, sort_order asc) uygular ama caller kendi
+       JS sort'unu yapar → dizi sırası maskeli → array parity (findBySlug
+       deseni). Boş ids → compiler `FALSE` → boş sonuç (parity). Top-level
+       order/limit YOK. Return HAM `{data,error}` (unwrap YOK; caller
+       `villas as VillaRow[]` cast eder). Row-tip generic consumer VillaRow
+       ile uyumlu. Tek fark `db` → `dbAdmin`.
+  =============================================================== */
+  async findActiveImagesByIds(ids: string[]) {
+    return await dbAdmin
+      .from<{
+        id: string;
+        villa_images: Array<{
+          image_url: string | null;
+          is_cover: boolean | null;
+          sort_order: number | null;
+        }> | null;
+      }>("villa")
+      .select(
+        `
+        id,
+        villa_images (
+          image_url,
+          is_cover,
+          sort_order
+        )
+      `
+      )
+      .in("id", ids)
+      .eq("is_active", true)
+      .is("deleted_at", null);
+  },
+
+  /* ===============================================================
+     READ — header/hero title search (NATIVE, Migration S8M)
+     ===============================================================
+     Anon `villaRepository.searchByTitle` ile BYTE-IDENTICAL — header/hero
+     TR-aware villa adı araması. Aynı `normalizeSearchText` (TR-fold+lower+
+     whitespace) + `escapeLikePattern` (wildcard escape); embed villa_images
+     (image_url,is_cover,sort_order); `.ilike("search_title", "%…%")` (mig
+     065 GENERATED STORED kolonu, pg_trgm GIN index); top-level `.limit(limit)`.
+       needle boş → erken [] · UNWRAPPED array döner (error→[]; ham
+       {data,error} DEĞİL).
+     ⚠️ CASE-INSENSITIVE: `.ilike` → compiler `search_title ILIKE $n` (query-
+       builder:160). search_title zaten TR-fold+lower generated → anon ile
+       BİREBİR case-insensitive. Embed order/limit yok (consumer cover seçer).
+     Row-tip generic (dönüş tipiyle aynı) → `as any[]` cast GEREKMEZ. Tek
+     fark `db` → `dbAdmin`.
+  =============================================================== */
+  async searchByTitle(
+    term: string,
+    limit = 5
+  ): Promise<
+    {
+      id: string;
+      title: string | null;
+      slug: string | null;
+      villa_images: {
+        image_url: string | null;
+        is_cover: boolean | null;
+        sort_order: number | null;
+      }[];
+    }[]
+  > {
+    const needle = normalizeSearchText(term);
+    if (needle.length === 0) return [];
+    const pattern = `%${escapeLikePattern(needle)}%`;
+    const { data, error } = await dbAdmin
+      .from<{
+        id: string;
+        title: string | null;
+        slug: string | null;
+        villa_images: {
+          image_url: string | null;
+          is_cover: boolean | null;
+          sort_order: number | null;
+        }[];
+      }>("villa")
+      .select(
+        `id, title, slug, villa_images (image_url, is_cover, sort_order)`
+      )
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .ilike("search_title", pattern)
+      .limit(limit);
+
+    if (error) {
+      console.error("[villa.repo.server.searchByTitle] FAILED", error.message);
+      return [];
+    }
+    return data || [];
+  },
+
+  /* ===============================================================
+     READ — villas by ids / favorites (NATIVE, Migration S8O)
+     ===============================================================
+     Anon `villaRepository.findByIds` ile BYTE-IDENTICAL — /favoriler
+     (localStorage id'leri). dedup (Set) + filter (string, non-empty)
+     guard; SELECT_WITH_PRICES (location + villa_images cover-slim +
+     villa_prices[price,currency,start_date]) + `.in("id", cleaned)` +
+     is_active + deleted_at; top-level ORDER **created_at DESC** (yalnız —
+     listPublic'ten farklı, sort_order YOK). UNWRAPPED `VillaRawRow[]`
+     (error→[]).
+     ⚠️ cover-slim listPublic ile aynı mekanizma (embedLimits + metadata
+       orderBy). Boş/empty-cleaned → erken []. Native `.in([])` compiler
+       `FALSE` (parity). mapVilla villa_images re-sort → array parity.
+     Return `Record<string,unknown>[]` (= VillaRawRow; consumer mapVilla
+       `as unknown as Villa` cast eder). Tek fark `db` → `dbAdmin`.
+  =============================================================== */
+  async findByIds(ids: string[]): Promise<Record<string, unknown>[]> {
+    if (!Array.isArray(ids) || ids.length === 0) return [];
+    const cleaned = Array.from(
+      new Set(
+        ids.filter(
+          (x): x is string => typeof x === "string" && x.length > 0
+        )
+      )
+    );
+    if (cleaned.length === 0) return [];
+
+    const { data, error } = await dbAdmin
+      .from("villa")
+      .select(
+        `
+        *,
+        location:villa_locations(name),
+        villa_images (
+          image_url,
+          is_cover,
+          sort_order
+        ),
+        villa_prices (
+          price,
+          currency,
+          start_date
+        )
+      `
+      )
+      .in("id", cleaned)
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("is_cover", {
+        referencedTable: "villa_images",
+        ascending: false,
+      })
+      .order("sort_order", {
+        referencedTable: "villa_images",
+        ascending: true,
+      })
+      .limit(1, { referencedTable: "villa_images" })
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[villa.repo.server.findByIds] FAILED", error.message);
+      return [];
+    }
+    return (data || []) as Record<string, unknown>[];
+  },
+
   /** villa_type_relations → type_id list (villa_id ile). */
   async findTypeRelationIds(villaId: string) {
     return await dbAdmin
@@ -789,6 +1173,36 @@ export const villaAdminRepository = {
       .eq("villa_id", villaId);
   },
 
+  /* ===============================================================
+     READ — villa prices FULL (NATIVE twin, Migration S7C2b)
+     ===============================================================
+     Anon `villaAdminRepository.findVillaPrices` (villa.repository.ts) ile
+     BYTE-IDENTICAL — `getVillaPrices` (villa-price.service) bu davranışa
+     bağlı. ⚠️ findPricesForClone'dan FARKLI: o slim (`start_date, end_date,
+     price, currency`, order YOK) klon içindir; bu `*` + start_date ASC.
+       SELECT * · WHERE villa_id = $1 · ORDER BY start_date ASC
+     LIMIT YOK, WHERE ek YOK, ORDER = start_date ASC (created_at DEĞİL).
+     Return HAM `{ data, error }` (unwrap YOK; service `data || []`).
+     Row-tip generic (S7B findVillaDistances deseni): native `from<T>` tipi
+     taşır → consumer tip zinciri kırılmaz; runtime AYNI (`SELECT *`).
+     Tek fark `db` (anon) → `dbAdmin` (native).
+  =============================================================== */
+  async findVillaPrices(villaId: string) {
+    return await dbAdmin
+      .from<{
+        id: string;
+        villa_id: string;
+        start_date: string;
+        end_date: string;
+        price: number;
+        currency: string;
+        created_at: string;
+      }>("villa_prices")
+      .select("*")
+      .eq("villa_id", villaId)
+      .order("start_date", { ascending: true });
+  },
+
   /** villa_distances → title/distance (villa_id ile). ⚠️ `unit` sütunu
    *  YOK — select yalnız title+distance (distance metni serialized
    *  unit'i taşır). */
@@ -797,6 +1211,35 @@ export const villaAdminRepository = {
       .from("villa_distances")
       .select("title, distance")
       .eq("villa_id", villaId);
+  },
+
+  /* ===============================================================
+     READ — villa distances FULL (NATIVE twin, Migration S7B)
+     ===============================================================
+     Anon `villaAdminRepository.findVillaDistances` (villa.repository.ts)
+     ile BYTE-IDENTICAL — `getVillaDistances` (villa-distance.service) bu
+     davranışa bağlı. ⚠️ findDistancesForClone'dan FARKLI: o slim
+     (`title, distance`, order yok) klon içindir; bu `*` + created_at ASC.
+       SELECT * · WHERE villa_id = $1 · ORDER BY created_at ASC
+     Return HAM `{ data, error }` (unwrap YOK; service `data || []`).
+     Tek fark `db` (anon) → `dbAdmin` (native).
+  =============================================================== */
+  async findVillaDistances(villaId: string) {
+    /* Row-tip generic: native provider `from<T>` tipi taşır; anon gevşek
+       (any) olduğu için consumer (`setDistances({title,distance}[])`) tip
+       uyumsuzluğu yaşamasın. Runtime AYNI (`SELECT *`), yalnız `data`
+       `{title,distance,…}[]` olarak tiplenir. */
+    return await dbAdmin
+      .from<{
+        id: string;
+        villa_id: string;
+        title: string;
+        distance: string;
+        created_at: string;
+      }>("villa_distances")
+      .select("*")
+      .eq("villa_id", villaId)
+      .order("created_at", { ascending: true });
   },
 
   /* ===============================================================
@@ -864,6 +1307,116 @@ export const villaAdminRepository = {
       .select("slug, title")
       .eq("id", id)
       .maybeSingle();
+  },
+
+  /* ===============================================================
+     READ — id/title/currency by id (NATIVE twin, Migration S8A)
+     ===============================================================
+     Anon `villaRepository.findIdTitleCurrencyById` (villa.repository.ts)
+     ile BYTE-IDENTICAL — pricing calendar (`loadPricingData` →
+     pricing.action) `villaRes.data` (id/title/currency) okur.
+     ⚠️ findTitleById (`title`) / findSlugTitleById (`slug, title`)'dan
+     FARKLI select → reuse edilemez.
+       SELECT id, title, currency · WHERE id = $1 · maybeSingle
+     LIMIT yok (maybeSingle). Return HAM `{ data, error }` (unwrap YOK).
+     Row-tip generic (S7B deseni): native `from<T>` tipi taşır → consumer
+     tip zinciri kırılmaz; runtime AYNI. Tek fark `db` → `dbAdmin`.
+  =============================================================== */
+  async findIdTitleCurrencyById(villaId: string) {
+    return await dbAdmin
+      .from<{ id: string; title: string; currency: string }>("villa")
+      .select("id, title, currency")
+      .eq("id", villaId)
+      .maybeSingle();
+  },
+
+  /* ===============================================================
+     READ — slug by id (NATIVE twin, Migration S8C)
+     ===============================================================
+     Anon `villaRepository.findSlugById` (villa.repository.ts) ile BYTE-
+     IDENTICAL — galeri (`gallery.action`) yalnız `data?.slug` okur (storage
+     human-readable folder). ⚠️ findSlugTitleById (`slug, title`) /
+     findTitleById (`title`)'dan FARKLI select → reuse edilemez.
+       SELECT slug · WHERE id = $1 · maybeSingle
+     LIMIT yok. Return HAM `{ data, error }` (unwrap YOK). Row-tip generic
+     (S7B/S8A deseni): `from<{slug}>` → consumer tip zinciri kırılmaz;
+     runtime AYNI. Tek fark `db` → `dbAdmin`.
+  =============================================================== */
+  async findSlugById(id: string) {
+    return await dbAdmin
+      .from<{ slug: string }>("villa")
+      .select("slug")
+      .eq("id", id)
+      .maybeSingle();
+  },
+
+  /* ===============================================================
+     READ — all id/title/slug (NATIVE twin, Migration S8E)
+     ===============================================================
+     Anon `villaRepository.findAllIdTitleSlug` (villa.repository.ts) ile
+     BYTE-IDENTICAL — manual-reservation "ekle" villa dropdown'ı (id/title/
+     slug okur). ⚠️ findAdminSelectList (`id, title, slug, is_active,
+     deleted_at` + koşullu activeOnly)'dan FARKLI → reuse edilemez.
+       SELECT id, title, slug · WHERE deleted_at IS NULL
+     ORDER yok, LIMIT yok, maybeSingle YOK → ARRAY döner. is_active
+     filtresi YOK (pasif villalar da seçilebilir — davranış korunur).
+     Return HAM `{ data, error }` (unwrap YOK). Row-tip generic (S7B/S8A
+     deseni): `from<{id,title,slug}>` → consumer tip zinciri kırılmaz;
+     runtime AYNI. Tek fark `db` → `dbAdmin`.
+  =============================================================== */
+  async findAllIdTitleSlug() {
+    return await dbAdmin
+      .from<{ id: string; title: string; slug: string }>("villa")
+      .select("id, title, slug")
+      .is("deleted_at", null);
+  },
+
+  /* ===============================================================
+     READ — public slugs CHUNKED (NATIVE twin, Migration S8G)
+     ===============================================================
+     Anon `villaRepository.listPublicSlugs` (villa.repository.ts) ile
+     BYTE-IDENTICAL — sitemap (`v.slug` + `v.created_at` okur).
+     ⚠️ BASİT DEĞİL: chunked-fetch loop (PAGE_SIZE=1000, MAX_PAGES=200) +
+       per-page `.range(from,to)` + error→[] + batch<PAGE_SIZE break.
+       Return HAM `{data,error}` DEĞİL → UNWRAPPED `{slug, created_at}[]`.
+       SELECT slug, created_at · WHERE is_active=true AND deleted_at IS NULL.
+     ⚠️ Chunked loop PostgREST'in 1000-satır max-rows cap'i içindi; native
+       pg'de cap yok ama BYTE-IDENTICAL için loop AYNEN korunur (aynı sonuç:
+       .range → LIMIT/OFFSET chunk). Row-tip generic (S7B/S8A deseni).
+       Tek fark `db` → `dbAdmin`.
+  =============================================================== */
+  async listPublicSlugs(): Promise<
+    { slug: string | null; created_at: string | null }[]
+  > {
+    const PAGE_SIZE = 1000;
+    const MAX_PAGES = 200;
+
+    const out: { slug: string | null; created_at: string | null }[] = [];
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, error } = await dbAdmin
+        .from<{ slug: string | null; created_at: string | null }>("villa")
+        .select("slug, created_at")
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .range(from, to);
+
+      if (error) {
+        console.error(
+          "[villa.repo.server.listPublicSlugs] FAILED",
+          error.message
+        );
+        return [];
+      }
+      const batch = (data || []) as {
+        slug: string | null;
+        created_at: string | null;
+      }[];
+      out.push(...batch);
+      if (batch.length < PAGE_SIZE) break;
+    }
+    return out;
   },
 
   /** villa_images (image_url, sort_order) — sort_order ASC. ZIP entry
@@ -1159,7 +1712,14 @@ export const villaAdminRepository = {
       end_date: string;
       price: number;
       currency: string;
-    }>
+    }>,
+    /* 🛡️ S7C2 — API/imza uyumluluğu için opsiyonel `client` (anon repo ile
+       byte-identical imza). ⚠️ NATIVE BU PARAMETREYİ KULLANMAZ: her zaman
+       `dbAdmin` (dbAdminNative) ile çağrılır — S7C1 DECISION A: `client`
+       fonksiyon sonucunu etkilemez (replace_villa_prices auth-bağımsız).
+       Kasıtlı unused (yalnız imza uyumu). */
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    client?: Pick<SupabaseClient, "rpc">
   ) {
     return await dbAdmin.rpc("replace_villa_prices", {
       p_villa_id: villaId,

@@ -21,12 +21,17 @@
      Sonra: villa.service → @/lib/db/villa.repository → @/lib/supabase
    =============================================================== */
 
-import { villaRepository } from "@/lib/db/villa.repository";
-/* 🛡️ Villa Migration S4A — findBySlug native embed'e taşındı. villa.service
-   S1 sonrası hiçbir client tarafından import edilmiyor → server-only native
-   repo import'u güvenli. Diğer villaRepository çağrıları (listPublic vs.)
-   AYNEN Supabase; yalnız getVillaBySlug'ın tek findBySlug çağrısı native. */
-import { villaAdminRepository } from "@/lib/db/villa.repository.server";
+/* 🛡️ Villa Migration S4A–S8P — villa.service'in TÜM villa read'leri native'e
+   taşındı (findBySlug/findById/listPublic/listForAdmin/countForAdmin/
+   listTrashed/findByPrivateToken + S8P findByIds). S1 sonrası hiçbir client
+   import etmiyor → server-only native repo güvenli. `villaRepository` alias'ı
+   native villaAdminRepository'ye bağlanır → call-site'lar
+   (villaRepository.findByIds / villaAdminRepository.X) DEĞİŞMEZ. Anon
+   villa.repository import'u kaldırıldı. */
+import {
+  villaAdminRepository,
+  villaAdminRepository as villaRepository,
+} from "@/lib/db/villa.repository.server";
 import { getVillaReviewStatsBatch } from "./villa-review.service";
 import { normalizeYouTubeVideos } from "@/lib/youtube.helper";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
@@ -563,7 +568,7 @@ export async function getVillas(): Promise<VillaDTO[]> {
 //
 // 🛡️ FAZ 32 — Query repository'ye taşındı; davranış birebir aynı.
 export async function getVillasForAdmin(): Promise<VillaDTO[]> {
-  const rows = await villaRepository.listForAdmin();
+  const rows = await villaAdminRepository.listForAdmin();
   return (rows as unknown as Villa[]).map(mapVilla);
 }
 
@@ -616,14 +621,14 @@ export async function getVillasForAdminPage(opts: {
      mevcut order zincirinden gelir → operasyon ekranı sırası
      sıralama paneli ile birebir aynı. */
   const [rows, total] = await Promise.all([
-    villaRepository.listForAdmin({
+    villaAdminRepository.listForAdmin({
       limit: safeSize,
       offset,
       q,
       active,
       document,
     }),
-    villaRepository.countForAdmin({ q, active, document }),
+    villaAdminRepository.countForAdmin({ q, active, document }),
   ]);
 
   const items = (rows as unknown as Villa[]).map(mapVilla);

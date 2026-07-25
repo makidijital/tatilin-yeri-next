@@ -1,6 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { villaAdminRepository } from "@/lib/db/villa.repository";
+/* 🛡️ Villa Migration S7C3 — anon villa.repository yerine native
+   villa.repository.server. findVillaPrices (S7C2b byte-identical twin) +
+   rpcReplaceVillaPrices (S7C2 imza-uyumlu, client? opsiyonel/ignore) ikisi
+   de native. Bu service yalnız server (public detay RSC + pricing/villa-edit
+   action) → server-only native repo import'u güvenli. Method isimleri aynı. */
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 
 // 🔥 DATE FORMAT
 const formatDate = (date: Date) => {
