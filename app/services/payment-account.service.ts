@@ -1,4 +1,11 @@
-import { paymentRepository } from "@/lib/db/payment.repository";
+/* 🛡️ Payment Migration P5A — anon `payment.repository` (supabaseDbProvider)
+   yerine native `payment.repository.server` (P5 twin'leri: 6 payment_account
+   metodu). Service PA-B1 sonrası hiçbir client tarafından runtime import
+   edilmiyor (yalnız server action + type-only) → server-only native repo
+   güvenli. Call-site'lar aynı (paymentServerRepository → paymentRepository
+   alias). Return contract / exception flow / single-active orchestration
+   AYNEN. */
+import { paymentServerRepository as paymentRepository } from "@/lib/db/payment.repository.server";
 import type { PaymentAccount } from "@/lib/payment-account.helper";
 
 /* ===============================================================

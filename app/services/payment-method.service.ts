@@ -1,4 +1,10 @@
-import { paymentRepository } from "@/lib/db/payment.repository";
+/* 🛡️ Payment Migration PB2 — anon payment.repository yerine native
+   payment.repository.server (P2+P3 twin'leri: findPaymentMethods + insert/
+   update/delete). Service PB1 sonrası hiçbir client tarafından runtime import
+   edilmiyor → server-only native repo güvenli. PB1.5 tip köprüsü (`?? []`)
+   native `Record[]|null` dönüşünü non-null array'e daraltır. Call-site'lar
+   aynı (paymentServerRepository → paymentRepository alias). */
+import { paymentServerRepository as paymentRepository } from "@/lib/db/payment.repository.server";
 import type { PaymentMethodRow } from "@/types/database";
 
 /* ===============================================================
@@ -28,7 +34,12 @@ export async function getPaymentMethods() {
   const { data, error } = await paymentRepository.findPaymentMethods();
 
   if (error) throw error;
-  return data;
+  /* 🛡️ Migration PB1.5 — tip köprüsü: error-throw sonrası `data` daima
+     array (list select: boş tablo → [], null yalnız error → yukarıda
+     throw). `?? []` runtime-EŞDEĞER (null'a ulaşılmaz); return tipini
+     non-null array'e daraltır → native repo `{data: Row[] | null}` PB2'de
+     repoint edilince consumer `setState<any[]>` tip uyumsuzluğu olmaz. */
+  return data ?? [];
 }
 
 // CREATE

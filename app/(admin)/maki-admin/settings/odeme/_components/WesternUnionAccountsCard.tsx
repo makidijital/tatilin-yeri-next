@@ -3,14 +3,17 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, Save, Send, Check, Star } from "lucide-react";
 
+/* 🛡️ Migration WU-B1 — client boundary: runtime western-union-account.service
+   import'u yerine server action. Böylece service (ve ileride native server-only
+   repo) client bundle'a sızmaz. Call-site'lar alias ile değişmez. */
 import {
-  getWesternUnionAccounts,
-  createWesternUnionAccount,
-  updateWesternUnionAccount,
-  deleteWesternUnionAccount,
-  setActiveWesternUnionAccount,
-  type WesternUnionAccountInput,
-} from "@/app/services/western-union-account.service";
+  getWesternUnionAccountsAction as getWesternUnionAccounts,
+  createWesternUnionAccountAction as createWesternUnionAccount,
+  updateWesternUnionAccountAction as updateWesternUnionAccount,
+  deleteWesternUnionAccountAction as deleteWesternUnionAccount,
+  setActiveWesternUnionAccountAction as setActiveWesternUnionAccount,
+} from "@/app/services/western-union-account.action";
+import type { WesternUnionAccountInput } from "@/app/services/western-union-account.service";
 import type { WesternUnionAccount } from "@/lib/western-union-account.helper";
 import {
   useNotify,

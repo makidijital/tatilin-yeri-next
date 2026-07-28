@@ -1,4 +1,11 @@
-import { paymentRepository } from "@/lib/db/payment.repository";
+/* 🛡️ Payment Migration WU-P5A — anon `payment.repository` (supabaseDbProvider)
+   yerine native `payment.repository.server` (WU-P5 twin'leri: 6 western_union
+   metodu). Service WU-B1 sonrası hiçbir client tarafından runtime import
+   edilmiyor (yalnız server action + type-only) → server-only native repo
+   güvenli. Call-site'lar aynı (paymentServerRepository → paymentRepository
+   alias). Return contract / exception flow / single-active orchestration
+   AYNEN. */
+import { paymentServerRepository as paymentRepository } from "@/lib/db/payment.repository.server";
 import type { WesternUnionAccount } from "@/lib/western-union-account.helper";
 
 /* ===============================================================

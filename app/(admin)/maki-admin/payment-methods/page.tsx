@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+/* 🛡️ Migration PB1 — client boundary: runtime payment-method.service import'u
+   yerine server action. Böylece service (ve ileride native server-only repo)
+   client bundle'a sızmaz. Call-site'lar alias ile değişmez. */
 import {
-  getPaymentMethods,
-  createPaymentMethod,
-  deletePaymentMethod,
-} from "@/app/services/payment-method.service";
+  getPaymentMethodsAction as getPaymentMethods,
+  createPaymentMethodAction as createPaymentMethod,
+  deletePaymentMethodAction as deletePaymentMethod,
+} from "@/app/services/payment-method.action";
 import { Plus, Trash2, CreditCard } from "lucide-react";
 import {
   useNotify,

@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { paymentRepository } from "@/lib/db/payment.repository";
+/* 🛡️ Payment Migration P17 — anon `payment.repository` (supabaseDbProvider)
+   yerine native `payment.repository.server` (P16.5 twin: findPaymentMethodsPublic,
+   order'sız `SELECT *`). Route server-only API handler (`"use client"` yok) →
+   server-only native repo güvenli. RLS: payment_methods read policy `using(true)`
+   (migration 037) koşulsuz → native RLS-free okuma anon ile aynı satır/kolon
+   döndürür → veri paritesi korunur. Call-site aynı (alias). HTTP contract AYNEN. */
+import { paymentServerRepository as paymentRepository } from "@/lib/db/payment.repository.server";
 
 /* ===============================================================
    🛡️ /api/public/payment-methods — PUBLIC PAYMENT METHODS

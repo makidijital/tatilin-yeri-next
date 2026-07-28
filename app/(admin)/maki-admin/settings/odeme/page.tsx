@@ -11,13 +11,13 @@ import {
 } from "lucide-react";
 
 import {
-  getPaymentAccounts,
-  createPaymentAccount,
-  updatePaymentAccount,
-  deletePaymentAccount,
-  setActivePaymentAccount,
-  type PaymentAccountInput,
-} from "@/app/services/payment-account.service";
+  getPaymentAccountsAction as getPaymentAccounts,
+  createPaymentAccountAction as createPaymentAccount,
+  updatePaymentAccountAction as updatePaymentAccount,
+  deletePaymentAccountAction as deletePaymentAccount,
+  setActivePaymentAccountAction as setActivePaymentAccount,
+} from "@/app/services/payment-account.action";
+import type { PaymentAccountInput } from "@/app/services/payment-account.service";
 import type { PaymentAccount } from "@/lib/payment-account.helper";
 import {
   useNotify,
