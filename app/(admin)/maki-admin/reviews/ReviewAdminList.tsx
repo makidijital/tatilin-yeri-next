@@ -49,13 +49,16 @@ import {
   Inbox,
 } from "lucide-react";
 
+/* 🛡️ Migration VR-B1 — client boundary: runtime villa-review.service
+   (server-only native repo) yerine server action. service + native repo
+   client bundle'a sızmaz. Call-site'lar alias ile değişmez. Type type-only. */
 import {
-  approveVillaReview,
-  deleteVillaReview,
-  getVillaReviewsForAdmin,
-  toggleFeaturedReview,
-  type VillaReviewAdmin,
-} from "@/app/services/villa-review.service";
+  approveVillaReviewAction as approveVillaReview,
+  deleteVillaReviewAction as deleteVillaReview,
+  getVillaReviewsForAdminAction as getVillaReviewsForAdmin,
+  toggleFeaturedReviewAction as toggleFeaturedReview,
+} from "@/app/services/villa-review.action";
+import type { VillaReviewAdmin } from "@/app/services/villa-review.service";
 import { revalidateVillaReviews } from "@/app/services/revalidate.actions";
 import { logActivity } from "@/lib/activity-log.client";
 import { formatDateTr } from "@/lib/date-format";

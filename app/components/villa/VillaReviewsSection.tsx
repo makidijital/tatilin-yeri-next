@@ -41,10 +41,14 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-import {
-  createVillaReview,
-  type VillaReviewPublic,
-  type VillaReviewStats,
+/* 🛡️ Migration VR-B1 — client boundary: runtime villa-review.service
+   (server-only native repo'ya repoint edildi) yerine server action. Böylece
+   service + native repo client bundle'a sızmaz. Call-site alias ile değişmez.
+   Type'lar service'ten type-only (erase edilir → taint yok). */
+import { createVillaReviewAction as createVillaReview } from "@/app/services/villa-review.action";
+import type {
+  VillaReviewPublic,
+  VillaReviewStats,
 } from "@/app/services/villa-review.service";
 import { formatDateTr } from "@/lib/date-format";
 
