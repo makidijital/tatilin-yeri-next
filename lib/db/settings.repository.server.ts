@@ -91,4 +91,17 @@ export const settingsServerRepository = {
       .update(values)
       .eq("id", id);
   },
+
+  /** Singleton settings row (PUBLIC-SAFE) — SECURITY DEFINER RPC
+   *  `get_public_settings` (migration 041). Anon repo `findPublicViaRpc`
+   *  ile BYTE-IDENTICAL; tek fark `db` → `dbAdmin`.
+   *  ⚠️ RPC ÇAĞRISI KORUNUR — `SELECT *` DEĞİL: definer fonksiyon
+   *  public-safe kolon whitelist'i döner (resend_api_key/mail_from* ÇIKTIDA
+   *  YOK). Düz select'e çevrilirse native (RLS-free) secret sızdırır.
+   *  Native provider RPC scalar davranışı (rpc-metadata: get_public_settings
+   *  → "scalar", jsonb) → dönen jsonb obje (row yoksa null) `{ data, error }`
+   *  içinde; anon `db.rpc` ile aynı envelope. */
+  async findPublicViaRpc() {
+    return await dbAdmin.rpc("get_public_settings");
+  },
 };

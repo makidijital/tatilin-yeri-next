@@ -1,4 +1,12 @@
-import { settingsRepository } from "@/lib/db/settings.repository";
+/* 🛡️ Migration ST-P5A — anon `settings.repository` (supabaseDbProvider)
+   yerine native `settings.repository.server` (ST-P5 twin'leri: findSingleton +
+   findPublicViaRpc + updateById). Call-site'lar aynı (settingsServerRepository
+   → settingsRepository alias). Envelope + maybeSingle + RPC (get_public_settings
+   whitelist) AYNEN. Service yalnız server-consumed (client taint yok → boundary-
+   sever gerekmez). ⚠️ getSettings native (RLS-free) → voucher `site_logo` artık
+   null yerine full row'dan gelir (RLS'in gizlediği logo görünür; secret voucher
+   çıktısına ulaşmaz — yalnız site_logo okunur). */
+import { settingsServerRepository as settingsRepository } from "@/lib/db/settings.repository.server";
 import type { Settings } from "./settings.types";
 
 /* ===============================================================

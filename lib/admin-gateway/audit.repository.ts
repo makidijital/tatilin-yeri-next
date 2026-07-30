@@ -1,6 +1,12 @@
 import "server-only";
 
-import { dbAdmin } from "@/lib/db/server";
+/* 🛡️ Migration AUD-P5A — service-role Supabase provider (`@/lib/db/server`)
+   yerine native privileged provider (`dbAdminNative`). İkisi de RLS-bypass;
+   insert byte-identical. `dbAdmin` alias korunur → insert() gövdesi + kolonlar
+   + jsonb alanları + try/catch best-effort DEĞİŞMEDİ. jsonb parity: native
+   query-compiler plain-object → `JSON.stringify(...)::jsonb` (before_data/
+   after_data/metadata aynen jsonb persist). */
+import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
 import type { AdminAuditEntry } from "./admin-gateway.types";
 

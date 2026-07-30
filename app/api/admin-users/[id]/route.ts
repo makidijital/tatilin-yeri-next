@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { adminUserServerRepository } from "@/lib/db/admin-user.repository.server";
+import { adminUserPanelServerRepository } from "@/lib/db/admin-user-panel.repository.server";
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import {
   extractAdminContextFromRequest,
@@ -24,6 +25,113 @@ import {
    Yalnız sunucu — service role client (getSupabaseAdmin) burada,
    ASLA client component'lerde import edilmez.
    =============================================================== */
+
+/* ===============================================================
+   🔥 PATCH /api/admin-users/[id]  (Migration AU-P1 — panel UPDATE boundary)
+   ===============================================================
+   Authenticated admin → admin_users kaydını günceller. `updateAdminUser`
+   (full patch) VE `setAdminUserActive` ({ is_active }) İKİSİ de bu tek
+   endpoint (aynı query shape; partial payload).
+
+   NEDEN ROUTE HANDLER + NATIVE:
+     admin_users RLS (mig 038) authenticated-only; anon `db` server-side
+     silent-anon → reddeder. Native `dbAdmin` (RLS-free) + authz
+     `authorizeAdminCaller` (aktif admin) ile server boundary.
+
+   ⚠️ PAYLOAD NORMALIZE — service `updateAdminUser` ile BYTE-IDENTICAL
+     (trim / lowercase email / password yalnız doluysa / sidebar_permissions
+     array / is_active bool; alan yalnız `!== undefined` ise eklenir). Bu
+     GEÇİCİ duplikasyondur: service mixed client/server olduğundan (client-
+     safe SIDEBAR_PERMISSIONS value export'u → server-only taint) bu sprintte
+     import edilemez; ayrı service-split cleanup sprintinde route buradan
+     saf normalize helper'ına repoint edilecek.
+   =============================================================== */
+export async function PATCH(
+  req: Request,
+  ctx: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  const { id } = await ctx.params;
+
+  try {
+    /* ---------- CALLER AUTH ---------- */
+    const auth = await authorizeAdminCaller(req);
+    if (!auth.ok) {
+      console.error("[admin-users.update] UNAUTHORIZED", {
+        status: auth.status,
+        error: auth.error,
+      });
+      return NextResponse.json(
+        { ok: false, error: auth.error },
+        { status: auth.status }
+      );
+    }
+
+    /* ---------- INPUT ---------- */
+    const targetId = (id || "").toString().trim();
+    if (!targetId) {
+      return NextResponse.json(
+        { ok: false, error: "id gerekli" },
+        { status: 400 }
+      );
+    }
+
+    const input = (await req.json().catch(() => ({}))) as {
+      full_name?: string;
+      email?: string;
+      password?: string;
+      sidebar_permissions?: string[];
+      is_active?: boolean;
+    };
+
+    /* ---------- PAYLOAD (service `updateAdminUser` BYTE-IDENTICAL) ---------- */
+    type AdminUserUpdatePayload = {
+      full_name?: string;
+      email?: string;
+      password?: string;
+      sidebar_permissions?: string[];
+      is_active?: boolean;
+    };
+    const payload: AdminUserUpdatePayload = {};
+    if (input.full_name !== undefined)
+      payload.full_name = (input.full_name || "").trim();
+    if (input.email !== undefined)
+      payload.email = (input.email || "").trim().toLowerCase();
+    if (input.password !== undefined && input.password.trim().length > 0) {
+      // password sadece doluysa update edilir
+      payload.password = input.password.trim();
+    }
+    if (input.sidebar_permissions !== undefined)
+      payload.sidebar_permissions = Array.isArray(input.sidebar_permissions)
+        ? input.sidebar_permissions
+        : [];
+    if (input.is_active !== undefined)
+      payload.is_active = !!input.is_active;
+
+    /* ---------- UPDATE (native, RLS-free) ---------- */
+    const { error } = await adminUserPanelServerRepository.updateById(
+      targetId,
+      payload
+    );
+
+    if (error) {
+      console.error("[admin-users.update] FAILED", error.message);
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Bilinmeyen hata";
+    console.error("[admin-users.update] EXCEPTION", { error: message });
+    return NextResponse.json(
+      { ok: false, error: message },
+      { status: 500 }
+    );
+  }
+}
 
 export async function DELETE(
   req: Request,

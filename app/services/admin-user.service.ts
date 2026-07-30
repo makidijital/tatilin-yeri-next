@@ -1,4 +1,3 @@
-import { adminUserRepository } from "@/lib/db/admin-user.repository";
 import { authProvider } from "@/lib/auth";
 
 /* ===============================================================
@@ -33,30 +32,6 @@ export type AdminUserInput = {
   sidebar_permissions?: string[];
   is_active?: boolean;
 };
-
-/* ----- LIST ----- */
-export async function getAdminUsers(): Promise<AdminUser[]> {
-  const { data, error } = await adminUserRepository.findAllForList();
-
-  if (error) {
-    console.error("❌ getAdminUsers:", error.message);
-    return [];
-  }
-  return (data || []) as AdminUser[];
-}
-
-/* ----- BY ID (password dahil değil) ----- */
-export async function getAdminUserById(
-  id: string
-): Promise<AdminUser | null> {
-  if (!id) return null;
-  const { data, error } = await adminUserRepository.findById(id);
-  if (error) {
-    console.error("❌ getAdminUserById:", error.message);
-    return null;
-  }
-  return (data as AdminUser) || null;
-}
 
 /* ----- CREATE -----
    ===============================================================
@@ -145,66 +120,6 @@ export async function createAdminUser(
     });
     return { ok: false, error: msg };
   }
-}
-
-/* ----- UPDATE (password opsiyonel) ----- */
-export async function updateAdminUser(
-  id: string,
-  input: Partial<AdminUserInput>
-): Promise<{ ok: boolean; error?: string }> {
-  if (!id) return { ok: false, error: "id gerekli" };
-
-  /* 🛡️ Faz 9 hardening: `Record<string, any>` → typed payload.
-     Alanlar admin_users şemasıyla 1:1; sidebar_permissions string[]
-     olarak unknown JSON yerine net dizi. */
-  type AdminUserUpdatePayload = {
-    full_name?: string;
-    email?: string;
-    password?: string;
-    sidebar_permissions?: string[];
-    is_active?: boolean;
-  };
-  const payload: AdminUserUpdatePayload = {};
-  if (input.full_name !== undefined)
-    payload.full_name = (input.full_name || "").trim();
-  if (input.email !== undefined)
-    payload.email = (input.email || "").trim().toLowerCase();
-  if (input.password !== undefined && input.password.trim().length > 0) {
-    // password sadece doluysa update edilir
-    payload.password = input.password.trim();
-  }
-  if (input.sidebar_permissions !== undefined)
-    payload.sidebar_permissions = Array.isArray(
-      input.sidebar_permissions
-    )
-      ? input.sidebar_permissions
-      : [];
-  if (input.is_active !== undefined)
-    payload.is_active = !!input.is_active;
-
-  const { error } = await adminUserRepository.updateById(id, payload);
-
-  if (error) {
-    console.error("❌ updateAdminUser:", error.message);
-    return { ok: false, error: error.message };
-  }
-  return { ok: true };
-}
-
-/* ----- TOGGLE ACTIVE ----- */
-export async function setAdminUserActive(
-  id: string,
-  active: boolean
-): Promise<boolean> {
-  if (!id) return false;
-  const { error } = await adminUserRepository.updateById(id, {
-    is_active: !!active,
-  });
-  if (error) {
-    console.error("❌ setAdminUserActive:", error.message);
-    return false;
-  }
-  return true;
 }
 
 /* ----- DELETE ----- */

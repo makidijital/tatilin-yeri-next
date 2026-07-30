@@ -1,4 +1,11 @@
-import { villaReviewRepository } from "@/lib/db/villa-review.repository";
+/* 🛡️ Migration VR-P5A — anon `villa-review.repository` (supabaseDbProvider)
+   yerine native `villa-review.repository.server` (VR-P5 twin'leri: 11 method;
+   VR-P5.5 findFeaturedStateById row bridge). Call-site'lar aynı
+   (villaReviewServerRepository → villaReviewRepository alias). SELECT/embed/
+   order/filter/maybeSingle + data/error envelope AYNEN (VR-P0 parite kanıtı).
+   Native RLS-free → admin okuma/yazma (pending dahil) tüm satırlara erişir;
+   app-layer authz service/route sınırında. */
+import { villaReviewServerRepository as villaReviewRepository } from "@/lib/db/villa-review.repository.server";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 
 /* ===============================================================

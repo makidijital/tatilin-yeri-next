@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+/* 🛡️ Migration AU-P2 — list/update/toggle artık server route handler'ları
+   üzerinden (native, RLS-free + authorizeAdminCaller). create/delete +
+   SIDEBAR_PERMISSIONS (client-safe value) + type'lar service'te KALIR
+   (dokunulmadı). */
 import {
-  getAdminUsers,
   createAdminUser,
-  updateAdminUser,
   deleteAdminUser,
-  setAdminUserActive,
   SIDEBAR_PERMISSIONS,
   type AdminUser,
   type AdminUserInput,
   type PermissionItem,
 } from "@/app/services/admin-user.service";
+import { adminFetch } from "@/lib/admin-fetch";
 import {
   Plus,
   Search,
@@ -51,6 +53,95 @@ import { normalizeSearchText } from "@/lib/search";
 
 function formatDateTime(value?: string | null) {
   return formatDateTimeTr(value);
+}
+
+/* ===============================================================
+   🛡️ AU-P2 — CLIENT ROUTE-HANDLER WRAPPERS (list/update/toggle)
+   ===============================================================
+   Anon `admin-user.service` yerine `adminFetch` (Bearer) ile server
+   route'ları çağırır. Dönüş sözleşmeleri service ile BYTE-IDENTICAL →
+   call-site'lar (load / handleSave / handleToggleActive) DEĞİŞMEZ.
+   Authorization route boundary'de (`authorizeAdminCaller`); native twin
+   RLS-free. Payload normalize route handler'da (service ile birebir).
+   =============================================================== */
+async function getAdminUsers(): Promise<AdminUser[]> {
+  try {
+    const res = await adminFetch("/api/admin-users");
+    const json = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      users?: AdminUser[];
+      error?: string;
+    };
+    if (!res.ok || !json?.ok) {
+      console.error("❌ getAdminUsers:", json?.error ?? res.statusText);
+      return [];
+    }
+    return json.users || [];
+  } catch (err) {
+    console.error(
+      "❌ getAdminUsers:",
+      err instanceof Error ? err.message : err
+    );
+    return [];
+  }
+}
+
+async function updateAdminUser(
+  id: string,
+  input: Partial<AdminUserInput>
+): Promise<{ ok: boolean; error?: string }> {
+  if (!id) return { ok: false, error: "id gerekli" };
+  try {
+    const res = await adminFetch(
+      `/api/admin-users/${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      }
+    );
+    const json = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error?: string;
+    };
+    if (!res.ok || !json?.ok) {
+      return {
+        ok: false,
+        error: json?.error || res.statusText || "Güncellenemedi",
+      };
+    }
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Bilinmeyen hata",
+    };
+  }
+}
+
+async function setAdminUserActive(
+  id: string,
+  active: boolean
+): Promise<boolean> {
+  if (!id) return false;
+  try {
+    const res = await adminFetch(
+      `/api/admin-users/${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: active }),
+      }
+    );
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean };
+    return res.ok && json?.ok === true;
+  } catch (err) {
+    console.error(
+      "❌ setAdminUserActive:",
+      err instanceof Error ? err.message : err
+    );
+    return false;
+  }
 }
 
 type StatusFilter = "all" | "active" | "inactive";
