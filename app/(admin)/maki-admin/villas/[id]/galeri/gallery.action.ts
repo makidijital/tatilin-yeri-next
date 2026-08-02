@@ -12,6 +12,10 @@ import {
    (villaAdminRepository → villaRepository alias). */
 import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+/* 🛡️ IMG-P2B — app-layer admin gate (native RLS-free öncesi write authz).
+   Yalnız gate; auth.caller kullanılmaz. Business logic / createSupabaseServerClient
+   / repository / storage DEĞİŞMEDİ. */
+import { authorizeAdminSession } from "@/lib/admin-route-auth";
 
 /* ===============================================================
    🛡️ GALERİ — READ ORCHESTRATION (SERVER ACTION)
@@ -39,11 +43,17 @@ export async function addGalleryImage(
   villaId: string,
   imageUrl: string
 ): Promise<boolean> {
+  const auth = await authorizeAdminSession();
+  if (!auth.ok) return false;
+
   const supabase = await createSupabaseServerClient();
   return addVillaImage(villaId, imageUrl, supabase);
 }
 
 export async function deleteGalleryImage(imageId: string): Promise<boolean> {
+  const auth = await authorizeAdminSession();
+  if (!auth.ok) return false;
+
   const supabase = await createSupabaseServerClient();
   return deleteVillaImage(imageId, supabase);
 }
@@ -51,6 +61,9 @@ export async function deleteGalleryImage(imageId: string): Promise<boolean> {
 export async function deleteAllGalleryImages(
   villaId: string
 ): Promise<{ ok: boolean; removed: number; orphans: string[] }> {
+  const auth = await authorizeAdminSession();
+  if (!auth.ok) return { ok: false, removed: 0, orphans: [] };
+
   const supabase = await createSupabaseServerClient();
   return deleteAllVillaImages(villaId, supabase);
 }

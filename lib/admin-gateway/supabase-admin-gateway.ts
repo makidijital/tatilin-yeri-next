@@ -1,111 +1,27 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
-
 import type { AdminGateway } from "./admin-gateway.provider";
 import type {
   AdminAuditAction,
   AdminGatewayContext,
-  GatewayResult,
 } from "./admin-gateway.types";
 import { adminAuditRepository } from "./audit.repository";
 
 /* ===============================================================
    🛡️ FAZ 41 — SUPABASE ADMIN GATEWAY (Implementation)
    ===============================================================
-   AdminGateway interface'inin Supabase service-role impl'i.
-   Service-role client'ı (`getSupabaseAdmin()`) yalnız BU dosyada
-   tüketilir; diğer tüm tüketiciler gateway üzerinden geçer.
+   AdminGateway interface'inin service-role impl'i. Audit best-effort
+   fire-forget; native `adminAuditRepository` (AUD-P5A) üzerinden yazar.
 
-   ⚠️ KESIN KURAL:
-     - Gateway sessiz: throw etmez; GatewayResult döner.
-     - Audit best-effort fire-forget (await edilmez normalde).
-     - Predicate destek: minimal — `.eq(key, val)` set. Daha
-       karmaşık filter için `findRows` yerine `runRaw` escape.
-     - `runRaw<T>` admin client'ı ham geçirir; sadece migration
-       sürecinde geçici kullanılır.
+   ⚠️ GW-P2 CLEANUP:
+     Ölü generic CRUD (`insertRow`/`updateRow`/`deleteRow`/`findRows`) +
+     `runRaw` escape hatch KALDIRILDI (GW-P1: 0 runtime call-site, 0
+     reflection, 0 test). Bunlar `getSupabaseAdmin()` kullanan SON yüzeydi
+     → import da kaldırıldı. Gateway artık YALNIZ `audit` içerir; Supabase
+     service-role DB kullanımı YOK. `audit` davranışı DEĞİŞMEDİ.
 =============================================================== */
 
 export const supabaseAdminGateway: AdminGateway = {
-  async insertRow(table, payload) {
-    try {
-      const admin = getSupabaseAdmin();
-      const { data, error } = await admin
-        .from(table)
-        .insert(payload)
-        .select()
-        .maybeSingle();
-      if (error) {
-        return { ok: false, error: error.message || "" };
-      }
-      return { ok: true, value: data };
-    } catch (err) {
-      return {
-        ok: false,
-        error: err instanceof Error ? err.message : "unknown",
-      };
-    }
-  },
-
-  async updateRow(table, id, payload) {
-    try {
-      const admin = getSupabaseAdmin();
-      const { data, error } = await admin
-        .from(table)
-        .update(payload)
-        .eq("id", id)
-        .select()
-        .maybeSingle();
-      if (error) {
-        return { ok: false, error: error.message || "" };
-      }
-      return { ok: true, value: data };
-    } catch (err) {
-      return {
-        ok: false,
-        error: err instanceof Error ? err.message : "unknown",
-      };
-    }
-  },
-
-  async deleteRow(table, id) {
-    try {
-      const admin = getSupabaseAdmin();
-      const { error } = await admin.from(table).delete().eq("id", id);
-      if (error) {
-        return { ok: false, error: error.message || "" };
-      }
-      return { ok: true, value: null };
-    } catch (err) {
-      return {
-        ok: false,
-        error: err instanceof Error ? err.message : "unknown",
-      };
-    }
-  },
-
-  async findRows(table, select, predicates) {
-    try {
-      const admin = getSupabaseAdmin();
-      let query = admin.from(table).select(select);
-      if (predicates) {
-        for (const [key, val] of Object.entries(predicates)) {
-          query = query.eq(key, val);
-        }
-      }
-      const { data, error } = await query;
-      if (error) {
-        return { ok: false, error: error.message || "" };
-      }
-      return { ok: true, value: (data as unknown[]) || [] };
-    } catch (err) {
-      return {
-        ok: false,
-        error: err instanceof Error ? err.message : "unknown",
-      };
-    }
-  },
-
   async audit(action, payload) {
     /* Best-effort fire-forget; caller `void adminGateway.audit(...)`
        pattern'i ile bloklamaz. Audit fail asla ana akışı bozmaz.
@@ -142,21 +58,11 @@ export const supabaseAdminGateway: AdminGateway = {
       user_agent: payload.context?.userAgent ?? null,
     });
   },
-
-  async runRaw<T>(fn: (admin: unknown) => Promise<T>): Promise<T> {
-    const admin = getSupabaseAdmin();
-    return fn(admin);
-  },
 };
 
 /* Kullanım örneği (caller'da fire-forget audit):
 
-   import { adminGateway } from "@/lib/admin-gateway";
-
-   const result = await adminGateway.updateRow("villa", id, {
-     is_active: true,
-   });
-   // Caller mevcut error mesajını kendisi üretir.
+   import { adminGateway } from "@/lib/admin-gateway/server";
 
    // Audit fire-forget (await yok, caller akışını bloklamaz):
    void adminGateway.audit("villa.visibility_toggle", {
@@ -168,8 +74,4 @@ export const supabaseAdminGateway: AdminGateway = {
 */
 
 export { adminAuditRepository };
-export type {
-  AdminAuditAction,
-  AdminGatewayContext,
-  GatewayResult,
-};
+export type { AdminAuditAction, AdminGatewayContext };

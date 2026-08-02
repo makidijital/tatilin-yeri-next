@@ -55,9 +55,3 @@ export type AdminGatewayContext = {
   ip?: string | null;
   userAgent?: string | null;
 };
-
-/** Pure DB I/O return envelope — gateway tüketicileri Supabase
- *  native shape'i değil bunu görür. */
-export type GatewayResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; error: string };

@@ -2,6 +2,7 @@ import "server-only";
 
 import { getSupabaseAdmin } from "./supabase-admin";
 import { authVerifier } from "@/lib/auth/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /* ===============================================================
    🔥 ADMIN ROUTE AUTHORIZER — TEK HELPER
@@ -156,6 +157,35 @@ export async function authorizeAdminCaller(
       ok: false,
       status: 401,
       error: "Authorization header eksik",
+    };
+  }
+  return authorizeAdminToken(token);
+}
+
+/* ---------------------------------------------
+   🔥 COOKIE SESSION — authorizeAdminSession()
+   ---------------------------------------------
+   Server Action path'i (Bearer YOK, cookie session VAR). Bearer
+   route'ları `authorizeAdminCaller` kullanır; cookie-session server
+   action'ları (galeri/pricing write'ları) bunu kullanır.
+
+   ⚠️ ADDITIVE + ÇEKİRDEK KORUNUR:
+     `createSupabaseServerClient()` (SSR cookie) → `getSession()` →
+     `access_token` → DEĞİŞMEMİŞ `authorizeAdminToken(token)`. Token
+     transport; gerçek doğrulama yine authorizeAdminToken içindeki
+     `verifyToken` (service-role `auth.getUser(token)`) + admin_users
+     lookup. Yeni auth mantığı / lookup / verify YOK. Dönüş aynen
+     `AuthorizeResult`. access_token yoksa mevcut 401 formatı.
+--------------------------------------------- */
+export async function authorizeAdminSession(): Promise<AuthorizeResult> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  if (!token) {
+    return {
+      ok: false,
+      status: 401,
+      error: "Oturum bulunamadı",
     };
   }
   return authorizeAdminToken(token);

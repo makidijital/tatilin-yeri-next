@@ -28,5 +28,4 @@ export type {
   AdminAuditAction,
   AdminAuditEntry,
   AdminGatewayContext,
-  GatewayResult,
 } from "./admin-gateway.types";
