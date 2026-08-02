@@ -11,10 +11,9 @@ import {
    villaRepository yalnız findSlugById için kullanılıyor; method adı aynı
    (villaAdminRepository → villaRepository alias). */
 import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-/* 🛡️ IMG-P2B — app-layer admin gate (native RLS-free öncesi write authz).
-   Yalnız gate; auth.caller kullanılmaz. Business logic / createSupabaseServerClient
-   / repository / storage DEĞİŞMEDİ. */
+/* 🛡️ IMG-P2B/P3R — app-layer admin gate (native RLS-free write authz).
+   Yalnız gate; auth.caller kullanılmaz. Service'ler native (dbAdminNative);
+   Supabase session client injection IMG-P3R'de kaldırıldı. */
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
 
 /* ===============================================================
@@ -46,16 +45,14 @@ export async function addGalleryImage(
   const auth = await authorizeAdminSession();
   if (!auth.ok) return false;
 
-  const supabase = await createSupabaseServerClient();
-  return addVillaImage(villaId, imageUrl, supabase);
+  return addVillaImage(villaId, imageUrl);
 }
 
 export async function deleteGalleryImage(imageId: string): Promise<boolean> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return false;
 
-  const supabase = await createSupabaseServerClient();
-  return deleteVillaImage(imageId, supabase);
+  return deleteVillaImage(imageId);
 }
 
 export async function deleteAllGalleryImages(
@@ -64,6 +61,5 @@ export async function deleteAllGalleryImages(
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, removed: 0, orphans: [] };
 
-  const supabase = await createSupabaseServerClient();
-  return deleteAllVillaImages(villaId, supabase);
+  return deleteAllVillaImages(villaId);
 }

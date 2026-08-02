@@ -23,6 +23,7 @@ import "server-only";
    =============================================================== */
 
 import { dbAdminNative } from "@/lib/db/native";
+import type { VillaImage } from "@/app/services/villa-image/villa-image.types";
 
 /** Provider-agnostik DI tipi (native `.from`). Eski repo'nun
  *  `Pick<SupabaseClient,"from">`'unun native karşılığı; SupabaseClient
@@ -36,7 +37,7 @@ export const villaImageServerRepository = {
     client: NativeFromClient = dbAdminNative
   ) {
     return await client
-      .from<Record<string, unknown>>("villa_images")
+      .from<VillaImage>("villa_images")
       .select("*")
       .eq("villa_id", villaId)
       .order("sort_order", { ascending: true });

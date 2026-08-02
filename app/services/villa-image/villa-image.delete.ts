@@ -1,6 +1,8 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
-import { villaImageRepository } from "@/lib/db/villa-image.repository";
+/* 🛡️ Migration IMG-P3R — anon repo + Supabase session client injection yerine
+   native `villa-image.repository.server`. Write authz app-layer gate'inde
+   (authorizeAdminSession, IMG-P2B); native default (dbAdminNative, RLS-free).
+   Storage (R2) akışı + DB-first sıra DEĞİŞMEDİ. */
+import { villaImageServerRepository as villaImageRepository } from "@/lib/db/villa-image.repository.server";
 import {
   parseVillaStorageUrl,
   VILLA_IMAGES_BUCKET,
@@ -9,10 +11,6 @@ import {
   removeVillaImageByUrl,
   removeVillaStorageFiles,
 } from "@/lib/villa-image.storage.server";
-
-/* Opsiyonel session-aware client (geriye uyumlu, default anon `db`).
-   Server action bağlamında admin RLS session'ı taşımak için geçilir. */
-type WriteClient = Pick<SupabaseClient, "from">;
 
 /* ===============================================================
    🛡️ VILLA IMAGE — DELETE ORCHESTRATION (delete / deleteAll)
@@ -72,15 +70,12 @@ type WriteClient = Pick<SupabaseClient, "from">;
      - Race koşullarında (zaten silinmiş) eski false → yeni true.
        Bu davranış strict improvement: success/failure ayrımı netleşir.
    =============================================================== */
-export async function deleteVillaImage(
-  id: string,
-  client?: WriteClient
-): Promise<boolean> {
+export async function deleteVillaImage(id: string): Promise<boolean> {
   if (!id) return false;
 
   /* 1) Fetch — image_url storage cleanup için lazım. */
   const { data: image, error: fetchError } =
-    await villaImageRepository.findImageUrlById(id, client);
+    await villaImageRepository.findImageUrlById(id);
 
   if (fetchError) {
     console.error("[villa-image.delete] FETCH_FAILED", {
@@ -97,7 +92,7 @@ export async function deleteVillaImage(
   }
 
   /* 2) DB DELETE — defansif önce. */
-  const { error: dbError } = await villaImageRepository.deleteById(id, client);
+  const { error: dbError } = await villaImageRepository.deleteById(id);
 
   if (dbError) {
     console.error("[villa-image.delete] DB_FAILED", {
@@ -162,8 +157,7 @@ export async function deleteVillaImage(
                                                    (storage'a dokunulmadı)
    =============================================================== */
 export async function deleteAllVillaImages(
-  villaId: string,
-  client?: WriteClient
+  villaId: string
 ): Promise<{
   ok: boolean;
   removed: number;
@@ -173,7 +167,7 @@ export async function deleteAllVillaImages(
 
   /* 1) Fetch — storage cleanup için image_url'ler lazım. */
   const { data: imgs, error: fetchError } =
-    await villaImageRepository.findImageUrlsByVilla(villaId, client);
+    await villaImageRepository.findImageUrlsByVilla(villaId);
 
   if (fetchError) {
     console.error("[villa-image.deleteAll] FETCH_FAILED", {
@@ -192,10 +186,7 @@ export async function deleteAllVillaImages(
   const count = imgs.length;
 
   /* 2) DB BATCH DELETE — tek query, sadece bu villa. */
-  const { error: dbError } = await villaImageRepository.deleteByVilla(
-    villaId,
-    client
-  );
+  const { error: dbError } = await villaImageRepository.deleteByVilla(villaId);
 
   if (dbError) {
     console.error("[villa-image.deleteAll] DB_FAILED", {

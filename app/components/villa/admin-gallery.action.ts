@@ -4,10 +4,9 @@ import {
   updateImageOrder,
   setCoverImage,
 } from "@/app/services/villa-image/villa-image.mutations";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-/* 🛡️ IMG-P2B — app-layer admin gate (native RLS-free öncesi write authz).
-   Yalnız gate; auth.caller kullanılmaz. Business logic / createSupabaseServerClient
-   / service DEĞİŞMEDİ. */
+/* 🛡️ IMG-P2B/P3R — app-layer admin gate (native RLS-free write authz).
+   Yalnız gate; auth.caller kullanılmaz. Service'ler native (dbAdminNative);
+   Supabase session client injection IMG-P3R'de kaldırıldı. */
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
 
 /* ===============================================================
@@ -28,8 +27,7 @@ export async function reorderGalleryImages(
   const auth = await authorizeAdminSession();
   if (!auth.ok) return;
 
-  const supabase = await createSupabaseServerClient();
-  await updateImageOrder(updates, supabase);
+  await updateImageOrder(updates);
 }
 
 export async function setGalleryCover(
@@ -39,6 +37,5 @@ export async function setGalleryCover(
   const auth = await authorizeAdminSession();
   if (!auth.ok) return;
 
-  const supabase = await createSupabaseServerClient();
-  await setCoverImage(id, villaId, supabase);
+  await setCoverImage(id, villaId);
 }

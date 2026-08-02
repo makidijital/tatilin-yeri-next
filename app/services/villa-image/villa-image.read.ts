@@ -1,4 +1,4 @@
-import { villaImageRepository } from "@/lib/db/villa-image.repository";
+import { villaImageServerRepository as villaImageRepository } from "@/lib/db/villa-image.repository.server";
 import type { VillaImage } from "./villa-image.types";
 
 /* ===============================================================
