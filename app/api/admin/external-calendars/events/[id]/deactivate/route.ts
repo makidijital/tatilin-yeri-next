@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { externalCalendarEventServerRepository } from "@/lib/db/external-calendar-event.repository.server";
 import { externalCalendarSourceServerRepository } from "@/lib/db/external-calendar-source.repository.server";
 import { villaAdminRepository } from "@/lib/db/villa.repository.server";
@@ -59,28 +58,6 @@ export async function POST(
     return NextResponse.json(
       { ok: false, error: "event id gerekli" },
       { status: 400 }
-    );
-  }
-
-  /* getSupabaseAdmin() service-role client. RLS bypass — events tablosu
-     authenticated UPDATE policy yok; tüm SELECT/UPDATE'ler bu client
-     üzerinden gider. getSupabaseAdmin throw ederse (env eksik) catch'e
-     düşer, actual mesaj response'a yansır. */
-  /* Repo çağrıları dbAdmin (aynı getSupabaseAdmin singleton) kullanır;
-     bu guard env-eksik durumunda spesifik 500 mesajını BYTE-IDENTICAL
-     korur. */
-  try {
-    getSupabaseAdmin();
-  } catch (err) {
-    const msg =
-      err instanceof Error ? err.message : "service-role init hatası";
-    console.error(
-      "[admin.external_events.deactivate] ADMIN CLIENT INIT FAILED",
-      msg
-    );
-    return NextResponse.json(
-      { ok: false, error: `Admin client başlatılamadı: ${msg}` },
-      { status: 500 }
     );
   }
 

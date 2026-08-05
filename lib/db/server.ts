@@ -24,9 +24,4 @@ import "server-only";
    client eklenirse burada switch.
    =============================================================== */
 
-import { supabaseDbAdminProvider } from "./supabase-db.server";
-
 export type { DbProvider } from "./db.provider";
-
-/** Aktif service-role DB provider (SERVER-ONLY). RLS bypass. */
-export const dbAdmin = supabaseDbAdminProvider;

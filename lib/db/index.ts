@@ -26,9 +26,4 @@
        kullanıyor; davranış değişmedi.
    =============================================================== */
 
-import { supabaseDbProvider } from "./supabase-db.provider";
-
 export type { DbProvider } from "./db.provider";
-
-/** Aktif anon-client DB provider (CLIENT-SAFE). RLS aktif. */
-export const db = supabaseDbProvider;

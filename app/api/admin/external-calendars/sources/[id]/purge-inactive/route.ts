@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { externalCalendarSourceServerRepository } from "@/lib/db/external-calendar-source.repository.server";
 import { externalCalendarEventServerRepository } from "@/lib/db/external-calendar-event.repository.server";
 import {
@@ -68,24 +67,6 @@ export async function POST(
     return NextResponse.json(
       { ok: false, error: "source id gerekli" },
       { status: 400 }
-    );
-  }
-
-  /* Service-role client init guard. Repo çağrıları dbAdmin (aynı
-     getSupabaseAdmin singleton) kullanır; bu guard env-eksik durumunda
-     spesifik 500 mesajını BYTE-IDENTICAL korur. */
-  try {
-    getSupabaseAdmin();
-  } catch (err) {
-    const msg =
-      err instanceof Error ? err.message : "service-role init hatası";
-    console.error(
-      "[admin.external_events.purge] ADMIN CLIENT INIT FAILED",
-      msg
-    );
-    return NextResponse.json(
-      { ok: false, error: `Admin client başlatılamadı: ${msg}` },
-      { status: 500 }
     );
   }
 
