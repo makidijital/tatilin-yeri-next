@@ -1,8 +1,11 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "./supabase-admin";
 import { authVerifier } from "@/lib/auth/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+/* 🛡️ AR-P2 — admin_users lookup native repo'ya repoint (getSupabaseAdmin
+   service-role SELECT yerine dbAdminNative). verifyToken (Supabase Auth)
+   DEĞİŞMEDİ; yalnız DB lookup native. */
+import { adminUserServerRepository } from "@/lib/db/admin-user.repository.server";
 
 /* ===============================================================
    🔥 ADMIN ROUTE AUTHORIZER — TEK HELPER
@@ -68,10 +71,6 @@ export async function authorizeAdminToken(
     .toLowerCase()
     .trim();
 
-  /* admin_users tablo lookup'ı için service-role client lokal
-     kullanılır (DB tarafı; auth tarafından bağımsız). */
-  const admin = getSupabaseAdmin();
-
   /* ---------- LOOKUP ---------- */
   // 1) Yeni kayıtlar: auth_user_id öncelikli
   let row: {
@@ -81,11 +80,8 @@ export async function authorizeAdminToken(
   } | null = null;
 
   if (authUserId) {
-    const { data, error } = await admin
-      .from("admin_users")
-      .select("id, email, is_active")
-      .eq("auth_user_id", authUserId)
-      .maybeSingle();
+    const { data, error } =
+      await adminUserServerRepository.findAuthByAuthUserId(authUserId);
     if (error) {
       console.error(
         "[admin-route-auth.lookup] auth_user_id FAILED",
@@ -99,11 +95,8 @@ export async function authorizeAdminToken(
 
   // 2) Eski kayıtlar: email fallback
   if (!row && email) {
-    const { data, error } = await admin
-      .from("admin_users")
-      .select("id, email, is_active")
-      .eq("email", email)
-      .maybeSingle();
+    const { data, error } =
+      await adminUserServerRepository.findAuthByEmail(email);
     if (error) {
       return {
         ok: false,

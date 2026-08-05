@@ -18,7 +18,6 @@ import { normalizeSearchText, escapeLikePattern } from "@/lib/search";
    YOK). `rpcReplaceVillaPrices`'ın anon ile byte-identical imzası için
    opsiyonel `client?` parametresinin tipi. Native gövde client'ı KULLANMAZ
    (dbAdminNative sabit) — yalnız API/imza uyumluluğu (S7C1 DECISION A). */
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 /* ===============================================================
    🛡️ FAZ 2 STABILIZATION — VILLA ADMIN REPOSITORY (SERVER-ROLE)
@@ -1713,13 +1712,6 @@ export const villaAdminRepository = {
       price: number;
       currency: string;
     }>,
-    /* 🛡️ S7C2 — API/imza uyumluluğu için opsiyonel `client` (anon repo ile
-       byte-identical imza). ⚠️ NATIVE BU PARAMETREYİ KULLANMAZ: her zaman
-       `dbAdmin` (dbAdminNative) ile çağrılır — S7C1 DECISION A: `client`
-       fonksiyon sonucunu etkilemez (replace_villa_prices auth-bağımsız).
-       Kasıtlı unused (yalnız imza uyumu). */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    client?: Pick<SupabaseClient, "rpc">
   ) {
     return await dbAdmin.rpc("replace_villa_prices", {
       p_villa_id: villaId,

@@ -82,4 +82,30 @@ export const adminUserServerRepository = {
       .select("id")
       .single();
   },
+
+  /* 🛡️ AR-P1 — admin auth lookup (native twin). authorizeAdminToken'ın
+     `getSupabaseAdmin().from("admin_users").select("id, email, is_active")`
+     lookup'ının BYTE-IDENTICAL native karşılıkları (auth_user_id öncelik +
+     email fallback). Row generic authorizeAdminToken'ın `row` tipiyle uyumlu
+     → repoint'te (AR-P2) tip köprüsü gerekmez. maybeSingle davranışı aynen.
+     ⚠️ ADDITIVE — henüz wire edilmedi. */
+  async findAuthByAuthUserId(authUserId: string) {
+    return await dbAdmin
+      .from<{ id: string; email: string | null; is_active: boolean | null }>(
+        "admin_users"
+      )
+      .select("id, email, is_active")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle();
+  },
+
+  async findAuthByEmail(email: string) {
+    return await dbAdmin
+      .from<{ id: string; email: string | null; is_active: boolean | null }>(
+        "admin_users"
+      )
+      .select("id, email, is_active")
+      .eq("email", email)
+      .maybeSingle();
+  },
 };

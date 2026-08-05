@@ -9,7 +9,10 @@ import {
   getVillaPrices,
   setVillaPrices,
 } from "@/app/services/villa-price.service";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+/* 🛡️ VP-P1 — app-layer admin gate. Yazma native (dbAdminNative.rpc) + RPC
+   auth-bağımsız (DECISION A) olduğundan RLS gate uygulanmıyordu; authz
+   burada. Yalnız gate; auth.caller kullanılmaz. */
+import { authorizeAdminSession } from "@/lib/admin-route-auth";
 
 /* ===============================================================
    🛡️ PRICING CALENDAR — SERVER ACTIONS
@@ -45,6 +48,8 @@ export async function savePricingData(
     currency: string;
   }[]
 ): Promise<void> {
-  const supabase = await createSupabaseServerClient();
-  await setVillaPrices(villaId, prices, supabase);
+  const auth = await authorizeAdminSession();
+  if (!auth.ok) return;
+
+  await setVillaPrices(villaId, prices);
 }

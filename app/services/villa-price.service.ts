@@ -1,5 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
 /* 🛡️ Villa Migration S7C3 — anon villa.repository yerine native
    villa.repository.server. findVillaPrices (S7C2b byte-identical twin) +
    rpcReplaceVillaPrices (S7C2 imza-uyumlu, client? opsiyonel/ignore) ikisi
@@ -52,11 +50,7 @@ export async function setVillaPrices(
     price: number;
 
     currency?: string;
-  }[],
-  /* Opsiyonel client — verilmezse anon `db` (mevcut davranış). Server
-     action bağlamında session-aware client geçilir (admin write RLS
-     session'ı server tarafında da taşınsın). */
-  client?: Pick<SupabaseClient, "rpc">
+  }[]
 ) {
 
   // RPC payload'ı hazırla — villa_id RPC parametresi olarak ayrı geçer.
@@ -83,8 +77,7 @@ export async function setVillaPrices(
      ("sv-SE") + currency fallback ("TRY") service edge'de aynen. */
   const { error } = await villaAdminRepository.rpcReplaceVillaPrices(
     villaId,
-    payload,
-    client
+    payload
   );
 
   if (error) {
