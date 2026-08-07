@@ -447,12 +447,16 @@ export default function ReservationCalendar({
         {/* Legend */}
         <div className="hidden md:flex items-center gap-3 text-[11px] text-[var(--color-stone-500)] flex-wrap">
           <LegendSwatch
-            label="Onaylı"
+            label="Dolu (Onaylı/Manuel)"
             style={{ background: "rgba(239,68,68,0.4)" }}
           />
           <LegendSwatch
             label="Beklemede"
             style={{ background: "#facc15" }}
+          />
+          <LegendSwatch
+            label="iCal"
+            style={{ background: "rgba(139,92,246,0.62)" }}
           />
           <LegendSwatch
             label="Boş"

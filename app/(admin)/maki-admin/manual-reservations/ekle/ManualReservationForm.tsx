@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createManualReservationAction as createManualReservation,
@@ -8,7 +8,7 @@ import {
   deleteManualReservationAction as deleteManualReservation,
   getVillaAvailabilitySnapshotAction as getVillaAvailabilitySnapshot,
 } from "@/app/(admin)/maki-admin/manual-reservations/manual-reservation.action";
-import { Save, Home as HomeIcon, X, CalendarRange } from "lucide-react";
+import { Save, Home as HomeIcon } from "lucide-react";
 import { formatDateTr, parseLocalDate } from "@/lib/date-format";
 import ReservationCalendar from "@/app/components/admin/reservation-form/ReservationCalendar";
 import { fetchExternalCalendarArraysForVillaAdminAction as fetchExternalCalendarArraysForVillaAdmin } from "@/lib/external-calendar.admin.action";
@@ -22,6 +22,11 @@ import {
 } from "@/app/components/admin/notifications/NotificationProvider";
 import { logActivity } from "@/lib/activity-log.client";
 import VillaCombobox from "./VillaCombobox";
+import ActiveBlocksPanel from "./ActiveBlocksPanel";
+import {
+  buildActiveBlocks,
+  deriveIcalRanges,
+} from "@/lib/active-blocks.helper";
 
 /* ===============================================================
    🛡️ FAZ 29 — EDIT MODE SUPPORT
@@ -301,6 +306,19 @@ export default function ManualReservationForm({
     };
   }, [selectedVilla]);
 
+  /* 🎯 AKTİF BLOKLAR — manuel + iCal birleşik liste (saf UI türetme).
+     Veri zaten state'te: `manualBlocksList` (snapshot) + `externalCal`
+     (iCal detailByDate). buildActiveBlocks örtüşen aralıkları "Her ikisi"
+     işaretler, duplicate'i eler. Yeni fetch / iş mantığı YOK. */
+  const activeBlocks = useMemo(
+    () =>
+      buildActiveBlocks(
+        manualBlocksList,
+        deriveIcalRanges(externalCal.detailByDate)
+      ),
+    [manualBlocksList, externalCal]
+  );
+
   /* ---------------------------------------------
      🔥 getValidEndDate — birebir korundu (inline kasıtlı,
      "behavior frozen" — shared lib'e geçirilmedi).
@@ -542,85 +560,18 @@ export default function ManualReservationForm({
         </div>
       )}
 
-      {/* 🛡️ AKTİF MANUEL BLOKLAR — chip strip (hızlı sil aksiyonu).
-         YALNIZ manuel bloklar render edilir (gerçek rezervasyon /
-         iCal blokları DAHİL DEĞİL → yanlışlıkla silme imkansız).
-         Edit mode'da düzenlenen kayıt listede gösterilmez (self-exclude
-         fetchBlockedDates içinde). Takvim ALTINDA ayrı card —
-         takvim hücrelerine / renklerine / boyutuna SIFIR etki. */}
-      {selectedVilla && manualBlocksList.length > 0 && (
-        <div className="card-premium p-5 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] flex items-center gap-1.5">
-              <CalendarRange
-                size={12}
-                className="text-[var(--color-champagne-600)]"
-              />
-              Aktif manuel bloklar ({manualBlocksList.length})
-            </p>
-          </div>
-          <p className="text-[12px] text-[var(--color-stone-500)]">
-            Yalnız admin tarafından oluşturulan manuel blok kayıtları.
-            Gerçek rezervasyonlar ve iCal blokları bu listede yer almaz.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {manualBlocksList.map((b) => {
-              const start = parseLocalDate(b.start_date);
-              const end = parseLocalDate(b.end_date);
-              const label = `${formatDateTr(b.start_date)} → ${formatDateTr(
-                b.end_date
-              )}`;
-              const isDeleting = deletingBlockId === b.id;
-              /* Note tooltip için yardımcı text. */
-              const titleText = b.note
-                ? `${label}\nNot: ${b.note}`
-                : label;
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => handleDeleteBlock(b)}
-                  disabled={isDeleting}
-                  title={titleText}
-                  aria-label={`${label} bloğunu sil`}
-                  className="
-                    group inline-flex items-center gap-2
-                    px-3 py-1.5 rounded-full
-                    border border-[var(--color-stone-200)]
-                    bg-white
-                    text-[12.5px] font-medium
-                    text-[var(--color-stone-700)]
-                    hover:border-red-300 hover:bg-red-50 hover:text-red-700
-                    transition-colors motion-reduce:transition-none
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                    disabled:hover:border-[var(--color-stone-200)]
-                    disabled:hover:bg-white
-                    disabled:hover:text-[var(--color-stone-700)]
-                  "
-                >
-                  <span
-                    style={{ fontVariantNumeric: "tabular-nums" }}
-                  >
-                    {start.toLocaleDateString("tr-TR", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                    {" — "}
-                    {end.toLocaleDateString("tr-TR", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </span>
-                  <X
-                    size={12}
-                    strokeWidth={2}
-                    className="text-[var(--color-stone-400)] group-hover:text-red-600"
-                  />
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      {/* 🎯 AKTİF BLOKLAR — manuel + iCal birleşik panel (filtre + badge).
+         Takvim ALTINDA ayrı card — takvim hücrelerine / renklerine /
+         boyutuna SIFIR etki. Silme YALNIZ manuel/her-ikisi satırlarda
+         (iCal salt-okunur → yanlışlıkla silme imkansız). Edit mode'da
+         düzenlenen kayıt listede gösterilmez (self-exclude
+         fetchBlockedDates içinde). */}
+      {selectedVilla && (
+        <ActiveBlocksPanel
+          blocks={activeBlocks}
+          onDeleteManual={handleDeleteBlock}
+          deletingId={deletingBlockId}
+        />
       )}
 
       {/* 🛡️ EDIT MODE — eski Note Card + Save Button JSX'i AYNEN
