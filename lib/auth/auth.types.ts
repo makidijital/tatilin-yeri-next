@@ -68,6 +68,16 @@ export type CreateAdminUserInput = {
   email: string;
   password: string;
   emailConfirm?: boolean;
+  /* 🛡️ FAZ 1 (NATIVE AUTH) — ADDITIVE optional alanlar. Supabase
+     provider bunları YOK SAYAR (yalnız email/password/emailConfirm
+     kullanır) → mevcut davranış birebir korunur. Native provider,
+     admin_users satırını tek adımda kurarken kullanır (native'de
+     "auth user" ile "admin_users" aynı tablodur). */
+  fullName?: string;
+  sidebarPermissions?: string[];
+  /* 🛡️ FAZ 4 — is_active (native admin_users). Supabase provider silindi;
+     native provider bunu insertNative'e geçirir (default true). */
+  isActive?: boolean;
 };
 
 export type CreatedAdminUser = {

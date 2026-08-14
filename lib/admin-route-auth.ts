@@ -1,7 +1,9 @@
 import "server-only";
 
 import { authVerifier } from "@/lib/auth/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+/* 🛡️ FAZ 4 — Supabase Auth SÖKÜLDÜ. Native tek yol: access JWT httpOnly
+   cookie'den okunur, `authorizeAdminToken` (native jose verify) doğrular. */
+import { readAccessCookie } from "@/lib/auth/native/cookies";
 /* 🛡️ AR-P2 — admin_users lookup native repo'ya repoint (getSupabaseAdmin
    service-role SELECT yerine dbAdminNative). verifyToken (Supabase Auth)
    DEĞİŞMEDİ; yalnız DB lookup native. */
@@ -130,73 +132,42 @@ export async function authorizeAdminToken(
 }
 
 /* ---------------------------------------------
-   🔥 BEARER — authorizeAdminCaller(req)
-   POST/JSON route'ları için klasik Authorization header path.
+   🔥 authorizeAdminCaller(req) — FAZ 4 NATIVE
+   POST/JSON route'ları. Access JWT httpOnly cookie'den okunur (adminFetch
+   native modda Bearer eklemez; cookie same-origin otomatik gider).
 ---------------------------------------------- */
-function extractBearer(req: Request): string | null {
-  const authHeader = req.headers.get("authorization") || "";
-  const m = authHeader.match(/^Bearer\s+(.+)$/i);
-  if (!m) return null;
-  const t = m[1].trim();
-  return t || null;
-}
-
 export async function authorizeAdminCaller(
   req: Request
 ): Promise<AuthorizeResult> {
-  const token = extractBearer(req);
+  void req; // cookie-based; req gövdesi kullanılmıyor.
+  const token = await readAccessCookie();
   if (!token) {
-    return {
-      ok: false,
-      status: 401,
-      error: "Authorization header eksik",
-    };
+    return { ok: false, status: 401, error: "Oturum bulunamadı" };
   }
   return authorizeAdminToken(token);
 }
 
 /* ---------------------------------------------
-   🔥 COOKIE SESSION — authorizeAdminSession()
-   ---------------------------------------------
-   Server Action path'i (Bearer YOK, cookie session VAR). Bearer
-   route'ları `authorizeAdminCaller` kullanır; cookie-session server
-   action'ları (galeri/pricing write'ları) bunu kullanır.
-
-   ⚠️ ADDITIVE + ÇEKİRDEK KORUNUR:
-     `createSupabaseServerClient()` (SSR cookie) → `getSession()` →
-     `access_token` → DEĞİŞMEMİŞ `authorizeAdminToken(token)`. Token
-     transport; gerçek doğrulama yine authorizeAdminToken içindeki
-     `verifyToken` (service-role `auth.getUser(token)`) + admin_users
-     lookup. Yeni auth mantığı / lookup / verify YOK. Dönüş aynen
-     `AuthorizeResult`. access_token yoksa mevcut 401 formatı.
+   🔥 authorizeAdminSession() — FAZ 4 NATIVE
+   Server Action path'i. Native access cookie → authorizeAdminToken.
 --------------------------------------------- */
 export async function authorizeAdminSession(): Promise<AuthorizeResult> {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getSession();
-  const token = data?.session?.access_token;
+  const token = await readAccessCookie();
   if (!token) {
-    return {
-      ok: false,
-      status: 401,
-      error: "Oturum bulunamadı",
-    };
+    return { ok: false, status: 401, error: "Oturum bulunamadı" };
   }
   return authorizeAdminToken(token);
 }
 
 /* ---------------------------------------------
-   🔥 FLEX — authorizeAdminCallerFlex(req)
-   GET-and-open-new-tab senaryoları için (örn: /api/voucher/[id]):
-     - Authorization: Bearer <token>  → öncelikli (programatik kullanım)
-     - ?token=<access_token>           → fallback (new-tab UX'i)
-   Token query'de geçerken HTTPS şart; Referrer-Policy: no-referrer
-   route response header'ında set edilmeli (route içi sorumluluk).
+   🔥 authorizeAdminCallerFlex(req) — FAZ 4 NATIVE
+   GET-and-open-new-tab (voucher PDF): same-origin GET'te httpOnly cookie
+   otomatik gider → cookie öncelikli; yoksa ?token fallback (edge-case).
 ---------------------------------------------- */
 export async function authorizeAdminCallerFlex(
   req: Request
 ): Promise<AuthorizeResult> {
-  const headerToken = extractBearer(req);
-  let token: string | null = headerToken;
+  let token: string | null = await readAccessCookie();
   if (!token) {
     try {
       const url = new URL(req.url);

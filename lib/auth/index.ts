@@ -23,7 +23,8 @@
        : supabaseAuthProvider;
    =============================================================== */
 
-import { supabaseAuthProvider } from "./supabase-auth.provider";
+/* 🛡️ FAZ 4 — Supabase Auth SÖKÜLDÜ. Native tek client provider. */
+import { nativeAuthProvider } from "./native/native-auth.provider";
 
 export type {
   AuthProvider,
@@ -42,5 +43,5 @@ export type {
   CreatedAdminUser,
 } from "./auth.types";
 
-/** Aktif anon-client auth provider (CLIENT-SAFE). */
-export const authProvider = supabaseAuthProvider;
+/** Aktif client auth provider — native (endpoint fetch). */
+export const authProvider = nativeAuthProvider;

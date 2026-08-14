@@ -108,4 +108,103 @@ export const adminUserServerRepository = {
       .eq("email", email)
       .maybeSingle();
   },
+
+  /* 🛡️ FAZ 1 (NATIVE AUTH) — ADDITIVE, henüz wire edilmedi.
+     Native login için kimlik + parola state projeksiyonu. `password_hash`
+     ve login-state kolonları migration 068 ile eklendi (nullable →
+     mevcut Supabase yolu etkilenmez). */
+  async findCredentialsByEmail(email: string) {
+    return await dbAdmin
+      .from<{
+        id: string;
+        email: string | null;
+        full_name: string | null;
+        is_active: boolean | null;
+        password_hash: string | null;
+        sidebar_permissions: unknown;
+        failed_attempts: number | null;
+        locked_until: string | null;
+      }>("admin_users")
+      .select(
+        "id, email, full_name, is_active, password_hash, sidebar_permissions, failed_attempts, locked_until"
+      )
+      .eq("email", email)
+      .maybeSingle();
+  },
+
+  /* 🛡️ FAZ 1 (NATIVE AUTH) — ADDITIVE. Native admin oluşturma:
+     Supabase auth.admin.createUser YOK; parola `password_hash` olarak
+     yerel saklanır (auth_user_id gerekmez). Mevcut `insert()` (Supabase
+     yolu) AYNEN korunur; bu ayrı native yol. */
+  async insertNative(payload: {
+    full_name: string;
+    email: string;
+    password_hash: string;
+    sidebar_permissions: string[];
+    is_active: boolean;
+  }) {
+    return await dbAdmin
+      .from("admin_users")
+      .insert(payload)
+      .select("id")
+      .single();
+  },
+
+  /* 🛡️ FAZ 1 (NATIVE AUTH) — ADDITIVE. Refresh re-issue için id ile
+     admin claim projeksiyonu (email + is_active + permissions). */
+  async findByIdForSession(id: string) {
+    return await dbAdmin
+      .from<{
+        id: string;
+        email: string | null;
+        full_name: string | null;
+        is_active: boolean | null;
+        sidebar_permissions: unknown;
+      }>("admin_users")
+      .select("id, email, full_name, is_active, sidebar_permissions")
+      .eq("id", id)
+      .maybeSingle();
+  },
+
+  /* 🛡️ FAZ 1 (NATIVE AUTH) — ADDITIVE. Upgrade-on-login / şifre değişimi
+     için password_hash güncelle (+ password_changed_at). */
+  async updatePasswordHash(
+    id: string,
+    passwordHash: string,
+    changedAtIso: string
+  ) {
+    return await dbAdmin
+      .from("admin_users")
+      .update({
+        password_hash: passwordHash,
+        password_changed_at: changedAtIso,
+      })
+      .eq("id", id);
+  },
+
+  /* 🛡️ FAZ 2 (NATIVE AUTH) — ADDITIVE. Login brute-force state.
+     Sayaç caller'da hesaplanır (findCredentialsByEmail failed_attempts
+     döndürür); query-builder SQL-expr desteklemediği için mutlak değer
+     yazılır. */
+  async recordLoginFailure(
+    id: string,
+    failedAttempts: number,
+    lockedUntilIso: string | null
+  ) {
+    return await dbAdmin
+      .from("admin_users")
+      .update({ failed_attempts: failedAttempts, locked_until: lockedUntilIso })
+      .eq("id", id);
+  },
+
+  async recordLoginSuccess(id: string, loginAtIso: string) {
+    return await dbAdmin
+      .from("admin_users")
+      .update({
+        failed_attempts: 0,
+        locked_until: null,
+        last_login_at: loginAtIso,
+      })
+      .eq("id", id);
+  },
 };

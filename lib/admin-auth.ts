@@ -1,4 +1,3 @@
-import { supabase } from "./supabase";
 import { authProvider } from "@/lib/auth";
 
 /* ===============================================================
@@ -43,92 +42,97 @@ export async function getCurrentAdmin(): Promise<AdminAuthRecord | null> {
 }
 
 /* ---------------------------------------------
+   🛡️ NATIVE lookup (server /api/auth/me)
+   Native modda admin lookup server-side; client yalnız endpoint çağırır.
+---------------------------------------------- */
+async function fetchMeOnce(): Promise<AdminLookupResult> {
+  try {
+    const res = await fetch("/api/auth/me", {
+      method: "GET",
+      credentials: "same-origin",
+    });
+    if (res.status === 401) {
+      return { ok: false, reason: "unauthenticated" };
+    }
+    if (res.status === 403) {
+      return { ok: false, reason: "inactive" };
+    }
+    if (!res.ok) {
+      return { ok: false, reason: "not_admin" };
+    }
+    const json = (await res.json()) as {
+      ok?: boolean;
+      admin?: {
+        id?: string;
+        email?: string;
+        full_name?: string;
+        sidebar_permissions?: unknown;
+      };
+    };
+    if (!json?.ok || !json.admin?.id) {
+      return { ok: false, reason: "not_admin" };
+    }
+    return {
+      ok: true,
+      admin: {
+        id: json.admin.id,
+        full_name: (json.admin.full_name || "").trim(),
+        email: (json.admin.email || "").toLowerCase().trim(),
+        is_active: true,
+        sidebar_permissions: Array.isArray(json.admin.sidebar_permissions)
+          ? (json.admin.sidebar_permissions as unknown[]).filter(
+              (p): p is string => typeof p === "string"
+            )
+          : [],
+      },
+    };
+  } catch {
+    return { ok: false, reason: "unauthenticated" };
+  }
+}
+
+/* ---------------------------------------------
+   🛡️ AUTH HARDENING (Fix 1) — refresh-then-retry.
+   `/api/auth/me` "unauthenticated" (401) dönerse access token süresi
+   dolmuş olabilir; önce `/api/auth/refresh` (rotation) denenir, başarılıysa
+   `/me` bir kez daha çağrılır. Yalnız refresh de başarısızsa unauthenticated
+   döner (→ caller logout). 403 "inactive" / not_admin refresh DENEMEZ
+   (kesin durumlar; refresh zaten is_active'i doğrular). Additive: mevcut
+   /me davranışı korunur, üzerine tek retry eklenir.
+---------------------------------------------- */
+async function tryRefreshAccess(): Promise<boolean> {
+  try {
+    const r = await fetch("/api/auth/refresh", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function lookupCurrentAdminNative(): Promise<AdminLookupResult> {
+  const first = await fetchMeOnce();
+  if (first.ok || first.reason !== "unauthenticated") {
+    return first;
+  }
+  // Access expired olabilir → refresh dene, başarılıysa /me tekrar.
+  const refreshed = await tryRefreshAccess();
+  if (!refreshed) {
+    return first; // refresh de başarısız → gerçekten oturum yok.
+  }
+  return fetchMeOnce();
+}
+
+/* ---------------------------------------------
    lookupCurrentAdmin — neden başarısız olduğunu da döner
    (login flow inactive vs not-found ayrımı için)
 ---------------------------------------------- */
 export async function lookupCurrentAdmin(): Promise<AdminLookupResult> {
-  /* FAZ 39: authProvider.getCurrentUser delege; null davranışı
-     (unauthenticated) aynen. */
-  const user = await authProvider.getCurrentUser();
-  if (!user) {
-    return { ok: false, reason: "unauthenticated" };
-  }
-  const authUserId = user.id;
-  const email = (user.email || "").toLowerCase().trim();
-  if (!authUserId && !email) {
-    return { ok: false, reason: "unauthenticated" };
-  }
-
-  /* ---------- LOOKUP ---------- */
-  // 1) Yeni kayıtlar: auth_user_id öncelikli
-  type Row = {
-    id: string;
-    full_name: string | null;
-    email: string | null;
-    is_active: boolean | null;
-    sidebar_permissions: unknown;
-  };
-  let row: Row | null = null;
-
-  if (authUserId) {
-    const { data, error } = await supabase
-      .from("admin_users")
-      .select(
-        "id, full_name, email, is_active, sidebar_permissions"
-      )
-      .eq("auth_user_id", authUserId)
-      .maybeSingle();
-    if (error) {
-      console.error(
-        "[admin-auth.lookup] auth_user_id FAILED",
-        error.message
-      );
-      // continue to email fallback
-    } else {
-      row = (data as Row | null) || null;
-    }
-  }
-
-  // 2) Eski kayıtlar (auth_user_id NULL): email fallback
-  if (!row && email) {
-    const { data, error } = await supabase
-      .from("admin_users")
-      .select(
-        "id, full_name, email, is_active, sidebar_permissions"
-      )
-      .eq("email", email)
-      .maybeSingle();
-    if (error) {
-      console.error(
-        "[admin-auth.lookup] email fallback FAILED",
-        error.message
-      );
-      return { ok: false, reason: "not_admin" };
-    }
-    row = (data as Row | null) || null;
-  }
-
-  if (!row) {
-    return { ok: false, reason: "not_admin" };
-  }
-  if (!row.is_active) {
-    return { ok: false, reason: "inactive" };
-  }
-
-  return {
-    ok: true,
-    admin: {
-      id: row.id,
-      full_name: (row.full_name || "").trim(),
-      email: (row.email || email).trim().toLowerCase(),
-      is_active: !!row.is_active,
-      sidebar_permissions: Array.isArray(row.sidebar_permissions)
-        ? (row.sidebar_permissions as unknown[]).filter(
-            (p): p is string => typeof p === "string"
-          )
-        : [],
-    },
-  };
+  /* 🛡️ FAZ 4 — Native tek yol. Tarayıcı DB'ye erişmez → admin lookup
+     server'da (`/api/auth/me`); native access cookie doğrulanır. */
+  return lookupCurrentAdminNative();
 }
 
 /* ---------------------------------------------

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { adminAuthProvider } from "@/lib/auth/server";
 import { adminUserServerRepository } from "@/lib/db/admin-user.repository.server";
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import {
@@ -96,8 +96,6 @@ export async function POST(req: Request): Promise<NextResponse> {
       );
     }
 
-    const admin = getSupabaseAdmin();
-
     /* ---------- DUPLICATE CHECK (admin_users) ---------- */
     const { data: existing, error: existingErr } =
       await adminUserServerRepository.findIdByEmail(email);
@@ -117,93 +115,33 @@ export async function POST(req: Request): Promise<NextResponse> {
       );
     }
 
-    /* ---------- STEP 1: AUTH USER ---------- */
-    const { data: authCreated, error: authCreateErr } =
-      await admin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: { full_name: fullName },
-      });
-    if (authCreateErr || !authCreated?.user) {
-      const msg =
-        authCreateErr?.message ||
-        "Auth user oluşturulamadı";
-      console.error("[admin.create_user] AUTH_CREATE_FAILED", {
-        email,
-        error: msg,
-      });
-      // Supabase'in döndürdüğü "User already registered" gibi
-      // hataları hijack etmiyoruz; mesajı olduğu gibi geçiyoruz.
-      const status =
-        /already registered|exists/i.test(msg) ? 409 : 500;
-      return NextResponse.json(
-        { ok: false, error: msg },
-        { status }
-      );
+    /* ---------- NATIVE CREATE (FAZ 4) ----------
+       Supabase auth.admin.createUser YOK. adminAuthProvider (native) →
+       Argon2id password_hash + admin_users tek-adım insert (auth_user_id
+       gerekmez). "auth user" ile "admin_users" native'de aynı satırdır. */
+    const created = await adminAuthProvider.createUser({
+      email,
+      password,
+      fullName,
+      sidebarPermissions: permissions,
+      isActive,
+    });
+    if (!created.ok) {
+      const msg = created.error || "Admin oluşturulamadı";
+      console.error("[admin.create_user] CREATE_FAILED", { email, error: msg });
+      const status = /zaten|exists|duplicate|unique/i.test(msg) ? 409 : 500;
+      return NextResponse.json({ ok: false, error: msg }, { status });
     }
-    const authUserId = authCreated.user.id;
-
-    /* ---------- STEP 2: ADMIN_USERS INSERT ---------- */
-    const { data: adminRow, error: insertErr } =
-      await adminUserServerRepository.insert({
-        full_name: fullName,
-        email,
-        sidebar_permissions: permissions,
-        is_active: isActive,
-        // 🔥 auth.users.id ↔ admin_users.auth_user_id (UNIQUE) ilişkisi
-        auth_user_id: authUserId,
-        // password kolonu YOK — auth tarafında tutuluyor.
-      });
-
-    if (insertErr || !adminRow?.id) {
-      // 🔥 ROLLBACK — admin_users insert fail ise auth user'ı sil
-      console.error("[admin.create_user] ADMIN_INSERT_FAILED", {
-        email,
-        authUserId,
-        error: insertErr?.message,
-      });
-      const { error: rollbackErr } =
-        await admin.auth.admin.deleteUser(authUserId);
-      if (rollbackErr) {
-        console.error(
-          "[admin.create_user] ROLLBACK_FAILED",
-          {
-            authUserId,
-            error: rollbackErr.message,
-          }
-        );
-        return NextResponse.json(
-          {
-            ok: false,
-            error:
-              "Admin kayıt başarısız ve rollback yapılamadı: " +
-              (insertErr?.message || ""),
-          },
-          { status: 500 }
-        );
-      }
-      return NextResponse.json(
-        {
-          ok: false,
-          error:
-            insertErr?.message ||
-            "admin_users kaydı oluşturulamadı",
-        },
-        { status: 500 }
-      );
-    }
+    const adminRow = { id: created.value.id };
 
     console.info("[admin.create_user] CREATED", {
       callerEmail: caller.email,
       newAdminId: adminRow.id,
       newAdminEmail: email,
-      authUserId,
     });
 
-    /* 🛡️ FAZ 55I — AUDIT LOG (additive, fail-safe)
-       password ASLA logged değil (admin_users tablosunda zaten yok;
-       auth.users tarafında bcrypt hash; helper sanitizer ek koruma). */
+    /* 🛡️ AUDIT LOG (additive, fail-safe). password ASLA logged değil
+       (Argon2id hash; helper sanitizer ek koruma). */
     const ctx = extractAdminContextFromRequest(req, caller);
     await insertAdminActivityLog(ctx, {
       action: "admin.created",
@@ -216,14 +154,12 @@ export async function POST(req: Request): Promise<NextResponse> {
         full_name: fullName,
         sidebar_permissions: permissions,
         is_active: isActive,
-        auth_user_id: authUserId,
       },
     });
 
     return NextResponse.json({
       ok: true,
       id: adminRow.id,
-      authUserId,
     });
   } catch (err) {
     const message =

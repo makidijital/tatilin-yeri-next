@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { adminUserServerRepository } from "@/lib/db/admin-user.repository.server";
 import { adminUserPanelServerRepository } from "@/lib/db/admin-user-panel.repository.server";
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
@@ -178,8 +177,6 @@ export async function DELETE(
       );
     }
 
-    const admin = getSupabaseAdmin();
-
     /* ---------- TARGET FETCH ---------- */
     const { data: target, error: fetchErr } =
       await adminUserServerRepository.findByIdForDelete(targetId);
@@ -205,48 +202,10 @@ export async function DELETE(
         ? target.auth_user_id
         : null;
 
-    /* ---------- AUTH USER DELETE ---------- */
-    // auth_user_id null ise (eski kayıtlar): auth.users tarafında
-    // karşılığı olmayabilir; admin_users delete'ine geçilir.
-    if (targetAuthUserId) {
-      const { error: authDelErr } =
-        await admin.auth.admin.deleteUser(targetAuthUserId);
-
-      if (authDelErr) {
-        const msg = authDelErr.message || "";
-        const alreadyGone =
-          /not[_ ]?found|user.*not.*exist/i.test(msg);
-        if (!alreadyGone) {
-          // 🔥 Auth delete fail → admin_users korunur (consistency)
-          console.error(
-            "[admin-users.delete] AUTH_DELETE_FAILED",
-            {
-              targetId,
-              authUserId: targetAuthUserId,
-              error: msg,
-            }
-          );
-          return NextResponse.json(
-            {
-              ok: false,
-              error:
-                "Auth kullanıcı silinemedi: " +
-                (msg || "bilinmeyen hata"),
-            },
-            { status: 500 }
-          );
-        }
-        console.warn(
-          "[admin-users.delete] AUTH_USER_ALREADY_GONE",
-          {
-            targetId,
-            authUserId: targetAuthUserId,
-          }
-        );
-      }
-    }
-
-    /* ---------- ADMIN_USERS DELETE ---------- */
+    /* ---------- ADMIN_USERS DELETE (FAZ 4 — NATIVE) ----------
+       Supabase auth.admin.deleteUser YOK. Native'de "auth user" = admin_users
+       satırı → tek delete. İlişkili `admin_sessions` FK `ON DELETE CASCADE`
+       ile otomatik temizlenir (aktif oturumlar düşer). */
     const { error: rowDelErr } =
       await adminUserServerRepository.deleteById(targetId);
     if (rowDelErr) {

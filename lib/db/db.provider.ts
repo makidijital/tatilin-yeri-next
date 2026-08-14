@@ -1,5 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
 /* ===============================================================
    🛡️ FAZ 1.1 — DB PROVIDER INTERFACE (THIN ABSTRACTION)
    ===============================================================
@@ -46,9 +44,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  *  JS API yüzeyinden türetiliyor (FAZ 1.1 — byte-identical wrapper);
  *  portable shape sonraki cycle'da. */
 export interface DbProvider {
-  /** Tablo erişimi — Supabase JS `.from(table)` chain'ini döner. */
-  from: SupabaseClient["from"];
+  /** Tablo erişimi — query-builder chain'ini döner (native from()). */
+  from: (table: string) => unknown;
 
-  /** PostgreSQL function call — Supabase JS `.rpc(name, args)` shape'i. */
-  rpc: SupabaseClient["rpc"];
+  /** PostgreSQL function call (native rpc()). */
+  rpc: (fn: string, args?: Record<string, unknown>) => unknown;
 }

@@ -20,13 +20,14 @@ import "server-only";
        : supabaseAuthVerifier;
    =============================================================== */
 
+/* 🛡️ FAZ 4 — Supabase Auth SÖKÜLDÜ. Native tek sağlayıcı; flag/branch YOK. */
 import {
-  supabaseAuthVerifier,
-  supabaseAdminAuthProvider,
-} from "./supabase-auth.server";
+  nativeAuthVerifier,
+  nativeAdminAuthProvider,
+} from "./native/native-auth.server";
 
-/** Aktif server-side token verifier (SERVER-ONLY). */
-export const authVerifier = supabaseAuthVerifier;
+/** Server-side token verifier (SERVER-ONLY) — native (lokal jose verify). */
+export const authVerifier = nativeAuthVerifier;
 
-/** Aktif service-role admin provider (SERVER-ONLY). */
-export const adminAuthProvider = supabaseAdminAuthProvider;
+/** Admin provider (SERVER-ONLY) — native (Argon2id + admin_users insert). */
+export const adminAuthProvider = nativeAdminAuthProvider;
