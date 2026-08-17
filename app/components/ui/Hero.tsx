@@ -10,7 +10,6 @@ import {
 } from "@/lib/hero.helpers";
 
 import HeroSearchPanel from "./hero/_components/HeroSearchPanel";
-import HeroStickySearch from "./hero/_components/HeroStickySearch";
 
 import type { HeroReviewStats } from "./hero/_types/hero";
 
@@ -237,10 +236,6 @@ export default function Hero({
             </p>
           )}
 
-          {/* 🔎 Villa adı arama → HeroSearchPanel'in üst kenarına yarı binen
-              floating input olarak taşındı (duplicate kaldırıldı). Eski
-              Hero içi inline VillaSearchBox burada render edilmez. */}
-
           {/* CTA row — admin-driven (hero.primaryCta / secondaryCta).
              Text + link admin settings'ten; href tipine göre akıllı
              yönlendirme (HeroCta: #anchor smooth scroll / dahili route /
@@ -290,10 +285,6 @@ export default function Hero({
 
         {/* ─── FLOATING SEARCH PANEL — client island, AYNEN ───── */}
         <HeroSearchPanel />
-
-        {/* 🔎 STICKY SEARCH — sentinel (panel altı) + scroll'da header altı
-           kompakt bar. HeroSearchPanel'e DOKUNMAZ; CLS=0 (fixed). */}
-        <HeroStickySearch />
       </div>
 
       {/* 🛡️ DATEPICKER PORTAL TARGET — HeroSearchPanel'in

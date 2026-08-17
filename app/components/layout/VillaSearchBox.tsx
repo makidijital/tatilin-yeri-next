@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 
 /* 🛡️ Canlı arama artık server action üzerinden (villa.repository +
@@ -21,11 +22,17 @@ import { resolveVillaImageUrl } from "@/lib/storage.helpers";
      - "desktop" → header sağ pill (md:flex)
      - "mobile"  → header strip input (md:hidden)
      - "hero"    → Hero içi premium glassmorphism, full-width box
+     - "sheet"   → mobil bottom-sheet; SUNUM katmanı — dropdown absolute
+       DEĞİL, doğal akışta (içerikle uyumlu yükseklik); sonuç seçilince
+       sheet kapanış animasyonu (200ms) BİTİNCE navigate. Logic (state +
+       debounce + searchVillas + getImage + sonuç satırı içeriği) diğer
+       variantlarla AYNEN paylaşılır — duplicate YOK. Diğer variantlar
+       (hero/desktop/mobile/sticky) bu variant'tan ETKİLENMEZ.
    onResultNavigate: sonuç tıklanınca ekstra callback (header mobile
-     drawer'ı kapatmak için setOpen(false) geçer).
+     drawer'ı kapatmak için setOpen(false); sheet için sheet'i kapatır).
    =============================================================== */
 
-type Variant = "desktop" | "mobile" | "hero" | "sticky";
+type Variant = "desktop" | "mobile" | "hero" | "sticky" | "sheet";
 
 export default function VillaSearchBox({
   variant = "desktop",
@@ -40,6 +47,7 @@ export default function VillaSearchBox({
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [openSearch, setOpenSearch] = useState(false);
+  const router = useRouter();
 
   /* 🛡️ LIVE SEARCH — debounce + memory-leak guard (Header'dan birebir).
      `cancelled` flag: debounce geç tetiklemesi veya response gelmeden
@@ -127,6 +135,121 @@ export default function VillaSearchBox({
     onResultNavigate?.();
   };
 
+  /* 🛡️ SHEET seçim — önce sheet'i kapat (onResultNavigate → parent
+     searchOpen=false, sheet 200ms ile aşağı kayar), animasyon BİTİNCE
+     navigate. Hedef Link ile AYNI (`/kiralik-villa/<slug>`); yeni logic
+     yok. Diğer variantlar Link ile anında gider (davranış değişmedi). */
+  const handleSheetSelect = (slug: string) => {
+    setOpenSearch(false);
+    setSearch("");
+    onResultNavigate?.();
+    window.setTimeout(() => router.push(`/kiralik-villa/${slug}`), 200);
+  };
+
+  /* 🛡️ Sonuç satırı İÇERİĞİ — Link (diğer variantlar) ve button (sheet)
+     sarmalayıcıları arasında PAYLAŞILIR. Tek kaynak → duplicate render
+     azaltıldı; non-sheet DOM'u birebir korunur. */
+  const rowInner = (villa: any) => (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={getImage(villa)}
+        alt=""
+        className="w-14 h-12 object-cover rounded-lg ring-1 ring-[var(--color-stone-100)]"
+      />
+      <div className="flex flex-col min-w-0">
+        <span className="text-[13.5px] font-medium text-[var(--color-stone-900)] truncate">
+          {villa.title}
+        </span>
+        <span className="text-[11px] text-[var(--color-stone-400)] tracking-[0.05em] uppercase">
+          Villayı görüntüle →
+        </span>
+      </div>
+    </>
+  );
+
+  /* ============================================================
+     🛡️ SHEET VARIANT — yalnız SUNUM (mantık yukarıdan paylaşılır)
+     ============================================================
+     • dropdown absolute DEĞİL → doğal akış, içerikle uyumlu yükseklik
+     • boş sorgu: premium "arama yapın" hint
+     • sonuç yok: premium "Villa bulunamadı"
+     • sonuç satırı: <button> (rowInner paylaşılır) → handleSheetSelect
+       (kapan→navigate). Scroll sheet kabuğuna bırakılır (burada değil). */
+  if (variant === "sheet") {
+    return (
+      <div className="relative w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 w-full rounded-2xl px-4 py-3.5 bg-[var(--color-sand-50)] border border-[var(--color-stone-200)] focus-within:border-[var(--brand-coral)]/40 focus-within:bg-white transition-colors">
+          <Search
+            size={20}
+            className="text-[var(--brand-coral)] shrink-0"
+            strokeWidth={2}
+            aria-hidden
+          />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onFocus={() => setOpenSearch(true)}
+            placeholder={placeholder}
+            className="!bg-transparent !border-0 !shadow-none outline-none w-full text-[15px] !text-[var(--color-stone-900)] placeholder:text-[var(--color-stone-400)]"
+          />
+        </div>
+
+        <div className="mt-3">
+          {!search && (
+            <div className="mt-5 flex flex-col items-center text-center px-6 select-none">
+              <span className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-[var(--color-sand-50)] text-[var(--color-stone-400)]">
+                <Search size={20} strokeWidth={2} aria-hidden />
+              </span>
+              <p className="mt-3 text-[14px] font-medium text-[var(--color-stone-700)]">
+                Villa adı ile arama yapın
+              </p>
+              <p className="mt-1 text-[12.5px] text-[var(--color-stone-400)] leading-relaxed">
+                Aradığınız villanın adını yazın, anında listeleyelim.
+              </p>
+            </div>
+          )}
+
+          {search && loading && (
+            <div className="p-4 text-sm text-[var(--color-stone-500)] flex items-center gap-2">
+              <span className="w-3 h-3 border-2 border-[var(--brand-coral)] border-t-transparent rounded-full animate-spin" />
+              Aranıyor...
+            </div>
+          )}
+
+          {search && !loading && results.length === 0 && (
+            <div className="mt-5 flex flex-col items-center text-center px-6 select-none">
+              <span className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-[var(--color-sand-50)] text-[var(--color-stone-400)]">
+                <Search size={20} strokeWidth={2} aria-hidden />
+              </span>
+              <p className="mt-3 text-[14px] font-medium text-[var(--color-stone-700)]">
+                Villa bulunamadı
+              </p>
+              <p className="mt-1 text-[12.5px] text-[var(--color-stone-400)] leading-relaxed">
+                Farklı bir villa adı deneyin.
+              </p>
+            </div>
+          )}
+
+          {search && !loading && results.length > 0 && (
+            <div className="rounded-2xl border border-[var(--color-stone-100)] divide-y divide-[var(--color-stone-100)] overflow-hidden">
+              {results.map((villa) => (
+                <button
+                  key={villa.id}
+                  type="button"
+                  onClick={() => handleSheetSelect(villa.slug)}
+                  className="flex items-center gap-3 w-full text-left px-4 py-3 hover:bg-[var(--color-sand-50)] transition"
+                >
+                  {rowInner(villa)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={containerClass} onClick={(e) => e.stopPropagation()}>
       <Search
@@ -172,20 +295,7 @@ export default function VillaSearchBox({
                 className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-sand-50)] transition border-b border-[var(--color-stone-100)] last:border-b-0"
                 onClick={handleResultClick}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={getImage(villa)}
-                  alt=""
-                  className="w-14 h-12 object-cover rounded-lg ring-1 ring-[var(--color-stone-100)]"
-                />
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[13.5px] font-medium text-[var(--color-stone-900)] truncate">
-                    {villa.title}
-                  </span>
-                  <span className="text-[11px] text-[var(--color-stone-400)] tracking-[0.05em] uppercase">
-                    Villayı görüntüle →
-                  </span>
-                </div>
+                {rowInner(villa)}
               </Link>
             ))}
         </div>

@@ -6,10 +6,6 @@ import { useRouter } from "next/navigation";
    (menu/villa-type repository + @/lib/db client bundle'a girmez);
    aynı SELECT/order shape, aynı UI davranışı. */
 import { loadHeroFilters } from "./hero-filters.action";
-/* 🔎 Floating villa-adı arama — mevcut paylaşılan canlı arama component'i
-   (debounce + searchByTitle + autocomplete dropdown). Kendi navigation
-   logic'i var; burada yalnız tüketilir. */
-import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
 
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -169,16 +165,11 @@ export default function HeroSearchPanel() {
           - Coral CTA gradient + elevated shadow
         ═══════════════════════════════════════════════════════ */
     <div className="relative mt-12 md:mt-16">
-      {/* ═══════════════════════════════════════════════════════
-          🔎 FLOATING VILLA-ADI ARAMA — panelin üst kenarına yarı
-          binen, ortalanmış premium pill. Mevcut VillaSearchBox
-          (hero variant) → canlı arama + autocomplete + navigation.
-          Filtre alanları / filtre logic'i ile SIFIR etkileşim.
-          ═══════════════════════════════════════════════════════ */}
-      <div className="absolute left-1/2 -translate-x-1/2 -top-6 md:-top-16 z-40 w-[min(90vw,400px)]">
-        <VillaSearchBox variant="hero" placeholder="Villa adı ile ara..." />
-      </div>
-
+      {/* 🛡️ Floating villa-adı arama (VillaSearchBox) KALDIRILDI — villa-adı
+          araması artık Desktop'ta Header, mobilde Bottom Navigation →
+          SearchBottomSheet üzerinden. Aşağıdaki FİLTRE paneli (Tip / Bölge /
+          Tarih / Kişi / Villa bul) BİREBİR korunur; hiçbir filtre davranışı
+          değişmedi. */}
       <div
         className="
           relative isolate z-30
@@ -186,7 +177,7 @@ export default function HeroSearchPanel() {
           border-[3px] border-[var(--color-stone-900)]
           rounded-2xl ring-2 ring-[#1fb2ec]/30
           shadow-[0_36px_90px_-28px_rgba(11,31,58,0.42),0_12px_30px_-16px_rgba(2, 170, 229,0.16),0_16px_38px_-16px_rgba(2,170,229,0.38),inset_0_1px_0_rgba(255,255,255,0.7)]
-          px-2 md:px-2.5 pb-2 md:pb-2.5 pt-10 md:pt-2.5
+          px-2 md:px-2.5 pb-2 md:pb-2.5 pt-2 md:pt-2.5
           gap-1.5 md:gap-2
           flex flex-col md:flex-row items-stretch
           text-left

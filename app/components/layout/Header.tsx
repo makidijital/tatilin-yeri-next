@@ -65,11 +65,10 @@ export default function Header({
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  /* 🛡️ Anasayfada canlı arama Hero içine taşındı → header search
-     (desktop + mobile) yalnız anasayfa-DIŞI sayfalarda gösterilir.
-     İç sayfalarda davranış birebir korunur (paylaşılan VillaSearchBox).
-     Arama state/debounce/dropdown mantığı artık VillaSearchBox'ta. */
-  const isHome = pathname === "/";
+  /* 🛡️ Header search (desktop + mobile) TÜM sayfalarda gösterilir —
+     anasayfa dahil (eski `!isHome` gizleme kaldırıldı). İç sayfa
+     davranışı birebir aynı; paylaşılan VillaSearchBox mantığı değişmedi.
+     Hero / HeroSearchPanel / HeroStickySearch AYNEN korunur. */
 
   const [scrolled, setScrolled] = useState(false);
 
@@ -194,9 +193,9 @@ export default function Header({
 
             {/* RIGHT — search + favorites + CTA */}
             <div className="hidden md:flex items-center gap-3">
-              {/* SEARCH — paylaşılan VillaSearchBox. Anasayfada arama
-                 Hero içine taşındı → yalnız iç sayfalarda göster. */}
-              {!isHome && <VillaSearchBox variant="desktop" />}
+              {/* SEARCH — paylaşılan VillaSearchBox. Artık anasayfa dahil
+                 tüm sayfalarda görünür. */}
+              <VillaSearchBox variant="desktop" />
 
               {/* Favorites shortcut (FAZ 36).
                  🛡️ FAZ 39C: variant prop kaldırıldı (dead). */}
@@ -212,15 +211,10 @@ export default function Header({
                sadece DOM konumu değiştirdi. Desktop branch'e dokunulmadı
                (`md:hidden` mobil-only). */}
             <div className="md:hidden flex items-center gap-2">
-              {/* MOBILE SEARCH — paylaşılan VillaSearchBox. Anasayfada
-                 arama Hero içine taşındı → yalnız iç sayfalarda göster.
-                 Sonuç tıklanınca drawer kapanır (onResultNavigate). */}
-              {!isHome && (
-                <VillaSearchBox
-                  variant="mobile"
-                  onResultNavigate={() => setOpen(false)}
-                />
-              )}
+              {/* 🛡️ MOBILE SEARCH kaldırıldı — mobilde tek villa-adı arama
+                 girişi Bottom Navigation → Arama → SearchBottomSheet.
+                 Çift arama olmaması için header mobil arama render EDİLMEZ.
+                 Desktop arama (hidden md:flex bloğu) AYNEN korunur. */}
 
               {/* HAMBURGER — davranış birebir korundu; görünür "Menü"
                  etiketi eklendi (mobil kullanılabilirlik). */}

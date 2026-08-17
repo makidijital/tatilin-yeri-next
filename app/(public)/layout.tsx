@@ -2,6 +2,7 @@ import HeaderWrapper from "@/app/components/layout/HeaderWrapper";
 import Footer from "@/app/components/layout/Footer";
 import CookieConsent from "@/app/components/layout/CookieConsent";
 import FloatingSocial from "@/app/components/layout/FloatingSocial";
+import BottomNav from "@/app/components/layout/BottomNav";
 import ScrollToTopButton from "@/app/components/layout/ScrollToTopButton";
 import { getCachedSettings } from "@/lib/cache.helpers";
 
@@ -44,6 +45,16 @@ export default async function PublicLayout({
     );
   }
 
+  /* 🛡️ Mobil BottomNav için WhatsApp/Telefon href'leri — FloatingSocial
+     ile BİREBİR aynı türetme (yeni business logic YOK). */
+  const phoneHref = settings?.phone?.trim()
+    ? `tel:${settings.phone.trim()}`
+    : null;
+  const phoneDigits = (settings?.phone || "").replace(/\D/g, "");
+  const whatsappHref =
+    settings?.whatsapp_link?.trim() ||
+    (phoneDigits ? `https://wa.me/${phoneDigits}` : null);
+
   return (
     <div className="flex flex-col min-h-screen bg-[var(--color-ivory)]">
       {/* HEADER */}
@@ -63,6 +74,12 @@ export default async function PublicLayout({
          üstte kalır; Hero/Header/SearchPanel dokunulmadan additive
          entegrasyon. Bakım modunda render edilmez (early-return). */}
       <FloatingSocial />
+
+      {/* 📱 Mobil Bottom Navigation — yalnız <md; villa detayında (kendi
+         MobileBookingCta'sı var) otomatik gizlenir. Desktop'ta render
+         edilir ama `md:hidden` ile görünmez → FloatingSocial desktop'ta
+         aynen çalışır. Href'ler server'da türetilip prop geçilir. */}
+      <BottomNav phoneHref={phoneHref} whatsappHref={whatsappHref} />
 
       {/* ⬆️ Scroll-to-top — sol alt floating client island; scrollY>400'de
          görünür. z-40 (cookie/modaller üstte kalır), bottom-20 md:bottom-8

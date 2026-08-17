@@ -62,7 +62,7 @@ export default async function FloatingSocial() {
       className="
         fixed right-3 md:right-5 bottom-20 md:bottom-8
         z-40
-        flex flex-col gap-2.5
+        hidden md:flex flex-col gap-2.5
         print:hidden
       "
     >
