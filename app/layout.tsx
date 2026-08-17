@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Montserrat, Manrope, Inter, Fraunces, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "leaflet/dist/leaflet.css";
@@ -48,6 +48,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
   display: "swap",
 });
+
+/* ===============================================================
+   🛡️ ROOT VIEWPORT — viewport-fit=cover (safe-area aktivasyonu)
+   ===============================================================
+   `viewportFit: "cover"` olmadan `env(safe-area-inset-*)` iOS'ta 0
+   döner; bu yüzden BottomNav / SearchBottomSheet / MobileBookingCta /
+   SuccessModal içindeki `pb-[env(safe-area-inset-bottom)]` etkisizdi
+   (çentikli iPhone'da alt home-indicator şeridi boş kalıyordu). cover
+   ile bu padding'ler amaçlandığı gibi çalışır → mobil fixed bar'lar
+   home-indicator'a kadar tam yapışır, alt boşluk kapanır. width /
+   initialScale Next default'larıyla aynı (davranış değişmez). */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 /* ===============================================================
    🛡️ ROOT METADATA — settings-driven SEO fallback chain
