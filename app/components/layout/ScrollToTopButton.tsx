@@ -8,8 +8,11 @@ import { ChevronUp } from "lucide-react";
    ===============================================================
    Public site geneli, sol alt köşe. FloatingSocial (sağ alt) ile
    çakışmaz; z-40 → CookieConsent (z-50) ve modaller (1000/1100)
-   üstte kalır. Mobil bottom-20 → villa detay MobileBookingCta
-   (fixed bottom-0) bar'ının üstünde durur.
+   üstte kalır. Mobil bottom = BottomNav yüksekliği (70px) +
+   env(safe-area-inset-bottom) + 16px → alt bar'ın (BottomNav /
+   villa detay MobileBookingCta) üstünde premium boşlukla durur;
+   magic number değil, bar yüksekliğini referans alır. Desktop
+   md:bottom-8 (32px) AYNEN korunur.
 
    DAVRANIŞ:
      - Başlangıçta gizli; window.scrollY > 400 olunca görünür.
@@ -42,7 +45,8 @@ export default function ScrollToTopButton() {
   return (
     <div
       className="
-        fixed left-3 md:left-5 bottom-20 md:bottom-8
+        fixed left-3 md:left-5
+        bottom-[calc(70px_+_env(safe-area-inset-bottom)_+_16px)] md:bottom-8
         z-40
         print:hidden
         flex flex-col items-center gap-2
