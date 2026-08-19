@@ -533,6 +533,14 @@ export default function AdminGallery({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveId(null)}
+        /* 🛡️ AUTO-SCROLL — dnd-kit resmi config (yeni custom loop YOK).
+           Default acceleration=10 yavaştı; 25'e çıkarıldı → kenara
+           yaklaşınca hızlı, tam kenarda maksimum (dnd-kit yakınlık-oranı
+           ölçeklemesi korunur → kontrolsüz zıplama değil, akıcı). threshold
+           dikeye odaklı (y:0.25 biraz erken tetikleme, x:0 yatay kapalı).
+           Yukarı/aşağı simetrik; mouse + touch sensor'larının ikisinde de
+           geçerli. Normal galeri scroll'u etkilenmez (yalnız drag aktifken). */
+        autoScroll={{ acceleration: 25, threshold: { x: 0, y: 0.25 } }}
       >
         <SortableContext
           items={images.map((i) => i.id)}
