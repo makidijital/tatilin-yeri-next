@@ -1,7 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Trash2 } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { storageProvider } from "@/lib/storage";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import {
@@ -98,7 +115,21 @@ export default function AdminGallery({
   onReorder,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  /* 🛡️ MULTI-SELECT + GROUP DRAG (dnd-kit) — native HTML5 DnD yerine.
+     Seçim ID-bazlı (Set<string>); index-bazlı DEĞİL. activeId yalnız
+     DragOverlay + grup/tekli ayrımı için. Save zinciri (reorderGallery
+     Images → updateImageOrder → sort_order) AYNEN korunur. */
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sensors = useSensors(
+    /* Desktop: 8px hareket eşiği → click/checkbox ile karışmaz.
+       Touch: 250ms press-delay + tolerance → kısa dokunma seçim,
+       uzun basış sürükleme; sayfa scroll'u bozulmaz. */
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 8 },
+    })
+  );
   const [loading, setLoading] = useState(false);
   /* 🛡️ Bulk delete loading state — UI yalnız bu state aktifken
      buton "Siliniyor…" + disabled. */
@@ -139,95 +170,19 @@ export default function AdminGallery({
     }
   }
 
-  /* ===============================================================
-     🛡️ DRAG AUTO-SCROLL — Trello / Notion / Google Photos paterni
-     ===============================================================
-     SORUN:
-       Çok sayıda fotoğraf olduğunda en alttaki kartı en üste taşımak
-       için ekran kenarına çekildiğinde tarayıcı otomatik scroll
-       etmiyor (native HTML5 drag-drop default davranış). Admin
-       manuel scroll yapmak zorunda kalıyor → kötü UX.
-
-     ÇÖZÜM (mevcut native HTML5 DnD'yi BOZMADAN):
-       Document-level `dragover` listener + requestAnimationFrame
-       loop + window.scrollBy. Viewport'un üst veya alt 80px'ine
-       yaklaşıldığında scroll tetiklenir; mesafe azaldıkça hız
-       artar (ease-in 0→24 px/frame).
-
-     NEDEN KÜTÜPHANE YOK:
-       AdminGallery şu an saf native HTML5 (`draggable`, onDragStart,
-       onDragOver, onDrop) kullanıyor — dnd-kit YOK. Resmi `autoScroll`
-       özelliği yalnız dnd-kit modifier'larında mevcut; bu component'i
-       dnd-kit'e migrate etmek "galeri render yapısını değiştirme"
-       kuralını ihlal ederdi. Bu yüzden minimum invasif helper.
-
-     SADECE drag AKTİFKEN listener register edilir (dragIndex !== null
-     guardı + cleanup). Drop / dragend / unmount → rAF cleanup;
-     fantom scroll loop riski yok. Tablet / pointer events / touch
-     işaretleyici browser drag eventleri ile aynı API'yi paylaşır,
-     mobile için ekstra kod gerekmez.
-  =============================================================== */
+  /* 🛡️ SELECTION PRUNE — silinen görsellerin id'si seçimde kalmasın
+     (indicator sayacı doğru kalır). dnd-kit'in yerleşik autoScroll'u
+     drag sırasında pencere kaydırmayı üstlenir → eski native rAF
+     auto-scroll helper'ına artık gerek yok. */
   useEffect(() => {
-    if (dragIndex === null) return;
-
-    const EDGE = 140; // px — viewport edge'inden tetikleme mesafesi
-    const MAX_SPEED = 160; // px/frame — en yakın mesafede maksimum (2x)
-    let rafId: number | null = null;
-    let velocity = 0; // px/frame; > 0 → aşağı, < 0 → yukarı
-
-    function tick() {
-      if (velocity !== 0) {
-        window.scrollBy(0, velocity);
-        rafId = requestAnimationFrame(tick);
-      } else {
-        rafId = null;
-      }
-    }
-
-    function startLoop() {
-      if (rafId === null) rafId = requestAnimationFrame(tick);
-    }
-
-    function stopLoop() {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-      velocity = 0;
-    }
-
-    function handleDragOver(e: DragEvent) {
-      const y = e.clientY;
-      const h = window.innerHeight;
-
-      if (y < EDGE) {
-        const ratio = Math.min(1, (EDGE - y) / EDGE);
-        velocity = -Math.ceil(ratio * MAX_SPEED);
-        startLoop();
-      } else if (y > h - EDGE) {
-        const ratio = Math.min(1, (y - (h - EDGE)) / EDGE);
-        velocity = Math.ceil(ratio * MAX_SPEED);
-        startLoop();
-      } else {
-        velocity = 0;
-      }
-    }
-
-    function handleDragEnd() {
-      stopLoop();
-    }
-
-    document.addEventListener("dragover", handleDragOver);
-    document.addEventListener("dragend", handleDragEnd);
-    document.addEventListener("drop", handleDragEnd);
-
-    return () => {
-      document.removeEventListener("dragover", handleDragOver);
-      document.removeEventListener("dragend", handleDragEnd);
-      document.removeEventListener("drop", handleDragEnd);
-      stopLoop();
-    };
-  }, [dragIndex]);
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set(
+        [...prev].filter((id) => images.some((i) => i.id === id))
+      );
+      return next.size === prev.size ? prev : next;
+    });
+  }, [images]);
 
   // 🔥 DEBUG (çok önemli)
   console.log("🚀 villaId:", villaId);
@@ -405,23 +360,81 @@ export default function AdminGallery({
     }
   }
 
-  // 🔥 drag reorder
-  async function handleDrop(dropIndex: number) {
-    if (dragIndex === null) return;
+  // 🔥 selection helpers (ID-bazlı)
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
 
-    const updated = [...images];
-    const dragged = updated[dragIndex];
+  function handleDragStart(e: DragStartEvent) {
+    setActiveId(String(e.active.id));
+  }
 
-    updated.splice(dragIndex, 1);
-    updated.splice(dropIndex, 0, dragged);
+  /* 🔥 GROUP / SINGLE DRAG REORDER — save zinciri AYNEN
+     (reorderGalleryImages → updateImageOrder → sort_order).
+     Seçim varsa VE sürüklenen kart seçiliyse GRUP; aksi halde TEKLİ
+     (mevcut single-drag davranışı korunur). Grup: seçililer mevcut
+     sıralarıyla (iç sıra korunur) drop pozisyonuna tek blok yerleşir. */
+  async function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    setActiveId(null);
+    if (!over) return;
 
-    const payload = updated.map((img, i) => ({
+    const aId = String(active.id);
+    const oId = String(over.id);
+
+    const isGroup = selectedIds.size > 0 && selectedIds.has(aId);
+    const movingSet = isGroup
+      ? new Set(images.filter((i) => selectedIds.has(i.id)).map((i) => i.id))
+      : new Set([aId]);
+
+    if (!isGroup && aId === oId) return; // hareket yok
+
+    const moving = images.filter((i) => movingSet.has(i.id)); // iç sıra korunur
+    const remaining = images.filter((i) => !movingSet.has(i.id));
+
+    let insertAt: number;
+    if (movingSet.has(oId)) {
+      /* Drop hedefi seçili grubun İÇİNDEYSE: blok orijinal en-üst
+         konumunda kalır → yanlış reorder olmaz (edge case 10). */
+      const minOrig = Math.min(
+        ...moving.map((m) => images.findIndex((i) => i.id === m.id))
+      );
+      insertAt = remaining.filter(
+        (i) => images.findIndex((x) => x.id === i.id) < minOrig
+      ).length;
+    } else {
+      const overIdxRem = remaining.findIndex((i) => i.id === oId);
+      const activeOrig = images.findIndex((i) => i.id === aId);
+      const overOrig = images.findIndex((i) => i.id === oId);
+      // Aşağı taşıma → hedefin ARDINA; yukarı → hedefin ÖNÜNE.
+      insertAt = overOrig > activeOrig ? overIdxRem + 1 : overIdxRem;
+    }
+
+    const newImages = [
+      ...remaining.slice(0, insertAt),
+      ...moving,
+      ...remaining.slice(insertAt),
+    ];
+
+    const changed = newImages.some((img, i) => img.id !== images[i].id);
+    if (!changed) return;
+
+    const payload = newImages.map((img, i) => ({
       id: img.id,
       sort_order: i,
     }));
 
     await reorderGalleryImages(payload);
     await onReorder();
+    if (isGroup) clearSelection();
   }
 
   return (
@@ -487,73 +500,201 @@ export default function AdminGallery({
         </div>
       )}
 
-      {/* 🔥 GRID — yoğunluk artırıldı:
-         • xl:grid-cols-5 + 2xl:grid-cols-6 → desktop'ta satır başına
-           daha çok kart (4 → 5 → 6) → uzun listelerde daha az scroll
-         • md:gap-3 → desktop'ta gap 16→12px (mobile gap-4 KORUNDU) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-3">
-        {images.map((img, index) => (
-          <div
-            key={img.id}
-            draggable
-            onDragStart={() => setDragIndex(index)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => handleDrop(index)}
-            className="relative group border rounded-xl overflow-hidden cursor-move"
+      {/* 🛡️ SELECTION INDICATOR — yalnız seçim varken görünür. Seçim
+         yokken galeri görünümü mevcut haliyle aynı kalır. */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
+          <span className="text-[13px] font-medium text-blue-700">
+            {images.filter((i) => selectedIds.has(i.id)).length} görsel seçildi
+          </span>
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="text-[13px] font-medium text-blue-700 hover:text-blue-900 transition"
           >
-            {/* 🛡️ Aşama B + bucket-fix — image_url HEM FULL URL HEM
-                relative path olabilir. resolveVillaImageUrl villa-images
-                bucket'ından URL üretir; legacy URL'ler pass-through,
-                yeni path'ler runtime'da doğru bucket URL'e çevrilir. */}
-            <img
-              src={resolveVillaImageUrl(img.image_url) ?? ""}
-              /* 🛡️ Yükseklik h-40 (160px) → h-32 (128px) = %20 azalma.
-                 Aspect ratio mevcutta da korunmuyor (sabit yükseklik
-                 + esnek genişlik); object-cover semantic'i aynen. */
-              className="w-full h-32 object-cover"
-            />
+            Seçimi temizle
+          </button>
+        </div>
+      )}
 
-            {/* 🔥 COVER */}
-            {img.is_cover && (
-              <span className="absolute top-2 left-2 bg-black text-white text-xs px-2 py-1 rounded">
-                Kapak
-              </span>
-            )}
-
-            {/* 🏡 ANA SAYFA ÖNİZLEME — 2. görsel (index === 1).
-                Anasayfa "İndirimli" kartındaki sağ-alt mini önizleme
-                bu görseldir. YALNIZ bilgilendirme rozeti; sıralama/
-                cover/upload/drag-drop mantığı DEĞİŞMEZ. Kapak badge'i
-                ile aynı tasarım (radius/padding/font/shadow), yalnız
-                accent farklı (brand-coral). Kapak normalde index 0 →
-                çakışma olmaz. */}
-            {index === 1 && (
-              <span className="absolute top-2 left-2 bg-[#ff7a59] text-white text-xs px-2 py-1 rounded">
-                Anasayfa İndirimli Önizleme
-              </span>
-            )}
-
-            {/* 🔥 ACTIONS */}
-            <div className="absolute bottom-2 left-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
-              <button
-                onClick={async () => {
-  await setGalleryCover(img.id, img.villa_id);
-  await onReorder(); // 🔥 UI anında güncellenir
-}}
-                className="flex-1 bg-white text-xs py-1 rounded hover:bg-gray-200"
-              >
-                Kapak
-              </button>
-
-              <button
-                onClick={() => onDelete(img.id)}
-                className="flex-1 bg-red-500 text-white text-xs py-1 rounded hover:bg-red-600"
-              >
-                Sil
-              </button>
-            </div>
+      {/* 🔥 GRID — dnd-kit sortable. Grid yoğunluğu + responsive AYNEN:
+         xl:grid-cols-5 / 2xl:grid-cols-6 / md:gap-3 / mobile gap-4. */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveId(null)}
+      >
+        <SortableContext
+          items={images.map((i) => i.id)}
+          strategy={rectSortingStrategy}
+        >
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-3">
+            {images.map((img, index) => (
+              <GalleryCard
+                key={img.id}
+                img={img}
+                index={index}
+                selected={selectedIds.has(img.id)}
+                dimmed={
+                  activeId !== null &&
+                  selectedIds.has(activeId) &&
+                  selectedIds.has(img.id) &&
+                  img.id !== activeId
+                }
+                onToggle={toggleSelect}
+                onDelete={onDelete}
+                onReorder={onReorder}
+              />
+            ))}
           </div>
-        ))}
+        </SortableContext>
+
+        {/* Grup/tekli sürükleme önizlemesi (thumbnail + adet rozeti). */}
+        <DragOverlay>
+          {activeId
+            ? (() => {
+                const a = images.find((i) => i.id === activeId);
+                if (!a) return null;
+                const count = selectedIds.has(activeId)
+                  ? images.filter((i) => selectedIds.has(i.id)).length
+                  : 1;
+                return (
+                  <div className="relative rounded-xl overflow-hidden border shadow-2xl">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={resolveVillaImageUrl(a.image_url) ?? ""}
+                      alt=""
+                      className="w-full h-32 object-cover"
+                    />
+                    {count > 1 && (
+                      <span className="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full shadow">
+                        {count}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()
+            : null}
+        </DragOverlay>
+      </DndContext>
+    </div>
+  );
+}
+
+/* ===============================================================
+   🛡️ GALLERY CARD — tek görsel kartı (dnd-kit sortable item)
+   ===============================================================
+   useSortable ile sürüklenebilir. Checkbox (sağ-üst; sol-üst kapak/
+   preview badge'leriyle çakışmasın diye) + mevcut kapak/preview
+   rozetleri + hover aksiyonları (Kapak / Sil) AYNEN korunur.
+   Checkbox ve butonlarda onPointerDown stopPropagation → dokunuş
+   yanlışlıkla drag başlatmaz (seçim/aksiyon ile karışmaz). */
+function GalleryCard({
+  img,
+  index,
+  selected,
+  dimmed,
+  onToggle,
+  onDelete,
+  onReorder,
+}: {
+  img: VillaImage;
+  index: number;
+  selected: boolean;
+  dimmed: boolean;
+  onToggle: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
+  onReorder: () => Promise<void>;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: img.id });
+
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: dimmed ? 0.4 : isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={
+        "relative group border rounded-xl overflow-hidden cursor-move " +
+        (selected
+          ? "ring-2 ring-blue-500 border-blue-500"
+          : "border-[var(--color-stone-200)]")
+      }
+    >
+      {/* ☑️ SELECTION CHECKBOX — sağ-üst; hover'sız da erişilebilir,
+          touch-friendly. stopPropagation → drag başlatmaz. */}
+      <label
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        className="absolute top-2 right-2 z-10 flex h-7 w-7 items-center justify-center rounded-md bg-white/85 backdrop-blur-sm shadow cursor-pointer"
+      >
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onToggle(img.id)}
+          className="h-4 w-4 accent-blue-600 cursor-pointer"
+          aria-label="Görseli seç"
+        />
+      </label>
+
+      {/* 🛡️ Aşama B + bucket-fix — resolveVillaImageUrl (legacy URL
+          pass-through / relative path → bucket URL). */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={resolveVillaImageUrl(img.image_url) ?? ""}
+        alt=""
+        className="w-full h-32 object-cover"
+      />
+
+      {/* 🔥 COVER */}
+      {img.is_cover && (
+        <span className="absolute top-2 left-2 bg-black text-white text-xs px-2 py-1 rounded">
+          Kapak
+        </span>
+      )}
+
+      {/* 🏡 ANA SAYFA ÖNİZLEME — 2. görsel (index === 1). */}
+      {index === 1 && (
+        <span className="absolute top-2 left-2 bg-[#ff7a59] text-white text-xs px-2 py-1 rounded">
+          Anasayfa İndirimli Önizleme
+        </span>
+      )}
+
+      {/* 🔥 ACTIONS */}
+      <div className="absolute bottom-2 left-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={async () => {
+            await setGalleryCover(img.id, img.villa_id);
+            await onReorder(); // 🔥 UI anında güncellenir
+          }}
+          className="flex-1 bg-white text-xs py-1 rounded hover:bg-gray-200"
+        >
+          Kapak
+        </button>
+
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => onDelete(img.id)}
+          className="flex-1 bg-red-500 text-white text-xs py-1 rounded hover:bg-red-600"
+        >
+          Sil
+        </button>
       </div>
     </div>
   );
