@@ -36,6 +36,10 @@ export type BuildHeroSearchParamsInput = {
   guests: number;
   categoryOptions: FilterOption[];
   regionOptions: FilterOption[];
+  /** 🛡️ ADDITIVE — "Gelişmiş Arama" ±N gün esnek sonuç. 0/undefined
+   *  → hiç yazılmaz (mevcut URL birebir korunur). Yalnız > 0 iken
+   *  `flexible=N` eklenir. Ana `start`/`end` ASLA değişmez. */
+  flexible?: number;
 };
 
 export function buildHeroSearchParams(
@@ -49,6 +53,7 @@ export function buildHeroSearchParams(
     guests,
     categoryOptions,
     regionOptions,
+    flexible,
   } = input;
 
   const params = new URLSearchParams();
@@ -69,6 +74,8 @@ export function buildHeroSearchParams(
   if (startDate) params.set("start", formatHeroDate(startDate));
   if (endDate) params.set("end", formatHeroDate(endDate));
   if (guests) params.set("guests", guests.toString());
+  /* Yalnız pozitifse yaz; 0/undefined → param yok → mevcut davranış. */
+  if (flexible && flexible > 0) params.set("flexible", String(flexible));
 
   return params.toString();
 }

@@ -82,6 +82,10 @@ type InitialFilters = {
   start: string | null;
   end: string | null;
   guests: number;
+  /** 🛡️ ADDITIVE — "Gelişmiş Arama" (±3 esnek) URL'de flexible>0 mı.
+   *  Opsiyonel (diğer caller'lar etkilenmez); yoksa false. Hero ile
+   *  AYNI `flexible=3` parametresi. */
+  flexible?: boolean;
 };
 
 /* ===============================================================
@@ -186,6 +190,9 @@ export default function FilterSidebar({
   const [guestCount, setGuestCount] = useState<number>(
     Math.max(1, initial.guests || 1)
   );
+  /* 🛡️ GELİŞMİŞ ARAMA — ±3 esnek. Hero checkbox'ı ile AYNI `flexible=3`
+     parametresi. Draft state (URL'den init); Uygula'da buildHref yazar. */
+  const [flexible, setFlexible] = useState<boolean>(!!initial.flexible);
 
   /* Sayfa /arama?regions=... gibi yeni bir URL'le yeniden render
      edildiğinde props.initial değişir → draft'ı senkronize et. */
@@ -195,6 +202,7 @@ export default function FilterSidebar({
     setStartDate(parseDateFromUrl(initial.start));
     setEndDate(parseDateFromUrl(initial.end));
     setGuestCount(Math.max(1, initial.guests || 1));
+    setFlexible(!!initial.flexible);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     initial.regions.join(","),
@@ -202,6 +210,7 @@ export default function FilterSidebar({
     initial.start,
     initial.end,
     initial.guests,
+    initial.flexible,
   ]);
 
   /* ---------------- BÖLGE GRUP AÇ/KAPA STATE ----------------
@@ -338,6 +347,14 @@ export default function FilterSidebar({
       existingSort === "capacity-desc"
     ) {
       params.set("sort", existingSort);
+    }
+    /* 🛡️ flexible — "Gelişmiş Arama" checkbox state'i. İşaretliyse
+       `flexible=3` yazılır, değilse HİÇ yazılmaz (URL'den kalkar). State
+       URL'den init edildiği için dokunulmazsa DEĞER KORUNUR (herhangi bir
+       filtre değişiminde flexible=3 kaybolmaz). Hero ile AYNI parametre;
+       ana start/end etkilenmez. */
+    if (flexible) {
+      params.set("flexible", "3");
     }
     const qs = params.toString();
     return qs ? `/arama?${qs}` : "/arama";
@@ -733,6 +750,31 @@ export default function FilterSidebar({
             </ul>
           )}
         </FilterGroup>
+
+        {/* ═══ GELİŞMİŞ ARAMA — Hero checkbox'ı ile AYNI `flexible=3`.
+            Panel JSX paylaşımlı → desktop aside + mobil drawer ikisinde de
+            görünür. Draft: Uygula'da buildHref yazar. Ana tarih/normal
+            filtre/sonuç mantığı DEĞİŞMEZ. */}
+        <div className="pt-1">
+          <p className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-stone-500)]">
+            Gelişmiş Arama
+          </p>
+          <label className="flex items-start gap-3 rounded-xl bg-[var(--color-sand-50)]/60 px-3 py-3 text-[14px] cursor-pointer transition-colors motion-reduce:transition-none hover:bg-[var(--color-sand-50)]">
+            <input
+              type="checkbox"
+              checked={flexible}
+              onChange={(e) => setFlexible(e.target.checked)}
+              className="mt-0.5 shrink-0 !w-4 !h-4 accent-[var(--color-champagne-500)] !rounded"
+            />
+            <span className="leading-snug text-[var(--color-stone-700)]">
+              Sonuçlarda 3 gün önceki ve sonraki villaları da göster
+              <span className="mt-1 block text-[12px] text-[var(--color-stone-400)]">
+                Seçtiğiniz tarihlerde uygun olmayan, ancak ±3 gün içinde
+                müsait olan villaları da gösterir.
+              </span>
+            </span>
+          </label>
+        </div>
       </div>
 
       {/* STICKY FOOTER — Filtrele + Temizle */}

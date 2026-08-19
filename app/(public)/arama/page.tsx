@@ -14,7 +14,7 @@ import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
 import VillaCard from "@/app/components/villa/VillaCard";
 import { calculateGrandTotal, calculateNights, getStartingPrice } from "@/lib/price.engine";
-import { Search } from "lucide-react";
+import { Search, Sparkles } from "lucide-react";
 
 import FilterSidebar from "./FilterSidebar";
 import PageHero from "@/app/components/ui/PageHero";
@@ -123,8 +123,23 @@ type Props = {
      *    | capacity-asc | capacity-desc
      *  helpers: lib/pagination.ts (parsePublicSort + applyPublicSort). */
     sort?: string | string[];
+    /** 🛡️ ADDITIVE — "Gelişmiş Arama" ±N gün esnek EK sonuç bayrağı.
+     *  Yoksa/0 → davranış birebir mevcut. Ana `start`/`end` ASLA
+     *  değişmez; bu değer yalnız internal availability tespiti için. */
+    flexible?: string | string[];
   }>;
 };
+
+/* 🛡️ YMD +N gün — yalnız INTERNAL esnek availability penceresi üretmek
+   için (mevcut getBlockedVillaIds'e argüman). UTC-safe → TZ drift yok.
+   Fiyat/availability ALGORİTMASI DEĞİL; salt string kaydırma. Çıktı
+   hiçbir zaman ana start/end'e / karta / URL'ye yazılmaz. */
+function shiftYmd(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
 
 /* 🛡️ Public pagination — helpers `lib/pagination.ts`.
    Sayfa boyutu artık URL state'inden geliyor; default 12. */
@@ -497,6 +512,11 @@ export default async function AramaPage({ searchParams }: Props) {
      *  total). VillaCard prop'larına AKMAZ; sadece applyPublicSort
      *  priceKey shortcut'ı için. */
     _sortPrice?: number | null;
+    /** 🛡️ ADDITIVE — esnek EK sonuç işareti (yalnız UI). Normal
+     *  villalarda undefined/false → mevcut kart davranışı birebir.
+     *  Ana tarih/fiyat/href AKIŞI DEĞİŞMEZ; VillaCard yalnız fiyat
+     *  yerine "±3 gün içinde müsait" gösterir. */
+    isFlexible?: boolean;
   };
 
   const villasSource: AramaVillaRaw[] =
@@ -633,6 +653,51 @@ export default async function AramaPage({ searchParams }: Props) {
 
   const total = visibleVillas.length;
 
+  /* ===============================================================
+     🛡️ GELİŞMİŞ ARAMA — ±N gün ESNEK EK SONUÇ (ADDITIVE)
+     ===============================================================
+     INVARIANT: ana start/end HER YERDE (URL/kart/fiyat/detay/rezervasyon)
+     SABİT kalır. Kaydırılmış pencereler YALNIZ internal availability
+     tespiti içindir; karta/URL/fiyat/rezervasyona ASLA yazılmaz. Mevcut
+     `getBlockedVillaIds` helper'ı N kez yeniden kullanılır — yeni
+     algoritma / backend / RPC YOK.
+
+     Aday havuzu = ana tarihte DOLU villalar (normal sonuçta olmayanlar →
+     DUPLICATE imkânsız). Bir aday, ±N içindeki kaydırılmış bir pencerede
+     (süre sabit) ≥1 kez müsaitse `isFlexible` olarak işaretlenip normal
+     listenin SONUNA eklenir. `flexible` yok/0 → blok hiç çalışmaz →
+     davranış birebir mevcut (byte-identical). */
+  const flexRaw = firstString(sp.flexible);
+  const flexDays = Math.min(
+    3,
+    Math.max(0, Math.trunc(Number(flexRaw || 0)) || 0)
+  );
+  const flexActive = flexDays > 0 && hasDateRange;
+
+  let flexibleVillas: AramaVillaNormalized[] = [];
+  if (flexActive) {
+    const flexPool = villas.filter((v) => blockedSet.has(String(v.id)));
+    const poolIds = flexPool.map((v) => String(v.id));
+    if (poolIds.length > 0) {
+      const shifts = [-3, -2, -1, 1, 2, 3].filter(
+        (s) => Math.abs(s) <= flexDays
+      );
+      const windows = shifts
+        .map((s) => ({ s: shiftYmd(start!, s), e: shiftYmd(end!, s) }))
+        .filter((w) => w.s < w.e);
+      const blockedSets = await Promise.all(
+        windows.map((w) => getBlockedVillaIds(w.s, w.e, poolIds))
+      );
+      const availableInAny = new Set<string>();
+      for (const id of poolIds) {
+        if (blockedSets.some((bs) => !bs.has(id))) availableInAny.add(id);
+      }
+      flexibleVillas = flexPool
+        .filter((v) => availableInAny.has(String(v.id)))
+        .map((v) => ({ ...v, isFlexible: true }));
+    }
+  }
+
   /* 🛡️ SCALE HARDENING — pagination. `?page=N` + `?pageSize=M`
      searchParams. Filter + availability semantic'i AYNEN; sadece
      görünür dilim `villasOnPage` değişir. SEO `ItemList` da yine
@@ -736,13 +801,18 @@ export default async function AramaPage({ searchParams }: Props) {
     rates,
   });
 
+  /* 🛡️ NORMAL sonuçlar KENDİ sort + pagination'ında (eski davranış
+     BYTE-IDENTICAL). Esnek sonuçlar bu listeye/sort'a/pagination'a
+     GİRMEZ → normal villaların arasına karışmaz; ayrı bölümde altta.
+     `total` = yalnız normal sayı; flexible bunu DEĞİŞTİRMEZ. */
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(Math.max(1, pageRaw), totalPages);
   const sliceStart = (currentPage - 1) * pageSize;
-  const villasOnPage = sortedVillas.slice(
-    sliceStart,
-    sliceStart + pageSize
-  );
+  const villasOnPage = sortedVillas.slice(sliceStart, sliceStart + pageSize);
+
+  /* Esnek sonuç sayısı (banner ikinci satır + bölüm başlığı için).
+     Normal `total` sayısını ETKİLEMEZ; 114+70 gibi toplam gösterilmez. */
+  const flexibleCount = flexibleVillas.length;
 
   /* 🛡️ SEO structured data — BreadcrumbList + ItemList.
      Listede en az 1 villa varsa ItemList yayınlanır (boş listede
@@ -774,6 +844,9 @@ export default async function AramaPage({ searchParams }: Props) {
     start,
     end,
     guests,
+    /* 🛡️ Sidebar "Gelişmiş Arama" checkbox'ı için — URL'de flexible>0 mı.
+       Hero ile AYNI `flexible=3`; checkbox otomatik CHECKED gelir. */
+    flexible: flexDays > 0,
   };
 
   /* 🛡️ PageHero pill etiketleri — eski filter chip'lerinin birebir
@@ -795,17 +868,49 @@ export default async function AramaPage({ searchParams }: Props) {
         ]}
         eyebrow="Kiralık Villalar"
         title={
-          total > 0 ? (
-            <>
-              <span className="tabular-nums">{total}</span> kiralık villa ve
-              yazlık bulundu
-            </>
-          ) : (
-            <>
-              Aradığını{" "}
-              <span className="text-[var(--color-stone-400)]">bulalım.</span>
-            </>
-          )
+          <>
+            {total > 0 ? (
+              <>
+                <span className="tabular-nums">{total}</span> kiralık villa ve
+                yazlık bulundu
+              </>
+            ) : flexActive && flexibleCount > 0 ? (
+              /* Edge case: 0 normal ama esnek sonuç var → normal sayıyı
+                 gizleme, "0 ... bulundu" göster (esnek satırı altında). */
+              <>
+                <span className="tabular-nums">0</span> kiralık villa ve yazlık
+                bulundu
+              </>
+            ) : (
+              <>
+                Aradığını{" "}
+                <span className="text-[var(--color-stone-400)]">bulalım.</span>
+              </>
+            )}
+            {/* 🛡️ İKİNCİ SAYI — yalnız esnek sonuç varken; normal count'a
+                EKLENMEZ (114+70 toplam YOK). Dinamik flexibleCount.
+                Renk: proje token'ları (--brand-coral / champagne) turkuaz
+                olduğu ve hero görseline karıştığı için SICAK AMBER pill:
+                koyu yarı-saydam zemin + backdrop-blur + amber ring/metin →
+                hero'nun her tonunda okunur. Ana başlıktan belirgin küçük;
+                ikincil bilgi. Layout shift yok (title akışında). */}
+            {flexActive && flexibleCount > 0 && (
+              <span className="mt-3 mx-auto flex w-fit max-w-full items-center gap-2 rounded-full bg-[#1a1206]/55 px-3.5 py-1.5 ring-1 ring-[#f59e0b]/45 backdrop-blur-md shadow-[0_10px_24px_-12px_rgba(0,0,0,0.6)]">
+                <Sparkles
+                  size={15}
+                  strokeWidth={2}
+                  className="shrink-0 text-[#fbbf24]"
+                  aria-hidden
+                />
+                <span className="text-[13px] md:text-[15px] font-semibold tracking-normal text-[#ffe0b3] whitespace-normal">
+                  <span className="tabular-nums text-white">
+                    {flexibleCount}
+                  </span>{" "}
+                  alternatif villa daha bulundu
+                </span>
+              </span>
+            )}
+          </>
         }
         pills={heroPills}
       />
@@ -882,7 +987,11 @@ export default async function AramaPage({ searchParams }: Props) {
                   </a>
                 </div>
               </div>
-            ) : total === 0 ? (
+            ) : total === 0 && flexibleCount === 0 ? (
+              /* 🛡️ EMPTY = ne normal ne esnek sonuç var. flexOff'ta
+                 flexibleCount=0 → `total === 0` → BYTE-IDENTICAL eski
+                 davranış. Esnek sonuç varsa (total=0 olsa bile) boş state
+                 GÖSTERİLMEZ; aşağıdaki esnek bölüm devreye girer. */
               /* EMPTY STATE — normal UX. throw / notFound YOK.
                  Sidebar yanında yumuşak boş state; champagne/stone
                  design system ile birebir uyumlu. */
@@ -935,6 +1044,11 @@ export default async function AramaPage({ searchParams }: Props) {
               </div>
             ) : (
               <>
+                {/* 🛡️ NORMAL SONUÇLAR — toolbar + grid + pagination yalnız
+                    total>0 iken (byte-identical eski davranış). Esnek
+                    sonuçlar bu bloğa GİRMEZ. */}
+                {total > 0 && (
+                <>
                 {/* 🛡️ TOOLBAR — sort + page size selector (grid üstü).
                    Kart boyut/yerleşim/grid sınıfları DEĞİŞMEZ; sadece
                    üst kısımda küçük bir toolbar render edilir.
@@ -995,18 +1109,34 @@ export default async function AramaPage({ searchParams }: Props) {
                          (stay + cleaning_fee dahil) gösterir.
                          Yoksa: bu prop'lar undefined kalır, eski
                          "gecelik" davranış aynen devam eder. */
+                      /* 🛡️ Ana tarih (start/end) HER kart için sabit —
+                         esnek villada da detailHref 20→25 taşır. Esnek
+                         villada fiyat prop'ları bastırılır (fiyat motoru
+                         çağrılmaz); VillaCard "±3 gün içinde müsait"
+                         gösterir. Normal villalar birebir eski davranış. */
                       stayStart={hasDateRange ? start! : undefined}
                       stayEnd={hasDateRange ? end! : undefined}
-                      prices={hasDateRange ? villa.prices : undefined}
+                      prices={
+                        hasDateRange && !villa.isFlexible
+                          ? villa.prices
+                          : undefined
+                      }
                       cleaningFee={
-                        hasDateRange ? villa.cleaning_fee : undefined
+                        hasDateRange && !villa.isFlexible
+                          ? villa.cleaning_fee
+                          : undefined
                       }
                       cleaningCurrency={
-                        hasDateRange ? villa.cleaning_currency : undefined
+                        hasDateRange && !villa.isFlexible
+                          ? villa.cleaning_currency
+                          : undefined
                       }
                       cleaningLimit={
-                        hasDateRange ? villa.cleaning_limit : undefined
+                        hasDateRange && !villa.isFlexible
+                          ? villa.cleaning_limit
+                          : undefined
                       }
+                      isFlexible={villa.isFlexible}
                       /* 🛡️ FAZ 35 — review trust meta (★ avg · count). */
                       reviewAverage={villa.review_average}
                       reviewCount={villa.review_count}
@@ -1025,6 +1155,66 @@ export default async function AramaPage({ searchParams }: Props) {
                     totalPages={totalPages}
                     pageSize={pageSize}
                   />
+                )}
+                </>
+                )}
+
+                {/* ═══════════════════════════════════════════════════
+                    ✨ ESNEK TARİH FIRSATLARI — AYRI BÖLÜM
+                    ═══════════════════════════════════════════════════
+                    - Normal sort/pagination DIŞI (kendi tam listesi).
+                    - HER ZAMAN normal sonuçların ALTINDA; son sayfada
+                      (currentPage === totalPages) render edilir.
+                    - Kartlar ANA tarih (start/end) taşır; fiyat GİZLİ
+                      (isFlexible → "±3 gün içinde müsait"). Ana tarih/
+                      fiyat/rezervasyon mantığı DEĞİŞMEZ. */}
+                {flexibleCount > 0 && currentPage === totalPages && (
+                  <div className="mt-14 md:mt-20 border-t border-[var(--color-stone-100)] pt-10 md:pt-14">
+                    <div className="mb-7 md:mb-9 text-center md:text-left">
+                      <p className="text-[11px] tracking-[0.24em] uppercase font-medium text-[var(--brand-coral-deep)]">
+                        <span className="inline-block w-6 h-px bg-[var(--brand-coral)]/50 align-middle mr-2" />
+                        Alternatif Müsaitlik
+                      </p>
+                      <h2 className="font-display text-[26px] md:text-[36px] text-[var(--color-stone-900)] mt-3 tracking-[-0.02em] leading-[1.06]">
+                        Esnek Tarih Fırsatları
+                      </h2>
+                      <p className="text-[var(--color-stone-500)] mt-3 leading-relaxed text-[14px] md:text-[15px] max-w-xl mx-auto md:mx-0">
+                        Seçtiğiniz tarihlerde müsait olmayan ancak ±3 gün içinde
+                        alternatif müsaitlik bulunan villalar.
+                      </p>
+                      <p className="mt-3 text-[13px] font-semibold text-[var(--brand-coral-deep)]">
+                        <span className="tabular-nums">{flexibleCount}</span>{" "}
+                        alternatif villa
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
+                      {flexibleVillas.map((villa) => (
+                        <VillaCard
+                          key={villa.id}
+                          id={villa.id}
+                          slug={villa.slug ?? ""}
+                          title={villa.title ?? ""}
+                          location={villa.location}
+                          price={villa.price ?? undefined}
+                          currency={villa.currency || "TRY"}
+                          images={villa.images}
+                          badge={villa.badge ?? undefined}
+                          bedrooms={villa.bedrooms || 1}
+                          bathrooms={villa.bathrooms || 1}
+                          guests={villa.guests || 2}
+                          /* 🛡️ ANA tarih SABİT → detailHref start/end 20→25
+                             taşır. Fiyat prop'ları verilmez → VillaCard
+                             isFlexible ile "±3 gün içinde müsait" gösterir. */
+                          stayStart={hasDateRange ? start! : undefined}
+                          stayEnd={hasDateRange ? end! : undefined}
+                          isFlexible
+                          reviewAverage={villa.review_average}
+                          reviewCount={villa.review_count}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 )}
               </>
             )}
@@ -1060,6 +1250,10 @@ function buildAramaSearchHref(
   setIf("start", sp.start);
   setIf("end", sp.end);
   setIf("guests", sp.guests);
+  /* 🛡️ ADDITIVE — "Gelişmiş Arama" bayrağını sort/pageSize/pagination
+     navigasyonunda KORU (yoksa esnek sonuçlar ilk tıklamada iptal
+     olurdu). Yoksa yazılmaz → mevcut URL birebir. */
+  setIf("flexible", sp.flexible);
 
   /* page: > 1 ise URL'e yaz, değilse silmek (default 1 clean URL). */
   const p = next.page ?? parsePublicPage(sp.page);

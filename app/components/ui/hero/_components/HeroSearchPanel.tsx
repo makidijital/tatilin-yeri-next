@@ -87,6 +87,12 @@ export default function HeroSearchPanel() {
   const [openCat, setOpenCat] = useState(false);
   const [openRegion, setOpenRegion] = useState(false);
 
+  /* 🛡️ GELİŞMİŞ ARAMA (ADDITIVE) — ±3 gün esnek EK sonuç. Ana tarih/
+     filtre/query davranışını ETKİLEMEZ; yalnız `flexible=3` param'ını
+     ekler. Kapalıyken hiç param yazılmaz → mevcut URL birebir. */
+  const [advOpen, setAdvOpen] = useState(false);
+  const [flexible, setFlexible] = useState(false);
+
   const [categoryOptions, setCategoryOptions] = useState<FilterOption[]>([]);
   const [regionOptions, setRegionOptions] = useState<FilterOption[]>([]);
 
@@ -148,6 +154,8 @@ export default function HeroSearchPanel() {
       guests,
       categoryOptions,
       regionOptions,
+      /* Ana start/end DEĞİŞMEZ; yalnız ek-sonuç bayrağı. */
+      flexible: flexible ? 3 : 0,
     });
     router.push(`/arama?${query}`);
   };
@@ -468,6 +476,49 @@ export default function HeroSearchPanel() {
         <span>Villa bul</span>
       </button>
 
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════
+          🛡️ GELİŞMİŞ ARAMA — panel altında sade/premium expandable.
+          Inline açılır (floating değil) → DatePicker portal / dropdown
+          stacking'iyle ÇAKIŞMAZ. Filtre paneli tasarımına dokunmaz.
+          Checkbox yalnız `flexible` state'ini set eder; Villa Bul'a
+          basınca `flexible=3` param'ı eklenir (ana tarih değişmez).
+          ═══════════════════════════════════════════════════════ */}
+      <div className="mt-3 flex flex-col items-center">
+        <button
+          type="button"
+          onClick={() => setAdvOpen((o) => !o)}
+          aria-expanded={advOpen}
+          className="inline-flex items-center gap-1.5 rounded-full bg-white/75 backdrop-blur-md px-4 py-2 text-[12.5px] font-medium text-[var(--color-stone-700)] border border-white/60 shadow-sm hover:bg-white transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/40"
+        >
+          <ChevronDown
+            size={15}
+            className={
+              "transition-transform duration-200 motion-reduce:transition-none " +
+              (advOpen ? "rotate-180" : "")
+            }
+            aria-hidden
+          />
+          Gelişmiş Arama
+        </button>
+
+        {advOpen && (
+          <div className="mt-2 w-[min(92vw,420px)] rounded-2xl bg-white/95 backdrop-blur-md border border-[var(--color-stone-100)] shadow-[0_20px_44px_-20px_rgba(11,31,58,0.35)] px-4 py-3.5">
+            <label className="flex items-start gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={flexible}
+                onChange={(e) => setFlexible(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded cursor-pointer"
+                style={{ accentColor: "var(--brand-coral)" }}
+              />
+              <span className="text-[13px] leading-snug text-[var(--color-stone-700)]">
+                Sonuçlarda 3 gün önceki ve sonraki villaları da göster
+              </span>
+            </label>
+          </div>
+        )}
       </div>
     </div>
   );

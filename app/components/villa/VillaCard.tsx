@@ -14,6 +14,7 @@ import {
   ArrowUpRight,
   Star,
   CalendarRange,
+  Sparkles,
 } from "lucide-react";
 
 import { convertPrice, formatCurrency } from "@/lib/currency";
@@ -99,6 +100,12 @@ type Props = {
      (kart Link'i içinde nested <a> olmaması için) → onClick router.push +
      stopPropagation (kartın detay navigasyonu tetiklenmez). */
   reserveInfo?: { label: string; nights: number; href: string };
+  /** 🛡️ ADDITIVE — /arama "esnek" EK sonuç işareti. true ise fiyat
+   *  GÖSTERİLMEZ (villa ana tarihte müsait değil); yerine "Esnek Tarih
+   *  Fırsatı · ±3 gün içinde müsait" premium etiketi. Ana tarih/fiyat/
+   *  href akışı DEĞİŞMEZ (yalnız bu kartın fiyat sunumu). Default false
+   *  → mevcut kartlar birebir aynı. Yalnız default (public) variant. */
+  isFlexible?: boolean;
 };
 
 export default function VillaCard({
@@ -123,6 +130,7 @@ export default function VillaCard({
   reviewCount,
   variant = "default",
   reserveInfo,
+  isFlexible = false,
 }: Props) {
   const router = useRouter();
   /* Compact variant flag — curation flow için presentation density.
@@ -848,29 +856,44 @@ export default function VillaCard({
               Fiyat hesabı (stayTotal / convertedPrice branch) title
               satırından buraya BİREBİR taşındı — yeni hesap YOK. */}
           <div className="mt-3.5 flex items-end justify-between gap-3">
-            <div className="min-w-0">
-              {stayTotal !== null ? (
-                <>
-                  <div className="font-display text-[18px] md:text-[19px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
-                    {formatCurrency(stayTotal, currency)}
-                  </div>
-                  <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)] tabular-nums">
-                    {stayNights} gece{hasCleaning ? " · Temizlik dahil" : ""}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="font-display text-[18px] md:text-[19px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
-                    {price ? formatCurrency(convertedPrice, currency) : "Fiyat sorunuz"}
-                  </div>
-                  {price ? (
-                    <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)]">
-                      Başlayan Fiyatlarla
+            {isFlexible ? (
+              /* 🛡️ ESNEK EK SONUÇ — fiyat gösterilmez (villa ana tarihte
+                 müsait değil); premium "Esnek Tarih Fırsatı" sunumu.
+                 Fiyat motoru çağrılmaz; ana tarih/href akışı korunur. */
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-coral-tint)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--brand-coral-deep)]">
+                  <Sparkles size={11} strokeWidth={2} aria-hidden />
+                  Esnek Tarih Fırsatı
+                </div>
+                <div className="mt-1 text-[11px] font-medium text-[var(--color-stone-600)]">
+                  ±3 gün içinde müsait
+                </div>
+              </div>
+            ) : (
+              <div className="min-w-0">
+                {stayTotal !== null ? (
+                  <>
+                    <div className="font-display text-[18px] md:text-[19px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
+                      {formatCurrency(stayTotal, currency)}
                     </div>
-                  ) : null}
-                </>
-              )}
-            </div>
+                    <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)] tabular-nums">
+                      {stayNights} gece{hasCleaning ? " · Temizlik dahil" : ""}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="font-display text-[18px] md:text-[19px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
+                      {price ? formatCurrency(convertedPrice, currency) : "Fiyat sorunuz"}
+                    </div>
+                    {price ? (
+                      <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)]">
+                        Başlayan Fiyatlarla
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            )}
 
             <button
               type="button"

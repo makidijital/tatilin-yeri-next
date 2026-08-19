@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Menu, X, ChevronDown, Heart } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { usePathname } from "next/navigation";
 import TopBar from "./TopBar";
 /* 🛡️ FAZ 36 — Favorites shortcut (localStorage badge counter) */
 import HeaderFavoritesLink from "@/app/components/favorites/HeaderFavoritesLink";
+/* 🛡️ Mobil drawer favori girişi (island: dinamik sayı + menü kapatma).
+   Desktop HeaderFavoritesLink DEĞİŞMEZ. */
+import MobileFavoritesLink from "@/app/components/favorites/MobileFavoritesLink";
 /* 🛡️ Canlı arama paylaşılan component (header + hero) — duplikasyon yok.
    Arama state/debounce/dropdown mantığı VillaSearchBox'a taşındı. */
 import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
@@ -284,24 +287,11 @@ export default function Header({
               </div>
             ))}
 
-            {/* 🛡️ FAZ 36 — Mobile favorites entry.
-               🛡️ FAZ 39C — Coral hover (was cyan champagne). */}
-            <Link
-              href="/favoriler"
-              className="
-                inline-flex items-center justify-center gap-2
-                w-full !py-3 rounded-full
-                border border-[var(--color-stone-200)]
-                text-[13px] font-medium text-[var(--color-stone-700)]
-                hover:border-[var(--brand-coral)]
-                hover:text-[var(--color-stone-900)]
-                hover:bg-[var(--brand-coral-tint)]
-                transition-colors motion-reduce:transition-none
-              "
-            >
-              <Heart size={15} aria-hidden />
-              Favorilerim
-            </Link>
+            {/* 🛡️ FAZ 36 — Mobile favorites entry. Artık island:
+               dinamik favori sayısı (useFavorites) + tıklanınca menü
+               kapanır (onNavigate=setOpen(false)). Route/hook/localStorage
+               AYNEN; desktop favori ikonu ve VillaCard DEĞİŞMEZ. */}
+            <MobileFavoritesLink onNavigate={() => setOpen(false)} />
 
           </div>
         </div>
