@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { Trash2 } from "lucide-react";
 import {
   DndContext,
@@ -121,6 +122,9 @@ export default function AdminGallery({
      Images → updateImageOrder → sort_order) AYNEN korunur. */
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
+  /* 🛡️ SSR guard — DragOverlay yalnız client mount sonrası body'ye
+     portal edilir (server'da document yok). Hydration-safe. */
+  const [mounted, setMounted] = useState(false);
   const sensors = useSensors(
     /* Desktop: 8px hareket eşiği → click/checkbox ile karışmaz.
        Touch: 250ms press-delay + tolerance → kısa dokunma seçim,
@@ -169,6 +173,10 @@ export default function AdminGallery({
       });
     }
   }
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   /* 🛡️ SELECTION PRUNE — silinen görsellerin id'si seçimde kalmasın
      (indicator sayacı doğru kalır). dnd-kit'in yerleşik autoScroll'u
@@ -551,33 +559,44 @@ export default function AdminGallery({
           </div>
         </SortableContext>
 
-        {/* Grup/tekli sürükleme önizlemesi (thumbnail + adet rozeti). */}
-        <DragOverlay>
-          {activeId
-            ? (() => {
-                const a = images.find((i) => i.id === activeId);
-                if (!a) return null;
-                const count = selectedIds.has(activeId)
-                  ? images.filter((i) => selectedIds.has(i.id)).length
-                  : 1;
-                return (
-                  <div className="relative rounded-xl overflow-hidden border shadow-2xl">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={resolveVillaImageUrl(a.image_url) ?? ""}
-                      alt=""
-                      className="w-full h-32 object-cover"
-                    />
-                    {count > 1 && (
-                      <span className="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full shadow">
-                        {count}
-                      </span>
-                    )}
-                  </div>
-                );
-              })()
-            : null}
-        </DragOverlay>
+        {/* Grup/tekli sürükleme önizlemesi (thumbnail + adet rozeti).
+            🛡️ document.body'ye PORTAL — `.card-premium:hover { transform }`
+            fixed containing block'u bozuyordu (yukarı sürüklemede overlay
+            görünmez oluyordu). Portal ile overlay body seviyesinde render
+            edilir → position:fixed tekrar viewport'a göre çalışır, her yönde
+            görünür. React context portal üzerinden korunur → dnd-kit aynen
+            çalışır (activeId/selectedIds/drag algoritması değişmez).
+            zIndex 1000 → admin topbar (z-30) / sidebar (z-50) üstünde. */}
+        {mounted &&
+          createPortal(
+            <DragOverlay zIndex={1000}>
+              {activeId
+                ? (() => {
+                    const a = images.find((i) => i.id === activeId);
+                    if (!a) return null;
+                    const count = selectedIds.has(activeId)
+                      ? images.filter((i) => selectedIds.has(i.id)).length
+                      : 1;
+                    return (
+                      <div className="relative rounded-xl overflow-hidden border shadow-2xl">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={resolveVillaImageUrl(a.image_url) ?? ""}
+                          alt=""
+                          className="w-full h-32 object-cover"
+                        />
+                        {count > 1 && (
+                          <span className="absolute top-1 right-1 bg-blue-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full shadow">
+                            {count}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()
+                : null}
+            </DragOverlay>,
+            document.body
+          )}
       </DndContext>
     </div>
   );
