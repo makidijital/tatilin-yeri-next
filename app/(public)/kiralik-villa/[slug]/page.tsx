@@ -85,6 +85,7 @@ import FavoriteButton from "@/app/components/favorites/FavoriteButton";
 import AvailabilityInlineCalendar from "@/app/components/villa/AvailabilityInlineCalendar";
 
 import Gallery from "@/app/components/villa/Gallery";
+import PrepaymentBadge from "@/app/components/villa/PrepaymentBadge";
 import BookingSidebar from "@/app/components/villa/BookingSidebar";
 import MobileBookingCta from "@/app/components/villa/MobileBookingCta";
 /* 🛡️ Villa info bar — gallery'nin ÜSTÜNDE ayrı premium başlık şeridi
@@ -298,6 +299,13 @@ export default async function VillaDetail({
     getCachedVillaReviews(villa.id),
     getCachedVillaReviewStats(villa.id),
   ]);
+
+  /* 🛡️ ÖN ÖDEME KAMPANYA ORANI (UI-only) — kanonik çözüm birebir:
+     villa override → global settings → fallback 20. Ödeme/rezervasyon
+     hesabına DOKUNULMAZ; yalnız galeri badge'inde gösterilir. */
+  const prepaymentRate =
+    villa.custom_prepayment_rate ?? settings?.prepayment_rate ?? 20;
+
   const watermark = {
     /* 🛡️ Watermark logo, diğer site-asset'ler (site_logo/footer_logo/hero/
        favicon) ile AYNI şekilde resolveAssetUrl'den geçer: bucket-relative
@@ -391,13 +399,18 @@ export default async function VillaDetail({
 
       {/* ═══ GALLERY HERO — full container width (sayfanın ana hero'su).
           Lightbox/click davranışı AYNEN; yalnız DOM konumu yukarı + geniş. */}
-      <div className="rounded-3xl overflow-hidden ring-1 ring-[var(--color-stone-100)]">
+      <div className="relative rounded-3xl overflow-hidden ring-1 ring-[var(--color-stone-100)]">
         {/* 🛡️ SEO + a11y: villa.title → alt text auto-generation. */}
         <Gallery
           images={imageUrls}
           watermark={watermark}
           villaTitle={villa.title}
         />
+        {/* 🛡️ ÖN ÖDEME KAMPANYA BADGE — Gallery DIŞ wrapper'ında overlay.
+            Gallery/lightbox/favorite/watermark/sayaç'a DOKUNULMAZ.
+            pointer-events-none + z-20 (lightbox z-50 altında). Oran dinamik;
+            0/100'de badge kendini gizler. */}
+        <PrepaymentBadge rate={prepaymentRate} />
       </div>
 
       {/* ═══ VILLA INFO ROW — gallery altı, full-width premium info bar.

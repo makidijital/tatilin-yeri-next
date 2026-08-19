@@ -362,7 +362,9 @@ export default function VillaCard({
           {/* FAV BUTTON — top-right (FAZ 36 white glass).
               🛡️ Curation variant: admin curator listesinde favori
               gereksiz → render edilmez. */}
-          {id && !isCuration && <FavoriteButton villaId={id} variant="card" />}
+          {id && !isCuration && (
+            <FavoriteButton villaId={id} variant="card" alwaysVisible />
+          )}
 
           {/* ════════════════════════════════════════════════
               OVERLAY CONTENT (bottom editorial)
@@ -707,7 +709,7 @@ export default function VillaCard({
           )}
 
           {/* FAV BUTTON — top-right */}
-          {id && <FavoriteButton villaId={id} variant="card" />}
+          {id && <FavoriteButton villaId={id} variant="card" alwaysVisible />}
 
           {/* ════════════════════════════════════════════════
               🛡️ İKİNCİ GÖRSEL ÖNİZLEME — YALNIZ discount + images[1]
