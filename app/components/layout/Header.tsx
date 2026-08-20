@@ -7,9 +7,6 @@ import { usePathname } from "next/navigation";
 import TopBar from "./TopBar";
 /* 🛡️ FAZ 36 — Favorites shortcut (localStorage badge counter) */
 import HeaderFavoritesLink from "@/app/components/favorites/HeaderFavoritesLink";
-/* 🛡️ Mobil drawer favori girişi (island: dinamik sayı + menü kapatma).
-   Desktop HeaderFavoritesLink DEĞİŞMEZ. */
-import MobileFavoritesLink from "@/app/components/favorites/MobileFavoritesLink";
 /* 🛡️ Canlı arama paylaşılan component (header + hero) — duplikasyon yok.
    Arama state/debounce/dropdown mantığı VillaSearchBox'a taşındı. */
 import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
@@ -219,6 +216,13 @@ export default function Header({
                  Çift arama olmaması için header mobil arama render EDİLMEZ.
                  Desktop arama (hidden md:flex bloğu) AYNEN korunur. */}
 
+              {/* 🛡️ MOBILE FAVORITES — hamburger'ın solunda ikon-only
+                 favori girişi. Desktop ile AYNI HeaderFavoritesLink
+                 component'i (ikon + köşe badge); yalnız `md:hidden` bu
+                 blokta → desktop cluster'daki kopya etkilenmez. Eski
+                 drawer içi "Favorilerim" satırı kaldırıldı. */}
+              <HeaderFavoritesLink />
+
               {/* HAMBURGER — davranış birebir korundu; görünür "Menü"
                  etiketi eklendi (mobil kullanılabilirlik). */}
               <button
@@ -287,11 +291,9 @@ export default function Header({
               </div>
             ))}
 
-            {/* 🛡️ FAZ 36 — Mobile favorites entry. Artık island:
-               dinamik favori sayısı (useFavorites) + tıklanınca menü
-               kapanır (onNavigate=setOpen(false)). Route/hook/localStorage
-               AYNEN; desktop favori ikonu ve VillaCard DEĞİŞMEZ. */}
-            <MobileFavoritesLink onNavigate={() => setOpen(false)} />
+            {/* 🛡️ Favoriler artık mobil Header strip'te (hamburger'ın
+               solunda ikon-only). Drawer içindeki "Favorilerim" satırı
+               kaldırıldı. */}
 
           </div>
         </div>

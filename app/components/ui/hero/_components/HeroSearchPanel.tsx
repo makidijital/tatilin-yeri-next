@@ -199,6 +199,87 @@ export default function HeroSearchPanel() {
           ring-1 ring-inset ring-white/50
         "
       />
+      {/* DATE */}
+      <div className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white/40 border border-white/50 hover:bg-white/75 hover:border-[var(--color-champagne-500)]/35 transition flex items-center gap-3">
+        <span
+          className="
+            w-9 h-9 rounded-xl shrink-0
+            bg-[var(--brand-coral-tint)]
+            flex items-center justify-center
+            text-[var(--brand-coral)]
+          "
+          aria-hidden
+        >
+          <Calendar size={16} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[10.5px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-500)]">
+            Tarih
+          </div>
+          <DatePicker
+            selected={startDate}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onChange={(dates: any) => {
+              const [start, end] = dates;
+              setStartDate(start);
+              setEndDate(end);
+            }}
+            startDate={startDate}
+            endDate={endDate}
+            selectsRange
+            locale="tr"
+            dateFormat="dd.MM.yyyy"
+            minDate={new Date()}
+            placeholderText="Tarih seç"
+            className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none w-full text-[14px] font-medium !text-[var(--color-stone-900)] placeholder-[var(--color-stone-400)] cursor-pointer"
+            value={dateLabel === "Tarih seç" ? "" : dateLabel}
+            popperPlacement="bottom-start"
+            popperClassName="!z-[60]"
+            portalId="hero-datepicker-portal"
+            /* 🛡️ Mobil sanal klavye baskılama — customInput içinde
+               inputMode="none". Takvim popper'ı, value display,
+               selectsRange, onChange, dateFormat, locale, minDate,
+               placeholderText AYNEN korunur. Desktop davranışı
+               değişmez. Detay: MobileKbSafeInput.tsx başlığı. */
+            customInput={<MobileKbSafeInput />}
+          />
+        </div>
+      </div>
+
+
+      {/* GUESTS */}
+      <div className="px-4 py-3 rounded-xl bg-white/40 border border-white/50 hover:bg-white/75 hover:border-[var(--color-champagne-500)]/35 transition flex items-center gap-3">
+        <span
+          className="
+            w-9 h-9 rounded-xl shrink-0
+            bg-[var(--brand-coral-tint)]
+            flex items-center justify-center
+            text-[var(--brand-coral)]
+          "
+          aria-hidden
+        >
+          <Users size={16} />
+        </span>
+        <div className="min-w-0">
+          <div className="text-[10.5px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-500)]">
+            Kişi
+          </div>
+          <select
+            value={guests}
+            onChange={(e) => setGuests(Number(e.target.value))}
+            className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none text-[14px] font-medium !text-[var(--color-stone-900)] cursor-pointer"
+            style={{ backgroundImage: "none", paddingRight: 0 }}
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
+              <option key={g} value={g}>
+                {g} kişi
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+
       {/* CATEGORY */}
       <div ref={catRef} className="relative flex-1 min-w-0">
         <button
@@ -360,87 +441,6 @@ export default function HeroSearchPanel() {
             })}
           </div>
         )}
-      </div>
-
-
-      {/* DATE */}
-      <div className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white/40 border border-white/50 hover:bg-white/75 hover:border-[var(--color-champagne-500)]/35 transition flex items-center gap-3">
-        <span
-          className="
-            w-9 h-9 rounded-xl shrink-0
-            bg-[var(--brand-coral-tint)]
-            flex items-center justify-center
-            text-[var(--brand-coral)]
-          "
-          aria-hidden
-        >
-          <Calendar size={16} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-[10.5px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-500)]">
-            Tarih
-          </div>
-          <DatePicker
-            selected={startDate}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onChange={(dates: any) => {
-              const [start, end] = dates;
-              setStartDate(start);
-              setEndDate(end);
-            }}
-            startDate={startDate}
-            endDate={endDate}
-            selectsRange
-            locale="tr"
-            dateFormat="dd.MM.yyyy"
-            minDate={new Date()}
-            placeholderText="Tarih seç"
-            className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none w-full text-[14px] font-medium !text-[var(--color-stone-900)] placeholder-[var(--color-stone-400)] cursor-pointer"
-            value={dateLabel === "Tarih seç" ? "" : dateLabel}
-            popperPlacement="bottom-start"
-            popperClassName="!z-[60]"
-            portalId="hero-datepicker-portal"
-            /* 🛡️ Mobil sanal klavye baskılama — customInput içinde
-               inputMode="none". Takvim popper'ı, value display,
-               selectsRange, onChange, dateFormat, locale, minDate,
-               placeholderText AYNEN korunur. Desktop davranışı
-               değişmez. Detay: MobileKbSafeInput.tsx başlığı. */
-            customInput={<MobileKbSafeInput />}
-          />
-        </div>
-      </div>
-
-
-      {/* GUESTS */}
-      <div className="px-4 py-3 rounded-xl bg-white/40 border border-white/50 hover:bg-white/75 hover:border-[var(--color-champagne-500)]/35 transition flex items-center gap-3">
-        <span
-          className="
-            w-9 h-9 rounded-xl shrink-0
-            bg-[var(--brand-coral-tint)]
-            flex items-center justify-center
-            text-[var(--brand-coral)]
-          "
-          aria-hidden
-        >
-          <Users size={16} />
-        </span>
-        <div className="min-w-0">
-          <div className="text-[10.5px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-500)]">
-            Kişi
-          </div>
-          <select
-            value={guests}
-            onChange={(e) => setGuests(Number(e.target.value))}
-            className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none text-[14px] font-medium !text-[var(--color-stone-900)] cursor-pointer"
-            style={{ backgroundImage: "none", paddingRight: 0 }}
-          >
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
-              <option key={g} value={g}>
-                {g} kişi
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
 
       {/* SEARCH CTA — filtre submit (handleSearch → /arama). Turkuaz
