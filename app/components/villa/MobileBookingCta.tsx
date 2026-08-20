@@ -58,9 +58,29 @@ export default function MobileBookingCta({
   function handleClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
     if (typeof document === "undefined") return;
-    const target = document.getElementById(targetId);
-    if (!target) return;
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    /* 🛡️ MOBİL SCROLL HİZASI — "ikinci ekran" hedefi:
+       [Header] altında → [TARİH] → [MİSAFİR].
+       Öncelik: Tarih kartı (#booking-date-field) sticky header'ın HEMEN
+       ALTINA hizalanır. Bulunamazsa aside (targetId) fallback (eski
+       davranış korunur). Header yüksekliği GERÇEK DOM ölçümüyle alınır
+       (sabit px yok → responsive + adres-çubuğu değişimine dayanıklı).
+       Rezervasyon/tarih/fiyat/backend mantığına DOKUNULMAZ — yalnız
+       scroll hizası. Desktop'ta bu component `lg:hidden` → handler hiç
+       çalışmaz, mevcut sticky sidebar aynen. */
+    const el =
+      document.getElementById("booking-date-field") ||
+      document.getElementById(targetId);
+    if (!el) return;
+
+    const header = document.querySelector("header");
+    const headerH = header ? header.getBoundingClientRect().height : 0;
+    const GAP = 12; // Tarih kartının üstünde küçük, kontrollü boşluk
+
+    const top =
+      el.getBoundingClientRect().top + window.scrollY - headerH - GAP;
+
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
   }
 
   const hasPrice =

@@ -194,7 +194,10 @@ export default function BookingSidebar({
       "
     >
       {/* DATE */}
-      <div ref={ref} className="relative">
+      {/* 🛡️ id="booking-date-field" — MobileBookingCta scroll hedefi
+         (Tarih kartı sticky header'ın hemen altına hizalanır). Yalnız
+         anchor; tasarım/tarih-seçim mantığı DEĞİŞMEZ. */}
+      <div ref={ref} id="booking-date-field" className="relative">
         <div
           onClick={() => {
             const targetMonth = endDate || startDate || new Date();
