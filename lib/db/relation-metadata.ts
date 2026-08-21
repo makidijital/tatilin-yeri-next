@@ -87,6 +87,17 @@ export const RELATION_METADATA: Readonly<Record<string, ReadonlyArray<RelationDe
       localKey: "id",
       foreignKey: "villa_id",
     },
+    {
+      /* villa → property_owners (villa.owner_id FK, migration 044).
+         Yalnız güvenli alanlar (first_name/last_name/phone) embed edilir;
+         email/iban PII ASLA public read'e çıkmaz (caller select'i sınırlar).
+         Rezervasyon paylaşım sayfası için reservations→villa→owner nested. */
+      alias: "owner",
+      table: "property_owners",
+      cardinality: "one",
+      localKey: "owner_id",
+      foreignKey: "id",
+    },
   ],
 
   /* reservations → villa (operations + reservation detay embed'i) +

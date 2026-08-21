@@ -31,6 +31,10 @@ export type ReservationShareRow = {
   status: string | null;
   payment_link_status: string | null;
   payment_preference: string | null;
+  /* Misafir iletişim (rezervasyonun kendi kaydı). */
+  name: string | null;
+  phone: string | null;
+  email: string | null;
   start_date: string | null;
   end_date: string | null;
   guests: number | null;
@@ -50,6 +54,12 @@ export type ReservationShareRow = {
           sort_order: number | null;
         }>
       | null;
+    /* Mülk sahibi — YALNIZ güvenli alanlar (email/iban embed EDİLMEZ). */
+    owner: {
+      first_name: string | null;
+      last_name: string | null;
+      phone: string | null;
+    } | null;
   } | null;
 };
 
@@ -134,6 +144,9 @@ export const reservationShareRepository = {
          status,
          payment_link_status,
          payment_preference,
+         name,
+         phone,
+         email,
          start_date,
          end_date,
          guests,
@@ -144,7 +157,7 @@ export const reservationShareRepository = {
          remaining_payment,
          original_currency,
          payment_method:payment_method_id ( type ),
-         villa:villa_id ( title, villa_images ( image_url, is_cover, sort_order ) )`
+         villa:villa_id ( title, villa_images ( image_url, is_cover, sort_order ), owner:owner_id ( first_name, last_name, phone ) )`
       )
       .eq("id", id)
       .limit(1);

@@ -58,6 +58,13 @@ export type ReservationShareDTO = {
   isFullPayment: boolean;
   /** "Havale/EFT" | "Kredi Kartı" | null (yöntem tanımlı değilse). */
   paymentMethodLabel: string | null;
+  /* Mülk sahibi — yalnız ad + telefon (email/iban ASLA). villa.owner yoksa null. */
+  ownerName: string | null;
+  ownerPhone: string | null;
+  /* Misafir — rezervasyonun kendi kaydı (name/phone/email). */
+  guestName: string | null;
+  guestPhone: string | null;
+  guestEmail: string | null;
 };
 
 export type ReservationShareResult =
@@ -123,6 +130,9 @@ export async function resolveReservationShare(
           status: string | null;
           payment_link_status: string | null;
           payment_preference: string | null;
+          name: string | null;
+          phone: string | null;
+          email: string | null;
           start_date: string | null;
           end_date: string | null;
           guests: number | null;
@@ -142,6 +152,11 @@ export async function resolveReservationShare(
                   sort_order: number | null;
                 }>
               | null;
+            owner: {
+              first_name: string | null;
+              last_name: string | null;
+              phone: string | null;
+            } | null;
           } | null;
         })
       : null;
@@ -192,6 +207,21 @@ export async function resolveReservationShare(
         ? "Havale/EFT"
         : null;
 
+  /* Mülk sahibi — yalnız ad + telefon (email/iban embed edilmedi). */
+  const owner = row.villa?.owner ?? null;
+  const ownerName = owner
+    ? [owner.first_name, owner.last_name]
+        .map((s) => (s || "").trim())
+        .filter(Boolean)
+        .join(" ") || null
+    : null;
+  const ownerPhone = owner?.phone?.trim() || null;
+
+  /* Misafir — rezervasyonun kendi kaydı. */
+  const guestName = row.name?.trim() || null;
+  const guestPhone = row.phone?.trim() || null;
+  const guestEmail = row.email?.trim() || null;
+
   return {
     kind: "ok",
     data: {
@@ -211,6 +241,11 @@ export async function resolveReservationShare(
       prepayment: prepay > 0 ? prepay : null,
       isFullPayment,
       paymentMethodLabel,
+      ownerName,
+      ownerPhone,
+      guestName,
+      guestPhone,
+      guestEmail,
     },
   };
 }

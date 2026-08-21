@@ -5,6 +5,7 @@ import {
   Users,
   CreditCard,
   Clock,
+  User,
 } from "lucide-react";
 
 import { getCachedSettings } from "@/lib/cache.helpers";
@@ -172,14 +173,11 @@ export default async function ReservationShareView({
 
           {/* ÖDEME PLANI — Ön Ödeme / Tam Ödeme + Kalan (Girişte Alınacak) */}
           <div className="mt-4 space-y-2 border-t border-[var(--color-stone-100)] pt-4">
-            <div className="flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
-              <span className="text-[13px] text-[var(--color-stone-700)]">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
+              <span className="text-[13.5px] font-medium text-[var(--color-stone-800)]">
                 {data.isFullPayment
                   ? "Tam Ödeme"
                   : `Ön Ödeme (${TL(data.prepayment)})`}
-              </span>
-              <span className="text-[13.5px] font-semibold text-emerald-700 tabular-nums">
-                {TL(data.isFullPayment ? data.total : data.prepayment)} ✓
               </span>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-[var(--color-stone-100)] px-4 py-3">
@@ -193,6 +191,65 @@ export default async function ReservationShareView({
           </div>
         </section>
       )}
+
+      {/* MÜLK SAHİBİ + MİSAFİR İLETİŞİM — tek kart, ince divider ile. */}
+      <section className="mt-5 rounded-2xl border border-[var(--color-stone-100)] bg-white p-5 md:p-6">
+        <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-[var(--color-stone-500)]">
+          <User size={15} className="text-[var(--brand-coral)]" aria-hidden />
+          Mülk Sahibi İletişim Bilgileri
+        </h2>
+        {data.ownerName || data.ownerPhone ? (
+          <div className="mt-3 space-y-1">
+            {data.ownerName && (
+              <p className="text-[15px] font-medium text-[var(--color-stone-900)]">
+                {data.ownerName}
+              </p>
+            )}
+            {data.ownerPhone && (
+              <p className="text-[14px] text-[var(--color-stone-600)] tabular-nums">
+                {data.ownerPhone}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="mt-3 text-[13.5px] text-[var(--color-stone-500)]">
+            Mülk sahibi iletişim bilgileri bulunmuyor.
+          </p>
+        )}
+
+        <div className="my-5 border-t border-[var(--color-stone-100)]" />
+
+        <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-[var(--color-stone-500)]">
+          <User size={15} className="text-[var(--brand-coral)]" aria-hidden />
+          Misafir İletişim Bilgileri
+        </h2>
+        <dl className="mt-3 space-y-1.5 text-[14px]">
+          <div className="flex gap-3">
+            <dt className="w-24 shrink-0 text-[var(--color-stone-500)]">
+              Ad Soyad
+            </dt>
+            <dd className="min-w-0 font-medium text-[var(--color-stone-900)]">
+              {data.guestName || "—"}
+            </dd>
+          </div>
+          <div className="flex gap-3">
+            <dt className="w-24 shrink-0 text-[var(--color-stone-500)]">
+              Telefon
+            </dt>
+            <dd className="min-w-0 text-[var(--color-stone-900)] tabular-nums">
+              {data.guestPhone || "—"}
+            </dd>
+          </div>
+          <div className="flex gap-3">
+            <dt className="w-24 shrink-0 text-[var(--color-stone-500)]">
+              E-posta
+            </dt>
+            <dd className="min-w-0 break-all text-[var(--color-stone-900)]">
+              {data.guestEmail || "—"}
+            </dd>
+          </div>
+        </dl>
+      </section>
 
       {/* İLETİŞİM */}
       {(whatsappHref || phoneHref) && (
