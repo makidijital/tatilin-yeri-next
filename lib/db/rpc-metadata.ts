@@ -32,6 +32,7 @@ export const RPC_RETURN_KIND: Readonly<Record<string, RpcReturnKind>> = {
   check_villa_availability_conflict: "scalar", // returns boolean
   cleanup_past_manual_reservations: "scalar", // returns integer
   consume_villa_zip_token: "scalar", // returns uuid
+  resolve_reservation_share_token: "scalar", // returns uuid
   get_public_settings: "scalar", // returns jsonb
   refresh_villa_short_gaps: "scalar", // returns integer
 
