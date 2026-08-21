@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 070 — RESERVATION SHARE LINKS (admin-only RLS + resolve RPC)
+-- Migration 070 — RESERVATION SHARE LINKS (native PostgreSQL 16)
 -- ============================================================================
 -- AMAÇ:
 --   Admin panelden bir rezervasyon için süreli/iptal-edilebilir "güvenli
@@ -8,32 +8,31 @@
 --   girmeden. Mevcut `reservation_no + e-posta` sorgulama akışı AYNEN kalır;
 --   bu tamamen ADDITIVE ikinci erişim kanalıdır.
 --
---   Tablo `villa_zip_links` (043) / `shared_villa_lists` (035) desenini izler:
---   token + expires_at + revoked_at + lazy 404 + admin-only RLS + SECURITY
---   DEFINER resolve RPC. FARK: raw token DEĞİL, `token_hash` (sha256)
---   saklanır (refresh-token deseni; DB sızması linkleri açığa çıkarmaz).
+--   Tablo `token_hash + expires_at + revoked_at + lazy 404` desenini izler.
+--   Raw token DEĞİL, `token_hash` (sha256) saklanır (refresh-token deseni;
+--   DB sızması linkleri açığa çıkarmaz).
 --
 --   EXPIRATION: caller `expires_at`'i rezervasyonun `end_date + 3 gün`
---   olarak set eder (uydurma sabit süre yok; rezervasyon semantiğinden
---   türer). Mekanizma villa_zip_links ile aynı (`expires_at > now()` filtre).
+--   olarak set eder (uydurma sabit süre yok; rezervasyon semantiğinden türer).
 --
---   MULTI-USE: villa_zip'in tek-kullanım consume/counter'ından FARKLI —
---   müşteri linki defalarca açabilmeli → RPC sadece OKUR (counter yok).
+--   MULTI-USE: müşteri linki defalarca açabilmeli → RPC sadece OKUR (counter
+--   yok, tek-kullanım yok).
 --
--- ERİŞİM MODELİ:
---   • Tablo admin-only RLS (043 deseni): yalnız aktif admin + service_role.
---   • Public resolve route/action (server, service_role) `resolve_reservation
---     _share_token` RPC'sini çağırır: token_hash doğrula (revoked/expired
---     hariç) → reservation_id döndür; aksi → null. SECURITY DEFINER → RLS
---     bypass, yalnız bu kontrollü yüzeyden. `reservations` tablosuna DOKUNMAZ.
+-- ⚠️ NATIVE AUTHZ MODELİ (068 ile aynı — RLS / role-grant YOK):
+--   Hedef Hetzner PostgreSQL 16'da Supabase-özgü public/JWT rolleri YOKTUR →
+--   RLS + role-grant eklemek vanilla PG'de ERROR üretir.
+--   Native provider tek ayrıcalıklı app-rolü ile çalışır; yetki UYGULAMA
+--   KATMANINDA (admin yazma: authorizeAdminCaller; public resolve: server-only
+--   native repo + aşağıdaki SECURITY DEFINER RPC). Tablo yalnız server-only
+--   native repo'dan yazılır/okunur. Bu yüzden GRANT/REVOKE/RLS/POLICY YOK.
 --
--- ÖZELLİKLER: idempotent · transaction-safe · fail-safe · rollback-safe.
--- FORCE RLS / restrictive YOK → service_role bypass korunur.
+-- ÖZELLİKLER: idempotent · --single-transaction uyumlu · rollback-safe.
 -- ============================================================================
 
 
 -- ----------------------------------------------------------------------------
--- 0) GUARD garanti (idempotent) — is_active_admin() (043'te tanımlı; tekrar).
+-- 0) is_active_admin() — mevcut migration'daki haliyle KORUNDU (idempotent).
+--    (Native'de RLS'te kullanılmaz; app-layer helper olarak bırakıldı.)
 -- ----------------------------------------------------------------------------
 create index if not exists idx_admin_users_auth_user_id
   on public.admin_users (auth_user_id);
@@ -50,9 +49,6 @@ as $$
     where au.auth_user_id = auth.uid() and au.is_active = true
   );
 $$;
-
-revoke all on function public.is_active_admin() from public;
-grant execute on function public.is_active_admin() to anon, authenticated, service_role;
 
 
 -- ----------------------------------------------------------------------------
@@ -77,63 +73,13 @@ create index if not exists reservation_share_links_res_created_idx
 
 
 -- ----------------------------------------------------------------------------
--- 2) RLS — admin-only (043 deseni: keşfet → temizle → verify → canonical → verify)
+-- 2) RESOLVE RPC — token_hash doğrula → reservation_id döndür (MULTI-USE, OKUR)
 -- ----------------------------------------------------------------------------
-do $rls$
-declare
-  t         text := 'reservation_share_links';
-  pol       record;
-  v_canon   text := 'reservation_share_links_admin_only';
-  v_stray   int;
-  v_final   int;
-  v_dropped int := 0;
-begin
-  execute format('alter table public.%I enable row level security;', t);
-
-  for pol in
-    select policyname from pg_policies
-    where schemaname='public' and tablename=t and policyname <> v_canon
-  loop
-    execute format('drop policy %I on public.%I;', pol.policyname, t);
-    v_dropped := v_dropped + 1;
-    raise notice 'CLEANUP [%]: legacy policy "%" DROP edildi', t, pol.policyname;
-  end loop;
-
-  execute format('drop policy if exists %I on public.%I;', v_canon, t);
-
-  select count(*) into v_stray from pg_policies
-  where schemaname='public' and tablename=t;
-  if v_stray <> 0 then
-    raise exception 'RLS DRIFT [%]: cleanup sonrası % policy (beklenen 0). Abort.', t, v_stray;
-  end if;
-
-  execute format($f$
-    create policy %I on public.%I
-      as permissive for all to authenticated
-      using (public.is_active_admin())
-      with check (public.is_active_admin());
-  $f$, v_canon, t);
-
-  select count(*) into v_final from pg_policies
-  where schemaname='public' and tablename=t;
-  if v_final <> 1 then
-    raise exception 'RLS VERIFY [%]: beklenen 1 policy, bulunan %. Abort.', t, v_final;
-  end if;
-
-  raise notice 'OK [%]: RLS açık, % legacy temizlendi, canonical "%" kuruldu',
-    t, v_dropped, v_canon;
-end
-$rls$;
-
-
--- ----------------------------------------------------------------------------
--- 3) RESOLVE RPC — token_hash doğrula → reservation_id döndür (MULTI-USE, OKUR)
--- ----------------------------------------------------------------------------
--- SECURITY DEFINER: tablo admin-only RLS olsa da bu RPC tek satırı token_hash
--- ile OKUR. Yalnız geçerli (revoked değil + süresi dolmamış) token için
--- reservation_id döner; aksi → null. Counter YOK (link çok-kullanımlık →
--- müşteri defalarca açabilir). Public resolve route (service_role) çağırır.
--- Listeleme/enumerate YOK.
+-- SECURITY DEFINER: tek satırı token_hash ile OKUR. Yalnız geçerli (revoked
+-- değil + süresi dolmamış) token için reservation_id döner; aksi → null.
+-- Counter YOK (çok-kullanımlık). Public resolve akışı (server-only native
+-- repo) çağırır. Listeleme/enumerate YOK. Native tek app-rolü ile çalıştığı
+-- için GRANT/REVOKE eklenmez (068 yaklaşımı).
 create or replace function public.resolve_reservation_share_token(p_token_hash text)
 returns uuid
 language sql
@@ -149,10 +95,6 @@ as $$
    limit 1;
 $$;
 
-revoke all on function public.resolve_reservation_share_token(text) from public;
--- Yalnız server-side service_role tetikler (token-resolve public yüzeyden değil).
-grant execute on function public.resolve_reservation_share_token(text) to service_role;
-
 
 -- ----------------------------------------------------------------------------
 -- DOĞRULAMA / ROLLBACK
@@ -160,6 +102,5 @@ grant execute on function public.resolve_reservation_share_token(text) to servic
 -- select public.resolve_reservation_share_token('<sha256_hash>');  -- reservation_id | null
 -- ROLLBACK:
 --   drop function if exists public.resolve_reservation_share_token(text);
---   drop policy if exists reservation_share_links_admin_only on public.reservation_share_links;
 --   drop table if exists public.reservation_share_links;
 -- ============================================================================
