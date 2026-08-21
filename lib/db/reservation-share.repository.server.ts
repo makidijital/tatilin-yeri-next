@@ -30,6 +30,7 @@ export type ReservationShareRow = {
   reservation_no: string | null;
   status: string | null;
   payment_link_status: string | null;
+  payment_preference: string | null;
   start_date: string | null;
   end_date: string | null;
   guests: number | null;
@@ -39,7 +40,17 @@ export type ReservationShareRow = {
   prepayment_amount: number | null;
   remaining_payment: number | null;
   original_currency: string | null;
-  villa: { title: string | null } | null;
+  payment_method: { type: string | null } | null;
+  villa: {
+    title: string | null;
+    villa_images:
+      | Array<{
+          image_url: string | null;
+          is_cover: boolean | null;
+          sort_order: number | null;
+        }>
+      | null;
+  } | null;
 };
 
 export const reservationShareRepository = {
@@ -122,6 +133,7 @@ export const reservationShareRepository = {
         `reservation_no,
          status,
          payment_link_status,
+         payment_preference,
          start_date,
          end_date,
          guests,
@@ -131,7 +143,8 @@ export const reservationShareRepository = {
          prepayment_amount,
          remaining_payment,
          original_currency,
-         villa:villa_id ( title )`
+         payment_method:payment_method_id ( type ),
+         villa:villa_id ( title, villa_images ( image_url, is_cover, sort_order ) )`
       )
       .eq("id", id)
       .limit(1);

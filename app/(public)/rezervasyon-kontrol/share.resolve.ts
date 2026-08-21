@@ -2,6 +2,13 @@ import "server-only";
 
 import { reservationShareRepository } from "@/lib/db/reservation-share.repository.server";
 import { hashShareToken } from "@/lib/reservation-share.helper";
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+import { paymentMethodType } from "@/lib/payment-link.helper";
+
+/* 🛡️ Site geneli standart giriş/çıkış saatleri — CheckInOutTimes.tsx ile
+   AYNI değerler (projede villa/ayar bazlı saat kaynağı YOK; tek standart). */
+const CHECK_IN_TIME = "16:00";
+const CHECK_OUT_TIME = "10:00";
 
 /* ===============================================================
    🛡️ RESERVATION SHARE — TOKEN RESOLVE (server-only)
@@ -32,17 +39,25 @@ export type ReservationShareStatusKey =
 export type ReservationShareDTO = {
   reservationNo: string;
   villaTitle: string;
+  /** Villa kapak görseli (resolved URL) — yoksa null (layout bozulmaz). */
+  villaImage: string | null;
   startDate: string | null;
   endDate: string | null;
   nights: number | null;
   guests: number | null;
   statusKey: ReservationShareStatusKey;
+  /** Site standardı giriş/çıkış saatleri (16:00 / 10:00). */
+  checkInTime: string;
+  checkOutTime: string;
   /** Ödeme özeti — TRY (rezervasyon accounting currency). */
   total: number | null;
   paid: number | null;
   remaining: number | null;
-  prepaymentPct: number | null;
-  remainingPct: number | null;
+  prepayment: number | null;
+  /** payment_preference === "full_payment". */
+  isFullPayment: boolean;
+  /** "Havale/EFT" | "Kredi Kartı" | null (yöntem tanımlı değilse). */
+  paymentMethodLabel: string | null;
 };
 
 export type ReservationShareResult =
@@ -107,6 +122,7 @@ export async function resolveReservationShare(
           reservation_no: string | null;
           status: string | null;
           payment_link_status: string | null;
+          payment_preference: string | null;
           start_date: string | null;
           end_date: string | null;
           guests: number | null;
@@ -116,7 +132,17 @@ export async function resolveReservationShare(
           prepayment_amount: number | null;
           remaining_payment: number | null;
           original_currency: string | null;
-          villa: { title: string | null } | null;
+          payment_method: { type: string | null } | null;
+          villa: {
+            title: string | null;
+            villa_images:
+              | Array<{
+                  image_url: string | null;
+                  is_cover: boolean | null;
+                  sort_order: number | null;
+                }>
+              | null;
+          } | null;
         })
       : null;
   if (!row) return { kind: "invalid" };
@@ -141,27 +167,50 @@ export async function resolveReservationShare(
   const paid = num(row.paid_amount);
   const prepay = num(row.prepayment_amount);
   const remaining = num(row.remaining_payment);
+  const isFullPayment =
+    (row.payment_preference ?? "").toString().trim().toLowerCase() ===
+    "full_payment";
 
-  const prepaymentPct =
-    total > 0 && prepay > 0 ? Math.round((prepay / total) * 100) : null;
-  const remainingPct =
-    prepaymentPct !== null ? Math.max(0, 100 - prepaymentPct) : null;
+  /* Villa kapak görseli — is_cover öncelik, yoksa ilk geçerli (mevcut
+     resolveVillaImageUrl; yeni storage sistemi yok). Yoksa null. */
+  const imgs = Array.isArray(row.villa?.villa_images)
+    ? row.villa!.villa_images
+    : [];
+  const coverRaw =
+    imgs.find((i) => i?.is_cover)?.image_url ?? imgs[0]?.image_url ?? null;
+  const villaImage = coverRaw ? resolveVillaImageUrl(coverRaw) ?? null : null;
+
+  /* Ödeme yöntemi etiketi — mevcut paymentMethodType helper (kafadan
+     üretme yok). Yöntem tanımlı değilse null (parantez gösterilmez). */
+  const pmType = row.payment_method
+    ? paymentMethodType(row.payment_method)
+    : null;
+  const paymentMethodLabel =
+    pmType === "credit_card"
+      ? "Kredi Kartı"
+      : pmType === "bank_transfer"
+        ? "Havale/EFT"
+        : null;
 
   return {
     kind: "ok",
     data: {
       reservationNo: (row.reservation_no || "").toString(),
       villaTitle: (row.villa?.title || "Villa").toString(),
+      villaImage,
       startDate: row.start_date ?? null,
       endDate: row.end_date ?? null,
       nights: nightsBetween(row.start_date, row.end_date),
       guests: Number(row.guests) || null,
       statusKey,
+      checkInTime: CHECK_IN_TIME,
+      checkOutTime: CHECK_OUT_TIME,
       total: total > 0 ? total : null,
       paid: paid > 0 ? paid : 0,
-      remaining: remaining > 0 ? remaining : null,
-      prepaymentPct,
-      remainingPct,
+      remaining: isFullPayment ? 0 : remaining > 0 ? remaining : null,
+      prepayment: prepay > 0 ? prepay : null,
+      isFullPayment,
+      paymentMethodLabel,
     },
   };
 }

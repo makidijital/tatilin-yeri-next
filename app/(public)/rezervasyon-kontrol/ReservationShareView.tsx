@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { CheckCircle2, CalendarDays, Users, CreditCard } from "lucide-react";
+import {
+  CheckCircle2,
+  CalendarDays,
+  Users,
+  CreditCard,
+  Clock,
+} from "lucide-react";
 
 import { getCachedSettings } from "@/lib/cache.helpers";
 import type { ReservationShareDTO } from "./share.resolve";
@@ -19,17 +25,23 @@ import type { ReservationShareDTO } from "./share.resolve";
 const TL = (v: number | null): string =>
   v === null ? "—" : `${Math.round(v).toLocaleString("tr-TR")} TL`;
 
+/** "21 Eylül 2026, Pazartesi" — gün adı tarihten dinamik türetilir (TR). */
 function formatDateTr(iso: string | null): string {
   if (!iso) return "—";
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   if (!m) return "—";
   const dt = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-  return dt.toLocaleDateString("tr-TR", {
+  const base = dt.toLocaleDateString("tr-TR", {
     day: "numeric",
     month: "long",
     year: "numeric",
     timeZone: "UTC",
   });
+  const weekday = dt.toLocaleDateString("tr-TR", {
+    weekday: "long",
+    timeZone: "UTC",
+  });
+  return `${base}, ${weekday}`;
 }
 
 export default async function ReservationShareView({
@@ -74,38 +86,60 @@ export default async function ReservationShareView({
           <CalendarDays size={15} className="text-[var(--brand-coral)]" aria-hidden />
           Konaklama Bilgileri
         </h2>
-        <p className="mt-3 font-display text-[22px] text-[var(--color-stone-900)] tracking-[-0.01em]">
-          {data.villaTitle}
-        </p>
-        <div className="mt-4 grid grid-cols-2 gap-4 text-[14px]">
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-stone-400)] font-semibold">
-              Giriş
+        <div className="mt-4 flex flex-col sm:flex-row gap-4 md:gap-5">
+          {/* Villa kapak görseli — sol; yoksa hiç render edilmez
+              (layout bozulmaz). Mevcut resolveVillaImageUrl kaynağı. */}
+          {data.villaImage && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={data.villaImage}
+              alt={data.villaTitle}
+              className="w-full h-44 rounded-xl object-cover shrink-0 sm:w-40 sm:h-auto sm:self-stretch md:w-44"
+            />
+          )}
+
+          {/* Bilgiler — sağ */}
+          <div className="flex-1 min-w-0">
+            <p className="font-display text-[22px] text-[var(--color-stone-900)] tracking-[-0.01em]">
+              {data.villaTitle}
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-4 text-[14px]">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-stone-400)] font-semibold">
+                  Giriş
+                </div>
+                <div className="mt-1 font-medium text-[var(--color-stone-900)]">
+                  {formatDateTr(data.startDate)}
+                </div>
+                <div className="mt-1 inline-flex items-center gap-1 text-[13px] text-[var(--color-stone-500)] tabular-nums">
+                  <Clock size={13} aria-hidden /> {data.checkInTime}
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-stone-400)] font-semibold">
+                  Çıkış
+                </div>
+                <div className="mt-1 font-medium text-[var(--color-stone-900)]">
+                  {formatDateTr(data.endDate)}
+                </div>
+                <div className="mt-1 inline-flex items-center gap-1 text-[13px] text-[var(--color-stone-500)] tabular-nums">
+                  <Clock size={13} aria-hidden /> {data.checkOutTime}
+                </div>
+              </div>
             </div>
-            <div className="mt-1 font-medium text-[var(--color-stone-900)]">
-              {formatDateTr(data.startDate)}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {data.nights !== null && (
+                <span className="inline-flex items-center rounded-full bg-[var(--color-sand-50)] px-3 py-1 text-[12.5px] font-medium text-[var(--color-stone-700)]">
+                  {data.nights} gece
+                </span>
+              )}
+              {data.guests !== null && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-sand-50)] px-3 py-1 text-[12.5px] font-medium text-[var(--color-stone-700)]">
+                  <Users size={13} aria-hidden /> {data.guests} misafir
+                </span>
+              )}
             </div>
           </div>
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-stone-400)] font-semibold">
-              Çıkış
-            </div>
-            <div className="mt-1 font-medium text-[var(--color-stone-900)]">
-              {formatDateTr(data.endDate)}
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {data.nights !== null && (
-            <span className="inline-flex items-center rounded-full bg-[var(--color-sand-50)] px-3 py-1 text-[12.5px] font-medium text-[var(--color-stone-700)]">
-              {data.nights} gece
-            </span>
-          )}
-          {data.guests !== null && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-sand-50)] px-3 py-1 text-[12.5px] font-medium text-[var(--color-stone-700)]">
-              <Users size={13} aria-hidden /> {data.guests} misafir
-            </span>
-          )}
         </div>
       </section>
 
@@ -119,7 +153,7 @@ export default async function ReservationShareView({
           <dl className="mt-4 space-y-3">
             <div className="flex items-center justify-between">
               <dt className="text-[14px] text-[var(--color-stone-600)]">
-                Toplam Konaklama
+                Toplam Konaklama Tutarı
               </dt>
               <dd className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums">
                 {TL(data.total)}
@@ -127,51 +161,33 @@ export default async function ReservationShareView({
             </div>
             <div className="flex items-center justify-between">
               <dt className="text-[14px] text-[var(--color-stone-600)]">
-                Ödenen
+                Ödenen Tutar
+                {data.paymentMethodLabel ? ` (${data.paymentMethodLabel})` : ""}
               </dt>
               <dd className="text-[15px] font-semibold text-emerald-700 tabular-nums">
                 {TL(data.paid)}
               </dd>
             </div>
-            <div className="flex items-center justify-between border-t border-[var(--color-stone-100)] pt-3">
-              <dt className="text-[14px] font-medium text-[var(--color-stone-900)]">
-                Kalan Ödeme
-              </dt>
-              <dd className="font-display text-[20px] font-semibold text-[var(--color-stone-900)] tabular-nums">
-                {TL(data.remaining)}
-              </dd>
-            </div>
           </dl>
 
-          {data.prepaymentPct !== null && (
-            <div className="mt-4 rounded-xl bg-[var(--color-sand-50)] px-4 py-3 text-[13px] text-[var(--color-stone-700)]">
-              <span className="font-semibold text-[var(--color-stone-900)]">
-                %{data.prepaymentPct}
-              </span>{" "}
-              şimdi ödendi ·{" "}
-              <span className="font-semibold text-[var(--color-stone-900)]">
-                %{data.remainingPct}
-              </span>{" "}
-              girişte ödenecek
-            </div>
-          )}
-
-          {/* ÖDEME PLANI */}
-          <div className="mt-4 space-y-2">
+          {/* ÖDEME PLANI — Ön Ödeme / Tam Ödeme + Kalan (Girişte Alınacak) */}
+          <div className="mt-4 space-y-2 border-t border-[var(--color-stone-100)] pt-4">
             <div className="flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
               <span className="text-[13px] text-[var(--color-stone-700)]">
-                Rezervasyon sırasında ödenen
+                {data.isFullPayment
+                  ? "Tam Ödeme"
+                  : `Ön Ödeme (${TL(data.prepayment)})`}
               </span>
               <span className="text-[13.5px] font-semibold text-emerald-700 tabular-nums">
-                {TL(data.paid)} ✓
+                {TL(data.isFullPayment ? data.total : data.prepayment)} ✓
               </span>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-[var(--color-stone-100)] px-4 py-3">
               <span className="text-[13px] text-[var(--color-stone-700)]">
-                Konaklama sırasında ödenecek
+                Kalan Ödeme (Girişte Alınacak)
               </span>
               <span className="text-[13.5px] font-semibold text-[var(--color-stone-900)] tabular-nums">
-                {TL(data.remaining)}
+                {TL(data.isFullPayment ? 0 : data.remaining)}
               </span>
             </div>
           </div>
