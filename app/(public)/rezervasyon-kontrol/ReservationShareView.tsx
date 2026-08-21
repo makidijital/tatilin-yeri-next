@@ -215,16 +215,6 @@ export default async function ReservationShareView({
               </dd>
             </div>
 
-            {/* Ön Ödeme — Toplam'ın hemen altında (nötr/standart; başarı yeşili
-                YOK). Değer/kaynak değişmedi; yalnız sıra Ödenen'in ÜSTÜNE alındı. */}
-            <div className="rounded-xl border border-[var(--color-stone-100)] bg-[var(--color-sand-50)] px-4 py-3">
-              <span className="text-[13.5px] font-medium text-[var(--color-stone-800)]">
-                {data.isFullPayment
-                  ? "Tam Ödeme"
-                  : `Ön Ödeme (${TL(data.prepayment)})`}
-              </span>
-            </div>
-
             <div className="flex items-center justify-between">
               <dt className="text-[14px] text-[var(--color-stone-600)]">
                 Ödenen Tutar
