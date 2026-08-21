@@ -6,6 +6,8 @@ import {
   CreditCard,
   Clock,
   User,
+  Phone,
+  MessageCircle,
 } from "lucide-react";
 
 import { getCachedSettings } from "@/lib/cache.helpers";
@@ -43,6 +45,44 @@ function formatDateTr(iso: string | null): string {
     timeZone: "UTC",
   });
   return `${base}, ${weekday}`;
+}
+
+/* 🛡️ wa.me numarası — pure/lokal. Boşluk/parantez/tire vb. temizlenir;
+   TR yerel "0..." → "90..." (ülke kodu). Ülke kodlu numaralarda basamaklar
+   korunur (TR'ye hard-code zorlama yok). `tel:` için kullanıcıya gösterilen
+   gerçek numara kullanılır. */
+function toWaNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("0")) return "90" + digits.slice(1);
+  return digits;
+}
+
+/* Küçük WhatsApp + telefon aksiyon ikonları (mevcut iletişim dili).
+   Yalnız telefon varken caller render eder. */
+function PhoneActions({ phone }: { phone: string }) {
+  const wa = toWaNumber(phone);
+  return (
+    <span className="inline-flex items-center gap-1.5 align-middle">
+      {wa && (
+        <a
+          href={`https://wa.me/${wa}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="WhatsApp ile ulaş"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#25D366]/12 text-[#1da851] hover:bg-[#25D366] hover:text-white transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/40"
+        >
+          <MessageCircle size={15} aria-hidden />
+        </a>
+      )}
+      <a
+        href={`tel:${phone}`}
+        aria-label="Telefonla ara"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand-coral-tint)] text-[var(--brand-coral-deep)] hover:bg-[var(--brand-coral)] hover:text-white transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/40"
+      >
+        <Phone size={15} aria-hidden />
+      </a>
+    </span>
+  );
 }
 
 export default async function ReservationShareView({
@@ -206,9 +246,10 @@ export default async function ReservationShareView({
               </p>
             )}
             {data.ownerPhone && (
-              <p className="text-[14px] text-[var(--color-stone-600)] tabular-nums">
-                {data.ownerPhone}
-              </p>
+              <div className="flex items-center flex-wrap gap-x-3 gap-y-2 text-[14px] text-[var(--color-stone-600)]">
+                <span className="tabular-nums">{data.ownerPhone}</span>
+                <PhoneActions phone={data.ownerPhone} />
+              </div>
             )}
           </div>
         ) : (
@@ -236,8 +277,15 @@ export default async function ReservationShareView({
             <dt className="w-24 shrink-0 text-[var(--color-stone-500)]">
               Telefon
             </dt>
-            <dd className="min-w-0 text-[var(--color-stone-900)] tabular-nums">
-              {data.guestPhone || "—"}
+            <dd className="min-w-0 text-[var(--color-stone-900)]">
+              {data.guestPhone ? (
+                <span className="inline-flex items-center flex-wrap gap-x-3 gap-y-2">
+                  <span className="tabular-nums">{data.guestPhone}</span>
+                  <PhoneActions phone={data.guestPhone} />
+                </span>
+              ) : (
+                "—"
+              )}
             </dd>
           </div>
           <div className="flex gap-3">
