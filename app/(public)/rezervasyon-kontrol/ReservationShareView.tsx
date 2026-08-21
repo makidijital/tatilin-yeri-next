@@ -100,6 +100,20 @@ export default async function ReservationShareView({
 
   return (
     <div className="max-w-2xl mx-auto">
+      {/* 🛡️ Kalan ödeme — yumuşak/sürekli glow (≈2.6s). Yanıp sönme/flash
+          YOK; prefers-reduced-motion'da tamamen kapanır (statik accent kalır).
+          Kartın shadow/radius/layout sistemi etkilenmez (yalnız box-shadow). */}
+      <style>{`
+        @keyframes rkRemainingGlow {
+          0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand-coral) 0%, transparent); }
+          50% { box-shadow: 0 0 20px -2px color-mix(in srgb, var(--brand-coral) 42%, transparent); }
+        }
+        .rk-remaining-glow { animation: rkRemainingGlow 2.6s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .rk-remaining-glow { animation: none; }
+        }
+      `}</style>
+
       {/* HEADER — Onay */}
       <div className="text-center">
         <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
@@ -213,22 +227,64 @@ export default async function ReservationShareView({
 
           {/* ÖDEME PLANI — Ön Ödeme / Tam Ödeme + Kalan (Girişte Alınacak) */}
           <div className="mt-4 space-y-2 border-t border-[var(--color-stone-100)] pt-4">
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
+            {/* Ön Ödeme — nötr/standart (özel başarı yeşili YOK). */}
+            <div className="rounded-xl border border-[var(--color-stone-100)] bg-[var(--color-sand-50)] px-4 py-3">
               <span className="text-[13.5px] font-medium text-[var(--color-stone-800)]">
                 {data.isFullPayment
                   ? "Tam Ödeme"
                   : `Ön Ödeme (${TL(data.prepayment)})`}
               </span>
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-[var(--color-stone-100)] px-4 py-3">
-              <span className="text-[13px] text-[var(--color-stone-700)]">
+
+            {/* Kalan Ödeme — dikkat çekici marka accent + yumuşak glow/pulse.
+                Animasyon prefers-reduced-motion'da kapanır (aşağıdaki style). */}
+            <div className="rk-remaining-glow flex items-center justify-between rounded-xl border border-[var(--brand-coral)]/35 bg-[var(--brand-coral-tint)] px-4 py-3.5">
+              <span className="text-[13px] font-semibold text-[var(--brand-coral-deep)]">
                 Kalan Ödeme (Girişte Alınacak)
               </span>
-              <span className="text-[13.5px] font-semibold text-[var(--color-stone-900)] tabular-nums">
+              <span className="text-[18px] font-bold leading-none tracking-tight text-[var(--brand-coral-deep)] tabular-nums">
                 {TL(data.isFullPayment ? 0 : data.remaining)}
               </span>
             </div>
           </div>
+
+          {/* BİLGİLENDİRME — hesaba KATILMAYAN snapshot'lar (yalnız değer varsa). */}
+          {(data.damageDeposit !== null || data.cleaningFee !== null) && (
+            <div className="mt-4 space-y-3 border-t border-[var(--color-stone-100)] pt-4">
+              {data.damageDeposit !== null && (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-[14px] text-[var(--color-stone-600)]">
+                      Hasar Depozitosu
+                    </dt>
+                    <dd className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums">
+                      {TL(data.damageDeposit)}
+                    </dd>
+                  </div>
+                  <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-stone-400)]">
+                    Girişte hasar depozitosu ek olarak alınır. Villada herhangi
+                    bir hasar oluşmaması durumunda çıkışta eksiksiz olarak iade
+                    edilir.
+                  </p>
+                </div>
+              )}
+              {data.cleaningFee !== null && (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-[14px] text-[var(--color-stone-600)]">
+                      Temizlik Ücreti
+                    </dt>
+                    <dd className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums">
+                      {TL(data.cleaningFee)}
+                    </dd>
+                  </div>
+                  <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-stone-400)]">
+                    Fiyata Dahildir.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </section>
       )}
 

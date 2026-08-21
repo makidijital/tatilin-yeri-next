@@ -44,6 +44,10 @@ export type ReservationShareRow = {
   prepayment_amount: number | null;
   remaining_payment: number | null;
   original_currency: string | null;
+  /* Bilgilendirme snapshot'ları (TRY) — hesaba KATILMAZ (total/kalan
+     ödeme değişmez). Yalnız müşteriye gösterilir. */
+  damage_deposit: number | null;
+  cleaning_fee_try: number | null;
   payment_method: { type: string | null } | null;
   villa: {
     title: string | null;
@@ -156,6 +160,8 @@ export const reservationShareRepository = {
          prepayment_amount,
          remaining_payment,
          original_currency,
+         damage_deposit,
+         cleaning_fee_try,
          payment_method:payment_method_id ( type ),
          villa:villa_id ( title, villa_images ( image_url, is_cover, sort_order ), owner:owner_id ( first_name, last_name, phone ) )`
       )

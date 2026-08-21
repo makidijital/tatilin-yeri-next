@@ -56,6 +56,10 @@ export type ReservationShareDTO = {
   prepayment: number | null;
   /** payment_preference === "full_payment". */
   isFullPayment: boolean;
+  /** Bilgilendirme (TRY snapshot) — total/remaining hesabına KATILMAZ.
+   *  Değer yoksa null → satır gösterilmez. */
+  damageDeposit: number | null;
+  cleaningFee: number | null;
   /** "Havale/EFT" | "Kredi Kartı" | null (yöntem tanımlı değilse). */
   paymentMethodLabel: string | null;
   /* Mülk sahibi — yalnız ad + telefon (email/iban ASLA). villa.owner yoksa null. */
@@ -142,6 +146,8 @@ export async function resolveReservationShare(
           prepayment_amount: number | null;
           remaining_payment: number | null;
           original_currency: string | null;
+          damage_deposit: number | null;
+          cleaning_fee_try: number | null;
           payment_method: { type: string | null } | null;
           villa: {
             title: string | null;
@@ -185,6 +191,11 @@ export async function resolveReservationShare(
   const isFullPayment =
     (row.payment_preference ?? "").toString().trim().toLowerCase() ===
     "full_payment";
+
+  /* Bilgilendirme snapshot'ları (TRY) — hesaba KATILMAZ. Yalnız > 0 ise
+     DTO'ya konur; aksi halde null → view satırı hiç göstermez. */
+  const damageDepositVal = num(row.damage_deposit);
+  const cleaningFeeVal = num(row.cleaning_fee_try);
 
   /* Villa kapak görseli — is_cover öncelik, yoksa ilk geçerli (mevcut
      resolveVillaImageUrl; yeni storage sistemi yok). Yoksa null. */
@@ -240,6 +251,8 @@ export async function resolveReservationShare(
       remaining: isFullPayment ? 0 : remaining > 0 ? remaining : null,
       prepayment: prepay > 0 ? prepay : null,
       isFullPayment,
+      damageDeposit: damageDepositVal > 0 ? damageDepositVal : null,
+      cleaningFee: cleaningFeeVal > 0 ? cleaningFeeVal : null,
       paymentMethodLabel,
       ownerName,
       ownerPhone,
