@@ -65,7 +65,6 @@ import PaymentPreferenceCard from "./_components/PaymentPreferenceCard";
 import PaymentRequestCard from "./_components/PaymentRequestCard";
 /* 🔗 ADDITIVE — güvenli paylaşım linki (müşteriye gönderilir). Mevcut
    reservation/price/lookup akışına dokunmaz. */
-import ShareLinkCard from "./_components/ShareLinkCard";
 import PaymentCard from "./_components/PaymentCard";
 import DateRangeCard from "./_components/DateRangeCard";
 import VillaSelectCard from "./_components/VillaSelectCard";
@@ -1372,9 +1371,6 @@ export default function AdminReservationDetailPage() {
         {currentStep === 6 && (
           <NoteCard data={data} setData={setData} />
         )}
-
-        {/* 🔗 SHARE LINK — Rezervasyon Bilgilerini Paylaş (additive). */}
-        {currentStep === 6 && <ShareLinkCard reservationId={id} />}
       </div>
 
       {/* STICKY WIZARD NAV (FAZ 2: StickyFooterNav'a extract)

@@ -15,6 +15,7 @@ import {
   Search,
   Printer,
   Send,
+  Link2,
 } from "lucide-react";
 
 import {
@@ -48,6 +49,9 @@ export default function AdminReservationsPage() {
   const [search, setSearch] = useState(""); // client-side UI filter only
   const [voucherSendingId, setVoucherSendingId] =
     useState<string | null>(null);
+  /* 🔗 Paylaşım linki üretilirken ilgili satırın ikonu disable olur. */
+  const [shareGeneratingId, setShareGeneratingId] =
+    useState<string | null>(null);
   const router = useRouter();
   const toast = useNotify();
   const confirm = useConfirm();
@@ -64,6 +68,58 @@ export default function AdminReservationsPage() {
      - Server tarafında authorizeAdminCallerFlex doğrular
      - Token URL'de geçer → response Referrer-Policy: no-referrer
   ---------------------------------------------- */
+  /* ---------------------------------------------
+     🔗 REZERVASYON BİLGİLERİNİ PAYLAŞ — liste aksiyonu
+     - Mevcut share-link API'sini yeniden kullanır (POST):
+         /api/admin/reservations/{id}/share-link → { ok, url }
+     - Dönen güvenli tokenlı linki panoya kopyalar.
+     - Token lifecycle / hash-at-rest / expires davranışı DEĞİŞMEZ
+       (API her POST'ta mevcut mantığıyla token üretir — bilinçli).
+     - Modal/kart açmaz: oluştur → kopyala → toast.
+  ---------------------------------------------- */
+  const shareReservation = async (reservationId: string) => {
+    if (!reservationId || shareGeneratingId) return;
+    setShareGeneratingId(reservationId);
+    const toastId = `share-${reservationId}`;
+    toast.loading("Paylaşım linki oluşturuluyor", { id: toastId });
+    try {
+      const res = await adminFetch(
+        `/api/admin/reservations/${reservationId}/share-link`,
+        { method: "POST" }
+      );
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        url?: string;
+        error?: string;
+      };
+      if (!res.ok || !json?.ok || !json.url) {
+        toast.error("Link oluşturulamadı", {
+          id: toastId,
+          description: json?.error || undefined,
+        });
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(json.url);
+        toast.success("Rezervasyon paylaşım linki kopyalandı.", {
+          id: toastId,
+        });
+      } catch {
+        /* Pano erişimi yoksa link kaybolmasın — kullanıcı elle kopyalar. */
+        toast.success("Paylaşım linki oluşturuldu", {
+          id: toastId,
+          description: json.url,
+        });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
+      console.error("[share-link] CREATE_FAILED", { reservationId, error: msg });
+      toast.error("Link oluşturulamadı", { id: toastId, description: msg });
+    } finally {
+      setShareGeneratingId(null);
+    }
+  };
+
   const openVoucherPdf = async (reservationId: string) => {
     if (!reservationId) return;
     try {
@@ -667,6 +723,21 @@ export default function AdminReservationsPage() {
                       </button>
                     </>
                   )}
+
+                  {/* 🔗 REZERVASYON BİLGİLERİNİ PAYLAŞ — oluştur + kopyala.
+                      Mevcut aksiyon ikonlarıyla aynı boyut/stil (admin-icon-btn). */}
+                  <button
+                    onClick={() => shareReservation(r.id)}
+                    disabled={shareGeneratingId === r.id}
+                    className="admin-icon-btn disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Rezervasyon Bilgilerini Paylaş"
+                    title="Rezervasyon Bilgilerini Paylaş"
+                  >
+                    <Link2
+                      size={14}
+                      className="text-[var(--brand-coral)]"
+                    />
+                  </button>
 
                   <button
                     onClick={() => deleteReservation(r.id)}

@@ -223,6 +223,23 @@ export default async function ReservationShareView({
                 {TL(data.paid)}
               </dd>
             </div>
+            {/* Temizlik Ücreti — Ödenen Tutar'ın hemen altında (bilgilendirme;
+                kaynak cleaning_fee_try, hesaba KATILMAZ). Yalnız değer varsa. */}
+            {data.cleaningFee !== null && (
+              <div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-[14px] text-[var(--color-stone-600)]">
+                    Temizlik Ücreti
+                  </dt>
+                  <dd className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums">
+                    {TL(data.cleaningFee)}
+                  </dd>
+                </div>
+                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-stone-400)]">
+                  Fiyata Dahildir.
+                </p>
+              </div>
+            )}
           </dl>
 
           {/* ÖDEME PLANI — Ön Ödeme / Tam Ödeme + Kalan (Girişte Alınacak) */}
@@ -248,41 +265,23 @@ export default async function ReservationShareView({
             </div>
           </div>
 
-          {/* BİLGİLENDİRME — hesaba KATILMAYAN snapshot'lar (yalnız değer varsa). */}
-          {(data.damageDeposit !== null || data.cleaningFee !== null) && (
+          {/* BİLGİLENDİRME — Hasar Depozitosu (hesaba KATILMAZ; yalnız değer varsa). */}
+          {data.damageDeposit !== null && (
             <div className="mt-4 space-y-3 border-t border-[var(--color-stone-100)] pt-4">
-              {data.damageDeposit !== null && (
-                <div>
-                  <div className="flex items-center justify-between">
-                    <dt className="text-[14px] text-[var(--color-stone-600)]">
-                      Hasar Depozitosu
-                    </dt>
-                    <dd className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums">
-                      {TL(data.damageDeposit)}
-                    </dd>
-                  </div>
-                  <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-stone-400)]">
-                    Girişte hasar depozitosu ek olarak alınır. Villada herhangi
-                    bir hasar oluşmaması durumunda çıkışta eksiksiz olarak iade
-                    edilir.
-                  </p>
+              <div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-[14px] text-[var(--color-stone-600)]">
+                    Hasar Depozitosu
+                  </dt>
+                  <dd className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums">
+                    {TL(data.damageDeposit)}
+                  </dd>
                 </div>
-              )}
-              {data.cleaningFee !== null && (
-                <div>
-                  <div className="flex items-center justify-between">
-                    <dt className="text-[14px] text-[var(--color-stone-600)]">
-                      Temizlik Ücreti
-                    </dt>
-                    <dd className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums">
-                      {TL(data.cleaningFee)}
-                    </dd>
-                  </div>
-                  <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-stone-400)]">
-                    Fiyata Dahildir.
-                  </p>
-                </div>
-              )}
+                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-stone-400)]">
+                  Girişte hasar depozitosu ek olarak alınır. Villada herhangi bir
+                  hasar oluşmaması durumunda çıkışta eksiksiz olarak iade edilir.
+                </p>
+              </div>
             </div>
           )}
         </section>
