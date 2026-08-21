@@ -214,6 +214,17 @@ export default async function ReservationShareView({
                 {TL(data.total)}
               </dd>
             </div>
+
+            {/* Ön Ödeme — Toplam'ın hemen altında (nötr/standart; başarı yeşili
+                YOK). Değer/kaynak değişmedi; yalnız sıra Ödenen'in ÜSTÜNE alındı. */}
+            <div className="rounded-xl border border-[var(--color-stone-100)] bg-[var(--color-sand-50)] px-4 py-3">
+              <span className="text-[13.5px] font-medium text-[var(--color-stone-800)]">
+                {data.isFullPayment
+                  ? "Tam Ödeme"
+                  : `Ön Ödeme (${TL(data.prepayment)})`}
+              </span>
+            </div>
+
             <div className="flex items-center justify-between">
               <dt className="text-[14px] text-[var(--color-stone-600)]">
                 Ödenen Tutar
@@ -223,38 +234,27 @@ export default async function ReservationShareView({
                 {TL(data.paid)}
               </dd>
             </div>
-            {/* Temizlik Ücreti — Ödenen Tutar'ın hemen altında (bilgilendirme;
-                kaynak cleaning_fee_try, hesaba KATILMAZ). Yalnız değer varsa. */}
+
+            {/* Temizlik Ücreti — bilgilendirme (cleaning_fee_try, hesaba KATILMAZ).
+                "(Fiyata Dahildir.)" başlığın yanında parantez içinde. Değer varsa. */}
             {data.cleaningFee !== null && (
-              <div>
-                <div className="flex items-center justify-between">
-                  <dt className="text-[14px] text-[var(--color-stone-600)]">
-                    Temizlik Ücreti
-                  </dt>
-                  <dd className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums">
-                    {TL(data.cleaningFee)}
-                  </dd>
-                </div>
-                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-stone-400)]">
-                  Fiyata Dahildir.
-                </p>
+              <div className="flex items-center justify-between">
+                <dt className="text-[14px] text-[var(--color-stone-600)]">
+                  Temizlik Ücreti{" "}
+                  <span className="text-[var(--color-stone-400)]">
+                    (Fiyata Dahildir.)
+                  </span>
+                </dt>
+                <dd className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums">
+                  {TL(data.cleaningFee)}
+                </dd>
               </div>
             )}
           </dl>
 
-          {/* ÖDEME PLANI — Ön Ödeme / Tam Ödeme + Kalan (Girişte Alınacak) */}
-          <div className="mt-4 space-y-2 border-t border-[var(--color-stone-100)] pt-4">
-            {/* Ön Ödeme — nötr/standart (özel başarı yeşili YOK). */}
-            <div className="rounded-xl border border-[var(--color-stone-100)] bg-[var(--color-sand-50)] px-4 py-3">
-              <span className="text-[13.5px] font-medium text-[var(--color-stone-800)]">
-                {data.isFullPayment
-                  ? "Tam Ödeme"
-                  : `Ön Ödeme (${TL(data.prepayment)})`}
-              </span>
-            </div>
-
-            {/* Kalan Ödeme — dikkat çekici marka accent + yumuşak glow/pulse.
-                Animasyon prefers-reduced-motion'da kapanır (aşağıdaki style). */}
+          {/* Kalan Ödeme — dikkat çekici marka accent + yumuşak glow/pulse.
+              Animasyon prefers-reduced-motion'da kapanır (aşağıdaki style). */}
+          <div className="mt-4 border-t border-[var(--color-stone-100)] pt-4">
             <div className="rk-remaining-glow flex items-center justify-between rounded-xl border border-[var(--brand-coral)]/35 bg-[var(--brand-coral-tint)] px-4 py-3.5">
               <span className="text-[13px] font-semibold text-[var(--brand-coral-deep)]">
                 Kalan Ödeme (Girişte Alınacak)
