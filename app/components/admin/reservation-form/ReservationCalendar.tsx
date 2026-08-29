@@ -624,12 +624,19 @@ export default function ReservationCalendar({
                     sameDay(d, date)
                   );
 
-                  const activeFrom = draggingRef.current
+                  /* 📱 Bekleyen tap anchor'ı (1. dokunuş, 2. dokunuş beklenirken)
+                     de drag ile AYNI görsel state'i kullanır → ilk seçilen gün
+                     highlight olur. draggingRef.current okuması zaten render'da
+                     yapılıyor; aynı desen. */
+                  const pendingTapAnchor = tapAnchorRef.current !== null;
+                  const showDragVisual =
+                    draggingRef.current || pendingTapAnchor;
+                  const activeFrom = showDragVisual
                     ? dragFrom
                     : freshSelection
                       ? null
                       : startDate;
-                  const activeTo = draggingRef.current
+                  const activeTo = showDragVisual
                     ? dragTo
                     : freshSelection
                       ? null
