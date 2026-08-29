@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createManualReservationAction as createManualReservation,
@@ -108,6 +108,11 @@ export default function ManualReservationForm({
     initialData?.villa_id ?? initialVillaId ?? ""
   );
   const [note, setNote] = useState(initialData?.note ?? "");
+  /* 📱 CREATE modal not textarea'sı — mobilde native keyboard'ı tarih commit'i
+     anında AÇMAMAK için `autoFocus` kaldırıldı; odak yalnız DESKTOP'ta (fine
+     pointer + hover) ref ile verilir → desktop davranışı birebir korunur,
+     mobil sessiz kalır (kullanıcı nota dokununca klavye normal açılır). */
+  const noteRef = useRef<HTMLTextAreaElement | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [startDate, setStartDate] = useState<Date | null>(() =>
@@ -284,6 +289,21 @@ export default function ManualReservationForm({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [modalOpen, loading]);
+
+  /* 📱 CREATE modal açıldığında not textarea'sına odak — YALNIZ desktop.
+     Eski `autoFocus` her cihazda odaklıyordu → mobilde tarih commit'i
+     sonrası modal açılınca native keyboard fırlıyordu. Fine pointer + hover
+     (mouse'lu masaüstü) dışında odak verilmez → mobil sessiz; kullanıcı
+     nota dokununca klavye normal açılır (editable davranış korunur). */
+  useEffect(() => {
+    if (mode !== "create" || !modalOpen) return;
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const isDesktop =
+      window.matchMedia("(pointer: fine)").matches &&
+      window.matchMedia("(hover: hover)").matches;
+    if (!isDesktop) return;
+    noteRef.current?.focus();
+  }, [mode, modalOpen]);
 
   /* 🛡️ FAZ 56H-D — External iCal blocks (admin authenticated). */
   const [externalCal, setExternalCal] = useState<ExternalCalendarAdminArrays>(
@@ -681,7 +701,7 @@ export default function ManualReservationForm({
                 </label>
                 <textarea
                   id="new-block-modal-note"
-                  autoFocus
+                  ref={noteRef}
                   placeholder="Bu blok için not ekle…"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
