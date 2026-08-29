@@ -4,6 +4,7 @@ import { reservationShareRepository } from "@/lib/db/reservation-share.repositor
 import { hashShareToken } from "@/lib/reservation-share.helper";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { paymentMethodType } from "@/lib/payment-link.helper";
+import { getPaymentDisplayValues } from "@/lib/payment.helper";
 
 /* 🛡️ Site geneli standart giriş/çıkış saatleri — CheckInOutTimes.tsx ile
    AYNI değerler (projede villa/ayar bazlı saat kaynağı YOK; tek standart). */
@@ -183,14 +184,25 @@ export async function resolveReservationShare(
         ? "prepayment"
         : "pending";
 
-  /* Ödeme — TRY snapshot (kafadan hesap yok). */
-  const total = num(row.total_price_try) || num(row.total_price) || 0;
-  const paid = num(row.paid_amount);
+  /* Ödeme — TEK SOURCE-OF-TRUTH: mail (reservation-approved) + PDF voucher
+     ile AYNI helper (getPaymentDisplayValues). "Özel toplam tutar (TRY)"
+     zaten total_price_try'da taşınır → helper onu totalTRY olarak alır.
+     🐛 FIX: "Kalan", mail/PDF gibi remainingFromPaid (total − ödenen)'dir;
+     DB'deki remaining_payment SNAPSHOT'ı özel toplam + ön ödemede tutarsız
+     olabildiği için DISPLAY'de KULLANILMAZ (snapshot DB'de bozulmaz). */
+  const pay = getPaymentDisplayValues({
+    total_price_try: row.total_price_try,
+    total_price: row.total_price,
+    prepayment_amount: row.prepayment_amount,
+    paid_amount: row.paid_amount,
+    remaining_payment: row.remaining_payment,
+    payment_preference: row.payment_preference,
+  });
+  const total = pay.totalTRY;
+  const paid = pay.paidTRY;
   const prepay = num(row.prepayment_amount);
-  const remaining = num(row.remaining_payment);
-  const isFullPayment =
-    (row.payment_preference ?? "").toString().trim().toLowerCase() ===
-    "full_payment";
+  const remaining = pay.remainingFromPaid;
+  const isFullPayment = pay.isFullPayment;
 
   /* Bilgilendirme snapshot'ları (TRY) — hesaba KATILMAZ. Yalnız > 0 ise
      DTO'ya konur; aksi halde null → view satırı hiç göstermez. */
