@@ -1,3 +1,5 @@
+import { useRef } from "react";
+
 import {
   compactPrice as sharedCompactPrice,
   formatCompactPrice,
@@ -61,6 +63,7 @@ export default function DayCell({
   maxPrice,
   onCellDown,
   onCellEnter,
+  onCellTap,
   compact = false,
 }: {
   date: Date;
@@ -73,10 +76,16 @@ export default function DayCell({
   maxPrice: number;
   onCellDown: (d: Date) => void;
   onCellEnter: (d: Date) => void;
+  /** 📱 Mobil tap-to-range. Verilmezse touch handler'lar no-op → mevcut
+   *  mouse davranışı BİREBİR korunur. */
+  onCellTap?: (d: Date) => void;
   /** 5 ay görünümünde kompakt hücre (yükseklik/padding/font küçülür).
    *  Default false → 3 ay görünümü BYTE-IDENTICAL kalır. */
   compact?: boolean;
 }) {
+  /* 📱 Touch tap tespiti — başlangıç konumu; touchend'de hareket eşiğiyle
+     scroll'u tap'tan ayırır (parmak kaydırma yanlışlıkla gün seçmesin). */
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const tone = priceRange
     ? priceColorTone(priceRange.price, minPrice, maxPrice)
     : null;
@@ -101,6 +110,37 @@ export default function DayCell({
       onMouseEnter={() => {
         if (!inCurrentMonth) return;
         onCellEnter(date);
+      }}
+      onTouchStart={(e) => {
+        // Yalnız tap-to-range aktifse (onCellTap verildiyse) ve ay-içi günse.
+        if (!inCurrentMonth || !onCellTap) {
+          touchStartRef.current = null;
+          return;
+        }
+        const t = e.touches[0];
+        touchStartRef.current = t
+          ? { x: t.clientX, y: t.clientY }
+          : null;
+      }}
+      onTouchEnd={(e) => {
+        if (!inCurrentMonth || !onCellTap) return;
+        const start = touchStartRef.current;
+        touchStartRef.current = null;
+        if (!start) return;
+        const t = e.changedTouches[0];
+        if (t) {
+          // ~10px'ten fazla hareket → scroll/drag, tap DEĞİL → yok say.
+          if (
+            Math.abs(t.clientX - start.x) > 10 ||
+            Math.abs(t.clientY - start.y) > 10
+          ) {
+            return;
+          }
+        }
+        // 🛡️ Sentetik mouse/click emülasyonunu engelle → aynı dokunuş
+        //    onMouseDown/onClick olarak İKİNCİ kez tetiklenmez (double-fire yok).
+        e.preventDefault();
+        onCellTap(date);
       }}
       className="relative"
       style={{

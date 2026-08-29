@@ -107,10 +107,13 @@ export default function PricingCalendarCanvas({
     PricingCanvasRange[] | undefined
   >(initialPrices);
 
-  // Drag-select
+  // Drag-select (desktop mouse)
   const [dragStart, setDragStart] = useState<Date | null>(null);
   const [dragEnd, setDragEnd] = useState<Date | null>(null);
   const draggingRef = useRef<boolean>(false);
+  // 📱 Tap-to-range (mobil/touch): 1. dokunuş anchor, 2. dokunuş bitiş.
+  //    Desktop mouse drag'i ETKİLEMEZ (ayrı state; touch yolundan set edilir).
+  const [tapAnchor, setTapAnchor] = useState<Date | null>(null);
 
   // Drawer
   const [selectedFrom, setSelectedFrom] = useState<Date | null>(
@@ -208,33 +211,42 @@ export default function PricingCalendarCanvas({
     };
   }, [prices]);
 
-  /* ---------- DRAG GLOBAL MOUSEUP ---------- */
+  /* ---------- RANGE COMMIT — TEK KAYNAK (mouse drag + tap-to-range ortak) ----------
+     Mevcut mouseup finalize mantığının BİREBİR aynısı; swap + drawer açılışı
+     buraya taşındı ki hem desktop mouse drag hem mobil ikinci-dokunuş AYNI
+     `from/to` üretim + drawer davranışını kullansın (yeni hesap YOK). */
+  const commitRange = useCallback(
+    (a0: Date, b0: Date) => {
+      const a = a0.getTime() <= b0.getTime();
+      const from = a ? a0 : b0;
+      const to = a ? b0 : a0;
+      setSelectedFrom(from);
+      setSelectedTo(to);
+      const existing = dayPriceMap.get(dayKey(from));
+      setDrawerPrice(existing?.price || 0);
+      // existing range varsa onun currency'sini koru;
+      // yoksa villa default currency'ye, o da yoksa TRY'ye düş
+      setDrawerCurrency(existing?.currency || villa?.currency || "TRY");
+      setDrawerError("");
+      setDrawerOpen(true);
+    },
+    [dayPriceMap, villa?.currency]
+  );
+
+  /* ---------- DRAG GLOBAL MOUSEUP (desktop) ---------- */
   useEffect(() => {
     const handleUp = () => {
       if (!draggingRef.current) return;
       draggingRef.current = false;
       if (dragStart && dragEnd) {
-        const a = dragStart.getTime() <= dragEnd.getTime();
-        const from = a ? dragStart : dragEnd;
-        const to = a ? dragEnd : dragStart;
-        setSelectedFrom(from);
-        setSelectedTo(to);
-        const existing = dayPriceMap.get(dayKey(from));
-        setDrawerPrice(existing?.price || 0);
-        // existing range varsa onun currency'sini koru;
-        // yoksa villa default currency'ye, o da yoksa TRY'ye düş
-        setDrawerCurrency(
-          existing?.currency || villa?.currency || "TRY"
-        );
-        setDrawerError("");
-        setDrawerOpen(true);
+        commitRange(dragStart, dragEnd);
       }
       setDragStart(null);
       setDragEnd(null);
     };
     window.addEventListener("mouseup", handleUp);
     return () => window.removeEventListener("mouseup", handleUp);
-  }, [dragStart, dragEnd, dayPriceMap, villa?.currency]);
+  }, [dragStart, dragEnd, commitRange]);
 
   const onCellDown = useCallback((d: Date) => {
     draggingRef.current = true;
@@ -243,11 +255,40 @@ export default function PricingCalendarCanvas({
     setDrawerOpen(false);
     setSelectedFrom(null);
     setSelectedTo(null);
+    // Bekleyen tap anchor'ı varsa temizle (mouse etkileşimi tap akışını sıfırlar).
+    setTapAnchor(null);
   }, []);
   const onCellEnter = useCallback((d: Date) => {
     if (!draggingRef.current) return;
     setDragEnd(d);
   }, []);
+
+  /* ---------- 📱 TAP-TO-RANGE (mobil/touch) ----------
+     1. dokunuş → anchor seçilir (tek gün highlight, drawer AÇILMAZ).
+     2. dokunuş → commitRange(anchor, d) ile mevcut range/swap davranışı.
+        Aynı güne 2 kez → commitRange(d,d) → tek gün (mevcut davranış).
+     Disabled gün (inCurrentMonth=false) DayCell'de zaten no-op — buraya
+     hiç ulaşmaz. draggingRef KULLANILMAZ → global mouseup tetiklenmez. */
+  const onCellTap = useCallback(
+    (d: Date) => {
+      draggingRef.current = false;
+      if (!tapAnchor) {
+        setTapAnchor(d);
+        setSelectedFrom(null);
+        setSelectedTo(null);
+        setDrawerOpen(false);
+        // Bekleyen başlangıcı highlight'la (drag ile aynı görsel state).
+        setDragStart(d);
+        setDragEnd(d);
+      } else {
+        commitRange(tapAnchor, d);
+        setTapAnchor(null);
+        setDragStart(null);
+        setDragEnd(null);
+      }
+    },
+    [tapAnchor, commitRange]
+  );
 
   /* ---------- ACTIONS ---------- */
   const handleSavePrice = async () => {
@@ -422,6 +463,7 @@ export default function PricingCalendarCanvas({
                 isDraggingNow={!!dragStart && !!dragEnd}
                 onCellDown={onCellDown}
                 onCellEnter={onCellEnter}
+                onCellTap={onCellTap}
                 compact={visibleMonths >= 5}
               />
             ))}

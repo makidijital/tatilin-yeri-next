@@ -37,6 +37,7 @@ export default function MonthBlock({
   isDraggingNow,
   onCellDown,
   onCellEnter,
+  onCellTap,
   compact = false,
 }: {
   monthStart: Date;
@@ -48,6 +49,9 @@ export default function MonthBlock({
   isDraggingNow: boolean;
   onCellDown: (d: Date) => void;
   onCellEnter: (d: Date) => void;
+  /** 📱 Mobil tap-to-range — DayCell touch dokunuşunda çağrılır. Opsiyonel;
+   *  verilmezse DayCell yalnız mevcut mouse davranışını sürdürür. */
+  onCellTap?: (d: Date) => void;
   /** 5 ay görünümünde kompakt DayCell'leri tetikler. Default false. */
   compact?: boolean;
 }) {
@@ -89,6 +93,7 @@ export default function MonthBlock({
               maxPrice={maxPrice}
               onCellDown={onCellDown}
               onCellEnter={onCellEnter}
+              onCellTap={onCellTap}
               compact={compact}
             />
           );
