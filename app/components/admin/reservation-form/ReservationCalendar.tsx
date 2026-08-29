@@ -14,7 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { getDayStyle } from "@/lib/calendar.engine";
-import { parseLocalDate, formatLocalDate } from "@/lib/date-format";
+import { formatLocalDate } from "@/lib/date-format";
 import type { ExternalEventDetail } from "@/lib/external-calendar.admin.types";
 /* 🛡️ FAZ 28 — calculateNights reuse (lib/price.engine).
    BookingSidebar, PricingCalendarCanvas (Faz 27), VillaCard,
@@ -229,6 +229,13 @@ export default function ReservationCalendar({
   const [dragFrom, setDragFrom] = useState<Date | null>(null);
   const [dragTo, setDragTo] = useState<Date | null>(null);
   const draggingRef = useRef<boolean>(false);
+  /* 📱 Tap-to-range (mobil/touch): 1. dokunuş anchor, 2. dokunuş bitiş.
+     Anchor'ı REF'te tutuyoruz → hızlı ardışık tap'lerde stale-closure yok
+     (state async; ref senkron okunur). Desktop mouse drag'i ETKİLEMEZ. */
+  const tapAnchorRef = useRef<Date | null>(null);
+  /* Touch tap tespiti — dokunuş başlangıç konumu; touchend'de hareket
+     eşiğiyle scroll'u tap'tan ayırır (kaydırma yanlışlıkla gün seçmesin). */
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   /* ---------------------------------------------
      🔥 fullyBlockedDates — half-open `[)` semantic
@@ -336,11 +343,11 @@ export default function ReservationCalendar({
       setDragFrom(null);
       setDragTo(null);
     };
+    /* Yalnız DESKTOP mouse-drag finalize. Touch artık drag DEĞİL, tap-to-range
+       (aşağıda onCellTap) → global touchend finalize KALDIRILDI. */
     window.addEventListener("mouseup", handleUp);
-    window.addEventListener("touchend", handleUp);
     return () => {
       window.removeEventListener("mouseup", handleUp);
-      window.removeEventListener("touchend", handleUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragFrom, dragTo, fullyBlockedDates]);
@@ -350,6 +357,7 @@ export default function ReservationCalendar({
     setDragFrom(null);
     setDragTo(null);
     draggingRef.current = false;
+    tapAnchorRef.current = null;
   }, [resetKey]);
 
   const beginDrag = (date: Date, disabled: boolean) => {
@@ -357,12 +365,42 @@ export default function ReservationCalendar({
     draggingRef.current = true;
     setDragFrom(date);
     setDragTo(date);
+    // Mouse etkileşimi başlarsa bekleyen tap anchor'ı sıfırla (hibrit cihaz).
+    tapAnchorRef.current = null;
     if (freshSelection) setFreshSelection(false);
   };
 
   const extendDrag = (date: Date, disabled: boolean) => {
     if (!draggingRef.current || disabled) return;
     setDragTo(date);
+  };
+
+  /* ---------------------------------------------
+     📱 TAP-TO-RANGE (mobil/touch) — drag ZORUNLU DEĞİL.
+     1. dokunuş → anchor (tek gün highlight, onSelectRange ÇAĞRILMAZ).
+     2. dokunuş → mevcut swap + `onSelectRange(from, to, fullyBlockedDates)`
+        sözleşmesi AYNEN (yeni tarih hesabı yok). Aynı güne 2 kez → tek gün.
+     Disabled/blocked gün → no-op (caller `disabled` geçirir; bypass yok).
+     Anchor REF'te → state-async closure sorunu yok. draggingRef KULLANILMAZ
+     → global mouseup tetiklenmez, mouse yolu ile çakışmaz. */
+  const onCellTap = (date: Date, disabled: boolean) => {
+    if (disabled) return;
+    draggingRef.current = false;
+    if (freshSelection) setFreshSelection(false);
+    const anchor = tapAnchorRef.current;
+    if (!anchor) {
+      tapAnchorRef.current = date;
+      setDragFrom(date);
+      setDragTo(date); // bekleyen başlangıç highlight'ı (drag ile aynı görsel)
+    } else {
+      const a = anchor.getTime() <= date.getTime();
+      const from = a ? anchor : date;
+      const to = a ? date : anchor;
+      tapAnchorRef.current = null;
+      setDragFrom(null);
+      setDragTo(null);
+      onSelectRange(from, to, fullyBlockedDates);
+    }
   };
 
   const visibleMonths = useMemo(() => {
@@ -708,26 +746,30 @@ export default function ReservationCalendar({
                       }}
                       onMouseEnter={() => extendDrag(date, disabled)}
                       onTouchStart={(e) => {
-                        e.preventDefault();
-                        beginDrag(date, disabled);
-                      }}
-                      onTouchMove={(e) => {
+                        // 📱 Tap-to-range: yalnız başlangıç konumunu kaydet;
+                        //    drag başlatma YOK (uzun aralıkta sürükleme zorunluluğu kalktı).
                         const t = e.touches[0];
-                        if (!t) return;
-                        const el = document.elementFromPoint(
-                          t.clientX,
-                          t.clientY
-                        ) as HTMLElement | null;
-                        const dataDate = el?.closest("[data-date]") as
-                          | HTMLElement
-                          | null;
-                        const k = dataDate?.getAttribute("data-date");
-                        if (!k) return;
-                        const target = parseLocalDate(k);
-                        const isDis = fullyBlockedDates.some((d) =>
-                          sameDay(d, target)
-                        );
-                        extendDrag(target, isDis);
+                        touchStartRef.current = t
+                          ? { x: t.clientX, y: t.clientY }
+                          : null;
+                      }}
+                      onTouchEnd={(e) => {
+                        const start = touchStartRef.current;
+                        touchStartRef.current = null;
+                        if (!start) return;
+                        const t = e.changedTouches[0];
+                        // ~10px'ten fazla hareket → scroll/drag, tap DEĞİL → yok say.
+                        if (
+                          t &&
+                          (Math.abs(t.clientX - start.x) > 10 ||
+                            Math.abs(t.clientY - start.y) > 10)
+                        ) {
+                          return;
+                        }
+                        // 🛡️ Sentetik mouse/click emülasyonunu engelle → aynı dokunuş
+                        //    onMouseDown/onClick olarak İKİNCİ kez işlenmez (double-fire yok).
+                        e.preventDefault();
+                        onCellTap(date, disabled);
                       }}
                       aria-disabled={disabled}
                       role="button"
