@@ -71,6 +71,11 @@ import {
   type ExternalCalendarStringArrays,
 } from "@/lib/external-calendar.public.shared";
 
+/* 🛡️ Orphan-gap kontrolü — SAF helper (availability toplamaz; occupied
+   gece kümesi + minStay + today verilir, karar döner). Mevcut min-stay/
+   gap-fill mantığını BOZMAZ; yalnız orphan bırakan seçimi ek olarak eler. */
+import { evaluateOrphanGap } from "@/lib/stay-rules.helper";
+
 /* ===============================================================
    INPUT KONTRAT
    ===============================================================
@@ -86,6 +91,10 @@ export type UseBookingEngineInput = {
   cleaning_limit?: number;
   custom_prepayment_rate?: number | null;
   minimum_stay_nights?: number | null;
+  /* 🛡️ Orphan-gap kuralı (admin ayarı) — açıksa min-stay'den kısa
+     kullanılamaz boşluk bırakan seçim engellenir. Default false (hook
+     seviyesi); gerçek değer settings'ten prop olarak geçilir (villa page). */
+  orphanGapRuleEnabled?: boolean;
   externalBlocks?: ExternalCalendarStringArrays;
   initialStart?: string | null;
   initialEnd?: string | null;
@@ -128,6 +137,9 @@ export type UseBookingEngineReturn = {
   selectedNights: number;
   minStayThreshold: number;
   minimumStayValid: boolean;
+  /* Orphan-gap kuralı: seçim min-stay'den kısa kullanılamaz boşluk
+     bırakmıyor mu. Kural kapalıysa / min-stay<2 ise her zaman true. */
+  orphanGapValid: boolean;
   /* 🛡️ Gap override aktif mi? (seçim, mevcut rezervasyonlar arasındaki
      gerçek bir gap'in tamamını dolduruyor → min_stay esnetildi). UI bunu
      kullanarak min-stay uyarısını bastırır + bilgi metni gösterir. */
@@ -170,6 +182,7 @@ export function useBookingEngine(
     cleaning_limit = 0,
     custom_prepayment_rate = null,
     minimum_stay_nights = null,
+    orphanGapRuleEnabled = false,
     externalBlocks = EMPTY_EXTERNAL_STRING_ARRAYS,
     initialStart = null,
     initialEnd = null,
@@ -580,10 +593,35 @@ export function useBookingEngine(
     !endDate ||
     selectedNights >= effectiveMinStay;
 
+  /* ═══════════════════════════════════════════════════════════
+     🛡️ ORPHAN GAP VALIDATION (admin ayarı ile aç/kapa)
+     ═══════════════════════════════════════════════════════════
+     Min-stay + exact gap-fill mantığı YUKARIDA AYNEN durur; bu yalnız
+     EK bir eleme. Occupied gece kümesi = mevcut merged availability
+     (confirmed+manual+external; kaynak birleştirme DEĞİŞMEZ):
+       occupied nights = mergedBlockedDates ∪ mergedCheckinDates
+       (checkout günleri boş → dahil edilmez; daterange [) semantiği).
+     Helper SAF: yalnız kümeyi + minStay + today alır. Ayar kapalıysa
+     veya min-stay<2 ise helper her zaman valid döner (no-op). */
+  const orphanGapValid = (() => {
+    if (!orphanGapRuleEnabled || !startDate || !endDate) return true;
+    const occupied = new Set<string>();
+    for (const d of mergedBlockedDates) occupied.add(formatDate(d));
+    for (const d of mergedCheckinDates) occupied.add(formatDate(d));
+    return evaluateOrphanGap({
+      fromKey: formatDate(startDate),
+      toKey: formatDate(endDate),
+      minStayNights: minimum_stay_nights,
+      occupiedNightKeys: occupied,
+      todayKey: formatDate(today),
+      orphanRuleEnabled: orphanGapRuleEnabled,
+    }).valid;
+  })();
+
   /* 🛡️ FAZ 26B — minimum stay invalid → result hesaplama atla.
      calculateGrandTotal eski davranış aynen. */
   const result =
-    startDate && endDate && minimumStayValid
+    startDate && endDate && minimumStayValid && orphanGapValid
       ? calculateGrandTotal({
           start: formatDate(startDate),
           end: formatDate(endDate),
@@ -637,6 +675,17 @@ export function useBookingEngine(
       setTimeout(() => setReservationError(null), 3000);
       return;
     }
+    if (!orphanGapValid) {
+      /* Orphan gap: seçim, min-stay'den kısa kullanılamaz bir boşluk
+         bırakıyor → engelle (mevcut error mekanizması). */
+      setReservationError(
+        `Bu tarih aralığı, minimum ${minStayThreshold} gecelik kuralı ` +
+          `karşılamayan kısa bir boşluk bırakıyor. Lütfen boşluğun tamamını ` +
+          `kapsayan veya uygun bir aralık seçin.`
+      );
+      setTimeout(() => setReservationError(null), 5000);
+      return;
+    }
     setReservationError(null);
 
     const format = (date: Date) => {
@@ -682,6 +731,7 @@ export function useBookingEngine(
     selectedNights,
     minStayThreshold,
     minimumStayValid,
+    orphanGapValid,
     isGapOverride: isExactGapFill,
     result,
     prepayment,

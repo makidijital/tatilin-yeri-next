@@ -30,6 +30,11 @@ export type Settings = {
 
   prepayment_rate?: number | null;
 
+  /* 🛡️ Migration 071 — Orphan-gap / minimum konaklama boşluk kuralı (public
+     booking). true → min-stay'den kısa kullanılamaz boşluk bırakan seçim
+     engellenir. null → fail-safe AÇIK. Default true. */
+  orphan_gap_rule_enabled?: boolean | null;
+
   // 🔥 SITE LOGO (Storage public URL)
   site_logo?: string | null;
 

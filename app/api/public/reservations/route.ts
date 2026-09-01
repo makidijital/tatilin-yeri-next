@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 import { createReservation } from "@/app/services/reservation.service";
 import { reservationServerRepository } from "@/lib/db/reservation.repository.server";
 import { verifyPublicReservationPrice } from "@/app/services/reservation/_helpers/price-verify";
+import { verifyPublicReservationStayRules } from "@/app/services/reservation/_helpers/stay-verify";
 import { applyRateLimit } from "@/lib/rate-limit";
 import type { ReservationCreateInput } from "@/app/services/reservation/types";
 
@@ -59,6 +60,18 @@ export async function POST(req: Request): Promise<Response> {
   await verifyPublicReservationPrice(body);
 
   try {
+    /* 🛡️ ORPHAN-GAP GATE — frontend bypass edilirse min-stay'den kısa
+       kullanılamaz boşluk bırakan rezervasyon backend'de de reddedilir.
+       Ayar kapalı/okunamaz veya veri toplanamazsa BLOKLAMAZ (fail-open);
+       yalnız NET orphan ihlali throw eder → aşağıdaki catch 400 döndürür.
+       Mevcut overlap/fiyat/create akışına DOKUNMAZ (ayrı, additive).
+       createReservation'dan ÖNCE çağrılır. */
+    await verifyPublicReservationStayRules({
+      villa_id: body?.villa_id,
+      start_date: body?.start_date,
+      end_date: body?.end_date,
+    });
+
     const created = await createReservation(body, {
       insertRepository: reservationServerRepository,
     });

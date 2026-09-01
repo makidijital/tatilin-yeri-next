@@ -70,6 +70,9 @@ type Props = {
   /* Minimum konaklama gece sayısı.
      null veya <=1 → enforcement YOK. Detay: useBookingEngine. */
   minimum_stay_nights?: number | null;
+  /* 🛡️ Orphan-gap kuralı (admin ayarı). Default false → geçilmezse
+     mevcut davranış. Villa page settings'ten değeri geçer. */
+  orphanGapRuleEnabled?: boolean;
   /* /arama → detail navigasyonunda URL üzerinden gelen tarihler.
      Engine ilk render'da hidrate eder (lazy initializer). */
   initialStart?: string | null;
@@ -89,6 +92,7 @@ export default function BookingSidebar({
   cleaning_limit = 0,
   custom_prepayment_rate = null,
   minimum_stay_nights = null,
+  orphanGapRuleEnabled = false,
   externalBlocks = EMPTY_EXTERNAL_STRING_ARRAYS,
   initialStart = null,
   initialEnd = null,
@@ -104,6 +108,7 @@ export default function BookingSidebar({
     cleaning_limit,
     custom_prepayment_rate,
     minimum_stay_nights,
+    orphanGapRuleEnabled,
     externalBlocks,
     initialStart,
     initialEnd,

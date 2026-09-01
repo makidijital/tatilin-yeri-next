@@ -888,6 +888,11 @@ export default async function VillaDetail({
                  null/<=1 → BookingSidebar enforcement bypass eder,
                  mevcut davranış aynen. */
               minimum_stay_nights={villa.minimum_stay_nights ?? null}
+              /* 🛡️ Orphan-gap kuralı — admin ayarı (settings). Fail-safe TRUE:
+                 değer okunamazsa/null ise kural AÇIK kabul edilir. */
+              orphanGapRuleEnabled={
+                settings?.orphan_gap_rule_enabled ?? true
+              }
               /* 🛡️ /arama'dan gelen tarihler — opsiyonel hydrate */
               initialStart={hasInitialRange ? initialStart : undefined}
               initialEnd={hasInitialRange ? initialEnd : undefined}

@@ -9,12 +9,16 @@ import { revalidateSettings } from "@/app/services/revalidate.actions";
 import {
   SettingsSection,
   NumberField,
+  ToggleField,
   SaveButton,
 } from "../_components/SettingsField";
 
 export default function SettingsReservationPage() {
   const toast = useNotify();
   const [prepayment, setPrepayment] = useState<number | "">(30);
+  /* 🛡️ Orphan-gap kuralı — default AÇIK (fail-safe). Settings okunana kadar
+     true; null/okunamaz → true kalır (migration default'u ile uyumlu). */
+  const [orphanGapEnabled, setOrphanGapEnabled] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -24,6 +28,7 @@ export default function SettingsReservationPage() {
     getSettings().then((s) => {
       if (cancelled) return;
       setPrepayment(s?.prepayment_rate ?? 30);
+      setOrphanGapEnabled(s?.orphan_gap_rule_enabled ?? true);
       setLoading(false);
     });
     return () => {
@@ -43,7 +48,10 @@ export default function SettingsReservationPage() {
       setSaving(false);
       return;
     }
-    const ok = await updateSettings({ prepayment_rate: n });
+    const ok = await updateSettings({
+      prepayment_rate: n,
+      orphan_gap_rule_enabled: orphanGapEnabled,
+    });
     setSaving(false);
     if (!ok) {
       toast.error("Kaydedilemedi", { id: "settings-rezervasyon" });
@@ -88,6 +96,20 @@ export default function SettingsReservationPage() {
             placeholder="30"
             disabled={loading}
             hint="0-100 arası. BookingSidebar ön ödeme tutarını bu oran üzerinden hesaplar."
+          />
+        </SettingsSection>
+
+        <SettingsSection
+          title="Minimum Konaklama Boşluk Kuralı"
+          description="Rezervasyon tarih seçiminde 'orphan gap' (kullanılamaz kısa boşluk) oluşumunu engeller."
+          footer={<SaveButton loading={saving} saved={saved} />}
+        >
+          <ToggleField
+            label="Kısa kullanılamaz boşlukları rezervasyona kapat"
+            description="Minimum konaklama süresinden daha kısa kullanılabilir boşlukların rezervasyona kapatılmasını sağlar. Kapalıyken mevcut minimum konaklama kuralı ve boşluğu tam dolduran rezervasyon davranışı aynen çalışmaya devam eder."
+            checked={orphanGapEnabled}
+            onChange={setOrphanGapEnabled}
+            disabled={loading}
           />
         </SettingsSection>
       </form>

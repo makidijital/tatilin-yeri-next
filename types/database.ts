@@ -372,6 +372,10 @@ export interface SettingsRow {
   email: string | null;
   address: string | null;
   prepayment_rate: number | null;
+  /* 🛡️ Migration 071 — Orphan-gap / minimum konaklama boşluk kuralı.
+   *  true → min-stay'den kısa kullanılamaz boşluk bırakan public seçim
+   *  engellenir. NULL → fail-safe AÇIK kabul edilir (public tarafta). */
+  orphan_gap_rule_enabled: boolean | null;
   site_logo: string | null;
   /* 🛡️ mig 048 — footer'a özel logo (koyu zemin). NULL → footer
    *  site_logo'ya fallback eder. */
