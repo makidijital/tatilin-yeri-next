@@ -131,13 +131,26 @@ export default function SettingsGeneralPage() {
       setHeroSubtitle(s.hero_subtitle || "");
       setHeroBg(s.hero_background_image || null);
       setHeroOverlay(typeof s.hero_overlay_opacity === "number" ? s.hero_overlay_opacity : 1);
-      /* 🔗 DB null/boş → Hero fallback'i ile aynı default değer input'a
-         yüklenir (placeholder değil, gerçek value). Tek source-of-truth:
-         HERO_CTA_DEFAULTS (lib/hero.helpers.ts). */
-      setHeroPrimaryText(s.hero_primary_cta_text || HERO_CTA_DEFAULTS.primary.text);
-      setHeroPrimaryHref(s.hero_primary_cta_href || HERO_CTA_DEFAULTS.primary.href);
-      setHeroSecondaryText(s.hero_secondary_cta_text || HERO_CTA_DEFAULTS.secondary.text);
-      setHeroSecondaryHref(s.hero_secondary_cta_href || HERO_CTA_DEFAULTS.secondary.href);
+      /* 🛡️ DÜZELTME — DB null/boş artık HERO_CTA_DEFAULTS ile
+         OVERWRITE EDİLMEZ. Önceki davranış: kullanıcı alanı silip
+         kaydettiğinde (`hero_primary_cta_text` DB'de doğru şekilde
+         `null` olarak saklanıyordu) sayfa yenilendiğinde bu satırlar
+         `null || HERO_CTA_DEFAULTS...` ile input'u yeniden default
+         metinle dolduruyordu — kullanıcı "tekrar Kaydet"e bastığında
+         bu default artık GERÇEKTEN DB'ye yazılıyordu (silinen değer
+         görünüşte "geri geliyordu"). title/subtitle/badge (yukarıda)
+         zaten `s.hero_title || ""` deseniyle DOĞRU davranıyordu; CTA
+         alanları da aynı desene çekildi → DB'de kayıtlı gerçek değer
+         neyse (boş dahil) input'a AYNEN yüklenir. HERO_CTA_DEFAULTS
+         artık yalnız (a) yukarıdaki `useState` ilk değeri (satır fetch
+         tamamlanmadan / settings satırı hiç yoksa gösterilen ilk
+         varsayılan) ve (b) aşağıdaki `placeholder` metinlerinde
+         kullanılır — ikisi de kullanıcının kaydettiği veriyi ASLA
+         override etmez. */
+      setHeroPrimaryText(s.hero_primary_cta_text || "");
+      setHeroPrimaryHref(s.hero_primary_cta_href || "");
+      setHeroSecondaryText(s.hero_secondary_cta_text || "");
+      setHeroSecondaryHref(s.hero_secondary_cta_href || "");
       setHeroBadge(s.hero_badge_text || "");
       setPageHeroBg(s.page_hero_background_image || null);
       setLoading(false);
