@@ -623,6 +623,7 @@ export default function VillaCard({
          sayfası BookingSidebar üzerinden açılır); modal state'i
          hâlâ mount edilebilir ama isOpen=false sabit → 0 maliyet.
          ──────────────────────────────────────────────────── */
+      isDiscount ? (
       <article
         className={
           "relative overflow-hidden bg-white " +
@@ -873,6 +874,231 @@ export default function VillaCard({
           {reserveBlock}
         </div>
       </article>
+      ) : (
+      <article
+        className={
+          "relative overflow-hidden bg-white " +
+          "rounded-[22px] border border-[var(--color-stone-100)] " +
+          "shadow-[0_14px_34px_-22px_rgba(11,31,58,0.22)] " +
+          "group-hover:shadow-[0_28px_56px_-24px_rgba(11,31,58,0.32),0_0_0_1px_rgba(9,115,186,0.14)] " +
+          "group-hover:border-[#0973BA]/25 " +
+          "transition-[box-shadow,transform,border-color] duration-500 motion-reduce:transition-none " +
+          "group-hover:-translate-y-[3px]"
+        }
+      >
+        {/* ── IMAGE BLOCK — aspect-[4/3] (büyük, premium) ── */}
+        <div
+          className={
+            "relative overflow-hidden " +
+            "aspect-[4/3] " +
+            "bg-gradient-to-br from-[var(--color-sand-100)] via-[var(--color-sand-50)] to-[var(--color-sand-100)]"
+          }
+        >
+          {showImage ? (
+            <Image
+              src={cover}
+              alt={title || "Villa"}
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+              loading="lazy"
+              onError={() => setImgFailed(true)}
+              className="
+                object-cover object-center
+                transition-transform duration-[1000ms] ease-out
+                group-hover:scale-[1.06]
+                motion-reduce:transition-none motion-reduce:group-hover:scale-100
+              "
+            />
+          ) : (
+            /* PREMIUM FALLBACK — serif initial */
+            <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
+              <div className="font-display text-[72px] leading-none text-[var(--color-stone-300)] tracking-[-0.03em]">
+                {initial}
+              </div>
+              <p className="mt-2 text-[10px] tracking-[0.24em] uppercase font-medium text-[var(--color-stone-400)]">
+                Görsel yakında
+              </p>
+            </div>
+          )}
+
+          {/* Top vignette — badge/fav buton legibility */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/[0.22] via-black/[0.05] to-transparent pointer-events-none"
+          />
+          {/* Inner premium ring stroke */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 ring-1 ring-inset ring-white/15 pointer-events-none"
+          />
+
+          {/* BADGE — glass pill + turuncu→mavi gradient indicator dot. */}
+          {badge && (
+            <span className="absolute top-3.5 left-3.5 z-10 inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-md text-[var(--color-stone-900)] text-[10px] tracking-[0.16em] uppercase font-semibold px-2.5 py-1.5 rounded-full shadow-[0_6px_18px_-6px_rgb(27_26_23/0.28)] ring-1 ring-white/50">
+              <span
+                aria-hidden="true"
+                className="inline-block w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+              />
+              {badge}
+            </span>
+          )}
+
+          {/* FAV BUTTON — top-right (mevcut FavoriteButton, davranış/API AYNEN) */}
+          {id && <FavoriteButton villaId={id} variant="card" alwaysVisible />}
+        </div>
+
+        {/* ── CONTENT AREA ── */}
+        <div className="p-4 md:p-5">
+          {/* TITLE — premium display typography */}
+          <h3
+            className={
+              "font-display text-[18px] md:text-[20px] font-medium " +
+              "leading-[1.15] tracking-[-0.02em] text-[var(--color-stone-900)] " +
+              "line-clamp-1 group-hover:text-[#0973BA] " +
+              "transition-colors duration-300 motion-reduce:transition-none"
+            }
+          >
+            {title}
+          </h3>
+
+          {/* LOCATION */}
+          <p className="mt-1.5 flex items-center gap-1.5 text-[12.5px] text-[var(--color-stone-500)] min-w-0">
+            <MapPin
+              size={13}
+              className="text-[#ED7926] shrink-0"
+              strokeWidth={1.9}
+              aria-hidden
+            />
+            <span className="truncate">{location || "Lokasyon yok"}</span>
+          </p>
+
+          {/* REVIEW META — opsiyonel */}
+          {typeof reviewCount === "number" && reviewCount > 0 &&
+            typeof reviewAverage === "number" && reviewAverage > 0 && (
+              <div
+                className="mt-2 flex items-center gap-1.5 text-[12px] text-[var(--color-stone-600)]"
+                aria-label={`Ortalama puan ${reviewAverage.toFixed(
+                  1
+                )} / 5, ${reviewCount} misafir yorumu`}
+              >
+                <Star
+                  size={12}
+                  className="text-amber-500 shrink-0"
+                  fill="currentColor"
+                  strokeWidth={1.5}
+                  aria-hidden
+                />
+                <span className="font-medium tabular-nums text-[var(--color-stone-700)]">
+                  {reviewAverage.toFixed(1)}
+                </span>
+                <span aria-hidden="true" className="text-[var(--color-stone-300)] mx-0.5">·</span>
+                <span className="tabular-nums">{reviewCount} yorum</span>
+              </div>
+            )}
+
+          {/* Divider — üst bilgi bloğu ↔ özellikler */}
+          <div aria-hidden="true" className="mt-3.5 h-px bg-[var(--color-stone-100)]" />
+
+          {/* AMENITIES — guests / bedrooms / bathrooms, marka rengi ikon vurgusu */}
+          <div className="mt-3.5 flex items-center gap-x-4 gap-y-1.5 flex-wrap text-[12.5px] font-medium text-[var(--color-stone-800)]">
+            <span
+              className="inline-flex items-center gap-1.5"
+              aria-label={`${guests} kişi kapasitesi`}
+            >
+              <Users size={15} className="text-[#0973BA]" strokeWidth={1.9} aria-hidden />
+              <span className="tabular-nums">{guests} Kişi</span>
+            </span>
+            <span
+              className="inline-flex items-center gap-1.5"
+              aria-label={`${bedrooms} yatak odası`}
+            >
+              <BedDouble size={15} className="text-[#0973BA]" strokeWidth={1.9} aria-hidden />
+              <span className="tabular-nums">{bedrooms} Yatak Odası</span>
+            </span>
+            <span
+              className="inline-flex items-center gap-1.5"
+              aria-label={`${bathrooms} banyo`}
+            >
+              <Bath size={15} className="text-[#0973BA]" strokeWidth={1.9} aria-hidden />
+              <span className="tabular-nums">{bathrooms} Banyo</span>
+            </span>
+          </div>
+
+          {/* Marka rengi imza çizgisi — küçük vurgu */}
+          <div
+            aria-hidden="true"
+            className="mt-3.5 h-[2px] w-10 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+          />
+
+          {/* BOTTOM ROW — fiyat (sol) + booking CTA (sağ). Handler/aria-label/
+              lazy modal mantığı AYNEN; fiyat hesabı (stayTotal / convertedPrice)
+              üst tanımdan BİREBİR reuse — yeni hesap YOK. */}
+          <div className="mt-3.5 flex items-end justify-between gap-3">
+            {isFlexible ? (
+              /* 🛡️ ESNEK EK SONUÇ — fiyat gösterilmez; fiyat motoru
+                 çağrılmaz, ana tarih/href akışı korunur. */
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#ED7926]/10 to-[#0973BA]/10 ring-1 ring-[#0973BA]/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#0973BA]">
+                  <Sparkles size={11} strokeWidth={2} className="text-[#ED7926]" aria-hidden />
+                  Esnek Tarih Fırsatı
+                </div>
+                <div className="mt-1 text-[11px] font-medium text-[var(--color-stone-600)]">
+                  ±3 gün içinde müsait
+                </div>
+              </div>
+            ) : (
+              <div className="min-w-0">
+                {stayTotal !== null ? (
+                  <>
+                    <div className="font-display text-[19px] md:text-[20px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
+                      {formatCurrency(stayTotal, currency)}
+                    </div>
+                    <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)] tabular-nums">
+                      {stayNights} gece{hasCleaning ? " · Temizlik dahil" : ""}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="font-display text-[19px] md:text-[20px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
+                      {price ? formatCurrency(convertedPrice, currency) : "Fiyat sorunuz"}
+                    </div>
+                    {price ? (
+                      <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)]">
+                        Başlayan Fiyatlarla
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsBookingOpen(true);
+              }}
+              aria-label="Müsaitlik ve tarih seçimi modalını aç"
+              className={
+                "shrink-0 inline-flex items-center justify-center gap-1.5 whitespace-nowrap " +
+                "h-9 px-4 rounded-full " +
+                "text-white uppercase font-medium text-[11px] tracking-[0.06em] " +
+                "bg-gradient-to-r from-[#ED7926] to-[#0973BA] " +
+                "shadow-[0_10px_22px_-10px_rgba(9,115,186,0.45)] " +
+                "hover:shadow-[0_14px_28px_-10px_rgba(9,115,186,0.55)] hover:-translate-y-[1px] " +
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40 focus-visible:ring-offset-1 " +
+                "transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              }
+            >
+              <CalendarRange size={13} strokeWidth={1.9} aria-hidden />
+              Müsaitlik / Tarih Seç
+            </button>
+          </div>
+          {reserveBlock}
+        </div>
+      </article>
+      )
       )}
 
     </CardOuter>
