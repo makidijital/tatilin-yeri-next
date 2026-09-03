@@ -44,7 +44,7 @@ export function getCdnBaseForBucket(bucket: string): string | null {
 
 /**
  * Bucket için CDN base tanımlıysa absolute R2 URL döner; aksi halde null.
- *   resolveCdnPublicUrl("yazvillam-villa-images", "villas/x/y.webp")
+ *   resolveCdnPublicUrl("tatilinyeri-villa-images", "villas/x/y.webp")
  *     → "https://cdn.villayagel.com/villas/x/y.webp"
  */
 export function resolveCdnPublicUrl(
