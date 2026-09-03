@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
 import Hero from "@/app/components/ui/Hero";
-import CategoryCollection from "@/app/components/villa/CategoryCollection";
 import VillaTypeCarousel from "@/app/components/villa/VillaTypeCarousel";
 import LocationCollection from "@/app/components/villa/LocationCollection";
 import VillaList from "@/app/components/villa/VillaList";
@@ -109,10 +108,6 @@ export default async function Home() {
          FAQ varsa render edilir; boşsa hiç JSON-LD basılmaz. */}
       {faqs.length > 0 && <JsonLd data={buildFaqJsonLd(faqs)} />}
       <Hero content={heroContent} reviewStats={heroReviewStats} />
-      {/* 🛡️ "Kategori Keşfet" — Hero altı, VillaList üstü. Cached
-         helpers ile zero N+1, server-only render. Empty type'larda
-         null render → layout sessizce gizlenir. */}
-      <CategoryCollection />
       {/* 🛡️ "İndirimli Koleksiyon" — küratörlü fırsat villaları. Enabled
          + aktif villa yoksa null döner; Homepage Collection'ın ÜSTÜNDE. */}
       <DiscountCollection />
