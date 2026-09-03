@@ -695,13 +695,6 @@ function GalleryCard({
         </span>
       )}
 
-      {/* 🏡 ANA SAYFA ÖNİZLEME — 2. görsel (index === 1). */}
-      {index === 1 && (
-        <span className="absolute top-2 left-2 bg-[#ff7a59] text-white text-xs px-2 py-1 rounded">
-          Anasayfa İndirimli Önizleme
-        </span>
-      )}
-
       {/* 🔥 ACTIONS */}
       <div className="absolute bottom-2 left-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
         <button

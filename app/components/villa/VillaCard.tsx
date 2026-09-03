@@ -145,16 +145,6 @@ export default function VillaCard({
     (u): u is string => typeof u === "string" && u.trim().length > 0
   );
 
-  /* 🛡️ İKİNCİ GÖRSEL — YALNIZ discount (anasayfa İndirimli) variant.
-     images[1] paritesi: kapak (ilk geçerli URL) dışındaki İLK geçerli
-     görsel. Yoksa undefined → mini önizleme HİÇ render edilmez (boş
-     kutu yok). Yeni sorgu/DB/state YOK — mevcut images dizisi reuse. */
-  const secondImage = isDiscount
-    ? (images || []).filter(
-        (u): u is string => typeof u === "string" && u.trim().length > 0
-      )[1]
-    : undefined;
-
   /* Broken URL fallback: <img onError> tetiklenirse premium
      "Görsel yakında" state'ine geç. (onLoad opacity oyununa girmiyoruz
      — gradient bg zaten skeleton görevi görüyor, hydration-safe.) */
@@ -718,44 +708,6 @@ export default function VillaCard({
 
           {/* FAV BUTTON — top-right */}
           {id && <FavoriteButton villaId={id} variant="card" alwaysVisible />}
-
-          {/* ════════════════════════════════════════════════
-              🛡️ İKİNCİ GÖRSEL ÖNİZLEME — YALNIZ discount + images[1]
-              ════════════════════════════════════════════════
-              Kapak sağ-alt köşesinde premium mini kart. Kapak (images[0])
-              aynen kalır; bu images[1]. Kurallar:
-                - absolute → akış dışı, LAYOUT SHIFT / CLS YOK.
-                - Parent `overflow-hidden` → kart dışına TAŞMAZ.
-                - showImage guard → kapak görünmüyorken mini de yok.
-                - Hover: YALNIZ mini kendi üzerinde scale-[1.04]; ana
-                  görsel/kart animasyonu (group-hover) DEĞİŞMEZ.
-                - Yeni state/sorgu/DB YOK; mevcut images reuse. */}
-          {isDiscount && secondImage && showImage && (
-            <div
-              className="
-                absolute bottom-3 right-3 z-20
-                w-[108px] h-[70px] sm:w-[122px] sm:h-[80px]
-                rounded-xl overflow-hidden
-                border-[3px] border-white
-                ring-1 ring-black/5
-                shadow-[0_10px_28px_-8px_rgba(11,31,58,0.45)]
-                bg-white/40 backdrop-blur-[2px]
-                transition-transform duration-300 ease-out
-                hover:scale-[1.04]
-                motion-reduce:transition-none motion-reduce:hover:scale-100
-              "
-            >
-              <Image
-                src={secondImage}
-                alt=""
-                aria-hidden
-                fill
-                sizes="122px"
-                loading="lazy"
-                className="object-cover object-center"
-              />
-            </div>
-          )}
         </div>
 
         {/* ── CONTENT AREA — kart altı kompakt blok ── */}
