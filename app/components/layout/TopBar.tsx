@@ -225,7 +225,8 @@ export default function TopBar() {
         text-white
       "
     >
-      {/* SOL — İletişim (7/24 Destek + WhatsApp + Telefon + E-posta).
+      {/* SOL — İletişim (7/24 Destek + Telefon + E-posta). WhatsApp bu
+          bölümden kaldırıldı (SAĞ sosyal medya grubunda aynen kalıyor).
           Mobilde sıkışmayı/taşmayı önlemek için md+ görünür. */}
       <div className="hidden md:flex items-center gap-4 lg:gap-5 shrink-0 text-[12px]">
         {/* 7/24 DESTEK — premium, küçük; pulse abartısız (tek küçük nokta). */}
@@ -239,26 +240,8 @@ export default function TopBar() {
           </span>
         </div>
 
-        {(whatsappHref || phoneHref || emailHref) && (
+        {(phoneHref || emailHref) && (
           <span aria-hidden className="h-3 w-px bg-white/15" />
-        )}
-
-        {whatsappHref && (
-          <a
-            href={whatsappHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="WhatsApp"
-            className="
-              inline-flex items-center justify-center
-              opacity-90 hover:opacity-100 hover:scale-110
-              transition-[opacity,transform] duration-200
-              motion-reduce:transition-none motion-reduce:hover:scale-100
-              focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:rounded-md
-            "
-          >
-            <WhatsappIcon width={16} height={16} aria-hidden />
-          </a>
         )}
 
         {phoneHref && (
@@ -270,7 +253,7 @@ export default function TopBar() {
               transition-colors motion-reduce:transition-none
             "
           >
-            <Phone size={13} strokeWidth={1.85} className="text-[#ED7926]" aria-hidden />
+            <Phone size={15} strokeWidth={1.85} className="text-[#ED7926]" aria-hidden />
             <span className="font-medium tabular-nums whitespace-nowrap">
               {settings.phone}
             </span>
@@ -286,7 +269,7 @@ export default function TopBar() {
               transition-colors motion-reduce:transition-none
             "
           >
-            <Mail size={13} strokeWidth={1.85} className="text-[#0973BA]" aria-hidden />
+            <Mail size={15} strokeWidth={1.85} className="text-[#0973BA]" aria-hidden />
             <span className="max-w-[170px] truncate">{settings.email}</span>
           </a>
         )}
@@ -350,27 +333,27 @@ export default function TopBar() {
         <div className="hidden md:flex items-center gap-2.5">
           {settings.instagram && (
             <SocialLink href={settings.instagram} label="Instagram">
-              <InstagramIcon width={18} height={18} aria-hidden />
+              <InstagramIcon width={21} height={21} aria-hidden />
             </SocialLink>
           )}
           {settings.facebook && (
             <SocialLink href={settings.facebook} label="Facebook">
-              <FacebookIcon width={18} height={18} aria-hidden />
+              <FacebookIcon width={21} height={21} aria-hidden />
             </SocialLink>
           )}
           {whatsappHref && (
             <SocialLink href={whatsappHref} label="WhatsApp">
-              <WhatsappIcon width={18} height={18} aria-hidden />
+              <WhatsappIcon width={21} height={21} aria-hidden />
             </SocialLink>
           )}
           {settings.youtube && (
             <SocialLink href={settings.youtube} label="YouTube">
-              <YoutubeIcon width={18} height={18} aria-hidden />
+              <YoutubeIcon width={21} height={21} aria-hidden />
             </SocialLink>
           )}
           {settings.tiktok && (
             <SocialLink href={settings.tiktok} label="TikTok">
-              <TiktokIcon width={18} height={18} aria-hidden />
+              <TiktokIcon width={21} height={21} aria-hidden />
             </SocialLink>
           )}
         </div>
