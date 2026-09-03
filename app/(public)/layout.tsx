@@ -26,7 +26,7 @@ export default async function PublicLayout({
       settings?.maintenance_message?.trim() ||
       "Sitemizi yeniliyoruz. Kısa süre içinde tekrar buradayız.";
     return (
-      <div className="flex flex-col min-h-screen bg-[var(--color-ivory)]">
+      <div className="public-shell flex flex-col min-h-screen bg-[var(--color-ivory)]">
         <section className="flex-1 flex items-center justify-center px-5 md:px-10 py-24">
           <div className="max-w-xl text-center">
             <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)]">
@@ -56,7 +56,7 @@ export default async function PublicLayout({
     (phoneDigits ? `https://wa.me/${phoneDigits}` : null);
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--color-ivory)]">
+    <div className="public-shell flex flex-col min-h-screen bg-[var(--color-ivory)]">
       {/* HEADER */}
       <HeaderWrapper />
 

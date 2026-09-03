@@ -105,11 +105,12 @@
   --color-peach-500: #54c8f3;
 
   /* 🔠 Fonts */
-  /* 🛡️ PUBLIC TYPOGRAPHY — Outfit (hem body/UI hem heading/display).
+  /* 🛡️ PUBLIC TYPOGRAPHY — body/UI: Outfit. Başlıklar (h1-h6 + .font-display):
+     Outfit + next/font'un otomatik ürettiği metrik-eşleşen "Outfit Fallback"
+     @font-face'i, spesifikasyona göre (`'Outfit', 'Outfit Fallback', sans-serif`).
      Admin `.admin-shell` içinde --font-display Fraunces'e, --font-sans
      Inter'e PINLENİR (aşağıda) → admin tipografisi birebir korunur. */
-  --font-display: var(--font-outfit), "Outfit", system-ui, -apple-system,
-    sans-serif;
+  --font-display: var(--font-outfit), "Outfit", "Outfit Fallback", sans-serif;
   --font-sans: var(--font-outfit), "Outfit", system-ui, -apple-system,
     sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
@@ -232,6 +233,30 @@ body {
      ayrı tanımlar → etkilenmez. */
   letter-spacing: -0.02em;
   font-weight: 600;
+}
+
+/* ================================================================
+   🛡️ PUBLIC BAŞLIK FONTU — h1-h6 (merkezi, component'lere dokunmadan)
+   ================================================================
+   `.public-shell` altındaki (app/(public)/layout.tsx kök wrapper'ı —
+   yani TÜM public sayfalar: anasayfa, villa listeleme/arama, villa
+   detay, teklif al, favoriler, public header/topbar/footer) HER h1-h6
+   otomatik olarak --font-display (Outfit + Outfit Fallback) kullanır.
+   Böylece `.font-display` class'ı olmayan başlıklar (ör. küçük eyebrow
+   h2/h3 etiketleri) da kapsanır — tek tek component'e font-family
+   YAZILMADI. Yalnızca `font-family`; font-size/weight/line-height/
+   letter-spacing bu kuraldan ETKİLENMEZ (component'lerin kendi
+   class'ları aynen geçerli kalır).
+   `.admin-shell` bu selector'ların dışında (admin ayrı DOM subtree'de,
+   `.public-shell` class'ı hiç taşımaz) → admin başlıkları (Inter/
+   Fraunces) BİREBİR korunur; bu kural admin'e hiç uygulanmaz. */
+.public-shell h1,
+.public-shell h2,
+.public-shell h3,
+.public-shell h4,
+.public-shell h5,
+.public-shell h6 {
+  font-family: var(--font-display);
 }
 
 .eyebrow {
