@@ -124,6 +124,59 @@ export default function Header({
       ? "shadow-[0_8px_24px_-12px_rgba(27,26,23,0.08)]"
       : "shadow-none");
 
+  /* 🛡️ TEKLİF AL (desktop) — "Villa Arama" (`/arama`) menü öğesinin
+     index'i render'dan ÖNCE hesaplanır. Eşleşme hem `href` hem `name`
+     ile denenir (DB içeriği güvencesi için); index bulunamazsa (-1)
+     CTA nav'ın SONUNA fallback olarak eklenir — böylece buton HER
+     ZAMAN görünür olur, DB menü verisine kırılgan bağımlılık yoktur. */
+  const villaAramaIndex = menu.findIndex(
+    (item) => item.href === "/arama" || item.name === "Villa Arama"
+  );
+
+  /* 🛡️ Teklif Al CTA — marka renkleri (#ED7926 → #0973BA). Animasyon:
+     TopBar'daki ışık bandı/shimmer (`@keyframes shimmer`) KULLANILMAZ;
+     onun yerine Tailwind'in HAZIR `animate-pulse` utility'si ile
+     "nefes alan" (breathing) yumuşak bir glow halo uygulanır — emsal:
+     `PrepaymentBadge.tsx` (-inset blur + opacity animate-pulse).
+     globals.css'e dokunulmadı, yeni keyframe eklenmedi. Hover'da glow
+     daha belirgin (`group-hover:opacity-70 group-hover:blur-lg`) ve
+     buton kendi gölgesiyle hafifçe öne çıkar (`hover:-translate-y-[1px]`
+     + `hover:shadow-*`). Desktop ve mobil CTA aynı bu fonksiyonu /
+     aynı tekniği kullanır (yalnız mobilde boyut/padding farklı). */
+  const renderTeklifAlDesktop = (key: string) => (
+    <div key={key} className="group relative flex items-center py-5">
+      <span
+        aria-hidden
+        className="
+          pointer-events-none absolute -inset-1.5 rounded-full
+          bg-gradient-to-r from-[#ED7926] to-[#0973BA]
+          opacity-40 blur-md
+          animate-pulse [animation-duration:2.8s]
+          group-hover:opacity-70 group-hover:blur-lg
+          transition-[opacity,filter] duration-300
+          motion-reduce:animate-none
+        "
+      />
+      <Link
+        href="/teklif-al"
+        className="
+          relative inline-flex items-center justify-center
+          px-4 py-[7px] rounded-full
+          text-[12.5px] font-semibold tracking-[0.01em] text-white
+          bg-gradient-to-r from-[#ED7926] to-[#0973BA]
+          shadow-[0_6px_16px_-4px_rgba(237,121,38,0.45),0_6px_16px_-4px_rgba(9,115,186,0.35)]
+          hover:shadow-[0_10px_26px_-4px_rgba(237,121,38,0.6),0_10px_26px_-4px_rgba(9,115,186,0.5)]
+          hover:-translate-y-[1px]
+          transition-[box-shadow,transform] duration-300
+          motion-reduce:transition-none motion-reduce:hover:translate-y-0
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0973BA]/50
+        "
+      >
+        Teklif Al
+      </Link>
+    </div>
+  );
+
   return (
     <>
       <header className="w-full fixed top-0 z-50">
@@ -166,14 +219,14 @@ export default function Header({
                 text-[var(--color-stone-700)]
               "
             >
-              {menu.map((item) => {
+              {menu.map((item, index) => {
                 const isActive = pathname === item.href;
                 const hasChildren = item.children && item.children.length > 0;
                 /* 🛡️ TEKLİF AL (desktop) — DB menü ağacına DOKUNULMADI;
-                   yalnızca render sırasında, `href === "/arama"` olan
+                   yalnızca render sırasında, villaAramaIndex'e denk gelen
                    item'ın (Villa Arama) hemen ÖNÜNE, aynı .map() içinde
                    eklenir. Menü sırası/verisi DB'de aynen kalır. */
-                const isVillaAramaItem = item.href === "/arama";
+                const isVillaAramaItem = index === villaAramaIndex;
 
                 const menuItemNode = (
                   <div
@@ -227,51 +280,15 @@ export default function Header({
 
                 if (!isVillaAramaItem) return menuItemNode;
 
-                /* 🛡️ Teklif Al — marka renkleri (#ED7926 → #0973BA),
-                   statik gradient + yumuşak renkli glow (box-shadow) +
-                   çok hafif ışık geçişi (mevcut globals.css
-                   `@keyframes shimmer` — skeleton loader ile AYNI,
-                   yeni CSS eklenmedi — inline `animation` ile reuse
-                   edilir). Neon/rahatsız edici blink YOK.
-                   `py-5` sarmalayıcı diğer nav item'larıyla AYNI dikey
-                   ritim → menü yüksekliği artmaz. */
                 return [
-                  <div
-                    key={`teklif-al-desktop-${item.id || item.name}`}
-                    className="flex items-center py-5"
-                  >
-                    <Link
-                      href="/teklif-al"
-                      className="
-                        relative inline-flex items-center justify-center
-                        overflow-hidden
-                        px-4 py-[7px] rounded-full
-                        text-[12.5px] font-semibold tracking-[0.01em] text-white
-                        bg-gradient-to-r from-[#ED7926] to-[#0973BA]
-                        shadow-[0_6px_16px_-4px_rgba(237,121,38,0.45),0_6px_16px_-4px_rgba(9,115,186,0.35)]
-                        hover:shadow-[0_10px_22px_-4px_rgba(237,121,38,0.55),0_10px_22px_-4px_rgba(9,115,186,0.45)]
-                        hover:-translate-y-[1px]
-                        transition-[box-shadow,transform] duration-300
-                        motion-reduce:transition-none motion-reduce:hover:translate-y-0
-                        focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0973BA]/50
-                      "
-                    >
-                      <span className="relative z-10">Teklif Al</span>
-                      <span
-                        aria-hidden
-                        className="absolute inset-0 pointer-events-none motion-reduce:hidden"
-                        style={{
-                          background:
-                            "linear-gradient(100deg, transparent 42%, rgba(255,255,255,0.4) 50%, transparent 58%)",
-                          transform: "translateX(-100%)",
-                          animation: "shimmer 3.2s ease-in-out infinite",
-                        }}
-                      />
-                    </Link>
-                  </div>,
+                  renderTeklifAlDesktop(
+                    `teklif-al-desktop-${item.id || item.name}`
+                  ),
                   menuItemNode,
                 ];
               })}
+              {villaAramaIndex === -1 &&
+                renderTeklifAlDesktop("teklif-al-desktop-fallback")}
             </nav>
 
             {/* RIGHT — search + favorites + CTA */}
@@ -310,37 +327,42 @@ export default function Header({
                  yerini aldı. Hamburger toggle'dan TAMAMEN bağımsız ayrı
                  bir <Link>; kendi tıklama alanı var, hamburger'ın
                  onClick'ini tetiklemez, `open` state'ine dokunmaz.
-                 /teklif-al'a gider. Marka renkleri (#ED7926→#0973BA),
-                 desktop CTA ile aynı tasarım dili (gradient + glow +
-                 hafif shimmer — mevcut globals.css `@keyframes shimmer`
-                 reuse, yeni CSS eklenmedi). `shrink-0`+`whitespace-nowrap`
-                 → küçük ekranlarda taşma/sıkışma yok. */}
-              <Link
-                href="/teklif-al"
-                className="
-                  relative inline-flex items-center justify-center shrink-0
-                  overflow-hidden whitespace-nowrap
-                  px-3.5 py-2 rounded-full
-                  text-[12px] font-semibold text-white
-                  bg-gradient-to-r from-[#ED7926] to-[#0973BA]
-                  shadow-[0_4px_14px_-4px_rgba(237,121,38,0.5),0_4px_14px_-4px_rgba(9,115,186,0.4)]
-                  active:scale-[0.97]
-                  transition-transform duration-150 motion-reduce:transition-none
-                  focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0973BA]/50
-                "
-              >
-                <span className="relative z-10">Teklif Al</span>
+                 /teklif-al'a gider. Konum/boyut/davranış AYNEN korundu —
+                 yalnızca animasyon tekniği değişti: TopBar shimmer (ışık
+                 bandı) yerine, desktop CTA ile AYNI breathing/pulse glow
+                 (bkz. `renderTeklifAlDesktop` yorumu). `shrink-0` artık
+                 sarmalayıcı `div` üzerinde → küçük ekranlarda taşma/
+                 sıkışma yok. */}
+              <div className="group relative shrink-0">
                 <span
                   aria-hidden
-                  className="absolute inset-0 pointer-events-none motion-reduce:hidden"
-                  style={{
-                    background:
-                      "linear-gradient(100deg, transparent 42%, rgba(255,255,255,0.4) 50%, transparent 58%)",
-                    transform: "translateX(-100%)",
-                    animation: "shimmer 3.2s ease-in-out infinite",
-                  }}
+                  className="
+                    pointer-events-none absolute -inset-1 rounded-full
+                    bg-gradient-to-r from-[#ED7926] to-[#0973BA]
+                    opacity-40 blur-md
+                    animate-pulse [animation-duration:2.8s]
+                    group-hover:opacity-70 group-hover:blur-lg
+                    transition-[opacity,filter] duration-300
+                    motion-reduce:animate-none
+                  "
                 />
-              </Link>
+                <Link
+                  href="/teklif-al"
+                  className="
+                    relative inline-flex items-center justify-center
+                    whitespace-nowrap
+                    px-3.5 py-2 rounded-full
+                    text-[12px] font-semibold text-white
+                    bg-gradient-to-r from-[#ED7926] to-[#0973BA]
+                    shadow-[0_4px_14px_-4px_rgba(237,121,38,0.5),0_4px_14px_-4px_rgba(9,115,186,0.4)]
+                    active:scale-[0.97]
+                    transition-transform duration-150 motion-reduce:transition-none
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0973BA]/50
+                  "
+                >
+                  Teklif Al
+                </Link>
+              </div>
 
               {/* HAMBURGER — aç/kapa davranışı birebir korundu. Görünür
                  "Menü" metni kaldırıldı (yerini Teklif Al CTA'sı aldı);
