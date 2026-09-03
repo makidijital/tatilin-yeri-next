@@ -72,8 +72,39 @@ export default function Header({
 
   const [scrolled, setScrolled] = useState(false);
 
+  /* 🛡️ MOBILE SUBMENU ACCORDION — hangi ana menü öğelerinin alt
+     menüsü açık, id/name bazlı Set ile tutuluyor. Birden fazla
+     submenu bağımsız açık kalabilir (biri diğerini otomatik
+     kapatmaz). Başlangıç: boş Set → tüm alt menüler kapalı.
+     Yalnızca mobile hamburger drawer'ı için; desktop `group-hover`
+     dropdown sistemine dokunulmadı. */
+  const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(
+    new Set()
+  );
+
+  function toggleSubmenu(key: string) {
+    setOpenSubmenus((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }
+
+  /* Hamburger tamamen kapanınca submenu state'i de temizlenir —
+     kullanıcı menüyü tekrar açtığında bütün alt menüler yine
+     kapalı gelir. */
+  function closeMobileMenu() {
+    setOpen(false);
+    setOpenSubmenus(new Set());
+  }
+
   useEffect(() => {
     setOpen(false);
+    setOpenSubmenus(new Set());
   }, [pathname]);
 
   useEffect(() => {
@@ -138,8 +169,13 @@ export default function Header({
               {menu.map((item) => {
                 const isActive = pathname === item.href;
                 const hasChildren = item.children && item.children.length > 0;
+                /* 🛡️ TEKLİF AL (desktop) — DB menü ağacına DOKUNULMADI;
+                   yalnızca render sırasında, `href === "/arama"` olan
+                   item'ın (Villa Arama) hemen ÖNÜNE, aynı .map() içinde
+                   eklenir. Menü sırası/verisi DB'de aynen kalır. */
+                const isVillaAramaItem = item.href === "/arama";
 
-                return (
+                const menuItemNode = (
                   <div
                     key={item.id || item.name}
                     className="relative group py-5"
@@ -188,6 +224,53 @@ export default function Header({
                     )}
                   </div>
                 );
+
+                if (!isVillaAramaItem) return menuItemNode;
+
+                /* 🛡️ Teklif Al — marka renkleri (#ED7926 → #0973BA),
+                   statik gradient + yumuşak renkli glow (box-shadow) +
+                   çok hafif ışık geçişi (mevcut globals.css
+                   `@keyframes shimmer` — skeleton loader ile AYNI,
+                   yeni CSS eklenmedi — inline `animation` ile reuse
+                   edilir). Neon/rahatsız edici blink YOK.
+                   `py-5` sarmalayıcı diğer nav item'larıyla AYNI dikey
+                   ritim → menü yüksekliği artmaz. */
+                return [
+                  <div
+                    key={`teklif-al-desktop-${item.id || item.name}`}
+                    className="flex items-center py-5"
+                  >
+                    <Link
+                      href="/teklif-al"
+                      className="
+                        relative inline-flex items-center justify-center
+                        overflow-hidden
+                        px-4 py-[7px] rounded-full
+                        text-[12.5px] font-semibold tracking-[0.01em] text-white
+                        bg-gradient-to-r from-[#ED7926] to-[#0973BA]
+                        shadow-[0_6px_16px_-4px_rgba(237,121,38,0.45),0_6px_16px_-4px_rgba(9,115,186,0.35)]
+                        hover:shadow-[0_10px_22px_-4px_rgba(237,121,38,0.55),0_10px_22px_-4px_rgba(9,115,186,0.45)]
+                        hover:-translate-y-[1px]
+                        transition-[box-shadow,transform] duration-300
+                        motion-reduce:transition-none motion-reduce:hover:translate-y-0
+                        focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0973BA]/50
+                      "
+                    >
+                      <span className="relative z-10">Teklif Al</span>
+                      <span
+                        aria-hidden
+                        className="absolute inset-0 pointer-events-none motion-reduce:hidden"
+                        style={{
+                          background:
+                            "linear-gradient(100deg, transparent 42%, rgba(255,255,255,0.4) 50%, transparent 58%)",
+                          transform: "translateX(-100%)",
+                          animation: "shimmer 3.2s ease-in-out infinite",
+                        }}
+                      />
+                    </Link>
+                  </div>,
+                  menuItemNode,
+                ];
               })}
             </nav>
 
@@ -223,22 +306,59 @@ export default function Header({
                  drawer içi "Favorilerim" satırı kaldırıldı. */}
               <HeaderFavoritesLink />
 
-              {/* HAMBURGER — davranış birebir korundu; görünür "Menü"
-                 etiketi eklendi (mobil kullanılabilirlik). */}
-              <button
-                onClick={() => setOpen(!open)}
-                aria-label="Menüyü aç"
+              {/* 🛡️ MOBİL TEKLİF AL — eski görünür "Menü" yazısının
+                 yerini aldı. Hamburger toggle'dan TAMAMEN bağımsız ayrı
+                 bir <Link>; kendi tıklama alanı var, hamburger'ın
+                 onClick'ini tetiklemez, `open` state'ine dokunmaz.
+                 /teklif-al'a gider. Marka renkleri (#ED7926→#0973BA),
+                 desktop CTA ile aynı tasarım dili (gradient + glow +
+                 hafif shimmer — mevcut globals.css `@keyframes shimmer`
+                 reuse, yeni CSS eklenmedi). `shrink-0`+`whitespace-nowrap`
+                 → küçük ekranlarda taşma/sıkışma yok. */}
+              <Link
+                href="/teklif-al"
                 className="
-                  inline-flex items-center gap-1.5 shrink-0
-                  pl-3 pr-2.5 py-2 rounded-full
+                  relative inline-flex items-center justify-center shrink-0
+                  overflow-hidden whitespace-nowrap
+                  px-3.5 py-2 rounded-full
+                  text-[12px] font-semibold text-white
+                  bg-gradient-to-r from-[#ED7926] to-[#0973BA]
+                  shadow-[0_4px_14px_-4px_rgba(237,121,38,0.5),0_4px_14px_-4px_rgba(9,115,186,0.4)]
+                  active:scale-[0.97]
+                  transition-transform duration-150 motion-reduce:transition-none
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0973BA]/50
+                "
+              >
+                <span className="relative z-10">Teklif Al</span>
+                <span
+                  aria-hidden
+                  className="absolute inset-0 pointer-events-none motion-reduce:hidden"
+                  style={{
+                    background:
+                      "linear-gradient(100deg, transparent 42%, rgba(255,255,255,0.4) 50%, transparent 58%)",
+                    transform: "translateX(-100%)",
+                    animation: "shimmer 3.2s ease-in-out infinite",
+                  }}
+                />
+              </Link>
+
+              {/* HAMBURGER — aç/kapa davranışı birebir korundu. Görünür
+                 "Menü" metni kaldırıldı (yerini Teklif Al CTA'sı aldı);
+                 yalnız ikon kalır, simetrik padding ile tap alanı korunur.
+                 Kapanış (manuel ya da route değişimiyle) submenu state'ini
+                 de temizler (closeMobileMenu → openSubmenus sıfırlanır). */}
+              <button
+                onClick={() => (open ? closeMobileMenu() : setOpen(true))}
+                aria-label={open ? "Menüyü kapat" : "Menüyü aç"}
+                aria-expanded={open}
+                className="
+                  inline-flex items-center justify-center shrink-0
+                  p-2.5 rounded-full
                   text-[var(--color-stone-900)]
                   hover:bg-[var(--color-sand-50)]
                   transition-colors motion-reduce:transition-none
                 "
               >
-                <span className="text-[12px] font-medium tracking-[0.08em] uppercase">
-                  Menü
-                </span>
                 {open ? <X size={22} /> : <Menu size={22} />}
               </button>
             </div>
@@ -264,32 +384,90 @@ export default function Header({
                hamburger açmadan görebilsin). Drawer artık yalnızca
                navigasyon menüsü ve CTA içerir. Aynı state hâlâ
                geçerli — sadece drawer içindeki render kaldırıldı. */}
-            {menu.map((item) => (
-              <div
-                key={item.id || item.name}
-                className="border-b border-[var(--color-stone-100)] pb-3 last:border-b-0"
-              >
-                <Link
-                  href={item.href}
-                  className="block font-medium text-[var(--color-stone-900)]"
+            {menu.map((item) => {
+              const itemKey = item.id || item.name;
+              const hasChildren =
+                item.children && item.children.length > 0;
+              const isSubmenuOpen = openSubmenus.has(itemKey);
+
+              return (
+                <div
+                  key={itemKey}
+                  className="border-b border-[var(--color-stone-100)] pb-3 last:border-b-0"
                 >
-                  {item.name}
-                </Link>
-                {item.children && item.children.length > 0 && (
-                  <div className="ml-3 mt-2 space-y-2">
-                    {item.children.map((child) => (
-                      <Link
-                        key={child.id}
-                        href={child.href}
-                        className="block text-sm text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] transition"
+                  <div className="flex items-center justify-between gap-2">
+                    <Link
+                      href={item.href}
+                      className="block flex-1 font-medium text-[var(--color-stone-900)]"
+                    >
+                      {item.name}
+                    </Link>
+
+                    {/* 🛡️ SUBMENU TOGGLE — ayrı, bağımsız tıklama alanı.
+                       Parent linkin kendi navigasyon davranışına
+                       dokunmaz (yukarıdaki <Link> AYNEN çalışır);
+                       yalnızca alt menüyü açar/kapatır. Birden fazla
+                       submenu bağımsız açık kalabilir (openSubmenus
+                       bir Set — bunu açmak diğerini kapatmaz). */}
+                    {hasChildren && (
+                      <button
+                        type="button"
+                        onClick={() => toggleSubmenu(itemKey)}
+                        aria-expanded={isSubmenuOpen}
+                        aria-label={
+                          (isSubmenuOpen ? "Kapat: " : "Aç: ") +
+                          item.name +
+                          " alt menüsü"
+                        }
+                        className="
+                          shrink-0 inline-flex items-center justify-center
+                          h-7 w-7 rounded-full
+                          text-[var(--color-stone-500)]
+                          hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)]
+                          transition-colors motion-reduce:transition-none
+                          focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40
+                        "
                       >
-                        {child.name}
-                      </Link>
-                    ))}
+                        <ChevronDown
+                          size={16}
+                          className={
+                            "transition-transform duration-300 motion-reduce:transition-none " +
+                            (isSubmenuOpen ? "rotate-180" : "rotate-0")
+                          }
+                        />
+                      </button>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* 🛡️ SMOOTH ACCORDION — grid-rows-[0fr]→[1fr] tekniği
+                     (projede FaqSection.tsx ile aynı yaklaşım); height
+                     ölçme/layout-thrash yok. Başlangıçta (openSubmenus
+                     boş Set) HERKES kapalı. */}
+                  {hasChildren && (
+                    <div
+                      className={
+                        "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none " +
+                        (isSubmenuOpen ? "grid-rows-[1fr] mt-2" : "grid-rows-[0fr]")
+                      }
+                    >
+                      <div className="overflow-hidden">
+                        <div className="ml-3 space-y-2">
+                          {item.children!.map((child) => (
+                            <Link
+                              key={child.id}
+                              href={child.href}
+                              className="block text-sm text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] transition"
+                            >
+                              {child.name}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
             {/* 🛡️ Favoriler artık mobil Header strip'te (hamburger'ın
                solunda ikon-only). Drawer içindeki "Favorilerim" satırı
