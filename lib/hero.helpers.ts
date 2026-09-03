@@ -69,10 +69,25 @@ function clamp01(n: unknown, fallback: number): number {
   return v;
 }
 
-function pickStr(v: unknown, fallback: string): string {
-  if (typeof v !== "string") return fallback;
+/**
+ * 🛡️ Admin bilinçli boş bırakma — badge/title/subtitle için fallback
+ * ALMAYAN string picker. Kullanım: yalnız `resolveHeroContent`'in
+ * NORMAL (hero_enabled !== false) dalında. Amaç: admin alanı gerçekten
+ * boşsa (`""`, yalnızca whitespace, `null`/`undefined`) public Hero'da
+ * o içerik HİÇ render edilmesin — hardcoded metin defaultlarına
+ * (`HERO_DEFAULTS.badge/title/subtitle`) düşülmesin.
+ *
+ * `hero_enabled === false` (veya settings hiç yoksa) "safety reset"
+ * dalı bu fonksiyonu KULLANMAZ — o dal aynen `HERO_DEFAULTS.*` ile
+ * dolu döner (aşağıda değişmedi); yalnızca admin'in kaydettiği GERÇEK
+ * içerik boşsa public'te boş kalır. (Önceki `pickStr(v, fallback)`
+ * yardımcı fonksiyonu artık hiçbir yerde çağrılmadığı için kaldırıldı
+ * — dead code bırakılmadı.)
+ */
+function pickStrOrEmpty(v: unknown): string {
+  if (typeof v !== "string") return "";
   const t = v.trim();
-  return t.length > 0 ? v : fallback;
+  return t.length > 0 ? v : "";
 }
 
 function pickCta(
@@ -147,9 +162,14 @@ export function resolveHeroContent(
 
   return {
     enabled: true,
-    badge: pickStr(settings.hero_badge_text, HERO_DEFAULTS.badge),
-    title: pickStr(settings.hero_title, HERO_DEFAULTS.title),
-    subtitle: pickStr(settings.hero_subtitle, HERO_DEFAULTS.subtitle),
+    /* 🛡️ Admin bilinçli boşaltmışsa ("") → public'te render edilmesin
+       diye HİÇBİR fallback yok (pickStrOrEmpty). Hero.tsx bu alanları
+       artık `hero.badge && (...)` / `hero.title && (...)` ile koşullu
+       render ediyor. `hero_enabled === false` (yukarıdaki early-return)
+       davranışı BU SATIRLARDAN etkilenmez, aynen HERO_DEFAULTS.* döner. */
+    badge: pickStrOrEmpty(settings.hero_badge_text),
+    title: pickStrOrEmpty(settings.hero_title),
+    subtitle: pickStrOrEmpty(settings.hero_subtitle),
     backgroundImage,
     overlayOpacity: clamp01(
       settings.hero_overlay_opacity,

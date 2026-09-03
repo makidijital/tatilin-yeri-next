@@ -5,7 +5,6 @@ import { ArrowUpRight } from "lucide-react";
 
 import {
   resolveHeroContent,
-  HERO_CTA_DEFAULTS,
   type HeroContent,
 } from "@/lib/hero.helpers";
 
@@ -247,7 +246,9 @@ export default function Hero({
       />
 
       {/* ═══════════════════════════════════════════════════════════
-          CONTENT CONTAINER — alt-sol anchor (luxury booking pattern)
+          CONTENT CONTAINER — merkezi hizalı (text-center) kompozisyon.
+          Yalnızca hizalama/layout; H1 font-size/weight/line-height/
+          letter-spacing DEĞİŞMEDİ.
           ═══════════════════════════════════════════════════════════ */}
       <div
         className="
@@ -260,55 +261,65 @@ export default function Hero({
           pb-5 md:pb-12
         "
       >
-        {/* ─── COPY BLOCK ───────────────────────────────────────── */}
-        <div className="max-w-3xl lg:max-w-4xl">
-          {/* Eyebrow — floating glass badge, turuncu→mavi gradient dot */}
-          <p
-            className="
-              inline-flex items-center gap-2.5
-              rounded-full border border-white/25 bg-white/10 backdrop-blur-md
-              px-4 py-2
-              text-[11px] tracking-[0.28em] uppercase font-medium
-              text-white
-              shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)]
-            "
-          >
-            <span
-              aria-hidden="true"
-              className="relative inline-flex w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+        {/* ─── COPY BLOCK — merkezi hizalı (text-center + mx-auto) ── */}
+        <div className="max-w-3xl lg:max-w-4xl mx-auto text-center">
+          {/* Eyebrow — floating glass badge, turuncu→mavi gradient dot.
+             🛡️ Admin "Hero Rozet Metni" boşsa (`hero.badge === ""`)
+             HİÇ render edilmez — hardcoded default'a düşülmez. */}
+          {hero.badge && (
+            <p
+              className="
+                inline-flex items-center gap-2.5
+                rounded-full border border-white/25 bg-white/10 backdrop-blur-md
+                px-4 py-2
+                text-[11px] tracking-[0.28em] uppercase font-medium
+                text-white
+                shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)]
+              "
             >
               <span
                 aria-hidden="true"
-                className="absolute inset-0 rounded-full bg-[#ED7926] animate-ping opacity-60"
-              />
-            </span>
-            {hero.badge}
-          </p>
+                className="relative inline-flex w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+              >
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-full bg-[#ED7926] animate-ping opacity-60"
+                />
+              </span>
+              {hero.badge}
+            </p>
+          )}
 
           {/* Editorial title — beyaz ilk satır, turuncu→mavi gradient
-             (bg-clip-text) ikinci satır — dramatic scale */}
-          <h1
-            className="
-              font-display
-              text-[34px] sm:text-[42px] md:text-[54px] lg:text-[66px]
-              leading-[0.98] tracking-[-0.03em]
-              text-white
-              mt-6 md:mt-7
-            "
-          >
-            {titleLines.map((line, i) => (
-              <span
-                key={i}
-                className={
-                  i === 0
-                    ? "block"
-                    : "block bg-gradient-to-r from-[#ED7926] to-[#0973BA] bg-clip-text text-transparent"
-                }
-              >
-                {line}
-              </span>
-            ))}
-          </h1>
+             (bg-clip-text) ikinci satır — dramatic scale. Merkezi
+             hizalama ata `text-center`'dan miras alınır (inherit);
+             font-size/weight/line-height/letter-spacing DEĞİŞMEDİ.
+             🛡️ Admin "Hero Başlığı" boşsa (`hero.title === ""`) H1
+             HİÇ render edilmez — hardcoded default'a düşülmez. */}
+          {hero.title && (
+            <h1
+              className="
+                font-display
+                text-[34px] sm:text-[42px] md:text-[54px] lg:text-[66px]
+                leading-[0.98] tracking-[-0.03em]
+                text-white
+                mt-6 md:mt-7
+              "
+            >
+              {titleLines.map((line, i) => (
+                <span
+                  key={i}
+                  className={
+                    i === 0
+                      ? "block"
+                      : "block bg-gradient-to-r from-[#ED7926] to-[#0973BA] bg-clip-text text-transparent"
+                  }
+                >
+                  {line}
+                </span>
+              ))}
+            </h1>
+          )}
 
           {/* Body subtitle */}
           {hero.subtitle && (
@@ -327,65 +338,76 @@ export default function Hero({
           {/* CTA row — admin-driven (hero.primaryCta / secondaryCta).
              Text + link admin settings'ten; href tipine göre akıllı
              yönlendirme (HeroCta: #anchor smooth scroll / dahili route /
-             harici yeni sekme). Admin boşsa yeni scroll-CTA fallback'leri.
-             Primary: turuncu→mavi gradient + breathing/pulse glow (Header
-             CTA ile AYNI teknik — TopBar shimmer DEĞİL). Secondary: glass
-             outline. */}
-          <div className="mt-8 md:mt-10 flex flex-wrap items-center gap-3">
-            <HeroCta
-              href={hero.primaryCta?.href || HERO_CTA_DEFAULTS.primary.href}
-              className="
-                group relative inline-flex items-center
-                px-6 py-3 rounded-full
-                text-white text-[13.5px] font-medium tracking-[0.02em]
-                bg-gradient-to-r from-[#ED7926] to-[#0973BA]
-                shadow-[0_18px_36px_-14px_rgba(237,121,38,0.5),0_10px_26px_-10px_rgba(9,115,186,0.45)]
-                hover:shadow-[0_22px_44px_-14px_rgba(237,121,38,0.6),0_12px_30px_-10px_rgba(9,115,186,0.55)]
-                hover:-translate-y-[1px]
-                transition-[transform,box-shadow] duration-300
-                motion-reduce:transition-none motion-reduce:hover:translate-y-0
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-stone-900)]
-              "
-            >
-              <span
-                aria-hidden
-                className="
-                  pointer-events-none absolute -inset-1.5 rounded-full
-                  bg-gradient-to-r from-[#ED7926] to-[#0973BA]
-                  opacity-40 blur-md
-                  animate-pulse [animation-duration:2.8s]
-                  group-hover:opacity-70 group-hover:blur-lg
-                  transition-[opacity,filter] duration-300
-                  motion-reduce:animate-none
-                "
-              />
-              <span className="relative z-10 inline-flex items-center gap-2">
-                {hero.primaryCta?.text || HERO_CTA_DEFAULTS.primary.text}
-                <ArrowUpRight
-                  size={15}
-                  className="transition-transform duration-300 motion-reduce:transition-none group-hover:translate-x-[1px] group-hover:-translate-y-[1px]"
-                  aria-hidden
-                />
-              </span>
-            </HeroCta>
-            <HeroCta
-              href={hero.secondaryCta?.href || HERO_CTA_DEFAULTS.secondary.href}
-              className="
-                group inline-flex items-center gap-2
-                px-5 py-3 rounded-full
-                border border-white/30 bg-white/10 backdrop-blur-md
-                text-white
-                text-[13.5px] font-medium tracking-[0.02em]
-                hover:bg-white/[0.18] hover:border-white/45
-                hover:-translate-y-[1px]
-                transition-[transform,border-color,background-color] duration-300
-                motion-reduce:transition-none motion-reduce:hover:translate-y-0
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40
-              "
-            >
-              {hero.secondaryCta?.text || HERO_CTA_DEFAULTS.secondary.text}
-            </HeroCta>
-          </div>
+             harici yeni sekme) DEĞİŞMEDİ. 🛡️ Admin "Primary/Secondary CTA
+             Metni" boşsa `resolveHeroContent` zaten `null` döner
+             (pickCta) — burada artık HERO_CTA_DEFAULTS'a düşülmüyor;
+             ilgili buton (veya metin boşsa link dolu olsa bile) HİÇ
+             render edilmez. İkisi de boşsa satırın kendisi de render
+             edilmez (boş gap kalmaz). Primary: turuncu→mavi gradient +
+             breathing/pulse glow (Header CTA ile AYNI teknik — TopBar
+             shimmer DEĞİL). Secondary: glass outline. `justify-center`
+             → merkezi hizalama (yeni), buton stilleri/davranışı AYNEN. */}
+          {(hero.primaryCta || hero.secondaryCta) && (
+            <div className="mt-8 md:mt-10 flex flex-wrap items-center justify-center gap-3">
+              {hero.primaryCta && (
+                <HeroCta
+                  href={hero.primaryCta.href}
+                  className="
+                    group relative inline-flex items-center
+                    px-6 py-3 rounded-full
+                    text-white text-[13.5px] font-medium tracking-[0.02em]
+                    bg-gradient-to-r from-[#ED7926] to-[#0973BA]
+                    shadow-[0_18px_36px_-14px_rgba(237,121,38,0.5),0_10px_26px_-10px_rgba(9,115,186,0.45)]
+                    hover:shadow-[0_22px_44px_-14px_rgba(237,121,38,0.6),0_12px_30px_-10px_rgba(9,115,186,0.55)]
+                    hover:-translate-y-[1px]
+                    transition-[transform,box-shadow] duration-300
+                    motion-reduce:transition-none motion-reduce:hover:translate-y-0
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-stone-900)]
+                  "
+                >
+                  <span
+                    aria-hidden
+                    className="
+                      pointer-events-none absolute -inset-1.5 rounded-full
+                      bg-gradient-to-r from-[#ED7926] to-[#0973BA]
+                      opacity-40 blur-md
+                      animate-pulse [animation-duration:2.8s]
+                      group-hover:opacity-70 group-hover:blur-lg
+                      transition-[opacity,filter] duration-300
+                      motion-reduce:animate-none
+                    "
+                  />
+                  <span className="relative z-10 inline-flex items-center gap-2">
+                    {hero.primaryCta.text}
+                    <ArrowUpRight
+                      size={15}
+                      className="transition-transform duration-300 motion-reduce:transition-none group-hover:translate-x-[1px] group-hover:-translate-y-[1px]"
+                      aria-hidden
+                    />
+                  </span>
+                </HeroCta>
+              )}
+              {hero.secondaryCta && (
+                <HeroCta
+                  href={hero.secondaryCta.href}
+                  className="
+                    group inline-flex items-center gap-2
+                    px-5 py-3 rounded-full
+                    border border-white/30 bg-white/10 backdrop-blur-md
+                    text-white
+                    text-[13.5px] font-medium tracking-[0.02em]
+                    hover:bg-white/[0.18] hover:border-white/45
+                    hover:-translate-y-[1px]
+                    transition-[transform,border-color,background-color] duration-300
+                    motion-reduce:transition-none motion-reduce:hover:translate-y-0
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40
+                  "
+                >
+                  {hero.secondaryCta.text}
+                </HeroCta>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ─── FLOATING SEARCH PANEL — client island, AYNEN ───── */}
