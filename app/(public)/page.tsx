@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import Hero from "@/app/components/ui/Hero";
 import CategoryCollection from "@/app/components/villa/CategoryCollection";
+import VillaTypeCarousel from "@/app/components/villa/VillaTypeCarousel";
 import LocationCollection from "@/app/components/villa/LocationCollection";
 import VillaList from "@/app/components/villa/VillaList";
 /* 🛡️ İndirimli Koleksiyon (migration 062) — VillaList paraleli, AYRI
@@ -115,6 +116,12 @@ export default async function Home() {
       {/* 🛡️ "İndirimli Koleksiyon" — küratörlü fırsat villaları. Enabled
          + aktif villa yoksa null döner; Homepage Collection'ın ÜSTÜNDE. */}
       <DiscountCollection />
+      {/* 🛡️ "Villa Tiplerini Keşfedin" — premium carousel, VillaList
+         ("Sizin için seçtiklerimiz") bölümünün HEMEN ÜSTÜNDE. Mevcut
+         getCachedVillaTypes/getCachedCategoryCovers reuse edilir; N+1
+         yok. Villa tipi yoksa/hepsi count=0 ise component null döner
+         → layout sessizce etkilenmez. */}
+      <VillaTypeCarousel />
       <VillaList />
       {/* 🛡️ "Bölgeler" — VillaList altı, Footer üstü. CategoryCollection
          ile aynı chip pattern; sadece veri kaynağı (locations) ve
