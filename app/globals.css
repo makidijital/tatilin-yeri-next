@@ -105,12 +105,12 @@
   --color-peach-500: #54c8f3;
 
   /* 🔠 Fonts */
-  /* 🛡️ PUBLIC TYPOGRAPHY — Heading: Manrope · Body/UI: Montserrat.
+  /* 🛡️ PUBLIC TYPOGRAPHY — Outfit (hem body/UI hem heading/display).
      Admin `.admin-shell` içinde --font-display Fraunces'e, --font-sans
      Inter'e PINLENİR (aşağıda) → admin tipografisi birebir korunur. */
-  --font-display: var(--font-manrope), "Manrope", var(--font-montserrat),
-    system-ui, -apple-system, sans-serif;
-  --font-sans: var(--font-montserrat), "Montserrat", system-ui, -apple-system,
+  --font-display: var(--font-outfit), "Outfit", system-ui, -apple-system,
+    sans-serif;
+  --font-sans: var(--font-outfit), "Outfit", system-ui, -apple-system,
     sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
@@ -978,8 +978,8 @@ select.input {
 .admin-shell {
   --admin-font-display: "General Sans", var(--font-inter), Inter, system-ui,
     -apple-system, sans-serif;
-  /* 🛡️ ADMIN PIN — public --font-sans Montserrat'a, --font-display
-     Manrope'a geçti. Admin gövde Inter + başlık Fraunces (admin-page-header__title,
+  /* 🛡️ ADMIN PIN — public --font-sans/--font-display Outfit'e geçti.
+     Admin gövde Inter + başlık Fraunces (admin-page-header__title,
      admin-card__title, admin-stat__value, admin-brand-name + admin datepicker)
      KORUNSUN diye token'lar admin subtree'sinde pinlenir. Admin BİREBİR aynı. */
   --font-sans: var(--font-inter), "Inter", system-ui, -apple-system, sans-serif;

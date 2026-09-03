@@ -124,27 +124,15 @@ export default function Header({
       ? "shadow-[0_8px_24px_-12px_rgba(27,26,23,0.08)]"
       : "shadow-none");
 
-  /* 🛡️ TEKLİF AL (desktop) — "Villa Arama" (`/arama`) menü öğesinin
-     index'i render'dan ÖNCE hesaplanır. Eşleşme hem `href` hem `name`
-     ile denenir (DB içeriği güvencesi için); index bulunamazsa (-1)
-     CTA nav'ın SONUNA fallback olarak eklenir — böylece buton HER
-     ZAMAN görünür olur, DB menü verisine kırılgan bağımlılık yoktur. */
-  const villaAramaIndex = menu.findIndex(
-    (item) => item.href === "/arama" || item.name === "Villa Arama"
-  );
-
-  /* 🛡️ Teklif Al CTA — marka renkleri (#ED7926 → #0973BA). Animasyon:
-     TopBar'daki ışık bandı/shimmer (`@keyframes shimmer`) KULLANILMAZ;
-     onun yerine Tailwind'in HAZIR `animate-pulse` utility'si ile
-     "nefes alan" (breathing) yumuşak bir glow halo uygulanır — emsal:
-     `PrepaymentBadge.tsx` (-inset blur + opacity animate-pulse).
-     globals.css'e dokunulmadı, yeni keyframe eklenmedi. Hover'da glow
-     daha belirgin (`group-hover:opacity-70 group-hover:blur-lg`) ve
-     buton kendi gölgesiyle hafifçe öne çıkar (`hover:-translate-y-[1px]`
-     + `hover:shadow-*`). Desktop ve mobil CTA aynı bu fonksiyonu /
-     aynı tekniği kullanır (yalnız mobilde boyut/padding farklı). */
-  const renderTeklifAlDesktop = (key: string) => (
-    <div key={key} className="group relative flex items-center py-5">
+  /* 🛡️ TEKLİF AL (desktop) — artık `nav` / `menu.map()` İÇİNDE DEĞİL.
+     Sağ aksiyon alanında (`hidden md:flex items-center gap-3`) sabit,
+     her zaman görünen bir action olarak render edilir; "Villa Arama"
+     ve diğer nav menü öğelerinin DB sırasına hiçbir bağımlılığı yok.
+     Marka renkleri (#ED7926 → #0973BA) ve breathing/pulse glow
+     animasyonu AYNEN korunur (TopBar shimmer'ı KULLANMAZ; Tailwind
+     `animate-pulse` ile nefes alan halo — globals.css'e dokunulmadı). */
+  const teklifAlDesktopCta = (
+    <div className="group relative">
       <span
         aria-hidden
         className="
@@ -219,16 +207,11 @@ export default function Header({
                 text-[var(--color-stone-700)]
               "
             >
-              {menu.map((item, index) => {
+              {menu.map((item) => {
                 const isActive = pathname === item.href;
                 const hasChildren = item.children && item.children.length > 0;
-                /* 🛡️ TEKLİF AL (desktop) — DB menü ağacına DOKUNULMADI;
-                   yalnızca render sırasında, villaAramaIndex'e denk gelen
-                   item'ın (Villa Arama) hemen ÖNÜNE, aynı .map() içinde
-                   eklenir. Menü sırası/verisi DB'de aynen kalır. */
-                const isVillaAramaItem = index === villaAramaIndex;
 
-                const menuItemNode = (
+                return (
                   <div
                     key={item.id || item.name}
                     className="relative group py-5"
@@ -277,22 +260,15 @@ export default function Header({
                     )}
                   </div>
                 );
-
-                if (!isVillaAramaItem) return menuItemNode;
-
-                return [
-                  renderTeklifAlDesktop(
-                    `teklif-al-desktop-${item.id || item.name}`
-                  ),
-                  menuItemNode,
-                ];
               })}
-              {villaAramaIndex === -1 &&
-                renderTeklifAlDesktop("teklif-al-desktop-fallback")}
             </nav>
 
-            {/* RIGHT — search + favorites + CTA */}
+            {/* RIGHT — CTA + search + favorites */}
             <div className="hidden md:flex items-center gap-3">
+              {/* 🛡️ TEKLİF AL (desktop) — sağ aksiyon alanının EN BAŞINDA,
+                 sabit konumda. Konum artık DB menü verisinden bağımsız. */}
+              {teklifAlDesktopCta}
+
               {/* SEARCH — paylaşılan VillaSearchBox. Artık anasayfa dahil
                  tüm sayfalarda görünür. */}
               <VillaSearchBox variant="desktop" />

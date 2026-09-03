@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Montserrat, Manrope, Inter, Fraunces, Geist_Mono } from "next/font/google";
+import { Outfit, Inter, Fraunces, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
@@ -9,26 +9,20 @@ import { getCachedSettings } from "@/lib/cache.helpers";
 import { siteMetadataBase } from "@/lib/seo";
 import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
 
-/* 🛡️ PUBLIC BODY/UI FONT — Montserrat. Global `--font-sans` buna
-   bağlanır. next/font self-host + display:swap + adjustFontFallback
-   (default) → CLS minimal. Admin gövde Inter'de kalır (aşağıda pin). */
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-/* 🛡️ PUBLIC DISPLAY/HEADING FONT — Manrope (modern premium geometric
-   sans). Global `--font-display` token'ı buna bağlanır; admin
-   `.admin-shell` içinde Fraunces'e pinli kalır. */
-const manrope = Manrope({
-  variable: "--font-manrope",
+/* 🛡️ PUBLIC BODY/UI + DISPLAY/HEADING FONT — Outfit. Global
+   `--font-sans` VE `--font-display` bu tek fonta bağlanır (yalnızca
+   `.admin-shell` altında Inter/Fraunces'e PINLENİR — aşağıda,
+   globals.css içinde). next/font self-host + display:swap +
+   adjustFontFallback (default) → CLS minimal. Admin gövde Inter'de
+   kalır (aşağıda pin, ayrıca korunur). */
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
   display: "swap",
 });
 
 /* 🛡️ Inter — YALNIZ admin gövde tipografisi için korunur. Public gövde
-   Montserrat'a geçti; admin `.admin-shell --font-sans` Inter'e pinli
+   Outfit'e geçti; admin `.admin-shell --font-sans` Inter'e pinli
    (admin typography'ye dokunulmadı). */
 const inter = Inter({
   variable: "--font-inter",
@@ -161,7 +155,7 @@ export default async function RootLayout({
   return (
     <html
       lang="tr"
-      className={`${montserrat.variable} ${manrope.variable} ${inter.variable} ${fraunces.variable} ${geistMono.variable}`}
+      className={`${outfit.variable} ${inter.variable} ${fraunces.variable} ${geistMono.variable}`}
     >
       <head>
         {/* 🛡️ Custom head HTML — admin tarafından kontrol edilen
