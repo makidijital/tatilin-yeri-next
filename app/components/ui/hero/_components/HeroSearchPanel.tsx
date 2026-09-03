@@ -72,7 +72,20 @@ registerLocale("tr", tr);
      - 4 alan sırası: CATEGORY → REGION → DATE → GUESTS → SEARCH AYNEN.
      - DatePicker / dropdown / outside-click davranışı AYNEN.
      - registerLocale("tr", tr) module-level çağrı korundu.
-=============================================================== */
+
+   🎨 GÖRSEL YENİLEME (marka refresh — bu turda) — SADECE className/
+   style/renk değerleri değişti. State/handler/effect/ref/prop/attribute
+   mantığı yukarıdaki liste ile BİREBİR aynı kaldı:
+     - Turkuaz (--brand-coral*, --color-champagne-*) vurgular →
+       SADECE #ED7926 (turuncu) / #0973BA (mavi) marka renkleri.
+     - Panel: daha yumuşak radius (28px), turuncu/mavi çok-katmanlı
+       glow shadow, ince entrance animasyonu (local `<style>`,
+       globals.css'e dokunulmadı, prefers-reduced-motion'da kapanır).
+     - Tarih/Kişi alanları → turuncu ikon vurgusu; Tip/Bölge alanları
+       → mavi ikon vurgusu (tutarlı ikili renk haritası).
+     - "Villa bul" CTA → turuncu→mavi gradient + hafif breathing glow
+       (Header/Hero CTA ile aynı teknik, TopBar shimmer'ı DEĞİL).
+   =============================================================== */
 
 export default function HeroSearchPanel() {
   const router = useRouter();
@@ -164,15 +177,28 @@ export default function HeroSearchPanel() {
 
   return (
     /* ═══════════════════════════════════════════════════════
-        🛡️ FAZ 39B — FLOATING SEARCH PANEL (premium glass)
+        🛡️ MARKA REFRESH — FLOATING SEARCH PANEL (premium glass)
         ═══════════════════════════════════════════════════════
         Mevcut state + handlers AYNEN korundu. Visual:
-          - Daha kuvvetli layered shadow stack
+          - Koyu hero görseli üzerinde yüzen glass panel
+          - Turuncu/mavi çok-katmanlı glow shadow stack
           - Daha geniş radius (28px)
           - İnce top highlight (white inner ring)
-          - Coral CTA gradient + elevated shadow
+          - Turuncu→mavi gradient CTA + breathing glow
+          - Hafif, tek seferlik entrance animasyonu (local <style>,
+            globals.css'e dokunulmadı, reduced-motion'da kapanır)
         ═══════════════════════════════════════════════════════ */
-    <div className="relative mt-12 md:mt-16">
+    <div className="relative mt-12 md:mt-16 hero-panel-in">
+      <style>{`
+        @keyframes heroPanelIn {
+          from { opacity: 0; transform: translateY(14px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .hero-panel-in { animation: heroPanelIn 700ms cubic-bezier(0.16,1,0.3,1) both; }
+        @media (prefers-reduced-motion: reduce) {
+          .hero-panel-in { animation: none; }
+        }
+      `}</style>
       {/* 🛡️ Floating villa-adı arama (VillaSearchBox) KALDIRILDI — villa-adı
           araması artık Desktop'ta Header, mobilde Bottom Navigation →
           SearchBottomSheet üzerinden. Aşağıdaki FİLTRE paneli (Tip / Bölge /
@@ -183,8 +209,8 @@ export default function HeroSearchPanel() {
           relative isolate z-30
           bg-gradient-to-b from-white/92 to-white/[0.85] backdrop-blur-2xl
           border-[3px] border-[var(--color-stone-900)]
-          rounded-2xl ring-2 ring-[#1fb2ec]/30
-          shadow-[0_36px_90px_-28px_rgba(11,31,58,0.42),0_12px_30px_-16px_rgba(2, 170, 229,0.16),0_16px_38px_-16px_rgba(2,170,229,0.38),inset_0_1px_0_rgba(255,255,255,0.7)]
+          rounded-[28px] ring-2 ring-[#0973BA]/25
+          shadow-[0_36px_90px_-28px_rgba(11,31,58,0.45),0_14px_34px_-16px_rgba(237,121,38,0.22),0_16px_40px_-16px_rgba(9,115,186,0.32),inset_0_1px_0_rgba(255,255,255,0.7)]
           px-2 md:px-2.5 pb-2 md:pb-2.5 pt-2 md:pt-2.5
           gap-1.5 md:gap-2
           flex flex-col md:flex-row items-stretch
@@ -195,18 +221,18 @@ export default function HeroSearchPanel() {
       <div
         aria-hidden="true"
         className="
-          pointer-events-none absolute inset-0 rounded-2xl
+          pointer-events-none absolute inset-0 rounded-[28px]
           ring-1 ring-inset ring-white/50
         "
       />
       {/* DATE */}
-      <div className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white/40 border border-white/50 hover:bg-white/75 hover:border-[var(--color-champagne-500)]/35 transition flex items-center gap-3">
+      <div className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white/40 border border-white/50 hover:bg-white/75 hover:border-[#ED7926]/35 transition flex items-center gap-3">
         <span
           className="
             w-9 h-9 rounded-xl shrink-0
-            bg-[var(--brand-coral-tint)]
+            bg-[#ED7926]/12
             flex items-center justify-center
-            text-[var(--brand-coral)]
+            text-[#ED7926]
           "
           aria-hidden
         >
@@ -248,13 +274,13 @@ export default function HeroSearchPanel() {
 
 
       {/* GUESTS */}
-      <div className="px-4 py-3 rounded-xl bg-white/40 border border-white/50 hover:bg-white/75 hover:border-[var(--color-champagne-500)]/35 transition flex items-center gap-3">
+      <div className="px-4 py-3 rounded-xl bg-white/40 border border-white/50 hover:bg-white/75 hover:border-[#ED7926]/35 transition flex items-center gap-3">
         <span
           className="
             w-9 h-9 rounded-xl shrink-0
-            bg-[var(--brand-coral-tint)]
+            bg-[#ED7926]/12
             flex items-center justify-center
-            text-[var(--brand-coral)]
+            text-[#ED7926]
           "
           aria-hidden
         >
@@ -291,18 +317,18 @@ export default function HeroSearchPanel() {
           className="
             w-full px-4 py-3 rounded-xl
             bg-white/40 border border-white/50
-            hover:bg-white/75 hover:border-[var(--color-champagne-500)]/35
+            hover:bg-white/75 hover:border-[#0973BA]/35
             transition flex items-center gap-3 text-left
             focus:outline-none focus-visible:ring-2
-            focus-visible:ring-[var(--color-champagne-500)]/30
+            focus-visible:ring-[#0973BA]/30
           "
         >
           <span
             className="
               w-9 h-9 rounded-xl shrink-0
-              bg-[var(--color-champagne-50)]
+              bg-[#0973BA]/10
               flex items-center justify-center
-              text-[var(--color-champagne-600)]
+              text-[#0973BA]
             "
             aria-hidden
           >
@@ -340,8 +366,8 @@ export default function HeroSearchPanel() {
                   key={item.id}
                   className={`flex items-center gap-3 text-sm px-3 py-2.5 rounded-xl cursor-pointer transition ${
                     checked
-                      ? "bg-[var(--brand-coral-tint)] text-[var(--color-stone-900)]"
-                      : "hover:bg-[var(--color-champagne-50)] text-[var(--color-stone-700)]"
+                      ? "bg-[#0973BA]/10 text-[var(--color-stone-900)]"
+                      : "hover:bg-[#0973BA]/5 text-[var(--color-stone-700)]"
                   }`}
                 >
                   <input
@@ -351,7 +377,7 @@ export default function HeroSearchPanel() {
                       toggleItem(item.id, categories, setCategories)
                     }
                     className="!w-4 !h-4 !rounded"
-                    style={{ accentColor: "var(--brand-coral)" }}
+                    style={{ accentColor: "#0973BA" }}
                   />
                   {item.name}
                 </label>
@@ -373,18 +399,18 @@ export default function HeroSearchPanel() {
           className="
             w-full px-4 py-3 rounded-xl
             bg-white/40 border border-white/50
-            hover:bg-white/75 hover:border-[var(--color-champagne-500)]/35
+            hover:bg-white/75 hover:border-[#0973BA]/35
             transition flex items-center gap-3 text-left
             focus:outline-none focus-visible:ring-2
-            focus-visible:ring-[var(--color-champagne-500)]/30
+            focus-visible:ring-[#0973BA]/30
           "
         >
           <span
             className="
               w-9 h-9 rounded-xl shrink-0
-              bg-[var(--color-champagne-50)]
+              bg-[#0973BA]/10
               flex items-center justify-center
-              text-[var(--color-champagne-600)]
+              text-[#0973BA]
             "
             aria-hidden
           >
@@ -422,8 +448,8 @@ export default function HeroSearchPanel() {
                   key={item.id}
                   className={`flex items-center gap-3 text-sm px-3 py-2.5 rounded-xl cursor-pointer transition ${
                     checked
-                      ? "bg-[var(--brand-coral-tint)] text-[var(--color-stone-900)]"
-                      : "hover:bg-[var(--color-champagne-50)] text-[var(--color-stone-700)]"
+                      ? "bg-[#0973BA]/10 text-[var(--color-stone-900)]"
+                      : "hover:bg-[#0973BA]/5 text-[var(--color-stone-700)]"
                   }`}
                 >
                   <input
@@ -433,7 +459,7 @@ export default function HeroSearchPanel() {
                       toggleItem(item.id, regions, setRegions)
                     }
                     className="!w-4 !h-4 !rounded"
-                    style={{ accentColor: "var(--brand-coral)" }}
+                    style={{ accentColor: "#0973BA" }}
                   />
                   {item.name}
                 </label>
@@ -443,37 +469,50 @@ export default function HeroSearchPanel() {
         )}
       </div>
 
-      {/* SEARCH CTA — filtre submit (handleSearch → /arama). Turkuaz
-         gradient + multi-stop shadow stack → premium concierge button.
+      {/* SEARCH CTA — filtre submit (handleSearch → /arama). Turuncu→mavi
+         gradient + hafif breathing glow → premium concierge button.
          Floating villa-adı input'tan BAĞIMSIZ; filtre akışını tetikler. */}
       <button
         onClick={handleSearch}
         className="
-          group inline-flex items-center justify-center gap-2
+          group relative inline-flex items-center justify-center gap-2
           !rounded-xl !px-7 md:!px-8 !py-4
           mt-1.5 md:mt-0 md:ml-1.5
           text-white font-medium text-[14px] tracking-[0.02em]
-          bg-gradient-to-br from-[#1fb2ec] via-[var(--brand-coral)] to-[var(--brand-coral-deep)]
-          shadow-[0_20px_44px_-12px_rgba(2, 170, 229,0.55),0_8px_20px_-8px_rgba(11,31,58,0.28),inset_0_1px_0_rgba(255,255,255,0.28)]
-          hover:shadow-[0_26px_54px_-12px_rgba(2, 170, 229,0.65),0_10px_24px_-8px_rgba(11,31,58,0.34),inset_0_1px_0_rgba(255,255,255,0.34)]
+          bg-gradient-to-r from-[#ED7926] to-[#0973BA]
+          shadow-[0_20px_44px_-12px_rgba(237,121,38,0.5),0_10px_26px_-8px_rgba(9,115,186,0.45),inset_0_1px_0_rgba(255,255,255,0.28)]
+          hover:shadow-[0_26px_54px_-12px_rgba(237,121,38,0.6),0_12px_30px_-8px_rgba(9,115,186,0.55),inset_0_1px_0_rgba(255,255,255,0.34)]
           hover:-translate-y-[1px]
           transition-[transform,box-shadow] duration-300
           motion-reduce:transition-none motion-reduce:hover:translate-y-0
           focus:outline-none focus-visible:ring-2
-          focus-visible:ring-[var(--brand-coral)]/50
+          focus-visible:ring-[#0973BA]/50
           focus-visible:ring-offset-2 focus-visible:ring-offset-white
         "
       >
+        <span
+          aria-hidden
+          className="
+            pointer-events-none absolute -inset-1 !rounded-xl
+            bg-gradient-to-r from-[#ED7926] to-[#0973BA]
+            opacity-30 blur-md
+            animate-pulse [animation-duration:2.8s]
+            group-hover:opacity-55
+            transition-opacity duration-300
+            motion-reduce:animate-none
+          "
+        />
         <Search
           size={16}
           className="
+            relative z-10
             transition-transform duration-300
             motion-reduce:transition-none
             group-hover:scale-110
           "
           aria-hidden
         />
-        <span>Villa bul</span>
+        <span className="relative z-10">Villa bul</span>
       </button>
 
       </div>
@@ -490,7 +529,7 @@ export default function HeroSearchPanel() {
           type="button"
           onClick={() => setAdvOpen((o) => !o)}
           aria-expanded={advOpen}
-          className="inline-flex items-center gap-1.5 rounded-full bg-white/75 backdrop-blur-md px-4 py-2 text-[12.5px] font-medium text-[var(--color-stone-700)] border border-white/60 shadow-sm hover:bg-white transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/40"
+          className="inline-flex items-center gap-1.5 rounded-full bg-white/75 backdrop-blur-md px-4 py-2 text-[12.5px] font-medium text-[var(--color-stone-700)] border border-white/60 shadow-sm hover:bg-white transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40"
         >
           <ChevronDown
             size={15}
@@ -511,7 +550,7 @@ export default function HeroSearchPanel() {
                 checked={flexible}
                 onChange={(e) => setFlexible(e.target.checked)}
                 className="mt-0.5 h-4 w-4 shrink-0 rounded cursor-pointer"
-                style={{ accentColor: "var(--brand-coral)" }}
+                style={{ accentColor: "#ED7926" }}
               />
               <span className="text-[13px] leading-snug text-[var(--color-stone-700)]">
                 Sonuçlarda 3 gün önceki ve sonraki villaları da göster
