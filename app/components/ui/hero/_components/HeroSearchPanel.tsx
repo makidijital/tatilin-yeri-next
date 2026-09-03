@@ -207,10 +207,10 @@ export default function HeroSearchPanel() {
       <div
         className="
           relative isolate z-30
-          bg-gradient-to-b from-white/92 to-white/[0.85] backdrop-blur-2xl
-          border-[3px] border-[var(--color-stone-900)]
-          rounded-[28px] ring-2 ring-[#0973BA]/25
-          shadow-[0_36px_90px_-28px_rgba(11,31,58,0.45),0_14px_34px_-16px_rgba(237,121,38,0.22),0_16px_40px_-16px_rgba(9,115,186,0.32),inset_0_1px_0_rgba(255,255,255,0.7)]
+          bg-gradient-to-b from-white/30 to-white/[0.14] backdrop-blur-xl
+          border border-white/30
+          rounded-[16px]
+          shadow-[0_20px_50px_-24px_rgba(9,115,186,0.35),0_14px_38px_-26px_rgba(237,121,38,0.3)]
           px-2 md:px-2.5 pb-2 md:pb-2.5 pt-2 md:pt-2.5
           gap-1.5 md:gap-2
           flex flex-col md:flex-row items-stretch
@@ -221,7 +221,7 @@ export default function HeroSearchPanel() {
       <div
         aria-hidden="true"
         className="
-          pointer-events-none absolute inset-0 rounded-[28px]
+          pointer-events-none absolute inset-0 rounded-[16px]
           ring-1 ring-inset ring-white/50
         "
       />
