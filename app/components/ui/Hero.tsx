@@ -149,7 +149,6 @@ export default function Hero({
         min-h-[60svh] lg:min-h-[78svh]
         w-full
         bg-[var(--color-stone-900)]
-        overflow-hidden
       "
     >
       {/* 🛡️ Local, component-scoped animasyon tanımları — globals.css'e
@@ -174,6 +173,7 @@ export default function Hero({
         }
       `}</style>
 
+      <div className="absolute inset-0 overflow-hidden">
       {/* ═══════════════════════════════════════════════════════════
           FULL-BLEED BACKGROUND IMAGE — admin source-of-truth
           sizes="100vw" → CDN responsive srcset (WebP/AVIF auto)
@@ -244,6 +244,7 @@ export default function Hero({
           bg-gradient-to-br from-[#ED7926]/20 to-[#0973BA]/20
         "
       />
+      </div>
 
       {/* ═══════════════════════════════════════════════════════════
           CONTENT CONTAINER — merkezi hizalı (text-center) kompozisyon.
