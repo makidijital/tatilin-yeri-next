@@ -328,7 +328,7 @@ export default function Hero({
                 text-[15px] md:text-[16.5px] leading-[1.75]
                 text-white/80
                 mt-6 md:mt-8
-                max-w-xl whitespace-pre-line
+                max-w-xl w-full mx-auto text-center whitespace-pre-line
               "
             >
               {hero.subtitle}
