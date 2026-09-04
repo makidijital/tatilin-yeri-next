@@ -387,7 +387,7 @@ export default async function ShortGapListingPage({
                 Bu kriterlere uygun kısa süreli boşluk bulunamadı.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {/* 1 gap = 1 kart: gap-başına döner; aynı villa birden çok
                     boşluğuyla birden çok kart olarak görünür. Her kart kendi
                     gap_start/gap_end ile fiyat + detay linki üretir. */}

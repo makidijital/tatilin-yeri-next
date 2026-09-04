@@ -1084,7 +1084,7 @@ export default async function AramaPage({ searchParams }: Props) {
                      lg 1024+    → 2 kart (300px sidebar + geniş)
                      xl 1280+    → 3 kart (premium)
                    Card visual'ı dokunulmadı; sadece grid sayısı. */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
                   {/* 🛡️ SCALE HARDENING — `visibleVillas` yerine
                      `villasOnPage` (PAGE_SIZE dilim). Tüm filtreleme +
                      availability semantic'i aynen `visibleVillas`'da.
@@ -1188,7 +1188,7 @@ export default async function AramaPage({ searchParams }: Props) {
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
                       {flexibleVillas.map((villa) => (
                         <VillaCard
                           key={villa.id}
