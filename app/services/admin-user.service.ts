@@ -1,4 +1,4 @@
-import { authProvider } from "@/lib/auth";
+import { adminFetch } from "@/lib/admin-fetch";
 
 /* ===============================================================
    🔥 ADMIN USERS — multi-user foundation
@@ -42,8 +42,9 @@ export type AdminUserInput = {
             - Server: auth.admin.createUser → admin_users insert
             - Rollback: insert fail → auth user delete
 
-   Caller'ın access token'ı Authorization header'a eklenir;
-   route service role ile auth + admin doğrulamasını yapar.
+   🛡️ Native cookie-based auth — httpOnly access cookie adminFetch
+   (same-origin fetch) ile otomatik gönderilir; manuel Bearer header
+   YOK. Route içeride authorizeAdminCaller ile doğrular.
    Password admin_users tablosunda TUTULMAZ — yalnız auth.users'da.
 ================================================================= */
 export async function createAdminUser(
@@ -66,23 +67,14 @@ export async function createAdminUser(
       error: "Şifre en az 6 karakter olmalı",
     };
 
-  // Caller'ın access token'ını auth provider'dan al
-  /* FAZ 39: authProvider.getSession delege. */
-  const session = await authProvider.getSession();
-  if (!session?.accessToken) {
-    return {
-      ok: false,
-      error: "Oturum bulunamadı. Yeniden giriş yapın.",
-    };
-  }
-  const accessToken = session.accessToken;
-
+  /* 🛡️ Native cookie-based auth — adminFetch httpOnly access cookie'yi
+     same-origin fetch ile otomatik gönderir (401 → bir kez refresh+retry).
+     Manuel accessToken/Authorization header'a gerek yok (bkz. lib/admin-fetch.ts). */
   try {
-    const res = await fetch("/api/admin/create-user", {
+    const res = await adminFetch("/api/admin/create-user", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
         full_name: fullName,
@@ -132,25 +124,21 @@ export async function createAdminUser(
             - Self-delete koruması route içinde
             - auth_user_id null ise (eski kayıtlar) admin_users
               direkt silinir (auth karşılığı yok)
-   Caller'ın access token'ı Authorization header'a eklenir.
+   🛡️ Native cookie-based auth — httpOnly access cookie adminFetch
+   (same-origin fetch) ile otomatik gönderilir; manuel Bearer header
+   YOK. Route içeride authorizeAdminCaller ile doğrular.
 ================================================================= */
 export async function deleteAdminUser(id: string): Promise<boolean> {
   if (!id) return false;
 
-  /* FAZ 39: authProvider.getSession delege; console tag aynen. */
-  const session = await authProvider.getSession();
-  if (!session?.accessToken) {
-    console.error("[admin_user.delete] NO_SESSION");
-    return false;
-  }
-  const accessToken = session.accessToken;
-
+  /* 🛡️ Native cookie-based auth — adminFetch httpOnly access cookie'yi
+     same-origin fetch ile otomatik gönderir (401 → bir kez refresh+retry).
+     Manuel accessToken/Authorization header'a gerek yok (bkz. lib/admin-fetch.ts). */
   try {
-    const res = await fetch(
+    const res = await adminFetch(
       `/api/admin-users/${encodeURIComponent(id)}`,
       {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${accessToken}` },
       }
     );
     const json = (await res.json().catch(() => ({}))) as {
