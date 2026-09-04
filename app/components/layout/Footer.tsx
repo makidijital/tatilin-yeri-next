@@ -110,10 +110,10 @@ function SocialLink({
       className="
         group inline-flex items-center justify-center
         w-10 h-10 rounded-full
-        border border-white/12 bg-white/[0.05]
-        text-white/75
-        hover:border-[#0973BA]/50 hover:bg-gradient-to-br hover:from-[#ED7926]/20 hover:to-[#0973BA]/20
-        hover:text-white
+        border border-[var(--color-stone-200)] bg-white
+        text-[var(--color-stone-500)]
+        hover:border-[#ED7926]/45 hover:bg-gradient-to-br hover:from-[#ED7926]/10 hover:to-[#0973BA]/10
+        hover:text-[#ED7926]
         transition-[color,background-color,border-color,transform]
         duration-300 motion-reduce:transition-none
         hover:scale-[1.05]
@@ -138,8 +138,8 @@ function FooterLink({
       href={href}
       className="
         inline-flex items-center
-        text-[14px] text-white/60
-        hover:text-white
+        text-[14px] text-[var(--color-stone-500)]
+        hover:text-[#ED7926]
         hover:translate-x-[2px]
         transition-[color,transform] duration-300
         motion-reduce:transition-none motion-reduce:hover:translate-x-0
@@ -252,107 +252,46 @@ export default async function Footer() {
   return (
     <footer
       aria-label="Site altbilgisi"
-      className="relative mt-20 md:mt-28 overflow-hidden text-white"
-      /* 🌊 Deep brand navy gradient (layered) — nötr koyu zemin, marka
-         rengi eklenmedi; turuncu/mavi yalnızca ayrı glow katmanlarında
-         vurgu olarak kullanılıyor. */
+      className="relative mt-20 md:mt-28 overflow-hidden text-[var(--color-stone-700)]"
+      /* ☀️ Soft, ferah zemin — koyu lacivert kaldırıldı. Sıcak kırık beyaz
+         yüzey; turuncu/mavi yalnızca çok hafif, ayrı glow katmanlarında
+         atmosferik bir iz olarak kullanılıyor (ağır gradient yok). */
       style={{
         background:
-          "linear-gradient(180deg, #0b1f3a 0%, #081a30 55%, #050f1c 100%)",
+          "linear-gradient(180deg, #fdfaf5 0%, #faf5ec 55%, #f6efe2 100%)",
       }}
     >
-      {/* Turuncu ambient glow — sağ üst (derinlik). */}
+      {/* Turuncu ambient iz — sağ üst, çok hafif. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-40 right-[-140px] w-[620px] h-[420px] blur-3xl opacity-40"
+        className="pointer-events-none absolute -top-40 right-[-140px] w-[620px] h-[420px] blur-3xl opacity-[0.10]"
         style={{
           background:
-            "radial-gradient(circle at center, rgba(237,121,38,0.20), transparent 70%)",
+            "radial-gradient(circle at center, rgba(237,121,38,0.35), transparent 70%)",
         }}
       />
-      {/* Mavi glow — sol alt, subtle highlight. */}
+      {/* Mavi ambient iz — sol alt, çok hafif. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -bottom-28 left-[-120px] w-[520px] h-[360px] blur-3xl opacity-40"
+        className="pointer-events-none absolute -bottom-28 left-[-120px] w-[520px] h-[360px] blur-3xl opacity-[0.09]"
         style={{
           background:
-            "radial-gradient(circle at center, rgba(9,115,186,0.20), transparent 70%)",
-        }}
-      />
-      {/* Ultra-hafif grain/noise — feTurbulence SVG data-uri; asset
-         yok, glassmorphism yok. AYNEN korundu. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.04] mix-blend-soft-light"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+            "radial-gradient(circle at center, rgba(9,115,186,0.32), transparent 70%)",
         }}
       />
 
       <div className="relative max-w-7xl mx-auto px-5 md:px-10 lg:px-16 pb-10">
-        {/* ═══════════ SECTION 1 — TOP CTA BAND ═══════════
-            Eski siteye benzeyen tasarımdan uzaklaşmak için mevcut kart
-            yapısı korunup yalnız marka renkleri (#ED7926/#0973BA) ve
-            başlık metni güncellendi. CTA linki (WhatsApp href) AYNEN. */}
-        <div className="pt-14 md:pt-20">
-          <div className="relative overflow-hidden rounded-[28px] border border-white/12 bg-gradient-to-br from-white/[0.08] via-white/[0.035] to-transparent px-6 py-8 md:px-12 md:py-11 shadow-[0_30px_80px_-44px_rgba(0,0,0,0.75)]">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -top-24 left-1/3 w-80 h-56 blur-3xl opacity-40"
-              style={{
-                background:
-                  "radial-gradient(circle at center, rgba(237,121,38,0.22), transparent 70%)",
-              }}
-            />
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -bottom-16 right-1/4 w-72 h-52 blur-3xl opacity-30"
-              style={{
-                background:
-                  "radial-gradient(circle at center, rgba(9,115,186,0.22), transparent 70%)",
-              }}
-            />
-            <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-7">
-              <div className="max-w-xl">
-                <h2 className="font-display text-[26px] md:text-[34px] leading-[1.1] tracking-[-0.02em] text-white">
-                  Hayalinizdeki villayı bulmaya hazır mısınız?
-                </h2>
-                <p className="mt-3 text-[14.5px] text-white/60 leading-relaxed">
-                  Tarih, bölge ve bütçenize en uygun seçkiyi uzman ekibimizle
-                  dakikalar içinde oluşturalım.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 shrink-0">
-                {phoneDigits && (
-                  <a
-                    href={`https://wa.me/${phoneDigits}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 h-12 px-6 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA] text-white font-medium text-[13.5px] hover:shadow-[0_12px_30px_-10px_rgba(9,115,186,0.55)] hover:-translate-y-px transition-[box-shadow,transform] duration-300 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                  >
-                    <WhatsappIcon width={16} height={16} aria-hidden />
-                    WhatsApp&apos;tan Yazın
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ═══════════ SECTION 2 — MARKA + KEŞFET (asimetrik, kolon-kartı yok) ═══════════
+        {/* ═════════════ SECTION 2 — MARKA + KEŞFET (asimetrik, kolon-kartı yok) ═════════════
             LEFT (dominant): logo + marka açıklaması + sosyal — mantık AYNEN.
             RIGHT: tek "Keşfet" başlığı altında iki minimal alt-grup (Villalar,
-            Bölgeler); ColumnTitle kutu/çizgi başlıkları kaldırıldı, ayrım
-            tipografi + whitespace ile. "Kurumsal" (CMS sayfaları) ve
-            "Destek/İletişim" aşağıdaki özel bölümlere taşındı (bkz. Section 3/4) —
-            veri/link kaynakları BİREBİR aynı, yalnızca yerleşim değişti. */}
-        <div className="pt-16 md:pt-24 grid grid-cols-1 lg:grid-cols-12 gap-12 md:gap-16">
+            Bölgeler); veri/link kaynakları BİREBİR aynı, yalnızca renk/zemin
+            açık temaya göre revize edildi. */}
+        <div className="pt-14 md:pt-20 grid grid-cols-1 lg:grid-cols-12 gap-12 md:gap-16">
           {/* LEFT — dominant brand block */}
           <div className="lg:col-span-5 space-y-7">
             <Link
               href="/"
-              className="font-display text-[24px] tracking-tight inline-flex items-center text-white"
+              className="font-display text-[24px] tracking-tight inline-flex items-center text-[var(--color-stone-900)]"
             >
               {settings?.footer_logo || settings?.site_logo ? (
                 /* 🛡️ mig 048 — footer_logo varsa onu, yoksa site_logo'ya
@@ -380,7 +319,7 @@ export default async function Footer() {
                 </>
               )}
             </Link>
-            <p className="text-[14.5px] text-white/60 leading-relaxed max-w-sm">
+            <p className="text-[14.5px] text-[var(--color-stone-500)] leading-relaxed max-w-sm">
               Akdeniz&apos;in seçkin villalarını premium bir deneyimle
               keşfedin. Özel havuz, deniz manzarası ve butik konfor — tek bir
               platformda.
@@ -421,7 +360,7 @@ export default async function Footer() {
 
           {/* RIGHT — "Keşfet" minimal link kümesi (villa_types + villa_locations) */}
           <div className="lg:col-span-7 lg:pl-6">
-            <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/40">
+            <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-stone-400)]">
               <span
                 aria-hidden="true"
                 className="inline-block w-4 h-px bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
@@ -432,7 +371,7 @@ export default async function Footer() {
             <div className="mt-6 grid grid-cols-2 gap-x-10 gap-y-8">
               {/* VİLLA KATEGORİLERİ (dynamic villa_types) */}
               <nav aria-label="Villa kategorileri">
-                <p className="text-[13px] font-medium text-white/85 mb-4">
+                <p className="text-[13px] font-medium text-[var(--color-stone-800)] mb-4">
                   Villalar
                 </p>
                 {villaTypes.length > 0 ? (
@@ -456,7 +395,7 @@ export default async function Footer() {
 
               {/* POPÜLER BÖLGELER (dynamic villa_locations) */}
               <nav aria-label="Popüler bölgeler">
-                <p className="text-[13px] font-medium text-white/85 mb-4">
+                <p className="text-[13px] font-medium text-[var(--color-stone-800)] mb-4">
                   Bölgeler
                 </p>
                 {locations.length > 0 ? (
@@ -489,39 +428,40 @@ export default async function Footer() {
           </div>
         </div>
 
-        {/* ═══════════ SECTION 3 — CONTACT STRIP ═══════════
+        {/* ═════════════ SECTION 3 — CONTACT STRIP ═════════════
             Telefon/e-posta/adres artık ikon+liste değil, büyük tipografili
-            bir "iletişim şeridi"; telefon en belirgin. Rezervasyon Sorgula
+            bir "iletişim şeridi"; telefon en belirgin (birincil hover
+            #ED7926), e-posta ikincil hover #0973BA. Rezervasyon Sorgula
             linki (mevcut href) burada, destek eylemine en yakın yerde. */}
-        <div className="mt-16 md:mt-20 pt-10 md:pt-12 border-t border-white/10">
+        <div className="mt-16 md:mt-20 pt-10 md:pt-12 border-t border-[var(--color-stone-200)]">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
             <div className="flex flex-wrap items-baseline gap-x-10 gap-y-5">
               {settings?.phone && (
                 <a href={`tel:${settings.phone}`} className="group">
-                  <span className="block text-[11px] uppercase tracking-[0.18em] text-white/40 mb-1.5">
+                  <span className="block text-[11px] uppercase tracking-[0.18em] text-[var(--color-stone-400)] mb-1.5">
                     Telefon
                   </span>
-                  <span className="font-display text-[26px] md:text-[32px] tracking-[-0.01em] text-white group-hover:text-[#ED7926] transition-colors duration-300 motion-reduce:transition-none">
+                  <span className="font-display text-[26px] md:text-[32px] tracking-[-0.01em] text-[var(--color-stone-900)] group-hover:text-[#ED7926] transition-colors duration-300 motion-reduce:transition-none">
                     {settings.phone}
                   </span>
                 </a>
               )}
               {settings?.email && (
                 <a href={`mailto:${settings.email}`} className="group">
-                  <span className="block text-[11px] uppercase tracking-[0.18em] text-white/40 mb-1.5">
+                  <span className="block text-[11px] uppercase tracking-[0.18em] text-[var(--color-stone-400)] mb-1.5">
                     E-posta
                   </span>
-                  <span className="text-[16px] md:text-[18px] text-white/80 group-hover:text-white transition-colors duration-300 motion-reduce:transition-none break-all">
+                  <span className="text-[16px] md:text-[18px] text-[var(--color-stone-700)] group-hover:text-[#0973BA] transition-colors duration-300 motion-reduce:transition-none break-all">
                     {settings.email}
                   </span>
                 </a>
               )}
               {settings?.address && (
                 <div className="max-w-xs">
-                  <span className="block text-[11px] uppercase tracking-[0.18em] text-white/40 mb-1.5">
+                  <span className="block text-[11px] uppercase tracking-[0.18em] text-[var(--color-stone-400)] mb-1.5">
                     Adres
                   </span>
-                  <span className="text-[13.5px] text-white/55 leading-relaxed">
+                  <span className="text-[13.5px] text-[var(--color-stone-500)] leading-relaxed">
                     {settings.address}
                   </span>
                 </div>
@@ -538,32 +478,13 @@ export default async function Footer() {
           </div>
         </div>
 
-        {/* ═══════════ SECTION 4 — MİNİMAL ALT BAR ═══════════
-            Sol: copyright (mevcut mantık AYNEN). Sağ: Kurumsal CMS sayfa
-            linkleri (KVKK/Gizlilik/Çerez/Kullanım Koşulları vb. — mevcut
-            `corporatePages` veri kaynağı BİREBİR, sadece konumu değişti:
-            eskiden ayrı bir "Kurumsal" nav kolonundaydı, artık burada ince
-            bir satır. Trust/ödeme rozetleri ve geliştirici imzası (görsel/
-            href/alt AYNEN) hafifletilmiş, kutu/border azaltılmış halde. */}
-        <div className="mt-14 md:mt-16 pt-8 border-t border-white/10">
-          <div className="flex flex-wrap items-center gap-6 pb-8">
-            <Image
-              src="/brand/trust/tursab.png"
-              alt="TÜRSAB üyesi"
-              width={290}
-              height={132}
-              className="h-8 w-auto object-contain opacity-80"
-            />
-            <Image
-              src="/brand/trust/payment-methods.png"
-              alt="Visa, Mastercard ve Troy ödeme yöntemleri"
-              width={1400}
-              height={400}
-              className="h-8 w-auto object-contain opacity-90"
-            />
-          </div>
-
-          <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row md:items-center md:justify-between gap-5 text-[12px] text-white/50">
+        {/* ═════════════ SECTION 4 — MİNİMAL ALT BAR ═════════════
+            Sıra: copyright + kurumsal linkler → trust/ödeme rozetleri →
+            (ince separator) → Maki Dijital, ayrı ve tam ortalanmış, en son
+            satır. `corporatePages` veri kaynağı BİREBİR aynı, yalnızca
+            konum/sıra ve renkler değişti. */}
+        <div className="mt-14 md:mt-16 pt-8 border-t border-[var(--color-stone-200)]">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 text-[12px] text-[var(--color-stone-500)]">
             <p>
               {settings?.footer_copyright
                 ? settings.footer_copyright
@@ -581,7 +502,7 @@ export default async function Footer() {
                   <Link
                     key={p.id}
                     href={`/p/${p.slug}`}
-                    className="hover:text-white/85 transition-colors duration-300 motion-reduce:transition-none"
+                    className="hover:text-[#ED7926] transition-colors duration-300 motion-reduce:transition-none"
                   >
                     {p.title}
                   </Link>
@@ -590,24 +511,42 @@ export default async function Footer() {
             )}
           </div>
 
-          {/* 🛡️ Maki Dijital — ajans imzası (logo asset, href AYNEN). */}
-          <div className="mt-5">
+          <div className="mt-6 pt-6 border-t border-[var(--color-stone-200)] flex flex-wrap items-center gap-6">
+            <Image
+              src="/brand/trust/tursab.png"
+              alt="TÜRSAB üyesi"
+              width={290}
+              height={132}
+              className="h-8 w-auto object-contain opacity-80"
+            />
+            <Image
+              src="/brand/trust/payment-methods.png"
+              alt="Visa, Mastercard ve Troy ödeme yöntemleri"
+              width={1400}
+              height={400}
+              className="h-8 w-auto object-contain opacity-90"
+            />
+          </div>
+
+          {/* 🛡️ Maki Dijital — ajans imzası (logo asset, href AYNEN).
+              Ayrı ve tam ortalanmış, footer'ın SON içeriği. */}
+          <div className="mt-8 pt-6 border-t border-[var(--color-stone-200)] text-center">
             <a
               href="https://makidijital.com"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Web geliştirme: Maki Dijital"
               className="
-                group inline-flex items-center gap-2
+                group inline-flex items-center justify-center gap-2
                 text-[11.5px] tracking-[0.04em]
-                text-white/45 hover:text-white/80
+                text-[var(--color-stone-500)] hover:text-[#ED7926]
                 transition-colors duration-300 motion-reduce:transition-none
                 focus:outline-none focus-visible:ring-2
-                focus-visible:ring-white/30 rounded-full px-1
+                focus-visible:ring-[#0973BA]/40 rounded-full px-1
               "
             >
               <span>Web Geliştirme</span>
-              <span aria-hidden="true" className="text-white/25">
+              <span aria-hidden="true" className="text-[var(--color-stone-300)]">
                 :
               </span>
               <Image
