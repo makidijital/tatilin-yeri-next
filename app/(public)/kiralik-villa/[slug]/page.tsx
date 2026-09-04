@@ -386,23 +386,33 @@ export default async function VillaDetail({
         {/* SEO — JSON-LD structured data */}
         <JsonLd data={vacationRentalLd} />
         <JsonLd data={breadcrumbLd} />
+
+        {/* ═══ VILLA INFO HEADER — full-width, Gallery + Booking grid'inin
+            ÜSTÜNDE. Villa adı + lokasyon + guests/bedrooms/bathrooms/
+            belge no + FavoriteButton logic AYNEN (VillaInfoBar içinde);
+            yalnız DOM konumu (artık grid'in üstünde, tam genişlik) ve
+            iç tasarımı değişti. */}
+        <div className="mb-10 md:mb-14">
+          <VillaInfoBar
+            villaTitle={villa.title}
+            location={villa.location}
+            guests={villa.guests}
+            bedrooms={villa.bedrooms}
+            bathrooms={villa.bathrooms}
+            tourismDocumentNumber={villa.tourism_document_number}
+            videos={youtubeVideos}
+            actions={<FavoriteButton villaId={villa.id} variant="icon" />}
+          />
+        </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-8 lg:gap-10">
         {/* LEFT — ~70%: galeri + villa bilgi + içerik gövdesi */}
         <div className="lg:col-span-7 space-y-10 md:space-y-12">
-          {/* ════════════════════════════════════════════════════
-              🛡️ EDITORIAL HEADER kaldırıldı — duplicate cleanup.
-              ════════════════════════════════════════════════════
-              Villa adı + lokasyon + guests/bedrooms/bathrooms info'ları
-              artık `VillaInfoBar` içinde (Gallery altında). FavoriteButton
-              InfoBar'ın `actions` slot'una taşındı; favorite logic
-              (variant="detail" davranışı, useFavorites hook) DOKUNULMADI,
-              yalnız DOM konumu değişti.
-              ──────────────────────────────────────────────────── */}
-
-          {/* ═══ GALLERY HERO — artık sol kolonun (~%70) içinde, sağında
-              rezervasyon formu ile aynı hizada başlıyor (form artık
-              sticky DEĞİL, normal akışta). Lightbox/click davranışı
-              AYNEN; yalnız DOM konumu/genişliği değişti. */}
+          {/* ═══ GALLERY HERO — sol kolonun (~%70) içinde, sağında
+              rezervasyon formu ile aynı hizada başlıyor (form sticky
+              DEĞİL, normal akışta). VillaInfoBar artık bu grid'in
+              ÜSTÜNDE, full-width (bkz. aşağıda). Lightbox/click
+              davranışı AYNEN; yalnız DOM konumu/genişliği değişti. */}
           <div className="relative">
             {/* 🛡️ SEO + a11y: villa.title → alt text auto-generation. */}
             <Gallery
@@ -416,20 +426,6 @@ export default async function VillaDetail({
                 0/100'de badge kendini gizler. */}
             <PrepaymentBadge rate={prepaymentRate} />
           </div>
-
-          {/* ═══ VILLA INFO ROW — gallery altı, sol kolon genişliğinde
-              premium info bar. VillaInfoBar iç layout + FavoriteButton
-              logic AYNEN; konum/genişlik değişti. */}
-          <VillaInfoBar
-            villaTitle={villa.title}
-            location={villa.location}
-            guests={villa.guests}
-            bedrooms={villa.bedrooms}
-            bathrooms={villa.bathrooms}
-            tourismDocumentNumber={villa.tourism_document_number}
-            videos={youtubeVideos}
-            actions={<FavoriteButton villaId={villa.id} variant="icon" />}
-          />
 
           {/* DESCRIPTION */}
           <section>
