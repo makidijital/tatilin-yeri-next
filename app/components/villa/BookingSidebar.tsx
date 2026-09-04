@@ -49,14 +49,6 @@ import BookingCalendar from "@/app/components/villa/booking/BookingCalendar";
 import BookingSummary from "@/app/components/villa/booking/BookingSummary";
 import BookingMinStayWarning from "@/app/components/villa/booking/BookingMinStayWarning";
 
-/* "Öne Çıkan" bilgi kartı metinleri — statik; API/DB/sayı/emoji YOK.
-   Sayfa açılışında rastgele biri seçilir (client mount), sonra sabit. */
-const FEATURED_NOTES = [
-  "Bu bölgenin öne çıkan villa seçeneklerinden biri.",
-  "Misafirlerin en çok ilgi gösterdiği villalar arasında yer alıyor.",
-  "Son dönemde en çok incelenen villalar arasında.",
-] as const;
-
 /* 🛡️ PURE UI FORMAT HELPER — CHECK-IN/CHECK-OUT pill'lerinde tek bir
    tarihin gösterim biçimi. Eski tek-pill kodundaki
    `toLocaleDateString("tr-TR", { day: "numeric", month: "short" })`
@@ -152,19 +144,6 @@ export default function BookingSidebar({
   const [openCalendar, setOpenCalendar] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const guestsRef = useRef<HTMLDivElement>(null);
-
-  /* Öne Çıkan bilgi kartı — sayfa ilk açıldığında rastgele TEK metin
-     seçilir (client mount → SSR/hydration mismatch yok) ve sayfa boyunca
-     sabit kalır. Business logic / fiyat / API / storage YOK. */
-  const [featuredNote, setFeaturedNote] = useState<string | null>(null);
-  useEffect(() => {
-    /* Client-only rastgele seçim (SSR'de null → hydration-safe). Bu
-       yüzden set-state-in-effect bilinçli ve gerekli. */
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFeaturedNote(
-      FEATURED_NOTES[Math.floor(Math.random() * FEATURED_NOTES.length)]
-    );
-  }, []);
 
   /* currentMonth: takvim ilk açıldığında hangi ayı göstereceği.
      initialStart varsa o ay açılır → kullanıcı tarihlerini
@@ -425,22 +404,75 @@ export default function BookingSidebar({
         </p>
       </div>
 
-      {/* ÖNE ÇIKAN — bağımsız minimal bilgi notu (statik/rastgele metin,
-         seçim mantığı AYNEN; yalnız görünüm yenilendi). */}
-      {featuredNote && (
-        <div className="pt-5 border-t border-[var(--color-stone-100)]">
-          <p className="inline-flex items-center gap-1.5 text-[10.5px] tracking-[0.2em] uppercase text-[#0973BA] font-semibold">
+      {/* ═══════════════════════════════════════════════════════
+          🛡️ ÖDEME FIRSATI — "Öne Çıkan" alanının YERİNE geldi.
+          ═══════════════════════════════════════════════════════
+          SALT UI/mesaj: sabit "%20 Şimdi, Kalanı Tatilde Öde" metni.
+          Hesaplama YOK, API/DB çağrısı YOK, booking state'e bağlı DEĞİL —
+          gerçek ön ödeme oranı `prepaymentRate` bu component'te
+          KULLANILMIYOR (kasıtlı; görev talebi statik kampanya mesajı).
+          Konum: rezervasyon formunun EN ALTI (galeri/PrepaymentBadge'e
+          dokunulmadı, ayrı ve önceden var olan bir özellik). */}
+      <div className="pt-5 border-t border-[var(--color-stone-100)]">
+        <style>{`
+          @media (prefers-reduced-motion: no-preference) {
+            .pp-perk-shimmer { animation: pp-perk-sweep 7s ease-in-out infinite; }
+          }
+          @keyframes pp-perk-sweep {
+            0% { background-position: 160% 0; }
+            100% { background-position: -60% 0; }
+          }
+        `}</style>
+        <div
+          className="
+            group relative overflow-hidden rounded-[22px]
+            border border-[var(--color-stone-100)]
+            bg-gradient-to-br from-white via-white to-[#ED7926]/[0.05]
+            px-5 py-5 md:px-6 md:py-5
+            transition-transform duration-300 motion-reduce:transition-none
+            hover:-translate-y-1 motion-reduce:hover:translate-y-0
+          "
+        >
+          {/* İnce üst accent çizgisi — turuncu → mavi, çok yavaş shimmer */}
+          <span
+            aria-hidden="true"
+            className="pp-perk-shimmer absolute inset-x-5 top-0 h-[2px] rounded-full opacity-60"
+            style={{
+              background:
+                "linear-gradient(90deg, transparent, #ED7926, #0973BA, transparent)",
+              backgroundSize: "220% 100%",
+            }}
+          />
+
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-stone-400)]">
+            Ödeme Kolaylığı
+          </span>
+
+          <div className="mt-2.5 flex items-center gap-4">
+            <span
+              className="
+                shrink-0 font-display text-[42px] md:text-[46px]
+                leading-none tracking-[-0.02em] text-[#ED7926]
+                animate-pulse [animation-duration:5s] motion-reduce:animate-none
+              "
+            >
+              %20
+            </span>
             <span
               aria-hidden="true"
-              className="w-1.5 h-1.5 rounded-full bg-[#ED7926]"
+              className="h-10 w-px shrink-0 bg-[var(--color-stone-100)]"
             />
-            Öne Çıkan
-          </p>
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--color-stone-600)]">
-            {featuredNote}
-          </p>
+            <div className="min-w-0">
+              <p className="text-[13.5px] font-semibold text-[var(--color-stone-900)] leading-snug">
+                Şimdi Öde
+              </p>
+              <p className="mt-0.5 text-[13.5px] text-[var(--color-stone-500)] leading-snug">
+                Kalanı Tatilde Öde
+              </p>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
