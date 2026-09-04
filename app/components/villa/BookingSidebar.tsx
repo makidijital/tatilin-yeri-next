@@ -19,7 +19,6 @@
    → modal aynı component'leri kullanır, drift YOK.
 
    DOKUNULMAYAN ÖZELLİKLER (BYTE-IDENTICAL kontrat):
-     - DOM hiyerarşisi ve className string'leri
      - DayPicker handler davranışı (BookingCalendar içinde)
      - Selection lifecycle (freshSelection / hasConflict / getValidEndDate)
      - Half-open `[)` semantic, adjacent reservation rule
@@ -27,15 +26,17 @@
      - Network query'leri (engine içinde, aynı SQL)
      - Navigation URL formatı
      - Currency / pricing / prepayment hesap sonuçları
+     - onClick/disabled/submit/validation handler'ları
+
+   🎨 UI REVİZYONU (bu tur): "Booking Desk" editorial tasarım — sticky
+   kaldırıldı (page.tsx'te), ağır kart yerine soft/minimal panel, ince
+   separator'lar, CHECK-IN/CHECK-OUT kompozisyonu, marka gradienti CTA'da.
+   Yalnız JSX/className; state/handler/prop kontratı DEĞİŞMEDİ.
    =============================================================== */
 
 import { useEffect, useRef, useState } from "react";
 
-import {
-  Calendar,
-  Users,
-  ChevronDown,
-} from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 import { type VillaPriceEmbed } from "@/lib/villa-row.types";
 import {
@@ -55,6 +56,17 @@ const FEATURED_NOTES = [
   "Misafirlerin en çok ilgi gösterdiği villalar arasında yer alıyor.",
   "Son dönemde en çok incelenen villalar arasında.",
 ] as const;
+
+/* 🛡️ PURE UI FORMAT HELPER — CHECK-IN/CHECK-OUT pill'lerinde tek bir
+   tarihin gösterim biçimi. Eski tek-pill kodundaki
+   `toLocaleDateString("tr-TR", { day: "numeric", month: "short" })`
+   çağrısıyla BİREBİR aynı; state/hesaplama YOK, yalnız display format. */
+function formatDatePillLabel(date: Date): string {
+  return date.toLocaleDateString("tr-TR", {
+    day: "numeric",
+    month: "short",
+  });
+}
 
 type Props = {
   villaSlug: string;
@@ -191,17 +203,37 @@ export default function BookingSidebar({
   return (
     <div
       className="
-        rounded-3xl border border-[var(--color-stone-100)]
-        bg-gradient-to-b from-white to-[var(--color-sand-50)]/45
-        p-5 md:p-6
-        shadow-[0_28px_60px_-24px_rgba(11,31,58,0.22),0_8px_24px_-18px_rgba(11,31,58,0.12)]
-        space-y-5
+        relative rounded-[28px]
+        bg-white border border-[var(--color-stone-100)]
+        shadow-[0_1px_2px_rgba(11,31,58,0.05)]
+        px-6 py-7 md:px-7 md:py-8
+        space-y-6
       "
     >
-      {/* DATE */}
-      {/* 🛡️ id="booking-date-field" — MobileBookingCta scroll hedefi
-         (Tarih kartı sticky header'ın hemen altına hizalanır). Yalnız
-         anchor; tasarım/tarih-seçim mantığı DEĞİŞMEZ. */}
+      {/* ═══ EDİTORYAL GİRİŞ — "Booking Desk" başlığı (yeni, kısa/genel
+          UI metni; gerçek işlev/metinlere dokunulmadı). ═══ */}
+      <div>
+        <span className="inline-flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.22em] text-[var(--color-stone-400)]">
+          <span
+            aria-hidden="true"
+            className="inline-block w-3.5 h-px bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+          />
+          Rezervasyon
+        </span>
+        <h2 className="mt-2 font-display text-[21px] md:text-[23px] leading-tight tracking-[-0.02em] text-[var(--color-stone-900)]">
+          Konaklamanızı planlayın
+        </h2>
+        <p className="mt-1.5 text-[13px] text-[var(--color-stone-500)] leading-relaxed">
+          Uygun tarihleri seçin, konaklama detaylarını hemen görüntüleyin.
+        </p>
+      </div>
+
+      <div aria-hidden="true" className="h-px bg-[var(--color-stone-100)]" />
+
+      {/* DATE — mevcut tarih seçim state/behavior/handler AYNEN; yalnız
+         CHECK-IN / CHECK-OUT kompozisyonuna çevrildi. */}
+      {/* 🛡️ id="booking-date-field" — MobileBookingCta scroll hedefi.
+         Yalnız anchor; tasarım/tarih-seçim mantığı DEĞİŞMEZ. */}
       <div ref={ref} id="booking-date-field" className="relative">
         <div
           onClick={() => {
@@ -209,45 +241,44 @@ export default function BookingSidebar({
             setCurrentMonth(targetMonth);
             setOpenCalendar(true);
           }}
-          className="
-            border border-[var(--color-stone-100)] rounded-2xl
-            px-4 py-3.5
-            flex items-center gap-3
-            bg-[var(--color-sand-50)]/40
-            hover:bg-white hover:border-[var(--color-champagne-400)]
-            hover:shadow-[0_6px_18px_-12px_rgba(11,31,58,0.15)]
-            transition-all duration-200 motion-reduce:transition-none cursor-pointer
-          "
+          className="group flex items-center gap-4 cursor-pointer"
         >
-          <Calendar size={16} className="text-[var(--color-champagne-500)]" />
           <div className="flex-1 min-w-0">
-            <div className="text-[10.5px] tracking-[0.16em] uppercase font-semibold text-[var(--color-stone-400)]">
-              Tarih
+            <div className="text-[10px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-400)] group-hover:text-[#ED7926] transition-colors duration-200 motion-reduce:transition-none">
+              Check-in
             </div>
-            <div className="text-sm font-medium text-[var(--color-stone-900)] truncate">
-              {startDate && endDate
-                ? `${startDate.toLocaleDateString("tr-TR", {
-                  day: "numeric",
-                  month: "short",
-                })} – ${endDate.toLocaleDateString("tr-TR", {
-                  day: "numeric",
-                  month: "short",
-                })}`
-                : "Tarih seç"}
+            <div className="mt-1 text-[15px] font-medium text-[var(--color-stone-900)] truncate">
+              {startDate ? formatDatePillLabel(startDate) : "Tarih seç"}
             </div>
           </div>
+
+          <span
+            aria-hidden="true"
+            className="w-px h-9 bg-[var(--color-stone-100)] shrink-0"
+          />
+
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-400)] group-hover:text-[#0973BA] transition-colors duration-200 motion-reduce:transition-none">
+              Check-out
+            </div>
+            <div className="mt-1 text-[15px] font-medium text-[var(--color-stone-900)] truncate">
+              {endDate ? formatDatePillLabel(endDate) : "Tarih seç"}
+            </div>
+          </div>
+
           <ChevronDown
-            size={14}
-            className={`text-[var(--color-stone-400)] transition ${openCalendar ? "rotate-180" : ""
-              }`}
+            size={15}
+            className={`shrink-0 text-[var(--color-stone-400)] transition-transform duration-200 motion-reduce:transition-none ${
+              openCalendar ? "rotate-180" : ""
+            }`}
           />
         </div>
 
         {openCalendar && (
           <div
             className="
-              absolute right-0 z-[999] mt-3 bg-white border border-[var(--color-stone-100)]/80
-              rounded-2xl shadow-[0_12px_32px_-12px_rgb(27_26_23/0.12)]
+              absolute right-0 z-[999] mt-4 bg-white border border-[var(--color-stone-100)]
+              rounded-2xl shadow-[0_16px_40px_-16px_rgba(11,31,58,0.16)]
               p-4 md:p-5
               w-[min(22rem,calc(100vw-2.5rem))]
             "
@@ -262,38 +293,32 @@ export default function BookingSidebar({
         )}
       </div>
 
-      {/* GUESTS */}
+      <div aria-hidden="true" className="h-px bg-[var(--color-stone-100)]" />
+
+      {/* GUESTS — mevcut guest selector state/behavior/handler AYNEN. */}
       <div ref={guestsRef} className="relative">
         <div
           onClick={() => setOpenGuests(!openGuests)}
-          className="
-            border border-[var(--color-stone-100)] rounded-2xl
-            px-4 py-3.5
-            flex items-center gap-3
-            bg-[var(--color-sand-50)]/40
-            hover:bg-white hover:border-[var(--color-champagne-400)]
-            hover:shadow-[0_6px_18px_-12px_rgba(11,31,58,0.15)]
-            transition-all duration-200 motion-reduce:transition-none cursor-pointer
-          "
+          className="group flex items-center gap-4 cursor-pointer"
         >
-          <Users size={16} className="text-[var(--color-champagne-500)]" />
           <div className="flex-1 min-w-0">
-            <div className="text-[10.5px] tracking-[0.16em] uppercase font-semibold text-[var(--color-stone-400)]">
+            <div className="text-[10px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-400)] group-hover:text-[#ED7926] transition-colors duration-200 motion-reduce:transition-none">
               Misafir
             </div>
-            <div className="text-sm font-medium text-[var(--color-stone-900)]">
+            <div className="mt-1 text-[15px] font-medium text-[var(--color-stone-900)]">
               {adults} yetişkin · {children} çocuk
             </div>
           </div>
           <ChevronDown
-            size={14}
-            className={`text-[var(--color-stone-400)] transition ${openGuests ? "rotate-180" : ""
-              }`}
+            size={15}
+            className={`shrink-0 text-[var(--color-stone-400)] transition-transform duration-200 motion-reduce:transition-none ${
+              openGuests ? "rotate-180" : ""
+            }`}
           />
         </div>
 
         {openGuests && (
-          <div className="absolute z-50 mt-2 w-full bg-white border border-[var(--color-stone-100)] rounded-2xl shadow-[0_24px_48px_-16px_rgb(27_26_23/0.18)] p-5 space-y-4">
+          <div className="absolute z-50 mt-3 w-full bg-white border border-[var(--color-stone-100)] rounded-2xl shadow-[0_16px_40px_-16px_rgba(11,31,58,0.16)] p-5 space-y-4">
             <Counter
               label="Yetişkin"
               value={adults}
@@ -308,7 +333,7 @@ export default function BookingSidebar({
             />
             <button
               onClick={() => setOpenGuests(false)}
-              className="btn-dark w-full !py-2.5 mt-2"
+              className="w-full rounded-full bg-[var(--color-stone-900)] hover:bg-[var(--color-stone-800)] text-white text-[13px] font-semibold py-2.5 transition-colors duration-200 motion-reduce:transition-none"
             >
               Tamam
             </button>
@@ -321,8 +346,7 @@ export default function BookingSidebar({
           ═══════════════════════════════════════════════════════
           Yalnız: threshold>0 + BOTH dates selected + nights<threshold.
           Konum: SUMMARY yerine aynı blokta render olur → layout
-          shift YOK (warning ile summary mutually exclusive).
-          Premium amber/champagne luxury warning dili. */}
+          shift YOK (warning ile summary mutually exclusive). Koşul AYNEN. */}
       {minStayThreshold > 0 &&
         !!startDate &&
         !!endDate &&
@@ -334,9 +358,7 @@ export default function BookingSidebar({
           />
         )}
 
-      {/* 🛡️ GAP OVERRIDE bilgi metni — seçim, mevcut rezervasyonlar
-          arasındaki gerçek bir boşluğun TAMAMINI dolduruyor → min_stay
-          esnetildi. Yeni kart/modal YOK; sade inline not (tasarım korunur). */}
+      {/* 🛡️ GAP OVERRIDE bilgi metni — koşul AYNEN. */}
       {isGapOverride && (
         <p className="text-[12px] text-emerald-700 bg-emerald-50/70 border border-emerald-100 rounded-xl px-3 py-2">
           Kısa süreli boşluk fırsatı nedeniyle bu tarih aralığı rezerve
@@ -344,20 +366,24 @@ export default function BookingSidebar({
         </p>
       )}
 
-      {/* SUMMARY — minimum stay valid + result mevcut ise */}
+      {/* SUMMARY — minimum stay valid + result mevcut ise (koşul AYNEN).
+         İnce üst-ayraç ile akışa entegre; BookingSummary'nin kendi
+         içeriğine/hesabına dokunulmadı. */}
       {startDate && endDate && result && (
-        <BookingSummary
-          result={result}
-          prepayment={prepayment}
-          prepaymentRate={prepaymentRate}
-          convertedDeposit={convertedDeposit}
-          deposit={deposit}
-        />
+        <div>
+          <div aria-hidden="true" className="h-px bg-[var(--color-stone-100)] mb-6" />
+          <BookingSummary
+            result={result}
+            prepayment={prepayment}
+            prepaymentRate={prepaymentRate}
+            convertedDeposit={convertedDeposit}
+            deposit={deposit}
+          />
+        </div>
       )}
 
-      {/* 🛡️ INLINE RESERVATION ERROR — alert() yerine modern banner.
-          useBookingEngine'in handleReservation içinde set ettiği
-          reservationError state'i; 3sn sonra otomatik temizlenir. */}
+      {/* 🛡️ INLINE RESERVATION ERROR — alert() yerine modern banner
+          (koşul AYNEN). */}
       {reservationError && (
         <div
           role="alert"
@@ -372,37 +398,45 @@ export default function BookingSidebar({
         </div>
       )}
 
-      {/* CTA — FAZ 26B: minimum stay invalid → disabled.
-          handleReservation içinde de defansif short-circuit
-          var (state guard + return) — UI disable + handler guard double-layer. */}
-      <button
-        onClick={handleReservation}
-        disabled={!minimumStayValid}
-        className={`btn-primary w-full !py-4 !text-sm !rounded-2xl transition-all duration-200 motion-reduce:transition-none ${
-          !minimumStayValid
-            ? "!opacity-50 !cursor-not-allowed"
-            : "shadow-[0_18px_36px_-12px_rgba(2, 170, 229,0.5)] hover:shadow-[0_22px_44px_-12px_rgba(2, 170, 229,0.6)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
-        }`}
-      >
-        Rezervasyon Yap
-      </button>
+      <div aria-hidden="true" className="h-px bg-[var(--color-stone-100)]" />
 
-      <p className="text-[11px] text-[var(--color-stone-400)] text-center leading-relaxed">
-        Ücret seçilen tarihlere göre otomatik hesaplanır
-      </p>
+      {/* CTA — FAZ 26B: minimum stay invalid → disabled (koşul AYNEN).
+          onClick/disabled/handler DEĞİŞMEDİ; yalnız görünüm yenilendi. */}
+      <div className="space-y-3">
+        <button
+          onClick={handleReservation}
+          disabled={!minimumStayValid}
+          className={`
+            w-full rounded-full py-4
+            text-[14px] font-semibold tracking-[0.01em] text-white
+            transition-all duration-200 motion-reduce:transition-none
+            ${
+              !minimumStayValid
+                ? "bg-[var(--color-stone-300)] cursor-not-allowed"
+                : "bg-gradient-to-r from-[#ED7926] to-[#0973BA] shadow-[0_16px_32px_-12px_rgba(9,115,186,0.45)] hover:shadow-[0_20px_40px_-12px_rgba(9,115,186,0.55)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
+            }
+          `}
+        >
+          Rezervasyon Yap
+        </button>
 
-      {/* ÖNE ÇIKAN — bağımsız minimal bilgi kartı (statik metin, rastgele) */}
+        <p className="text-[11px] text-[var(--color-stone-400)] text-center leading-relaxed">
+          Ücret seçilen tarihlere göre otomatik hesaplanır
+        </p>
+      </div>
+
+      {/* ÖNE ÇIKAN — bağımsız minimal bilgi notu (statik/rastgele metin,
+         seçim mantığı AYNEN; yalnız görünüm yenilendi). */}
       {featuredNote && (
-        <div className="relative mt-5 overflow-hidden rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 via-white to-cyan-50 px-5 py-4 shadow-sm">
-          {/* Sol mavi accent çizgisi — 4px genişlik, 4px radius */}
-          <span
-            aria-hidden="true"
-            className="absolute left-2 top-3 bottom-3 w-1 rounded-[4px] bg-sky-500"
-          />
-          <p className="text-[11px] tracking-[0.25em] uppercase text-sky-700 font-semibold">
+        <div className="pt-5 border-t border-[var(--color-stone-100)]">
+          <p className="inline-flex items-center gap-1.5 text-[10.5px] tracking-[0.2em] uppercase text-[#0973BA] font-semibold">
+            <span
+              aria-hidden="true"
+              className="w-1.5 h-1.5 rounded-full bg-[#ED7926]"
+            />
             Öne Çıkan
           </p>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-slate-700 font-medium">
+          <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--color-stone-600)]">
             {featuredNote}
           </p>
         </div>
@@ -410,7 +444,6 @@ export default function BookingSidebar({
     </div>
   );
 }
-
 /* ── Helpers ── */
 
 function Counter({
@@ -433,7 +466,7 @@ function Counter({
         <button
           type="button"
           onClick={() => onChange(Math.max(min, value - 1))}
-          className="w-8 h-8 rounded-full border border-[var(--color-stone-200)] flex items-center justify-center text-[var(--color-stone-700)] hover:border-[var(--color-champagne-500)] hover:text-[var(--color-champagne-600)] transition disabled:opacity-30"
+          className="w-8 h-8 rounded-full border border-[var(--color-stone-200)] flex items-center justify-center text-[var(--color-stone-700)] hover:border-[#ED7926]/60 hover:text-[#ED7926] transition disabled:opacity-30"
           disabled={value <= min}
         >
           −
@@ -444,7 +477,7 @@ function Counter({
         <button
           type="button"
           onClick={() => onChange(value + 1)}
-          className="w-8 h-8 rounded-full border border-[var(--color-stone-200)] flex items-center justify-center text-[var(--color-stone-700)] hover:border-[var(--color-champagne-500)] hover:text-[var(--color-champagne-600)] transition"
+          className="w-8 h-8 rounded-full border border-[var(--color-stone-200)] flex items-center justify-center text-[var(--color-stone-700)] hover:border-[#ED7926]/60 hover:text-[#ED7926] transition"
         >
           +
         </button>

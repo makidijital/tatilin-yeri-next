@@ -400,9 +400,9 @@ export default async function VillaDetail({
               ──────────────────────────────────────────────────── */}
 
           {/* ═══ GALLERY HERO — artık sol kolonun (~%70) içinde, sağında
-              sticky rezervasyon formu ile aynı hizada başlıyor.
-              Lightbox/click davranışı AYNEN; yalnız DOM konumu/genişliği
-              değişti. */}
+              rezervasyon formu ile aynı hizada başlıyor (form artık
+              sticky DEĞİL, normal akışta). Lightbox/click davranışı
+              AYNEN; yalnız DOM konumu/genişliği değişti. */}
           <div className="relative">
             {/* 🛡️ SEO + a11y: villa.title → alt text auto-generation. */}
             <Gallery
@@ -871,40 +871,41 @@ export default async function VillaDetail({
           />
         </div>
 
-        {/* RIGHT (sidebar) */}
+        {/* RIGHT (sidebar) — STICKY KALDIRILDI: rezervasyon formu artık
+            normal document flow içinde, sayfa kaydırıldığında sabit
+            kalmıyor. Kolon genişliği (lg:col-span-3) AYNEN korunuyor. */}
         <aside id="booking-sidebar" className="lg:col-span-3">
-          <div className="lg:sticky lg:top-32">
-            <BookingSidebar
-              villaSlug={villa.slug}
-              villaId={villa.id}
-              externalBlocks={externalBlocks}
-              prices={prices}
-              deposit={villa.deposit}
-              cleaning_fee={villa.cleaning_fee}
-              cleaning_currency={villa.cleaning_currency}
-              cleaning_limit={villa.cleaning_limit}
-              custom_prepayment_rate={villa.custom_prepayment_rate ?? null}
-              /* 🛡️ FAZ 26B — minimum konaklama gece sayısı.
-                 null/<=1 → BookingSidebar enforcement bypass eder,
-                 mevcut davranış aynen. */
-              minimum_stay_nights={villa.minimum_stay_nights ?? null}
-              /* 🛡️ Orphan-gap kuralı — admin ayarı (settings). Fail-safe TRUE:
-                 değer okunamazsa/null ise kural AÇIK kabul edilir. */
-              orphanGapRuleEnabled={
-                settings?.orphan_gap_rule_enabled ?? true
-              }
-              /* 🛡️ /arama'dan gelen tarihler — opsiyonel hydrate */
-              initialStart={hasInitialRange ? initialStart : undefined}
-              initialEnd={hasInitialRange ? initialEnd : undefined}
-            />
-          </div>
+          <BookingSidebar
+            villaSlug={villa.slug}
+            villaId={villa.id}
+            externalBlocks={externalBlocks}
+            prices={prices}
+            deposit={villa.deposit}
+            cleaning_fee={villa.cleaning_fee}
+            cleaning_currency={villa.cleaning_currency}
+            cleaning_limit={villa.cleaning_limit}
+            custom_prepayment_rate={villa.custom_prepayment_rate ?? null}
+            /* 🛡️ FAZ 26B — minimum konaklama gece sayısı.
+               null/<=1 → BookingSidebar enforcement bypass eder,
+               mevcut davranış aynen. */
+            minimum_stay_nights={villa.minimum_stay_nights ?? null}
+            /* 🛡️ Orphan-gap kuralı — admin ayarı (settings). Fail-safe TRUE:
+               değer okunamazsa/null ise kural AÇIK kabul edilir. */
+            orphanGapRuleEnabled={
+              settings?.orphan_gap_rule_enabled ?? true
+            }
+            /* 🛡️ /arama'dan gelen tarihler — opsiyonel hydrate */
+            initialStart={hasInitialRange ? initialStart : undefined}
+            initialEnd={hasInitialRange ? initialEnd : undefined}
+          />
         </aside>
       </div>
       </div>
 
       {/* 🛡️ MOBILE STICKY CTA — yalnız <lg viewport.
-          Desktop'ta `lg:hidden` ile render edilmez; mevcut
-          `<aside lg:sticky lg:top-32>` sticky sidebar AYNEN. */}
+          Desktop'ta `lg:hidden` ile render edilmez; masaüstü booking
+          formu artık sticky DEĞİL (normal akış), bu mobile CTA davranışı
+          AYNEN korunuyor. */}
       <MobileBookingCta
         priceAmount={minPrice?.price ?? null}
         priceCurrency={minPrice?.currency ?? null}
