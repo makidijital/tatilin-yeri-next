@@ -958,7 +958,7 @@ export default function VillaCard({
             aria-hidden="true"
             className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black/75 via-black/30 to-transparent pointer-events-none"
           />
-          <div className="absolute inset-x-0 bottom-0 z-10 p-3.5 md:p-4">
+          <div className="absolute inset-x-0 bottom-0 z-10 p-3.5 md:p-4 pr-20 md:pr-24">
             <h3
               className={
                 "font-display text-white font-semibold " +
@@ -980,33 +980,61 @@ export default function VillaCard({
               <span className="truncate">{location || "Lokasyon yok"}</span>
             </p>
           </div>
-        </div>
 
-        {/* ── CONTENT AREA ── */}
-        <div className="p-4 md:p-5">
-          {/* REVIEW META — opsiyonel */}
+          {/* REVIEW BADGE — görselin sağ altı (villa adı/bölge sol altta
+              olduğu için ayrık köşe). Zarif glass pill; format birebir
+              korunur ("X.X · N yorum"), gerçek reviewAverage/reviewCount —
+              0/undefined'da render edilmez (eski davranışla aynı guard).
+              CONTENT AREA'daki eski REVIEW META bloğunun YERİNE bu geldi
+              (aşağıda o blok kaldırılıp price satırına dönüştürüldü). */}
           {typeof reviewCount === "number" && reviewCount > 0 &&
             typeof reviewAverage === "number" && reviewAverage > 0 && (
               <div
-                className="mt-2 flex items-center gap-1.5 text-[12px] text-[var(--color-stone-600)]"
+                className="absolute bottom-3.5 md:bottom-4 right-3.5 md:right-4 z-10 inline-flex items-center gap-1 bg-white/90 backdrop-blur-md text-[var(--color-stone-900)] text-[11px] font-medium px-2.5 py-1 rounded-full shadow-[0_4px_14px_-4px_rgba(0,0,0,0.28)] ring-1 ring-white/50"
                 aria-label={`Ortalama puan ${reviewAverage.toFixed(
                   1
                 )} / 5, ${reviewCount} misafir yorumu`}
               >
                 <Star
-                  size={12}
+                  size={11}
                   className="text-amber-500 shrink-0"
                   fill="currentColor"
                   strokeWidth={1.5}
                   aria-hidden
                 />
-                <span className="font-medium tabular-nums text-[var(--color-stone-700)]">
-                  {reviewAverage.toFixed(1)}
-                </span>
-                <span aria-hidden="true" className="text-[var(--color-stone-300)] mx-0.5">·</span>
+                <span className="tabular-nums">{reviewAverage.toFixed(1)}</span>
+                <span aria-hidden="true" className="text-[var(--color-stone-400)]">·</span>
                 <span className="tabular-nums">{reviewCount} yorum</span>
               </div>
             )}
+        </div>
+
+        {/* ── CONTENT AREA ── */}
+        <div className="p-4 md:p-5">
+          {/* PRICE — "X başlayan fiyatlarla" sade satırı; REVIEW META'nın
+              eski konumu (review artık görsel üzerinde sağ altta, bkz.
+              yukarıdaki REVIEW BADGE). Aynı convertedPrice/formatCurrency/
+              currency BOTTOM ROW'daki mevcut hesaptan reuse edilir — yeni
+              fiyat hesabı YOK. Yalnız stayTotal===null (tarih aralığı
+              seçilmemiş "başlangıç fiyatı" senaryosu) VE isFlexible===false
+              iken render edilir; BOTTOM ROW'daki aynı metin ÇİFT gösterim
+              olmasın diye oradan kaldırıldı (stayTotal!==null tarih-seçili
+              toplam ve isFlexible esnek-sonuç senaryoları BOTTOM ROW'da
+              AYNEN kalmaya devam ediyor — mutually exclusive, çakışma yok). */}
+          {!isFlexible && stayTotal === null && (
+            <p className="mt-2 text-[13px] text-[var(--color-stone-500)]">
+              {price ? (
+                <>
+                  <span className="font-display text-[15px] font-medium text-[var(--color-stone-900)] tabular-nums">
+                    {formatCurrency(convertedPrice, currency)}
+                  </span>{" "}
+                  başlayan fiyatlarla
+                </>
+              ) : (
+                "Fiyat sorunuz"
+              )}
+            </p>
+          )}
 
           {/* Divider — üst bilgi bloğu ↔ özellikler */}
           <div aria-hidden="true" className="mt-3.5 h-px bg-[var(--color-stone-100)]" />
@@ -1059,6 +1087,11 @@ export default function VillaCard({
                 </div>
               </div>
             ) : (
+              /* 🛡️ stayTotal===null durumunda (tarih seçilmemiş) fiyat
+                 artık CONTENT AREA'nın üstünde ("X başlayan fiyatlarla",
+                 review'ın eski konumu) gösteriliyor — burada ÇİFT
+                 gösterim olmasın diye boş bırakıldı. stayTotal!==null
+                 (tarih seçili gerçek toplam) AYNEN korunuyor, taşınmadı. */
               <div className="min-w-0">
                 {stayTotal !== null ? (
                   <>
@@ -1069,18 +1102,7 @@ export default function VillaCard({
                       {stayNights} gece{hasCleaning ? " · Temizlik dahil" : ""}
                     </div>
                   </>
-                ) : (
-                  <>
-                    <div className="font-display text-[19px] md:text-[20px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
-                      {price ? formatCurrency(convertedPrice, currency) : "Fiyat sorunuz"}
-                    </div>
-                    {price ? (
-                      <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)]">
-                        Başlayan Fiyatlarla
-                      </div>
-                    ) : null}
-                  </>
-                )}
+                ) : null}
               </div>
             )}
 
