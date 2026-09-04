@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Minus, HelpCircle } from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 
 /* ===============================================================
    🛡️ FaqSection — Luxury hospitality accordion (Faz 25)
@@ -43,142 +43,123 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
     <section
       id="sss"
       aria-labelledby="faq-heading"
-      className="
-        scroll-mt-24 md:scroll-mt-28
-        relative px-5 md:px-10 lg:px-16 py-14 md:py-20
-        border-t border-[var(--color-stone-100)]
-      "
+      className="scroll-mt-24 md:scroll-mt-28 px-5 md:px-10 lg:px-16 py-16 md:py-24 border-t border-[var(--color-stone-100)]"
     >
-      {/* Subtle ambient bg — Mediterranean cyan + coral */}
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none overflow-hidden"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 50% at 50% 0%, rgb(2 170 229 / 0.05) 0%, transparent 60%), radial-gradient(ellipse 50% 35% at 50% 100%, rgb(2 170 229 / 0.04) 0%, transparent 60%)",
-        }}
-      />
-
-      {/* Basliksiz premium kompozisyon - "Tatiliniz Icin Oneriler" stray
-             heading kaldirildi (section'in accessible name'i zaten
-             aria-labelledby="faq-heading" uzerinden asagidaki "Sikca Sorulan
-             Sorular" basligindan geliyor - SEO/a11y etkilenmez). Alttaki iki
-             sutunlu grid + accordion mantigi AYNEN. */}
-      <div className="relative max-w-[1280px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-        {/* ═══ LEFT — decorative info panel (navy + turquoise) ═══ */}
-        <div className="lg:col-span-4">
-          <div className="relative overflow-hidden rounded-3xl p-7 md:p-9 bg-gradient-to-br from-[#0B1F3A] to-[#132A46] border border-white/10 shadow-[0_28px_64px_-32px_rgba(11,31,58,0.6)] lg:sticky lg:top-24">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -top-20 -right-16 w-64 h-64 blur-3xl opacity-50"
-              style={{
-                background:
-                  "radial-gradient(circle at center, rgba(2, 170, 229,0.30), transparent 70%)",
-              }}
-            />
-            <span className="relative inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-[#ED7926] to-[#0973BA] text-white shadow-[0_8px_20px_-6px_rgba(9,115,186,0.5)]">
-              <HelpCircle size={22} strokeWidth={1.75} aria-hidden />
-            </span>
-            <h2
-              id="faq-heading"
-              className="relative mt-6 font-display font-medium text-[24px] md:text-[28px] text-white leading-tight tracking-[-0.02em]"
-            >
-              Sıkça Sorulan Sorular
-            </h2>
-            <p className="relative mt-3 text-[14.5px] leading-relaxed text-white/65">
-              Misafirlerimizin en çok merak ettiği sorular.
-            </p>
-            <div
+      <div className="max-w-[760px] mx-auto">
+        {/* ── HEADER — mikro-label + sade başlık + kısa alt metin.
+               Eski "koyu lacivert sol panel" tamamen kaldırıldı; bölüm
+               artık tek, bütünsel editorial bir kompozisyon. ── */}
+        <div className="mb-10 md:mb-14">
+          <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-stone-400)]">
+            <span
               aria-hidden="true"
-              className="relative mt-5 h-[3px] w-14 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+              className="inline-block w-4 h-px bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
             />
-          </div>
+            Sıkça Sorulan
+          </span>
+          <h2
+            id="faq-heading"
+            className="mt-4 font-display font-medium text-[28px] md:text-[36px] text-[var(--color-stone-900)] leading-[1.08] tracking-[-0.02em]"
+          >
+            Sıkça Sorulan Sorular
+          </h2>
+          <p className="mt-3 text-[14.5px] md:text-[15px] text-[var(--color-stone-500)] max-w-md">
+            Misafirlerimizin en çok merak ettiği sorular.
+          </p>
         </div>
 
-        {/* ═══ RIGHT — accordion. Logic (openIndex state, aria, grid-rows
-               collapse) BİREBİR aynı; yalnız kutu-kutu kart görünümü tek bir
-               unified editorial liste (divide-y) haline getirildi — daha az
-               border/box, daha "premium liste" hissi. ═══ */}
-        <div className="lg:col-span-8">
-          <div className="rounded-[28px] bg-white ring-1 ring-[var(--color-stone-100)] divide-y divide-[var(--color-stone-100)] overflow-hidden shadow-[0_20px_50px_-30px_rgba(11,31,58,0.22)]">
-            {faqs.map((faq, idx) => {
-              const isOpen = openIndex === idx;
-              return (
-                <article key={faq.id} className="relative">
-                  {/* Açık item'da sol kenarda ince marka-gradient accent çubuğu */}
-                  {isOpen && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#ED7926] to-[#0973BA]"
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setOpenIndex(isOpen ? null : idx)}
-                    aria-expanded={isOpen}
-                    aria-controls={`faq-panel-${idx}`}
-                    id={`faq-button-${idx}`}
-                    className="
-                      group w-full flex items-start gap-4
-                      px-5 py-4 md:px-7 md:py-5
-                      text-left
-                      focus:outline-none focus-visible:ring-2
-                      focus-visible:ring-[#0973BA]/40 focus-visible:ring-inset
-                      transition-colors duration-200 motion-reduce:transition-none
-                      hover:bg-[var(--color-stone-50)]
-                    "
+        {/* ── EDITORIAL LİSTE — logic (openIndex, aria, grid-rows collapse)
+               BİREBİR aynı; sunum tek bir numaralı satır listesi. Kart/box/
+               ağır shadow YOK — sadece ince üst/alt/ara divider. ── */}
+        <div>
+          {faqs.map((faq, idx) => {
+            const isOpen = openIndex === idx;
+            const num = String(idx + 1).padStart(2, "0");
+            return (
+              <article
+                key={faq.id}
+                className="border-b border-[var(--color-stone-100)] first:border-t"
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenIndex(isOpen ? null : idx)}
+                  aria-expanded={isOpen}
+                  aria-controls={`faq-panel-${idx}`}
+                  id={`faq-button-${idx}`}
+                  className="
+                    group w-full flex items-center gap-4 md:gap-6
+                    py-5 md:py-6 text-left
+                    focus:outline-none focus-visible:ring-2
+                    focus-visible:ring-[#0973BA]/30 focus-visible:ring-inset
+                  "
+                >
+                  <span
+                    className={
+                      "shrink-0 font-display text-[13px] md:text-[14px] tabular-nums tracking-[0.02em] " +
+                      "transition-colors duration-200 motion-reduce:transition-none " +
+                      (isOpen ? "text-[#0973BA]" : "text-[var(--color-stone-300)]")
+                    }
                   >
-                    <span
-                      className={`
-                        w-8 h-8 shrink-0 rounded-full
-                        flex items-center justify-center
-                        transition-[background-color,color,transform] duration-300
-                        motion-reduce:transition-none group-hover:scale-110
-                        ${
-                          isOpen
-                            ? "bg-gradient-to-br from-[#ED7926] to-[#0973BA] text-white"
-                            : "bg-[var(--color-stone-50)] border border-[var(--color-stone-200)] text-[var(--color-stone-500)]"
-                        }
-                      `}
-                      aria-hidden
-                    >
-                      {isOpen ? <Minus size={14} /> : <Plus size={14} />}
-                    </span>
-                    <span
-                      className={`
-                        flex-1 min-w-0 font-display text-[16px] md:text-[18px] leading-snug tracking-[-0.015em] mt-1
-                        transition-colors duration-200 motion-reduce:transition-none
-                        ${isOpen ? "text-[#0973BA]" : "text-[var(--color-stone-900)]"}
-                      `}
-                    >
-                      {faq.question}
-                    </span>
-                  </button>
+                    {num}
+                  </span>
+                  <span
+                    className={
+                      "flex-1 min-w-0 font-display text-[16px] md:text-[19px] leading-snug tracking-[-0.01em] " +
+                      "transition-colors duration-200 motion-reduce:transition-none " +
+                      (isOpen
+                        ? "text-[var(--color-stone-900)]"
+                        : "text-[var(--color-stone-700)] group-hover:text-[var(--color-stone-900)]")
+                    }
+                  >
+                    {faq.question}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0 inline-flex items-center justify-center w-5 h-5"
+                  >
+                    {isOpen ? (
+                      <Minus
+                        size={16}
+                        strokeWidth={1.75}
+                        className="text-[#ED7926] transition-colors duration-200 motion-reduce:transition-none"
+                      />
+                    ) : (
+                      <Plus
+                        size={16}
+                        strokeWidth={1.75}
+                        className="text-[var(--color-stone-400)] group-hover:text-[var(--color-stone-600)] transition-colors duration-200 motion-reduce:transition-none"
+                      />
+                    )}
+                  </span>
+                </button>
 
-                  {/* 🛡️ Smooth height animation — CSS grid-rows trick
-                         (grid-rows-[0fr]→[1fr]); layout-thrash yok. AYNEN. */}
-                  <div
-                    id={`faq-panel-${idx}`}
-                    role="region"
-                    aria-labelledby={`faq-button-${idx}`}
-                    className={`
-                      grid transition-[grid-template-rows] duration-300 ease-out
-                      motion-reduce:transition-none
-                      ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}
-                    `}
-                  >
-                    <div className="overflow-hidden">
-                      <div className="px-5 md:px-7 pb-5 md:pb-6 pl-[68px] md:pl-[80px]">
-                        <p className="text-[14px] md:text-[15px] text-[var(--color-stone-600)] leading-[1.75] whitespace-pre-line">
-                          {faq.answer}
-                        </p>
-                      </div>
+                {/* 🛡️ Smooth height animation — CSS grid-rows trick
+                       (grid-rows-[0fr]→[1fr]); layout-thrash yok. AYNEN. */}
+                <div
+                  id={`faq-panel-${idx}`}
+                  role="region"
+                  aria-labelledby={`faq-button-${idx}`}
+                  className={
+                    "grid transition-[grid-template-rows] duration-300 ease-out " +
+                    "motion-reduce:transition-none " +
+                    (isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]")
+                  }
+                >
+                  <div className="overflow-hidden">
+                    <div className="flex gap-3 md:gap-4 pb-6 md:pb-7 pl-9 md:pl-14 pr-2 md:pr-8">
+                      <span
+                        aria-hidden="true"
+                        className="shrink-0 w-[3px] rounded-full bg-gradient-to-b from-[#ED7926] to-[#0973BA]"
+                      />
+                      <p className="flex-1 min-w-0 text-[14.5px] md:text-[15.5px] text-[var(--color-stone-600)] leading-[1.75] whitespace-pre-line">
+                        {faq.answer}
+                      </p>
                     </div>
                   </div>
-                </article>
-              );
-            })}
-          </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>
