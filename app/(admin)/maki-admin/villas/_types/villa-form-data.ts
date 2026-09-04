@@ -60,6 +60,9 @@ import type {
 export type VillaFormData = VillaFormShape & {
   /* Basic */
   title: string;
+  /* 🛡️ Migration 072 — admin-only, bilgi amaçlı. Public'e aktarılmaz,
+     slug üretiminde kullanılmaz, title davranışını etkilemez. */
+  real_title: string;
   description: string;
   guests: number;
   bedrooms: number;
@@ -133,6 +136,7 @@ export function initialVillaFormData(
 ): VillaFormData {
   return {
     title: "",
+    real_title: "",
     description: "",
     guests: 0,
     bedrooms: 0,

@@ -101,6 +101,21 @@ export default function BasicInfoStep({
             </div>
           </div>
 
+          {/* 🛡️ Migration 072 — "Villanın Gerçek Adı": admin-only, bilgi
+              amaçlı. "Villa adı" input'undan TAMAMEN bağımsız; slug/
+              onChange zincirine dokunmaz, opsiyonel (boş bırakılabilir). */}
+          <div className="space-y-2">
+            <Label>Villanın Gerçek Adı</Label>
+            <input
+              placeholder="Villanın gerçek/mülk adı"
+              className="input"
+              value={form.real_title || ""}
+              onChange={(e) =>
+                setForm({ ...form, real_title: e.target.value })
+              }
+            />
+          </div>
+
           <div className="space-y-2">
             <Label>Bölge</Label>
             {/* 🛡️ Searchable combobox — Manual Reservation paritesi.

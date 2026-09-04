@@ -66,6 +66,9 @@ import type { VillaForm, VillaMapData } from "../types";
  *  loose; key set 40+ alanlı. */
 export type VillaCorePayload = {
   title: VillaForm["title"];
+  /* 🛡️ Migration 072 — admin-only, bilgi amaçlı. Public mapVilla()/
+     VillaDTO'ya EKLENMEZ; slug üretiminde kullanılmaz. */
+  real_title: string | null;
   description: VillaForm["description"];
   location_id: string | null;
   guests: number;
@@ -122,6 +125,15 @@ export function buildVillaCorePayload(
 
   return {
     title: form.title,
+    /* 🛡️ Migration 072 — trim + boş string → NULL (backfill/uydurma yok).
+       ⚠️ `VillaForm` (app/services/villa-admin/types.ts) kapsam dışı
+       (SADECE bu dosya + 4 dosya değiştirilecek); `real_title` orada
+       tanımlı değil. Kaynak dosyayı değiştirmeden yerel intersection
+       cast ile okunuyor — runtime davranışı `form.title` ile birebir
+       aynı, yalnızca type-level bir genişletme. */
+    real_title:
+      (form as VillaForm & { real_title?: string }).real_title?.trim() ||
+      null,
     description: sanitizeHtml(form.description),
 
     location_id:

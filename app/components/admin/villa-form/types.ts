@@ -18,6 +18,9 @@ import type { Dispatch, SetStateAction } from "react";
 /* ---------------- VILLA FORM SHAPE ---------------- */
 export type VillaFormShape = {
   title?: string;
+  /* 🛡️ Migration 072 — admin-only, bilgi amaçlı. Public'e aktarılmaz,
+     slug üretiminde kullanılmaz. */
+  real_title?: string;
   description?: string;
   guests?: number;
   bedrooms?: number;
