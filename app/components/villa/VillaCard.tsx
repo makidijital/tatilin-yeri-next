@@ -945,33 +945,45 @@ export default function VillaCard({
 
           {/* FAV BUTTON — top-right (mevcut FavoriteButton, davranış/API AYNEN) */}
           {id && <FavoriteButton villaId={id} variant="card" alwaysVisible />}
+
+          {/* ════════════════════════════════════════════════
+              🛡️ OVERLAY — villa adı + bölge, görselin sol altında.
+              Public kart redesign: eskiden CONTENT AREA'nın (beyaz
+              panel) en üstünde ayrı satırlardı; şimdi görsel üzerinde,
+              okunabilirlik için zarif koyu gradient scrim üzerinde.
+              Diğer her şey (review/amenities/fiyat/CTA/favori) AYNEN
+              CONTENT AREA'da kalmaya devam ediyor — yalnız bu iki alan
+              taşındı. Discount/curation variant'ları ETKİLENMEDİ. */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black/75 via-black/30 to-transparent pointer-events-none"
+          />
+          <div className="absolute inset-x-0 bottom-0 z-10 p-3.5 md:p-4">
+            <h3
+              className={
+                "font-display text-white font-semibold " +
+                "text-[17px] md:text-[19px] leading-[1.15] tracking-[-0.02em] " +
+                "line-clamp-1 group-hover:text-white/90 " +
+                "transition-colors duration-300 motion-reduce:transition-none " +
+                "drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]"
+              }
+            >
+              {title}
+            </h3>
+            <p className="mt-1 flex items-center gap-1.5 text-[10.5px] tracking-[0.14em] uppercase font-medium text-white/80 min-w-0">
+              <MapPin
+                size={11}
+                className="text-white/75 shrink-0"
+                strokeWidth={1.9}
+                aria-hidden
+              />
+              <span className="truncate">{location || "Lokasyon yok"}</span>
+            </p>
+          </div>
         </div>
 
         {/* ── CONTENT AREA ── */}
         <div className="p-4 md:p-5">
-          {/* TITLE — premium display typography */}
-          <h3
-            className={
-              "font-display text-[18px] md:text-[20px] font-medium " +
-              "leading-[1.15] tracking-[-0.02em] text-[var(--color-stone-900)] " +
-              "line-clamp-1 group-hover:text-[#0973BA] " +
-              "transition-colors duration-300 motion-reduce:transition-none"
-            }
-          >
-            {title}
-          </h3>
-
-          {/* LOCATION */}
-          <p className="mt-1.5 flex items-center gap-1.5 text-[12.5px] text-[var(--color-stone-500)] min-w-0">
-            <MapPin
-              size={13}
-              className="text-[#ED7926] shrink-0"
-              strokeWidth={1.9}
-              aria-hidden
-            />
-            <span className="truncate">{location || "Lokasyon yok"}</span>
-          </p>
-
           {/* REVIEW META — opsiyonel */}
           {typeof reviewCount === "number" && reviewCount > 0 &&
             typeof reviewAverage === "number" && reviewAverage > 0 && (
