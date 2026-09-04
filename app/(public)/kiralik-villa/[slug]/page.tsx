@@ -386,51 +386,51 @@ export default async function VillaDetail({
         {/* SEO — JSON-LD structured data */}
         <JsonLd data={vacationRentalLd} />
         <JsonLd data={breadcrumbLd} />
+      <div className="grid grid-cols-1 lg:grid-cols-10 gap-8 lg:gap-10">
+        {/* LEFT — ~70%: galeri + villa bilgi + içerik gövdesi */}
+        <div className="lg:col-span-7 space-y-10 md:space-y-12">
+          {/* ════════════════════════════════════════════════════
+              🛡️ EDITORIAL HEADER kaldırıldı — duplicate cleanup.
+              ════════════════════════════════════════════════════
+              Villa adı + lokasyon + guests/bedrooms/bathrooms info'ları
+              artık `VillaInfoBar` içinde (Gallery altında). FavoriteButton
+              InfoBar'ın `actions` slot'una taşındı; favorite logic
+              (variant="detail" davranışı, useFavorites hook) DOKUNULMADI,
+              yalnız DOM konumu değişti.
+              ──────────────────────────────────────────────────── */}
 
-        {/* ════════════════════════════════════════════════════
-            🛡️ EDITORIAL HEADER kaldırıldı — duplicate cleanup.
-            ════════════════════════════════════════════════════
-            Villa adı + lokasyon + guests/bedrooms/bathrooms info'ları
-            artık `VillaInfoBar` içinde (Gallery üstünde). FavoriteButton
-            InfoBar'ın `actions` slot'una taşındı; favorite logic
-            (variant="detail" davranışı, useFavorites hook) DOKUNULMADI,
-            yalnız DOM konumu değişti.
-            ──────────────────────────────────────────────────── */}
+          {/* ═══ GALLERY HERO — artık sol kolonun (~%70) içinde, sağında
+              sticky rezervasyon formu ile aynı hizada başlıyor.
+              Lightbox/click davranışı AYNEN; yalnız DOM konumu/genişliği
+              değişti. */}
+          <div className="relative">
+            {/* 🛡️ SEO + a11y: villa.title → alt text auto-generation. */}
+            <Gallery
+              images={imageUrls}
+              watermark={watermark}
+              villaTitle={villa.title}
+            />
+            {/* 🛡️ ÖN ÖDEME KAMPANYA BADGE — Gallery DIŞ wrapper'ında overlay.
+                Gallery/lightbox/favorite/watermark/sayaç'a DOKUNULMAZ.
+                pointer-events-none + z-20 (lightbox z-50 altında). Oran dinamik;
+                0/100'de badge kendini gizler. */}
+            <PrepaymentBadge rate={prepaymentRate} />
+          </div>
 
-      {/* ═══ GALLERY HERO — full container width (sayfanın ana hero'su).
-          Lightbox/click davranışı AYNEN; yalnız DOM konumu yukarı + geniş. */}
-      <div className="relative rounded-3xl overflow-hidden ring-1 ring-[var(--color-stone-100)]">
-        {/* 🛡️ SEO + a11y: villa.title → alt text auto-generation. */}
-        <Gallery
-          images={imageUrls}
-          watermark={watermark}
-          villaTitle={villa.title}
-        />
-        {/* 🛡️ ÖN ÖDEME KAMPANYA BADGE — Gallery DIŞ wrapper'ında overlay.
-            Gallery/lightbox/favorite/watermark/sayaç'a DOKUNULMAZ.
-            pointer-events-none + z-20 (lightbox z-50 altında). Oran dinamik;
-            0/100'de badge kendini gizler. */}
-        <PrepaymentBadge rate={prepaymentRate} />
-      </div>
+          {/* ═══ VILLA INFO ROW — gallery altı, sol kolon genişliğinde
+              premium info bar. VillaInfoBar iç layout + FavoriteButton
+              logic AYNEN; konum/genişlik değişti. */}
+          <VillaInfoBar
+            villaTitle={villa.title}
+            location={villa.location}
+            guests={villa.guests}
+            bedrooms={villa.bedrooms}
+            bathrooms={villa.bathrooms}
+            tourismDocumentNumber={villa.tourism_document_number}
+            videos={youtubeVideos}
+            actions={<FavoriteButton villaId={villa.id} variant="icon" />}
+          />
 
-      {/* ═══ VILLA INFO ROW — gallery altı, full-width premium info bar.
-          VillaInfoBar iç layout + FavoriteButton logic AYNEN; konum değişti. */}
-      <div className="mt-6 md:mt-8 mb-10 md:mb-12">
-        <VillaInfoBar
-          villaTitle={villa.title}
-          location={villa.location}
-          guests={villa.guests}
-          bedrooms={villa.bedrooms}
-          bathrooms={villa.bathrooms}
-          tourismDocumentNumber={villa.tourism_document_number}
-          videos={youtubeVideos}
-          actions={<FavoriteButton villaId={villa.id} variant="icon" />}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
-        {/* LEFT */}
-        <div className="lg:col-span-2 space-y-12">
           {/* DESCRIPTION */}
           <section>
             <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
@@ -872,7 +872,7 @@ export default async function VillaDetail({
         </div>
 
         {/* RIGHT (sidebar) */}
-        <aside id="booking-sidebar" className="lg:col-span-1">
+        <aside id="booking-sidebar" className="lg:col-span-3">
           <div className="lg:sticky lg:top-32">
             <BookingSidebar
               villaSlug={villa.slug}

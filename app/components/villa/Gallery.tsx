@@ -142,120 +142,155 @@ export default function Gallery({
 
   return (
     <>
-      {/* 🛡️ MOBILE GRID (<768px) — yeniden tasarım.
-         Eski 4-sütun 400px masonry mobilde küçük kartları ~80px wide
-         + dar/uzun gösteriyordu (sıkışık + premium hissi kayıp).
-         Yeni hiyerarşi:
-           ┌─────────────────────────────┐
-           │  HERO (aspect 16/10)        │
-           ├──────────────┬──────────────┤
-           │  Foto 2 4/3  │ Foto 3 4/3   │
-           │              │  +X overlay  │
-           └──────────────┴──────────────┘
-         - aspect-ratio CLS önler (img yüklenmeden alan rezerve).
-         - Tüm tıklamalar mevcut lightbox'ı tetikler (setActiveIndex).
-         - WatermarkOverlay her kartta — desktop parity. */}
-      <div className="grid md:hidden gap-2">
-        {/* HERO — 1. fotoğraf full-width, aspect 16/10 */}
-        <div
-          className="relative overflow-hidden rounded-xl cursor-pointer aspect-[16/10]"
-          onClick={() => setActiveIndex(0)}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={images[0]}
-            alt={buildImageAlt(villaTitle, 0, images.length)}
-            className="w-full h-full object-cover rounded-xl"
-          />
-          <WatermarkOverlay {...watermark} />
+      <div className="relative">
+        {/* 🛡️ MOBILE (<768px) — büyük hero + iki secondary; küçültülmüş
+           desktop grid DEĞİL, kendine özgü kompozisyon. Tüm tıklamalar
+           mevcut lightbox'ı tetikler (setActiveIndex); watermark her
+           karede AYNEN. */}
+        <div className="grid md:hidden gap-2.5">
+          <div
+            className="group relative overflow-hidden rounded-[22px] cursor-pointer aspect-[4/3]"
+            onClick={() => setActiveIndex(0)}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={images[0]}
+              alt={buildImageAlt(villaTitle, 0, images.length)}
+              className="w-full h-full object-cover transition-transform duration-500 ease-out group-active:scale-[1.03]"
+            />
+            <WatermarkOverlay {...watermark} />
+          </div>
+
+          {images.length >= 2 && (
+            <div className="grid grid-cols-2 gap-2.5">
+              <div
+                className="group relative overflow-hidden rounded-[16px] cursor-pointer aspect-[4/3]"
+                onClick={() => setActiveIndex(1)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={images[1]}
+                  alt={buildImageAlt(villaTitle, 1, images.length)}
+                  className="w-full h-full object-cover transition-transform duration-500 ease-out group-active:scale-[1.03]"
+                />
+                <WatermarkOverlay {...watermark} />
+              </div>
+
+              {images.length >= 3 && (
+                <div
+                  className="group relative overflow-hidden rounded-[16px] cursor-pointer aspect-[4/3]"
+                  onClick={() => setActiveIndex(2)}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={images[2]}
+                    alt={buildImageAlt(villaTitle, 2, images.length)}
+                    className="w-full h-full object-cover transition-transform duration-500 ease-out group-active:scale-[1.03]"
+                  />
+                  <WatermarkOverlay {...watermark} />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* ALT SATIR — 2 + 3. fotoğraf yan yana aynı yükseklikte.
-           images.length === 1 ise hiç render edilmez. */}
-        {images.length >= 2 && (
-          <div className="grid grid-cols-2 gap-2">
-            {/* 2. foto */}
+        {/* 🔥 DESKTOP (≥768px) — editorial asimetrik kompozisyon: dominant
+           hero (~2/3 genişlik) + sağda üst/alt iki secondary görsel.
+           Eski 4-kolon masonry KALDIRILDI. Tüm tıklamalar mevcut
+           lightbox'ı tetikler; watermark her karede AYNEN. */}
+        <div className="hidden md:grid grid-cols-3 grid-rows-2 gap-3 h-[440px] lg:h-[500px]">
+          {/* HERO — ana görsel, dominant */}
+          <div
+            className={
+              "group relative overflow-hidden rounded-[28px] cursor-pointer " +
+              (images.length >= 2
+                ? "col-span-2 row-span-2"
+                : "col-span-3 row-span-2")
+            }
+            onClick={() => setActiveIndex(0)}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={images[0]}
+              alt={buildImageAlt(villaTitle, 0, images.length)}
+              className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+            />
+            <WatermarkOverlay {...watermark} />
+          </div>
+
+          {/* SECONDARY 1 — sağ üst (veya foto sayısı 2 ise sağ kolonun tamamı) */}
+          {images.length >= 2 && (
             <div
-              className="relative overflow-hidden rounded-xl cursor-pointer aspect-[4/3]"
+              className={
+                "group relative overflow-hidden rounded-2xl cursor-pointer col-start-3 " +
+                (images.length >= 3 ? "row-start-1" : "row-span-2")
+              }
               onClick={() => setActiveIndex(1)}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={images[1]}
                 alt={buildImageAlt(villaTitle, 1, images.length)}
-                className="w-full h-full object-cover rounded-xl"
+                className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
               />
               <WatermarkOverlay {...watermark} />
             </div>
+          )}
 
-            {/* 3. foto + opsiyonel +X overlay.
-               images.length === 2 ise bu kart render edilmez ve
-               2. foto sol sütunda kalır (sağ taraf boş — kullanım
-               nadir, davranış zarif). */}
-            {images.length >= 3 && (
-              <div
-                className="relative overflow-hidden rounded-xl cursor-pointer aspect-[4/3]"
-                onClick={() => setActiveIndex(2)}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={images[2]}
-                  alt={buildImageAlt(villaTitle, 2, images.length)}
-                  className="w-full h-full object-cover rounded-xl"
-                />
-                <WatermarkOverlay {...watermark} />
-                {/* +X overlay — yalnız 4+ fotoğraf varsa */}
-                {images.length > 3 && (
-                  <div
-                    aria-hidden="true"
-                    className="absolute inset-0 bg-black/55 flex items-center justify-center rounded-xl"
-                  >
-                    <span className="text-white text-[15px] font-semibold tracking-[0.01em]">
-                      +{images.length - 3} Fotoğraf
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 🔥 DESKTOP GRID (≥768px) — eski 4-sütun masonry AYNEN korundu.
-         hidden md:grid ile mobile'da gizli; desktop davranışı byte-
-         identical. */}
-      <div className="hidden md:grid grid-cols-4 gap-2 h-[400px]">
-
-        {/* büyük */}
-        <div
-          className="col-span-2 row-span-2 cursor-pointer relative overflow-hidden rounded-xl"
-          onClick={() => setActiveIndex(0)}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={images[0]}
-            alt={buildImageAlt(villaTitle, 0, images.length)}
-            className="w-full h-full object-cover rounded-xl"
-          />
-          <WatermarkOverlay {...watermark} />
+          {/* SECONDARY 2 — sağ alt */}
+          {images.length >= 3 && (
+            <div
+              className="group relative overflow-hidden rounded-2xl cursor-pointer col-start-3 row-start-2"
+              onClick={() => setActiveIndex(2)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={images[2]}
+                alt={buildImageAlt(villaTitle, 2, images.length)}
+                className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+              />
+              <WatermarkOverlay {...watermark} />
+            </div>
+          )}
         </div>
 
-        {/* küçükler */}
-        {images.slice(1, 5).map((img, i) => (
-          <div
-            key={i}
-            className="relative overflow-hidden rounded-xl cursor-pointer hover:opacity-90 transition"
-            onClick={() => setActiveIndex(i + 1)}
+        {/* 🛡️ TÜM FOTOĞRAFLAR — floating control, galeri köşesinde modern
+           bir giriş noktası. Mevcut lightbox'ı index 0'dan açar; davranış
+           AYNEN (yalnız yeni, görünür bir tetikleyici). Gerçek fotoğraf
+           sayısı kullanılır — FAKE sayı YOK. Yalnızca collage'da
+           görünenden fazlası varsa (>3) render edilir. */}
+        {images.length > 3 && (
+          <button
+            type="button"
+            onClick={() => setActiveIndex(0)}
+            aria-label={`Tüm fotoğrafları gör (${images.length} fotoğraf)`}
+            className="
+              absolute bottom-3 right-3 md:bottom-4 md:right-4 z-10
+              inline-flex items-center gap-1.5
+              rounded-full bg-white/95 backdrop-blur-sm
+              px-3.5 py-2
+              text-[12.5px] font-semibold text-[var(--color-stone-800)]
+              ring-1 ring-black/5
+              shadow-[0_8px_20px_-8px_rgba(11,31,58,0.35)]
+              hover:bg-white transition-colors duration-200 motion-reduce:transition-none
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/50
+            "
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={img}
-              alt={buildImageAlt(villaTitle, i + 1, images.length)}
-              className="w-full h-full object-cover rounded-xl"
-            />
-            <WatermarkOverlay {...watermark} />
-          </div>
-        ))}
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+              <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+              <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+              <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+            </svg>
+            Tüm Fotoğraflar · {images.length}
+          </button>
+        )}
       </div>
 
       {/* 🔥 LIGHTBOX */}
