@@ -1070,10 +1070,16 @@ export default function VillaCard({
             className="mt-3.5 h-[2px] w-10 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
           />
 
-          {/* BOTTOM ROW — fiyat (sol) + booking CTA (sağ). Handler/aria-label/
+          {/* BOTTOM ROW — fiyat (sol, varsa) + booking CTA. Handler/aria-label/
               lazy modal mantığı AYNEN; fiyat hesabı (stayTotal / convertedPrice)
-              üst tanımdan BİREBİR reuse — yeni hesap YOK. */}
-          <div className="mt-3.5 flex items-end justify-between gap-3">
+              üst tanımdan BİREBİR reuse — yeni hesap YOK.
+              🛡️ CTA HİZALAMA — justify-between kaldırıldı; buton `mx-auto`
+              ile fiyat/chip bloğunun (varsa) SAĞINDAKİ boşlukta ortalanır.
+              Fiyat/chip bloğu solda AYNI konumunda kalır (taşınmadı); boş
+              olduğu yaygın durumda (stayTotal===null, isFlexible=false)
+              satırın tamamı boş kaldığı için buton satırın tam ortasına
+              gelir. Buton genişlik/yükseklik/renk/hover/metin AYNEN. */}
+          <div className="mt-3.5 flex items-end gap-3">
             {isFlexible ? (
               /* 🛡️ ESNEK EK SONUÇ — fiyat gösterilmez; fiyat motoru
                  çağrılmaz, ana tarih/href akışı korunur. */
@@ -1115,7 +1121,7 @@ export default function VillaCard({
               }}
               aria-label="Müsaitlik ve tarih seçimi modalını aç"
               className={
-                "shrink-0 inline-flex items-center justify-center gap-1.5 whitespace-nowrap " +
+                "shrink-0 mx-auto inline-flex items-center justify-center gap-1.5 whitespace-nowrap " +
                 "h-9 px-4 rounded-full " +
                 "text-white uppercase font-medium text-[11px] tracking-[0.06em] " +
                 "bg-gradient-to-r from-[#ED7926] to-[#0973BA] " +
