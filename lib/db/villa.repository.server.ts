@@ -1009,18 +1009,33 @@ export const villaAdminRepository = {
   /* ===============================================================
      READ — header/hero title search (NATIVE, Migration S8M)
      ===============================================================
-     Anon `villaRepository.searchByTitle` ile BYTE-IDENTICAL — header/hero
-     TR-aware villa adı araması. Aynı `normalizeSearchText` (TR-fold+lower+
-     whitespace) + `escapeLikePattern` (wildcard escape); embed villa_images
-     (image_url,is_cover,sort_order); `.ilike("search_title", "%…%")` (mig
-     065 GENERATED STORED kolonu, pg_trgm GIN index); top-level `.limit(limit)`.
-       needle boş → erken [] · UNWRAPPED array döner (error→[]; ham
-       {data,error} DEĞİL).
-     ⚠️ CASE-INSENSITIVE: `.ilike` → compiler `search_title ILIKE $n` (query-
-       builder:160). search_title zaten TR-fold+lower generated → anon ile
-       BİREBİR case-insensitive. Embed order/limit yok (consumer cover seçer).
+     Anon `villaRepository.searchByTitle` ile BYTE-IDENTICAL (temel) —
+     header/hero TR-aware villa adı araması. Aynı `normalizeSearchText`
+     (TR-fold+lower+whitespace) + `escapeLikePattern` (wildcard escape);
+     embed villa_images (image_url,is_cover,sort_order); top-level
+     `.limit(limit)`. needle boş → erken [] · UNWRAPPED array döner
+     (error→[]; ham {data,error} DEĞİL).
+     ⚠️ CASE-INSENSITIVE: `ilike` → compiler `... ILIKE $n` (query-
+       builder:160). search_title zaten TR-fold+lower generated. Embed
+       order/limit yok (consumer cover seçer).
      Row-tip generic (dönüş tipiyle aynı) → `as any[]` cast GEREKMEZ. Tek
      fark `db` → `dbAdmin`.
+
+     🛡️ MIGRATION 072 GENİŞLETMESİ — real_title OR eşleşmesi:
+       Eskiden tek `.ilike("search_title", pattern)`. Şimdi AYNI `pattern`
+       değeri `.or()` ile İKİ koluna uygulanıyor:
+         search_title.ilike.<pattern>  OR  real_title.ilike.<pattern>
+       `.or(...)` önceki `.eq("is_active",true).is("deleted_at",null)`
+       filtreleriyle AND olarak birleşir (bkz. listForAdmin/S6A aynı
+       zincir deseni, satır ~756). Quoting/escape `buildVillaSearchOrClauseNative`
+       (satır ~104) ile AYNI güvenli desen: escapeLikePattern zaten
+       backslash + `%`/`_` escape ediyor; `.or()` taşıma-string'i için
+       AYRICA çift tırnak escape edilip değer `"..."` içine sarılıyor
+       (query-builder `unquoteOrValue`'nun tersi — round-trip doğrulandı).
+       `real_title` SADECE WHERE/OR filtresinde kullanılıyor; `.select()`
+       listesine EKLENMEDİ → response'a asla dahil olmaz (title, mevcut
+       public villa adı olarak dönmeye devam eder). search_title kolu
+       davranışça birebir korunur (aynı pattern, aynı normalize).
   =============================================================== */
   async searchByTitle(
     term: string,
@@ -1040,6 +1055,12 @@ export const villaAdminRepository = {
     const needle = normalizeSearchText(term);
     if (needle.length === 0) return [];
     const pattern = `%${escapeLikePattern(needle)}%`;
+    /* 🛡️ Migration 072 — .or() taşıma-quoting'i (buildVillaSearchOrClauseNative
+       ile BİREBİR desen, satır ~104): escapeLikePattern zaten \ ve %/_
+       escape etti; burada SADECE .or() string parser'ı için çift tırnak
+       escape edilip `"..."` içine sarılıyor. real_title WHERE'de kullanılır,
+       SELECT'e eklenmez. */
+    const orQuoted = `"${pattern.replace(/"/g, '\\"')}"`;
     const { data, error } = await dbAdmin
       .from<{
         id: string;
@@ -1056,7 +1077,7 @@ export const villaAdminRepository = {
       )
       .eq("is_active", true)
       .is("deleted_at", null)
-      .ilike("search_title", pattern)
+      .or(`search_title.ilike.${orQuoted},real_title.ilike.${orQuoted}`)
       .limit(limit);
 
     if (error) {
