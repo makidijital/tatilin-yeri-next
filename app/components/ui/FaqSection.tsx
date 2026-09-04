@@ -59,16 +59,11 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
         }}
       />
 
-      {/* ═══ SECTION HEADING — iki sütunu da kapsayan, ortalı başlık.
-             Tipografi "Kısa Süreli Fırsatlar" (ShortGapsSection) section
-             başlığıyla BİREBİR aynı sınıflar. Alttaki iki sütunlu grid +
-             kartlar + accordion AYNEN. ═══ */}
-      <div className="relative max-w-[1280px] mx-auto text-center mb-8 md:mb-12">
-        <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] leading-tight tracking-[-0.02em]">
-          Tatiliniz İçin Öneriler
-        </h2>
-      </div>
-
+      {/* Basliksiz premium kompozisyon - "Tatiliniz Icin Oneriler" stray
+             heading kaldirildi (section'in accessible name'i zaten
+             aria-labelledby="faq-heading" uzerinden asagidaki "Sikca Sorulan
+             Sorular" basligindan geliyor - SEO/a11y etkilenmez). Alttaki iki
+             sutunlu grid + accordion mantigi AYNEN. */}
       <div className="relative max-w-[1280px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
         {/* ═══ LEFT — decorative info panel (navy + turquoise) ═══ */}
         <div className="lg:col-span-4">
@@ -81,7 +76,7 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
                   "radial-gradient(circle at center, rgba(2, 170, 229,0.30), transparent 70%)",
               }}
             />
-            <span className="relative inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--color-champagne-500)]/15 text-[var(--color-champagne-300)] ring-1 ring-inset ring-[var(--color-champagne-500)]/25">
+            <span className="relative inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-[#ED7926] to-[#0973BA] text-white shadow-[0_8px_20px_-6px_rgba(9,115,186,0.5)]">
               <HelpCircle size={22} strokeWidth={1.75} aria-hidden />
             </span>
             <h2
@@ -93,27 +88,30 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
             <p className="relative mt-3 text-[14.5px] leading-relaxed text-white/65">
               Misafirlerimizin en çok merak ettiği sorular.
             </p>
+            <div
+              aria-hidden="true"
+              className="relative mt-5 h-[3px] w-14 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+            />
           </div>
         </div>
 
-        {/* ═══ RIGHT — accordion (logic AYNEN; yalnız restyle) ═══ */}
+        {/* ═══ RIGHT — accordion. Logic (openIndex state, aria, grid-rows
+               collapse) BİREBİR aynı; yalnız kutu-kutu kart görünümü tek bir
+               unified editorial liste (divide-y) haline getirildi — daha az
+               border/box, daha "premium liste" hissi. ═══ */}
         <div className="lg:col-span-8">
-          <div className="space-y-3 md:space-y-3.5">
+          <div className="rounded-[28px] bg-white ring-1 ring-[var(--color-stone-100)] divide-y divide-[var(--color-stone-100)] overflow-hidden shadow-[0_20px_50px_-30px_rgba(11,31,58,0.22)]">
             {faqs.map((faq, idx) => {
               const isOpen = openIndex === idx;
               return (
-                <article
-                  key={faq.id}
-                  className={`
-                    rounded-2xl bg-white
-                    transition-all duration-300 motion-reduce:transition-none
-                    ${
-                      isOpen
-                        ? "border border-[var(--color-champagne-500)]/55 shadow-[0_20px_44px_-22px_rgba(2, 170, 229,0.30)]"
-                        : "border border-[var(--color-stone-100)] shadow-[0_8px_22px_-16px_rgba(11,31,58,0.18)] hover:border-[var(--color-champagne-400)]/50 hover:shadow-[0_16px_32px_-20px_rgba(11,31,58,0.26)]"
-                    }
-                  `}
-                >
+                <article key={faq.id} className="relative">
+                  {/* Açık item'da sol kenarda ince marka-gradient accent çubuğu */}
+                  {isOpen && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#ED7926] to-[#0973BA]"
+                    />
+                  )}
                   <button
                     type="button"
                     onClick={() => setOpenIndex(isOpen ? null : idx)}
@@ -122,11 +120,12 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
                     id={`faq-button-${idx}`}
                     className="
                       group w-full flex items-start gap-4
-                      px-5 py-4 md:px-6 md:py-5
+                      px-5 py-4 md:px-7 md:py-5
                       text-left
                       focus:outline-none focus-visible:ring-2
-                      focus-visible:ring-[var(--color-champagne-500)]/40
-                      rounded-2xl
+                      focus-visible:ring-[#0973BA]/40 focus-visible:ring-inset
+                      transition-colors duration-200 motion-reduce:transition-none
+                      hover:bg-[var(--color-stone-50)]
                     "
                   >
                     <span
@@ -137,15 +136,21 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
                         motion-reduce:transition-none group-hover:scale-110
                         ${
                           isOpen
-                            ? "bg-[var(--color-champagne-500)] text-white"
-                            : "bg-[var(--color-champagne-50)] border border-[var(--color-champagne-500)]/20 text-[var(--color-champagne-600)]"
+                            ? "bg-gradient-to-br from-[#ED7926] to-[#0973BA] text-white"
+                            : "bg-[var(--color-stone-50)] border border-[var(--color-stone-200)] text-[var(--color-stone-500)]"
                         }
                       `}
                       aria-hidden
                     >
                       {isOpen ? <Minus size={14} /> : <Plus size={14} />}
                     </span>
-                    <span className="flex-1 min-w-0 font-display text-[16px] md:text-[18px] text-[var(--color-stone-900)] leading-snug tracking-[-0.015em] mt-1">
+                    <span
+                      className={`
+                        flex-1 min-w-0 font-display text-[16px] md:text-[18px] leading-snug tracking-[-0.015em] mt-1
+                        transition-colors duration-200 motion-reduce:transition-none
+                        ${isOpen ? "text-[#0973BA]" : "text-[var(--color-stone-900)]"}
+                      `}
+                    >
                       {faq.question}
                     </span>
                   </button>
@@ -163,7 +168,7 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
                     `}
                   >
                     <div className="overflow-hidden">
-                      <div className="px-5 md:px-6 pb-5 md:pb-6 pl-[68px] md:pl-[76px]">
+                      <div className="px-5 md:px-7 pb-5 md:pb-6 pl-[68px] md:pl-[80px]">
                         <p className="text-[14px] md:text-[15px] text-[var(--color-stone-600)] leading-[1.75] whitespace-pre-line">
                           {faq.answer}
                         </p>
