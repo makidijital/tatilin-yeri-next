@@ -79,7 +79,7 @@ export default async function VillaList() {
         </div>
 
         {/* 🛡️ FAZ 39L — Grid spacing tightened (cards focus). */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 md:gap-x-8 gap-y-10 md:gap-y-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 md:gap-x-8 gap-y-10 md:gap-y-12">
           {villas.map((villa) => (
             <VillaCard
               key={villa.slug || villa.id}
