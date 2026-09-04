@@ -47,12 +47,22 @@ export default async function HomepageReviewsSection() {
       className="px-5 md:px-10 lg:px-16 pt-14 md:pt-20 pb-12 md:pb-16"
     >
       <div className="max-w-[1280px] mx-auto">
-        {/* HEADER — centered, eyebrow + genel rating özeti kaldırıldı */}
-        <div className="text-center mb-8 md:mb-10">
-          <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] leading-tight tracking-[-0.02em]">
+        {/* HEADER — editorial: mikro çizgi + uppercase mikro-etiket +
+               sol hizali başlık. Metinler (h2/p) BİREBİR aynı, sadece
+               sunum "guest stories" diline uyacak şekilde yeniden
+               düzenlendi. */}
+        <div className="mb-10 md:mb-14 max-w-xl">
+          <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-stone-400)]">
+            <span
+              aria-hidden="true"
+              className="inline-block w-4 h-px bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+            />
+            Misafirlerimizin Deneyimi
+          </span>
+          <h2 className="mt-4 font-display font-medium text-[28px] md:text-[36px] text-[var(--color-stone-900)] leading-[1.08] tracking-[-0.02em]">
             Misafirlerimiz ne diyor?
           </h2>
-          <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-stone-500)] max-w-md mx-auto">
+          <p className="mt-3 text-[14.5px] md:text-[15px] leading-relaxed text-[var(--color-stone-500)]">
             Konaklamasını bizimle yapan misafirlerin kendi sözleriyle
             Akdeniz deneyimleri.
           </p>
