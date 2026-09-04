@@ -624,45 +624,35 @@ export default function VillaCard({
          hâlâ mount edilebilir ama isOpen=false sabit → 0 maliyet.
          ──────────────────────────────────────────────────── */
       isDiscount ? (
-      <article
+      <div
         className={
-          "relative overflow-hidden bg-white " +
-          "rounded-2xl border border-[var(--color-stone-100)] " +
-          "shadow-[0_10px_26px_-16px_rgba(11,31,58,0.20)] " +
-          "group-hover:shadow-[0_24px_44px_-20px_rgba(11,31,58,0.30)] " +
-          "group-hover:border-[var(--color-stone-200)] " +
-          "transition-[box-shadow,transform,border-color] duration-400 motion-reduce:transition-none " +
-          "group-hover:-translate-y-[2px] " +
-          (isDiscount
-            ? "ring-2 ring-[#ff7a59]/30 shadow-[0_16px_38px_-16px_rgba(255,122,89,0.38)] "
-            : "")
+          "relative rounded-[28px] p-[1.5px] overflow-hidden dc-glow-ring " +
+          "shadow-[0_14px_34px_-18px_rgba(11,31,58,0.24)] " +
+          "group-hover:shadow-[0_28px_54px_-22px_rgba(9,115,186,0.32)] " +
+          "transition-[box-shadow,transform] duration-500 motion-reduce:transition-none " +
+          "group-hover:-translate-y-[3px]"
         }
       >
-        {/* ── IMAGE BLOCK — aspect-[16/10] (kompakt yatay) ── */}
-        <div
-          className={
-            "relative overflow-hidden " +
-            "aspect-[16/10] " +
-            "bg-gradient-to-br from-[var(--color-sand-100)] via-[var(--color-sand-50)] to-[var(--color-sand-100)]"
-          }
-        >
+      <article className="relative overflow-hidden bg-white rounded-[26.5px]">
+        {/* ── IMAGE BLOCK — aspect-[4/3], premium showcase, dominant görsel ── */}
+        <div className="relative overflow-hidden aspect-[4/3] bg-gradient-to-br from-[var(--color-sand-100)] via-[var(--color-sand-50)] to-[var(--color-sand-100)]">
           {showImage ? (
             <Image
               src={cover}
               alt={title || "Villa"}
               fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+              sizes="(max-width: 640px) 78vw, (max-width: 1024px) 340px, 380px"
               loading="lazy"
               onError={() => setImgFailed(true)}
               className="
                 object-cover object-center
                 transition-transform duration-[900ms] ease-out
-                group-hover:scale-[1.03]
+                group-hover:scale-[1.05]
                 motion-reduce:transition-none motion-reduce:group-hover:scale-100
               "
             />
           ) : (
-            /* PREMIUM FALLBACK — serif initial (kompakt boyut) */
+            /* PREMIUM FALLBACK — serif initial */
             <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
               <div className="font-display text-[64px] leading-none text-[var(--color-stone-300)] tracking-[-0.03em]">
                 {initial}
@@ -673,10 +663,15 @@ export default function VillaCard({
             </div>
           )}
 
-          {/* Top vignette — badge legibility (subtle, kompakt) */}
+          {/* Bottom scrim — başlık/bölge legibility */}
           <div
             aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/[0.20] via-black/[0.04] to-transparent pointer-events-none"
+            className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/[0.78] via-black/[0.28] to-transparent pointer-events-none"
+          />
+          {/* Top vignette — badge legibility */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/[0.24] via-black/[0.04] to-transparent pointer-events-none"
           />
           {/* Inner premium ring stroke */}
           <div
@@ -684,66 +679,47 @@ export default function VillaCard({
             className="absolute inset-0 ring-1 ring-inset ring-white/15 pointer-events-none"
           />
 
-          {/* DISCOUNT BADGE — soft coral→turquoise blend (premium, lüks). */}
+          {/* DISCOUNT BADGE — gerçek veri: bu kart discount koleksiyonunda küratörlü.
+              Shimmer sweep + soft pulse halo — çok yavaş, premium, ucuz neon değil.
+              prefers-reduced-motion → DiscountCollection'daki scoped style bloku
+              animasyonları kapatır/azaltır. */}
           {isDiscount && (
-            <span className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 bg-gradient-to-r from-[#ff7a59] to-[#00bc7d] text-white text-[10px] tracking-[0.16em] uppercase font-semibold px-2.5 py-1 rounded-full shadow-[0_4px_14px_-4px_rgba(255,122,89,0.5)] ring-1 ring-white/25">
-              <span
-                aria-hidden="true"
-                className="inline-block w-1 h-1 rounded-full bg-white/90"
-              />
-              İndirimli
-            </span>
-          )}
-
-          {/* BADGE — glass pill (kategori/lightning). Discount kartta
-              gizlenir → İndirimli badge ile çakışmasın. */}
-          {badge && !isDiscount && (
-            <span className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 bg-emerald-500 text-white text-[10px] tracking-[0.16em] uppercase font-medium px-2.5 py-1 rounded-full shadow-[0_4px_12px_-4px_rgba(16,122,87,0.45)] ring-1 ring-white/20">
-              <span
-                aria-hidden="true"
-                className="inline-block w-1 h-1 rounded-full bg-white/90"
-              />
-              {badge}
+            <span className="absolute top-3.5 left-3.5 z-10 dc-badge-pulse">
+              <span className="dc-badge-shimmer relative overflow-hidden inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA] px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-white shadow-[0_8px_20px_-6px_rgba(9,115,186,0.55)] ring-1 ring-white/30">
+                <Sparkles size={12} strokeWidth={2.2} aria-hidden />
+                Özel Fırsat · İndirimli
+              </span>
             </span>
           )}
 
           {/* FAV BUTTON — top-right */}
           {id && <FavoriteButton villaId={id} variant="card" alwaysVisible />}
-        </div>
 
-        {/* ── CONTENT AREA — kart altı kompakt blok ── */}
-        <div className="p-3.5 md:p-4">
-          {/* TITLE + LOCATION — tek satır: villa adı (sol) + bölge (sağ).
-              justify-between + items-center; uzun isimlerde title truncate,
-              uzun bölgede location max-w + truncate → layout wrap-safe. */}
-          <div className="flex items-center justify-between gap-3">
-            <h3
-              className={
-                "min-w-0 flex-1 truncate " +
-                "font-display text-[17px] md:text-[18px] " +
-                "leading-[1.15] tracking-[-0.02em] text-[var(--color-stone-900)] " +
-                "group-hover:text-[var(--color-stone-800)] " +
-                "transition-colors motion-reduce:transition-none"
-              }
-            >
+          {/* TITLE + LOCATION — görsel üzerinde alt overlay, brand accent çizgisi.
+              Normal public karttan (VillaCard default) ayırt etmek için altina
+              turuncu→mavi ince accent çizgisi eklendi. */}
+          <div className="absolute inset-x-0 bottom-0 p-4 pointer-events-none">
+            <h3 className="font-display text-[19px] md:text-[20px] font-semibold leading-[1.15] tracking-[-0.02em] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)] line-clamp-1">
               {title}
             </h3>
-            <p className="shrink-0 max-w-[45%] inline-flex items-center gap-1 text-[11.5px] text-[var(--color-stone-500)]">
-              <MapPin
-                size={12}
-                className="text-[var(--color-stone-400)] shrink-0"
-                strokeWidth={1.75}
-                aria-hidden
-              />
+            <p className="mt-1 inline-flex items-center gap-1 text-[11.5px] text-white/85 uppercase tracking-[0.05em]">
+              <MapPin size={11} className="shrink-0" strokeWidth={2} aria-hidden />
               <span className="truncate">{location || "Lokasyon yok"}</span>
             </p>
+            <div
+              aria-hidden="true"
+              className="mt-2 h-[3px] w-12 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+            />
           </div>
+        </div>
 
-          {/* ROW 3 — review meta (opsiyonel, kompakt) */}
+        {/* ── CONTENT AREA — kampanya hissi veren hafif gradient wash ── */}
+        <div className="p-3.5 md:p-4 bg-gradient-to-br from-[#FFF6F0] via-white to-[#F0F8FC]">
+          {/* REVIEW META — opsiyonel, mevcut veri, format AYNEN korunur */}
           {typeof reviewCount === "number" && reviewCount > 0 &&
             typeof reviewAverage === "number" && reviewAverage > 0 && (
               <div
-                className="mt-1.5 flex items-center gap-1 text-[11.5px] text-[var(--color-stone-600)]"
+                className="flex items-center gap-1 text-[11.5px] text-[var(--color-stone-600)]"
                 aria-label={`Ortalama puan ${reviewAverage.toFixed(
                   1
                 )} / 5, ${reviewCount} misafir yorumu`}
@@ -763,19 +739,23 @@ export default function VillaCard({
               </div>
             )}
 
-          {/* Subtle inset divider — üst bilgi bloğu (ad/bölge) ↔ amenities
-              ayrımı; premium minimal, full-width değil (mx-1 inset). */}
-          <div aria-hidden="true" className="mt-3.5 mx-1 h-px bg-[var(--color-stone-100)]" />
-
-          {/* AMENITIES — inline icon+text satır (referans tasarım dili).
-              Aynı veri (guests / bedrooms / bathrooms); pastel tile grid
-              yerine tek satır temiz amenity row. */}
-          <div className="mt-3.5 flex items-center justify-center gap-x-4 gap-y-1.5 flex-wrap text-[12.5px] font-medium text-[var(--color-stone-800)]">
+          {/* AMENITIES — inline icon+text satır, aynı veri (guests/bedrooms/bathrooms) */}
+          <div
+            className={
+              (typeof reviewCount === "number" &&
+              reviewCount > 0 &&
+              typeof reviewAverage === "number" &&
+              reviewAverage > 0
+                ? "mt-3 "
+                : "") +
+              "flex items-center justify-center gap-x-4 gap-y-1.5 flex-wrap text-[12.5px] font-medium text-[var(--color-stone-800)]"
+            }
+          >
             <span
               className="inline-flex items-center gap-1.5"
               aria-label={`${guests} kişi kapasitesi`}
             >
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-[#00bc7d]/12 text-[#00bc7d] shrink-0" aria-hidden>
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-[#0973BA]/10 text-[#0973BA] shrink-0" aria-hidden>
                 <Users size={17} strokeWidth={2.2} />
               </span>
               <span className="tabular-nums">{guests} Kişi</span>
@@ -784,7 +764,7 @@ export default function VillaCard({
               className="inline-flex items-center gap-1.5"
               aria-label={`${bedrooms} yatak odası`}
             >
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-[#00bc7d]/12 text-[#00bc7d] shrink-0" aria-hidden>
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-[#0973BA]/10 text-[#0973BA] shrink-0" aria-hidden>
                 <BedDouble size={17} strokeWidth={2.2} />
               </span>
               <span className="tabular-nums">{bedrooms} Yatak Odası</span>
@@ -793,60 +773,43 @@ export default function VillaCard({
               className="inline-flex items-center gap-1.5"
               aria-label={`${bathrooms} banyo`}
             >
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-[#00bc7d]/12 text-[#00bc7d] shrink-0" aria-hidden>
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-[#0973BA]/10 text-[#0973BA] shrink-0" aria-hidden>
                 <Bath size={17} strokeWidth={2.2} />
               </span>
               <span className="tabular-nums">{bathrooms} Banyo</span>
             </span>
           </div>
 
-          {/* Divider — content ile bottom row ayrımı */}
-          <div aria-hidden="true" className="mt-3.5 h-px bg-[var(--color-stone-100)]" />
+          {/* Divider */}
+          <div aria-hidden="true" className="mt-3.5 h-px bg-[var(--color-stone-200)]/70" />
 
           {/* BOTTOM ROW — price (sol) + booking CTA (sağ).
-              🛡️ Booking trigger onClick / aria-label / görünür label +
-              lazy modal mantığı AYNEN; yalnız konum + stil değişti.
-              Fiyat hesabı (stayTotal / convertedPrice branch) title
-              satırından buraya BİREBİR taşındı — yeni hesap YOK. */}
+              Fiyat hesabı (stayTotal / convertedPrice) ve booking trigger
+              handler'i birebir aynı; yalnız stil/konum değişti. */}
           <div className="mt-3.5 flex items-end justify-between gap-3">
-            {isFlexible ? (
-              /* 🛡️ ESNEK EK SONUÇ — fiyat gösterilmez (villa ana tarihte
-                 müsait değil); premium "Esnek Tarih Fırsatı" sunumu.
-                 Fiyat motoru çağrılmaz; ana tarih/href akışı korunur. */
-              <div className="min-w-0">
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-coral-tint)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--brand-coral-deep)]">
-                  <Sparkles size={11} strokeWidth={2} aria-hidden />
-                  Esnek Tarih Fırsatı
-                </div>
-                <div className="mt-1 text-[11px] font-medium text-[var(--color-stone-600)]">
-                  ±3 gün içinde müsait
-                </div>
-              </div>
-            ) : (
-              <div className="min-w-0">
-                {stayTotal !== null ? (
-                  <>
-                    <div className="font-display text-[18px] md:text-[19px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
-                      {formatCurrency(stayTotal, currency)}
+            <div className="min-w-0">
+              {stayTotal !== null ? (
+                <>
+                  <div className="font-display text-[18px] md:text-[19px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
+                    {formatCurrency(stayTotal, currency)}
+                  </div>
+                  <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)] tabular-nums">
+                    {stayNights} gece{hasCleaning ? " · Temizlik dahil" : ""}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="font-display text-[18px] md:text-[19px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
+                    {price ? formatCurrency(convertedPrice, currency) : "Fiyat sorunuz"}
+                  </div>
+                  {price ? (
+                    <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)]">
+                      Başlayan Fiyatlarla
                     </div>
-                    <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)] tabular-nums">
-                      {stayNights} gece{hasCleaning ? " · Temizlik dahil" : ""}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="font-display text-[18px] md:text-[19px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
-                      {price ? formatCurrency(convertedPrice, currency) : "Fiyat sorunuz"}
-                    </div>
-                    {price ? (
-                      <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)]">
-                        Başlayan Fiyatlarla
-                      </div>
-                    ) : null}
-                  </>
-                )}
-              </div>
-            )}
+                  ) : null}
+                </>
+              )}
+            </div>
 
             <button
               type="button"
@@ -859,12 +822,12 @@ export default function VillaCard({
               className={
                 "shrink-0 inline-flex items-center justify-center gap-1.5 whitespace-nowrap " +
                 "h-9 px-3.5 rounded-xl " +
-                "border border-[var(--brand-coral)]/35 " +
-                "bg-[var(--brand-coral-tint)] text-[var(--brand-coral-deep)] " +
+                "bg-gradient-to-r from-[#ED7926] to-[#0973BA] text-white " +
                 "uppercase font-medium text-[11px] tracking-[0.06em] " +
-                "hover:bg-[var(--brand-coral)] hover:text-white hover:border-[var(--brand-coral)] " +
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/40 " +
-                "transition-colors duration-200 motion-reduce:transition-none"
+                "shadow-[0_6px_16px_-6px_rgba(9,115,186,0.45)] " +
+                "hover:shadow-[0_10px_22px_-6px_rgba(9,115,186,0.55)] hover:-translate-y-px " +
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40 " +
+                "transition-[box-shadow,transform] duration-200 motion-reduce:transition-none"
               }
             >
               <CalendarRange size={13} strokeWidth={1.75} aria-hidden />
@@ -874,6 +837,7 @@ export default function VillaCard({
           {reserveBlock}
         </div>
       </article>
+      </div>
       ) : (
       <article
         className={
