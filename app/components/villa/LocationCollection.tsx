@@ -13,31 +13,30 @@ import {
 import HorizontalCarousel from "./HorizontalCarousel";
 
 /* ===============================================================
-   🛡️ LOCATION SHOWCASE — homepage "destination" carousel
+   🛡️ LOCATION SHOWCASE — homepage "circular avatar" carousel
    ===============================================================
    Yatay kaydırmalı "Villa Kiralama Bölgeleri" — VillaTypeCarousel'dan
    (app/components/villa/VillaTypeCarousel.tsx) BİLİNÇLİ OLARAK farklı
-   kart dili kullanır (aynı carousel altyapısı, farklı kompozisyon):
+   kart dili kullanır (aynı carousel altyapısı, tamamen farklı
+   kompozisyon):
      - HorizontalCarousel (app/components/villa/HorizontalCarousel.tsx,
        DEĞİŞTİRİLMEDİ) — native scroll-snap, wheel→horizontal, desktop
        showArrows, mobile native touch swipe. Yeni kütüphane YOK.
-     - Kart: tüm-görsel "destination" kompozisyonu — VillaTypeCarousel'in
-       görsel-üstte + beyaz-panel-altta yapısının TERSİ. aspect-[3/4]
-       dikey/portre oran (VillaTypeCarousel'in aspect-[4/3] yatayının
-       AKSİNE), daha geniş kartlar (240-320px aralığı, breakpoint'e göre
-       artan — VillaTypeCarousel'in daralan genişlik deseninin TERSİ),
-       rounded-[28px] (VillaTypeCarousel'in rounded-[18px]'inden farklı).
-     - Bölge adı + villa sayısı, görselin ALTINDAKİ güçlü gradient
-       overlay üzerinde büyük serif typography ile (VillaTypeCarousel'de
-       metin AYRI beyaz panelde idi — burada overlay içinde).
-     - Marka renkleri (#ED7926/#0973BA) SADECE villa sayısının yanındaki
-       ince gradient çizgide — VillaTypeCarousel'in köşe rozet (badge
-       pill) deseni KULLANILMADI, kasıtlı olarak farklı bir uygulama.
+     - Kart: KÜÇÜK, DAİRESEL görsel (rounded-full, ~140-180px) + altında
+       kompakt metin — VillaTypeCarousel'in büyük dikdörtgen kartının,
+       beyaz panelinin ve köşe rozet/badge'inin HİÇBİRİ kullanılmadı.
+       Büyük gradient overlay YOK, görselin üzerine yazı bindirilmedi —
+       bölge adı görselin ALTINDA, ayrı bir metin bloğunda.
+     - Villa sayısı ikincil/küçük bilgi; yanında marka renkli
+       (#ED7926/#0973BA) minik gradient nokta — badge/pill DEĞİL.
+     - Hover: sadece görsel hafif zoom + dairenin çok hafif elevation'ı
+       (büyük translate/scale yok, sade ve premium).
      - Server component, zero ek client JS (HorizontalCarousel hariç).
 
    ⚠️ GEÇMİŞ NOT (artık geçersiz): Bu component bir ara statik CSS
-     grid'e (carousel'siz) düşürülmüştü. Bu revizyonla yatay carousel
-     davranışı GERİ GETİRİLDİ — mevcut HorizontalCarousel altyapısı
+     grid'e (carousel'siz) düşürülmüştü, sonra büyük 3/4 poster kartlı
+     bir carousel'e dönüştürülmüştü. Bu revizyonla küçük dairesel
+     avatar kompozisyonuna geçildi — mevcut HorizontalCarousel altyapısı
      üzerinden, yeni bir mekanizma icat edilmeden.
 
    FARKLAR (CategoryCollection'a göre, veri tarafı):
@@ -176,22 +175,19 @@ export default async function LocationCollection() {
           </p>
         </div>
 
-        {/* DESTINATION CAROUSEL — yatay kaydırma, HorizontalCarousel
-            (DEĞİŞTİRİLMEDİ) üzerinden. Kart genişlikleri breakpoint'e
-            göre ARTAN (240→320px) — VillaTypeCarousel'in daralan
-            deseninin tersi; portre/dikey kartlar daha az kart gösterir,
-            "destination" hissini güçlendirir. */}
+        {/* CIRCULAR AVATAR CAROUSEL — yatay kaydırma, HorizontalCarousel
+            (DEĞİŞTİRİLMEDİ) üzerinden. Kartlar küçük olduğu için geniş
+            boşluk bırakılıyor (gap-7/8/9) ve aynı anda çok daha fazla
+            bölge görünüyor — VillaTypeCarousel'in geniş kartlarının
+            tersine. */}
         <HorizontalCarousel
           showArrows
           ariaLabel="Villa kiralama bölgeleri"
           className="pb-1"
         >
-          <ul role="list" className="flex flex-nowrap min-w-max gap-4 md:gap-5">
+          <ul role="list" className="flex flex-nowrap min-w-max gap-7 md:gap-8 lg:gap-9">
             {items.map((item) => (
-              <li
-                key={item.key}
-                className="snap-start shrink-0 w-[260px] sm:w-[290px] md:w-[300px] lg:w-[320px]"
-              >
+              <li key={item.key} className="snap-start shrink-0">
                 <LocationCard item={item} />
               </li>
             ))}
@@ -228,14 +224,15 @@ export default async function LocationCollection() {
 }
 
 /* ===============================================================
-   LocationCard — "destination showcase" kartı
+   LocationCard — dairesel "avatar" destination kartı
    ===============================================================
    VillaTypeCard'dan (VillaTypeCarousel.tsx) BİLİNÇLİ OLARAK farklı:
-   tüm-görsel kompozisyon (ayrı beyaz metin paneli YOK), dikey/portre
-   aspect-[3/4] (VillaTypeCard'ın yatay aspect-[4/3]'ünün tersi),
-   rounded-[28px] (VillaTypeCard'ın rounded-[18px]'inden farklı), köşe
-   rozet/badge YOK — villa sayısı overlay içinde ince marka-renkli
-   gradient çizgiyle birlikte. Veri/link/placeholder mantığı DEĞİŞMEDİ.
+   büyük dikdörtgen kart YOK — küçük rounded-full görsel (~140-180px,
+   breakpoint'e göre) + görselin ALTINDA kompakt metin bloğu. Gradient
+   overlay/yazı-üstüne-bindirme YOK, köşe rozet/badge YOK. İnce premium
+   ring (border) + hover'da sade görsel zoom/hafif elevation. Villa
+   sayısı küçük ikincil bilgi, yanında marka-renkli mini gradient nokta.
+   Veri/link/placeholder mantığı DEĞİŞMEDİ (sadece sunum).
 =============================================================== */
 function LocationCard({ item }: { item: Item }) {
   /* Grup üyelerinin token'ları (slug|id) virgülle; /arama çoklu değeri
@@ -246,47 +243,56 @@ function LocationCard({ item }: { item: Item }) {
   return (
     <Link
       href={href}
-      className="group relative block overflow-hidden rounded-[28px] bg-gradient-to-br from-[var(--color-sand-100)] via-[var(--color-sand-50)] to-[var(--color-sand-100)] aspect-[3/4] shadow-[0_14px_34px_-20px_rgba(11,31,58,0.3)] hover:shadow-[0_28px_56px_-22px_rgba(11,31,58,0.4)] transition-[transform,box-shadow] duration-500 motion-reduce:transition-none hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40 focus-visible:ring-offset-2"
+      className="group flex w-[140px] sm:w-[150px] md:w-[170px] lg:w-[180px] flex-col items-center text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40 focus-visible:ring-offset-2 rounded-3xl"
     >
-      {item.coverUrl ? (
-        <Image
-          src={item.coverUrl}
-          alt={item.key}
-          fill
-          sizes="(max-width: 640px) 260px, (max-width: 768px) 290px, (max-width: 1024px) 300px, 320px"
-          className="object-cover object-center transition-transform duration-[900ms] ease-out group-hover:scale-[1.08] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-        />
-      ) : (
-        /* SOFT PLACEHOLDER — serif initial (davranış korunuyor) */
-        <div className="absolute inset-0 flex items-center justify-center select-none">
-          <div className="font-display text-[56px] md:text-[72px] leading-none text-[var(--color-stone-300)] tracking-[-0.03em]">
-            {initial}
-          </div>
-        </div>
-      )}
-
-      {/* DARK BOTTOM GRADIENT — VillaTypeCard'dan daha güçlü/daha uzun
-          (destination poster hissi); hover'da biraz daha koyulaşır. */}
+      {/* DAİRESEL GÖRSEL — ince premium ring, hover'da sadece zoom +
+          çok hafif elevation (büyük translate/scale YOK). */}
       <div
-        aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 h-[70%] bg-gradient-to-t from-black/85 via-black/35 to-transparent transition-opacity duration-500 motion-reduce:transition-none group-hover:opacity-95 pointer-events-none"
-      />
-
-      {/* TEXT — alt-sol: büyük premium serif başlık + ince marka-renkli
-          gradient çizgi + villa sayısı (rozet/badge YOK, kasıtlı). */}
-      <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
-        <h3 className="font-display text-[21px] md:text-[25px] leading-[1.1] text-white tracking-[-0.02em] line-clamp-2 drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]">
-          {item.key}
-        </h3>
-        <div className="mt-2.5 flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            className="inline-block h-[3px] w-6 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+        className="
+          relative shrink-0 overflow-hidden rounded-full
+          w-[140px] h-[140px] sm:w-[150px] sm:h-[150px]
+          md:w-[170px] md:h-[170px] lg:w-[180px] lg:h-[180px]
+          bg-gradient-to-br from-[var(--color-sand-100)] via-[var(--color-sand-50)] to-[var(--color-sand-100)]
+          ring-1 ring-[var(--color-stone-200)]
+          shadow-[0_8px_20px_-12px_rgba(11,31,58,0.28)]
+          transition-[box-shadow,transform] duration-400
+          motion-reduce:transition-none
+          group-hover:shadow-[0_14px_30px_-14px_rgba(11,31,58,0.34)]
+          group-hover:-translate-y-0.5
+          group-hover:ring-[#0973BA]/30
+        "
+      >
+        {item.coverUrl ? (
+          <Image
+            src={item.coverUrl}
+            alt={item.key}
+            fill
+            sizes="(max-width: 640px) 140px, (max-width: 1024px) 170px, 180px"
+            className="object-cover object-center transition-transform duration-[700ms] ease-out group-hover:scale-[1.08] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           />
-          <span className="text-[11px] tracking-[0.1em] uppercase font-medium text-white/85 tabular-nums">
-            {item.count} villa
-          </span>
-        </div>
+        ) : (
+          /* SOFT PLACEHOLDER — serif initial (davranış korunuyor) */
+          <div className="absolute inset-0 flex items-center justify-center select-none">
+            <div className="font-display text-[36px] md:text-[42px] leading-none text-[var(--color-stone-300)] tracking-[-0.03em]">
+              {initial}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* METİN — görselin ALTINDA: kompakt güçlü başlık + ikincil villa
+          sayısı + marka-renkli minik gradient nokta (rozet/badge YOK). */}
+      <h3 className="mt-3 font-display text-[14.5px] md:text-[15.5px] font-medium leading-[1.2] text-[var(--color-stone-900)] tracking-[-0.01em] line-clamp-2">
+        {item.key}
+      </h3>
+      <div className="mt-1 flex items-center justify-center gap-1.5">
+        <span
+          aria-hidden="true"
+          className="inline-block h-1.5 w-1.5 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+        />
+        <span className="text-[11px] text-[var(--color-stone-500)] tabular-nums">
+          {item.count} villa
+        </span>
       </div>
     </Link>
   );
