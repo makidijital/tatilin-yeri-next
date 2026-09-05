@@ -85,7 +85,6 @@ import FavoriteButton from "@/app/components/favorites/FavoriteButton";
 import AvailabilityInlineCalendar from "@/app/components/villa/AvailabilityInlineCalendar";
 
 import Gallery from "@/app/components/villa/Gallery";
-import PrepaymentBadge from "@/app/components/villa/PrepaymentBadge";
 import BookingSidebar from "@/app/components/villa/BookingSidebar";
 import MobileBookingCta from "@/app/components/villa/MobileBookingCta";
 /* 🛡️ Villa info bar — gallery'nin ÜSTÜNDE ayrı premium başlık şeridi
@@ -300,12 +299,6 @@ export default async function VillaDetail({
     getCachedVillaReviewStats(villa.id),
   ]);
 
-  /* 🛡️ ÖN ÖDEME KAMPANYA ORANI (UI-only) — kanonik çözüm birebir:
-     villa override → global settings → fallback 20. Ödeme/rezervasyon
-     hesabına DOKUNULMAZ; yalnız galeri badge'inde gösterilir. */
-  const prepaymentRate =
-    villa.custom_prepayment_rate ?? settings?.prepayment_rate ?? 20;
-
   const watermark = {
     /* 🛡️ Watermark logo, diğer site-asset'ler (site_logo/footer_logo/hero/
        favicon) ile AYNI şekilde resolveAssetUrl'den geçer: bucket-relative
@@ -414,17 +407,16 @@ export default async function VillaDetail({
               ÜSTÜNDE, full-width (bkz. aşağıda). Lightbox/click
               davranışı AYNEN; yalnız DOM konumu/genişliği değişti. */}
           <div className="relative">
-            {/* 🛡️ SEO + a11y: villa.title → alt text auto-generation. */}
+            {/* 🛡️ SEO + a11y: villa.title → alt text auto-generation.
+                Ön ödeme kampanya badge'i buradan KALDIRILDI — aynı
+                kampanya artık yalnızca BookingSidebar'ın altındaki
+                ödeme fırsatı panelinde (gerçek `prepaymentRate` ile)
+                gösteriliyor; duplicate render önlendi. */}
             <Gallery
               images={imageUrls}
               watermark={watermark}
               villaTitle={villa.title}
             />
-            {/* 🛡️ ÖN ÖDEME KAMPANYA BADGE — Gallery DIŞ wrapper'ında overlay.
-                Gallery/lightbox/favorite/watermark/sayaç'a DOKUNULMAZ.
-                pointer-events-none + z-20 (lightbox z-50 altında). Oran dinamik;
-                0/100'de badge kendini gizler. */}
-            <PrepaymentBadge rate={prepaymentRate} />
           </div>
 
           {/* DESCRIPTION */}

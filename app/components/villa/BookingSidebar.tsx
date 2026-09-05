@@ -407,72 +407,80 @@ export default function BookingSidebar({
       {/* ═══════════════════════════════════════════════════════
           🛡️ ÖDEME FIRSATI — "Öne Çıkan" alanının YERİNE geldi.
           ═══════════════════════════════════════════════════════
-          SALT UI/mesaj: sabit "%20 Şimdi, Kalanı Tatilde Öde" metni.
-          Hesaplama YOK, API/DB çağrısı YOK, booking state'e bağlı DEĞİL —
-          gerçek ön ödeme oranı `prepaymentRate` bu component'te
-          KULLANILMIYOR (kasıtlı; görev talebi statik kampanya mesajı).
-          Konum: rezervasyon formunun EN ALTI (galeri/PrepaymentBadge'e
-          dokunulmadı, ayrı ve önceden var olan bir özellik). */}
-      <div className="pt-5 border-t border-[var(--color-stone-100)]">
-        <style>{`
-          @media (prefers-reduced-motion: no-preference) {
-            .pp-perk-shimmer { animation: pp-perk-sweep 7s ease-in-out infinite; }
-          }
-          @keyframes pp-perk-sweep {
-            0% { background-position: 160% 0; }
-            100% { background-position: -60% 0; }
-          }
-        `}</style>
-        <div
-          className="
-            group relative overflow-hidden rounded-[22px]
-            border border-[var(--color-stone-100)]
-            bg-gradient-to-br from-white via-white to-[#ED7926]/[0.05]
-            px-5 py-5 md:px-6 md:py-5
-            transition-transform duration-300 motion-reduce:transition-none
-            hover:-translate-y-1 motion-reduce:hover:translate-y-0
-          "
-        >
-          {/* İnce üst accent çizgisi — turuncu → mavi, çok yavaş shimmer */}
-          <span
-            aria-hidden="true"
-            className="pp-perk-shimmer absolute inset-x-5 top-0 h-[2px] rounded-full opacity-60"
-            style={{
-              background:
-                "linear-gradient(90deg, transparent, #ED7926, #0973BA, transparent)",
-              backgroundSize: "220% 100%",
-            }}
-          />
-
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-stone-400)]">
-            Ödeme Kolaylığı
-          </span>
-
-          <div className="mt-2.5 flex items-center gap-4">
-            <span
-              className="
-                shrink-0 font-display text-[42px] md:text-[46px]
-                leading-none tracking-[-0.02em] text-[#ED7926]
-                animate-pulse [animation-duration:5s] motion-reduce:animate-none
-              "
-            >
-              %20
-            </span>
+          Oran ARTIK DİNAMİK: mevcut `prepaymentRate` (useBookingEngine'den,
+          BookingSummary'nin de kullandığı AYNI değer — villa override →
+          global settings → engine'in kendi fallback'i; kanonik hesap
+          BookingSidebar/engine içinde zaten var, burada YENİDEN
+          hesaplanmadı/fetch edilmedi). Görünürlük guard'ı PrepaymentBadge
+          ile AYNI kural: yalnız 0 < oran < 100 iken gösterilir (aksi halde
+          "%0" / "%100 şimdi..." gibi anlamsız metin render edilmez).
+          Bu, galerinin sol-üstündeki eski PrepaymentBadge overlay'inin
+          YERİNE geçen TEK gösterim — aynı kampanya artık iki yerde
+          render edilmiyor. Hesaplama/API/DB çağrısı hâlâ YOK; yalnız
+          UI text/data-binding düzeltmesi. Konum: rezervasyon formunun
+          EN ALTI (değişmedi). */}
+      {prepaymentRate > 0 && prepaymentRate < 100 && (
+        <div className="pt-5 border-t border-[var(--color-stone-100)]">
+          <style>{`
+            @media (prefers-reduced-motion: no-preference) {
+              .pp-perk-shimmer { animation: pp-perk-sweep 7s ease-in-out infinite; }
+            }
+            @keyframes pp-perk-sweep {
+              0% { background-position: 160% 0; }
+              100% { background-position: -60% 0; }
+            }
+          `}</style>
+          <div
+            className="
+              group relative overflow-hidden rounded-[22px]
+              border border-[var(--color-stone-100)]
+              bg-gradient-to-br from-white via-white to-[#ED7926]/[0.05]
+              px-5 py-5 md:px-6 md:py-5
+              transition-transform duration-300 motion-reduce:transition-none
+              hover:-translate-y-1 motion-reduce:hover:translate-y-0
+            "
+          >
+            {/* İnce üst accent çizgisi — turuncu → mavi, çok yavaş shimmer */}
             <span
               aria-hidden="true"
-              className="h-10 w-px shrink-0 bg-[var(--color-stone-100)]"
+              className="pp-perk-shimmer absolute inset-x-5 top-0 h-[2px] rounded-full opacity-60"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent, #ED7926, #0973BA, transparent)",
+                backgroundSize: "220% 100%",
+              }}
             />
-            <div className="min-w-0">
-              <p className="text-[13.5px] font-semibold text-[var(--color-stone-900)] leading-snug">
-                Şimdi Öde
-              </p>
-              <p className="mt-0.5 text-[13.5px] text-[var(--color-stone-500)] leading-snug">
-                Kalanı Tatilde Öde
-              </p>
+
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-stone-400)]">
+              Ödeme Kolaylığı
+            </span>
+
+            <div className="mt-2.5 flex items-center gap-4">
+              <span
+                className="
+                  shrink-0 font-display text-[42px] md:text-[46px]
+                  leading-none tracking-[-0.02em] text-[#ED7926]
+                  animate-pulse [animation-duration:5s] motion-reduce:animate-none
+                "
+              >
+                %{prepaymentRate}
+              </span>
+              <span
+                aria-hidden="true"
+                className="h-10 w-px shrink-0 bg-[var(--color-stone-100)]"
+              />
+              <div className="min-w-0">
+                <p className="text-[13.5px] font-semibold text-[var(--color-stone-900)] leading-snug">
+                  Şimdi Öde
+                </p>
+                <p className="mt-0.5 text-[13.5px] text-[var(--color-stone-500)] leading-snug">
+                  Kalanı Tatilde Öde
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
