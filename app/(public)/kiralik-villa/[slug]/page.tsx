@@ -374,7 +374,7 @@ export default async function VillaDetail({
 
   return (
     <>
-    <div className="px-5 md:px-10 lg:px-16 pt-28 md:pt-40 pb-24 md:pb-32">
+    <div className="px-5 md:px-10 lg:px-16 pt-20 md:pt-28 pb-24 md:pb-32">
       <div className="max-w-[1280px] mx-auto">
         {/* SEO — JSON-LD structured data */}
         <JsonLd data={vacationRentalLd} />

@@ -116,7 +116,7 @@ export default function VillaInfoBar({
           border border-[var(--color-stone-100)]
           bg-gradient-to-br from-white via-white to-[var(--color-sand-50)]/60
           shadow-[0_24px_60px_-36px_rgba(11,31,58,0.22)]
-          px-6 py-7 md:px-9 md:py-9
+          px-6 py-6 md:px-9 md:py-8
         "
       >
         <style>{`
@@ -244,10 +244,10 @@ export default function VillaInfoBar({
             (>0 / certificateNo boş değil) — eski StatCard/CertificateCard
             ile birebir aynı görünürlük mantığı. */}
         {hasAnyInfoItem && (
-          <div className="mt-6 md:mt-7 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div className="mt-5 md:mt-6 grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3">
             {guests > 0 && (
               <InfoItem
-                icon={<Users size={17} strokeWidth={1.8} />}
+                icon={<Users size={15} strokeWidth={1.8} />}
                 accentColor="#0973BA"
                 value={guests}
                 label="Kişi"
@@ -255,7 +255,7 @@ export default function VillaInfoBar({
             )}
             {bedrooms > 0 && (
               <InfoItem
-                icon={<BedDouble size={17} strokeWidth={1.8} />}
+                icon={<BedDouble size={15} strokeWidth={1.8} />}
                 accentColor="#ED7926"
                 value={bedrooms}
                 label="Yatak Odası"
@@ -263,7 +263,7 @@ export default function VillaInfoBar({
             )}
             {bathrooms > 0 && (
               <InfoItem
-                icon={<Bath size={17} strokeWidth={1.8} />}
+                icon={<Bath size={15} strokeWidth={1.8} />}
                 accentColor="#0973BA"
                 value={bathrooms}
                 label="Banyo"
@@ -315,13 +315,13 @@ function InfoItem({
         hover:shadow-[0_12px_28px_-18px_rgba(11,31,58,0.22)]
         hover:-translate-y-0.5
         transition-all duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0
-        px-4 py-4
+        px-3.5 py-3
       "
     >
       <span
         aria-hidden="true"
         className="
-          inline-flex items-center justify-center w-9 h-9 rounded-xl
+          inline-flex items-center justify-center w-8 h-8 rounded-xl
           bg-white shadow-[inset_0_0_0_1px_rgba(11,31,58,0.06)]
           transition-transform duration-300 motion-reduce:transition-none
           group-hover/item:scale-110
@@ -330,10 +330,10 @@ function InfoItem({
       >
         {icon}
       </span>
-      <p className="mt-3 font-display text-[20px] md:text-[22px] font-bold text-[var(--color-stone-900)] tracking-[-0.01em] tabular-nums leading-none">
+      <p className="mt-2.5 font-display text-[17px] md:text-[19px] font-bold text-[var(--color-stone-900)] tracking-[-0.01em] tabular-nums leading-none">
         {value}
       </p>
-      <p className="mt-1 text-[11.5px] md:text-[12px] font-medium text-[var(--color-stone-500)] leading-snug">
+      <p className="mt-0.5 text-[10px] md:text-[10.5px] font-medium text-[var(--color-stone-500)] leading-snug">
         {label}
       </p>
     </div>
@@ -359,14 +359,14 @@ function CertificateItem({ documentNumber }: { documentNumber: string }) {
         hover:shadow-[0_12px_28px_-18px_rgba(9,115,186,0.28)]
         hover:-translate-y-0.5
         transition-all duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0
-        px-4 py-4
+        px-3.5 py-3
         min-w-0
       "
     >
       <span
         aria-hidden="true"
         className="
-          inline-flex items-center justify-center w-9 h-9 rounded-xl
+          inline-flex items-center justify-center w-8 h-8 rounded-xl
           bg-white shadow-[inset_0_0_0_1px_rgba(11,31,58,0.06)]
           overflow-hidden
           transition-transform duration-300 motion-reduce:transition-none
@@ -378,13 +378,13 @@ function CertificateItem({ documentNumber }: { documentNumber: string }) {
           src="/brand/trust/turizm-bakanligi.svg"
           alt=""
           aria-hidden
-          className="w-5 h-5 object-contain"
+          className="w-4 h-4 object-contain"
         />
       </span>
-      <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#0973BA] leading-snug">
+      <p className="mt-2.5 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#0973BA] leading-snug">
         Turizm Belgesi
       </p>
-      <p className="mt-1 text-[12px] md:text-[12.5px] font-medium text-[var(--color-stone-700)] leading-snug truncate">
+      <p className="mt-0.5 text-[10.5px] md:text-[11px] font-medium text-[var(--color-stone-700)] leading-snug truncate">
         Belge No: {documentNumber}
       </p>
     </div>
