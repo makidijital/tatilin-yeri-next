@@ -442,7 +442,7 @@ export default async function VillaDetail({
                   key: "main",
                   label:
                     villa.pool_type === "ozel"
-                      ? "Özel Havuz"
+                      ? "Özel Korunaklı Havuz"
                       : "Ortak Havuz",
                   width: villa.pool_width,
                   length: villa.pool_length,
@@ -482,7 +482,7 @@ export default async function VillaDetail({
                   {/* MODERN INFO BLOCKS — düz açık zemin (gradient yok),
                       her havuz kendi bloğu; ölçüler küçük kartlar
                       halinde. Hover/transform/animasyon yok. */}
-                  <div className="rounded-2xl border border-[var(--color-stone-100)] bg-[var(--color-sand-50)] divide-y divide-[var(--color-stone-100)]">
+                  <div className="rounded-2xl border border-[var(--color-stone-200)] bg-[var(--color-sand-100)] divide-y divide-[var(--color-stone-100)]">
                     {cards.map((c) => {
                       const hasDims = !!(c.width || c.length || c.depth);
                       const rows = [
