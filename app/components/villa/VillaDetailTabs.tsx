@@ -41,9 +41,13 @@ export default function VillaDetailTabs({
 
   return (
     <div>
-      {/* TAB BAND — premium pill bar */}
+      {/* TAB BAND — modern segmented navigation rail: klasik altı-çizili
+          tab DEĞİL. Solid beyaz yüzey + ince border; active öğe küçük
+          sol gradient accent (turuncu→mavi) + sade nötr zemin ile öne
+          çıkar. Tab switching state/logic'i (useState `active`,
+          onClick) AYNEN; yalnız görsel tasarım değişti. */}
       <nav aria-label="Villa detay sekmeleri">
-        <div className="rounded-2xl border border-[var(--color-stone-100)] bg-white/85 backdrop-blur-md shadow-[0_12px_30px_-18px_rgba(11,31,58,0.22)] p-1.5 overflow-x-auto">
+        <div className="rounded-2xl border border-[var(--color-stone-100)] bg-white shadow-sm p-1.5 overflow-x-auto">
           <ul className="flex items-center gap-1 min-w-max md:min-w-0 md:w-full">
             {tabs.map((t) => {
               const isActive = active === t.id;
@@ -54,12 +58,19 @@ export default function VillaDetailTabs({
                     onClick={() => setActive(t.id)}
                     aria-current={isActive ? "true" : undefined}
                     className={
-                      "inline-flex items-center md:w-full md:justify-center px-4 py-2 rounded-xl text-[13px] font-medium tracking-[0.01em] transition-colors duration-200 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/40 " +
+                      "flex items-center md:w-full md:justify-center gap-2 px-4 py-2.5 rounded-xl text-[13px] tracking-[0.01em] transition-colors duration-200 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/40 " +
                       (isActive
-                        ? "bg-[var(--color-stone-900)] text-white shadow-[0_8px_18px_-10px_rgba(11,31,58,0.4)]"
-                        : "text-[var(--color-stone-600)] hover:text-[var(--color-stone-900)] hover:bg-[var(--color-stone-50)]")
+                        ? "bg-[var(--color-stone-50)] text-[var(--color-stone-900)] font-semibold"
+                        : "text-[var(--color-stone-500)] font-medium hover:text-[var(--color-stone-900)] hover:bg-[var(--color-stone-50)]/60")
                     }
                   >
+                    <span
+                      aria-hidden="true"
+                      className={
+                        "block h-3.5 w-[3px] shrink-0 rounded-full bg-gradient-to-b from-[#ED7926] to-[#0973BA] transition-opacity duration-200 motion-reduce:transition-none " +
+                        (isActive ? "opacity-100" : "opacity-0")
+                      }
+                    />
                     {t.label}
                   </button>
                 </li>
