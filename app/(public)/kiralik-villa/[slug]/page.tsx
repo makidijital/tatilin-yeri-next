@@ -419,6 +419,115 @@ export default async function VillaDetail({
             />
           </div>
 
+          {/* 🏊 HAVUZ BİLGİLERİ — Villa Açıklaması'nın HEMEN
+              üstünde, bağımsız kart. Önceden VillaDetailTabs içinde bir
+              sekmeydi (tıklanmadan görünmüyordu); artık her zaman
+              görünür, ayrı bir section. Veri/hesap mantığı (PoolCard,
+              cards.push, formatPoolDimension) AYNEN korunuyor; yalnız
+              konum ve JSX/tasarım değişti. */}
+          {(villa.pool_type !== "yok" ||
+              villa.indoor_pool ||
+              villa.child_pool) &&
+            (() => {
+              type PoolCard = {
+                key: string;
+                label: string;
+                width: string | null | undefined;
+                length: string | null | undefined;
+                depth: string | null | undefined;
+              };
+              const cards: PoolCard[] = [];
+              if (villa.pool_type && villa.pool_type !== "yok") {
+                cards.push({
+                  key: "main",
+                  label:
+                    villa.pool_type === "ozel"
+                      ? "Özel Havuz"
+                      : "Ortak Havuz",
+                  width: villa.pool_width,
+                  length: villa.pool_length,
+                  depth: villa.pool_depth,
+                });
+              }
+              if (villa.indoor_pool) {
+                cards.push({
+                  key: "indoor",
+                  label: "Kapalı Havuz",
+                  width: villa.indoor_pool_width,
+                  length: villa.indoor_pool_length,
+                  depth: villa.indoor_pool_depth,
+                });
+              }
+              if (villa.child_pool) {
+                cards.push({
+                  key: "child",
+                  label: "Çocuk Havuzu",
+                  width: villa.child_pool_width,
+                  length: villa.child_pool_length,
+                  depth: villa.child_pool_depth,
+                });
+              }
+              if (cards.length === 0) return null;
+              return (
+                <section>
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0973BA]/10 text-[#0973BA]">
+                      <Waves size={16} strokeWidth={1.8} />
+                    </span>
+                    <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
+                      Havuz Bilgileri
+                    </h2>
+                  </div>
+
+                  {/* MODERN INFO BLOCKS — düz açık zemin (gradient yok),
+                      her havuz kendi bloğu; ölçüler küçük kartlar
+                      halinde. Hover/transform/animasyon yok. */}
+                  <div className="rounded-2xl border border-[var(--color-stone-100)] bg-[var(--color-sand-50)] divide-y divide-[var(--color-stone-100)]">
+                    {cards.map((c) => {
+                      const hasDims = !!(c.width || c.length || c.depth);
+                      const rows = [
+                        { k: "Genişlik", v: formatPoolDimension(c.width) },
+                        { k: "Uzunluk", v: formatPoolDimension(c.length) },
+                        { k: "Derinlik", v: formatPoolDimension(c.depth) },
+                      ];
+                      return (
+                        <div key={c.key} className="p-4 md:p-5">
+                          <p className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--color-stone-500)]">
+                            <span
+                              aria-hidden="true"
+                              className="inline-block w-1.5 h-1.5 rounded-full bg-[#ED7926]"
+                            />
+                            {c.label}
+                          </p>
+                          {hasDims ? (
+                            <div className="mt-3 grid grid-cols-3 gap-2.5">
+                              {rows.map((row) => (
+                                <div
+                                  key={row.k}
+                                  className="rounded-lg border border-[var(--color-stone-100)] bg-white px-3 py-2.5"
+                                >
+                                  <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--color-stone-400)]">
+                                    {row.k}
+                                  </p>
+                                  <p className="mt-1 font-display text-[16px] md:text-[17px] text-[var(--color-stone-900)] tabular-nums">
+                                    {row.v}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-[13px] text-[var(--color-stone-400)] italic">
+                              Ölçü bilgisi yok
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })()}
+
           {/* DESCRIPTION */}
           <section>
             <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
@@ -626,119 +735,6 @@ export default async function VillaDetail({
                   </div>
                 )}
               </section>
-            }
-            havuz={
-              (villa.pool_type !== "yok" ||
-                villa.indoor_pool ||
-                villa.child_pool) &&
-              (() => {
-                type PoolCard = {
-                  key: string;
-                  label: string;
-                  width: string | null | undefined;
-                  length: string | null | undefined;
-                  depth: string | null | undefined;
-                };
-                const cards: PoolCard[] = [];
-                if (villa.pool_type && villa.pool_type !== "yok") {
-                  cards.push({
-                    key: "main",
-                    label:
-                      villa.pool_type === "ozel"
-                        ? "Özel Havuz"
-                        : "Ortak Havuz",
-                    width: villa.pool_width,
-                    length: villa.pool_length,
-                    depth: villa.pool_depth,
-                  });
-                }
-                if (villa.indoor_pool) {
-                  cards.push({
-                    key: "indoor",
-                    label: "Kapalı Havuz",
-                    width: villa.indoor_pool_width,
-                    length: villa.indoor_pool_length,
-                    depth: villa.indoor_pool_depth,
-                  });
-                }
-                if (villa.child_pool) {
-                  cards.push({
-                    key: "child",
-                    label: "Çocuk Havuzu",
-                    width: villa.child_pool_width,
-                    length: villa.child_pool_length,
-                    depth: villa.child_pool_depth,
-                  });
-                }
-                if (cards.length === 0) return null;
-                return (
-                  <section>
-                    <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em] mb-4">
-                      Havuz Bilgileri
-                    </h2>
-                    {/* SINGLE PREMIUM CONCIERGE PANEL — beige luxury,
-                        her havuz bir blok; attribute'lar satır + divider. */}
-                    <div className="rounded-3xl border border-[var(--color-stone-100)] bg-gradient-to-br from-[var(--color-sand-50)]/70 via-white to-white shadow-[0_12px_30px_-18px_rgba(11,31,58,0.18)] overflow-hidden">
-                      {cards.map((c, idx) => {
-                        const hasDims = !!(c.width || c.length || c.depth);
-                        const rows = [
-                          { k: "Genişlik", v: formatPoolDimension(c.width) },
-                          { k: "Uzunluk", v: formatPoolDimension(c.length) },
-                          { k: "Derinlik", v: formatPoolDimension(c.depth) },
-                        ];
-                        return (
-                          <div
-                            key={c.key}
-                            className={
-                              idx > 0
-                                ? "border-t border-[var(--color-stone-100)]"
-                                : ""
-                            }
-                          >
-                            {/* POOL LABEL — blok başlığı */}
-                            <div className="flex items-center gap-2 px-5 py-3.5 md:px-6 bg-white/45">
-                              <span
-                                className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-champagne-500)]"
-                                aria-hidden
-                              />
-                              <p className="font-display text-[15px] md:text-[16px] text-[var(--color-stone-900)] tracking-[-0.01em]">
-                                {c.label}
-                              </p>
-                            </div>
-
-                            {hasDims ? (
-                              <dl>
-                                {rows.map((row) => (
-                                  <div
-                                    key={row.k}
-                                    className="flex items-center justify-between gap-4 px-5 md:px-6 py-2.5 border-t border-[var(--color-stone-100)]/70"
-                                  >
-                                    <dt className="text-[12px] md:text-[12.5px] font-medium text-[var(--color-stone-500)]">
-                                      {row.k}
-                                    </dt>
-                                    <dd
-                                      className="font-display text-[14px] md:text-[15px] text-[var(--color-stone-900)] tracking-[-0.01em]"
-                                      style={{
-                                        fontVariantNumeric: "tabular-nums",
-                                      }}
-                                    >
-                                      {row.v}
-                                    </dd>
-                                  </div>
-                                ))}
-                              </dl>
-                            ) : (
-                              <p className="px-5 md:px-6 py-3 border-t border-[var(--color-stone-100)]/70 text-[var(--color-stone-400)] text-sm italic">
-                                Ölçü bilgisi yok
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                );
-              })()
             }
           />
 

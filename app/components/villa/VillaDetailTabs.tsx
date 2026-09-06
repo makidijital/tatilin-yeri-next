@@ -19,7 +19,6 @@ type Props = {
   /** Konum paneli — harita + Mesafeler (Yakındaki Noktalar) birlikte. */
   konum: ReactNode;
   ozellikler: ReactNode;
-  havuz: ReactNode;
 };
 
 export default function VillaDetailTabs({
@@ -27,14 +26,12 @@ export default function VillaDetailTabs({
   musaitlik,
   konum,
   ozellikler,
-  havuz,
 }: Props) {
   const tabs: { id: string; label: string; content: ReactNode }[] = [
     { id: "fiyatlar", label: "Fiyatlar", content: fiyatlar },
     { id: "musaitlik", label: "Müsaitlik", content: musaitlik },
     { id: "konum", label: "Konum & Mesafeler", content: konum },
     { id: "ozellikler", label: "Özellikler", content: ozellikler },
-    { id: "havuz", label: "Havuz Bilgileri", content: havuz },
   ];
 
   /* Default: Fiyatlar (Option A). */
