@@ -17,9 +17,9 @@ import { useState } from "react";
      CSS (max-height + mask-image); metin gizlenmez, sadece görsel.
 
    FADE:
-     Arka plan (.card-premium) gradient olduğundan renk eşleştirme
-     yerine `mask-image` linear-gradient kullanılır → metnin kendisi
-     alttan şeffaflaşır, zemin renginden BAĞIMSIZ (her zaman temiz).
+     Renk eşleştirme yerine `mask-image` linear-gradient kullanılır;
+     metnin kendisi alttan şeffaflaşır, zemin renginden BAĞIMSIZ (her
+     zaman temiz) — kart artık düz beyaz.
 
    TİPOGRAFİ KORUMA:
      `.villa-description` sınıfı HTML'i DOĞRUDAN saran div'de kalır
@@ -38,7 +38,7 @@ export default function CollapsibleDescription({
   const clamped = collapsible && !expanded;
 
   return (
-    <div className="card-premium mt-5 p-6 md:p-7">
+    <div className="bg-white border border-[var(--color-stone-100)] rounded-[20px] shadow-sm mt-5 p-6 md:p-7">
       <div
         className={
           "villa-description text-[var(--color-stone-600)] leading-[1.75] text-[15px] " +
