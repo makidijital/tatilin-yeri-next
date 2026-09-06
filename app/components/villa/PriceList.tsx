@@ -96,7 +96,7 @@ export default function PriceList({
   const hasInfo = hasMinStay || hasDeposit;
 
   return (
-    <div>
+    <div className="bg-white">
       {prices.map((p) => {
         /* Currency conversion — eski mantık AYNEN. */
         const convertedPrice = convertPrice(
