@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import {
   MapPin,
+  Clock,
   /* Users / Bed / Bath VillaInfoBar içinde kullanılıyor; bu sayfanın
      eski duplicate header'ı silindiği için burada gerek yok. */
   Waves,
@@ -51,7 +52,6 @@ const DISTANCE_ICON_MAP: Record<DistanceIconKey, LucideIcon> = {
 import PriceList from "@/app/components/villa/PriceList";
 import CollapsibleDescription from "@/app/components/villa/CollapsibleDescription";
 import AccommodationLayout from "@/app/components/villa/AccommodationLayout";
-import CheckInOutTimes from "@/app/components/villa/CheckInOutTimes";
 
 import { getVillaBySlug } from "@/app/services/villa.service";
 import { getVillaImages } from "@/app/services/villa-image/villa-image.read";
@@ -742,11 +742,6 @@ export default async function VillaDetail({
             }
           />
 
-          {/* 🕓 GİRİŞ & ÇIKIŞ SAATLERİ (statik) — Konaklama Düzeni'nin
-              HEMEN üstünde. Hardcoded (16:00 / 10:00); admin/DB yok.
-              space-y container'ında tek kardeş → aynı dikey ritim. */}
-          <CheckInOutTimes />
-
           {/* 🛡️ KONAKLAMA DÜZENİ (mig 047) — Airbnb tarzı oda/banyo
               kartları. Veri yoksa (eski villalar / boş) component
               null döner → section hiç render edilmez (geriye dönük
@@ -886,6 +881,68 @@ export default async function VillaDetail({
             initialStart={hasInitialRange ? initialStart : undefined}
             initialEnd={hasInitialRange ? initialEnd : undefined}
           />
+
+          {/* 🕓 GİRİŞ & ÇIKIŞ SAATLERİ — rezervasyon formunun HEMEN
+              altında, ayrı bir premium bilgi paneli. Booking formundan
+              (beyaz, rounded-[28px], koyu shadow) görsel olarak farklı:
+              sıcak sand-gradient zemin, daha küçük radius, hafif shadow.
+              Saatler CheckInOutTimes.tsx ile birebir aynı (16:00 / 10:00)
+              — mevcut statik veri kaynağı; yeni saat uydurulmadı. Eski
+              konum (sol kolon, Konaklama Düzeni'nin üstü) kaldırıldı,
+              sayfada duplicate bırakılmadı. Rezervasyon state/logic'ine
+              dokunulmadı — bu panel salt sunum amaçlı, bağımsız bir blok. */}
+          <div
+            className="
+              mt-6 rounded-2xl
+              border border-[var(--color-stone-100)]
+              bg-gradient-to-b from-[var(--color-sand-50)]/70 to-white
+              shadow-[0_10px_28px_-20px_rgba(11,31,58,0.18)]
+              px-5 py-5
+            "
+          >
+            <span className="inline-flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.22em] text-[var(--color-stone-400)]">
+              <span
+                aria-hidden="true"
+                className="inline-block w-3 h-px bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+              />
+              Villa Giriş &amp; Çıkış Saatleri
+            </span>
+
+            <div className="mt-4 flex items-center">
+              <div className="flex flex-1 items-center gap-3 min-w-0">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ED7926]/10 text-[#ED7926]">
+                  <Clock size={16} strokeWidth={1.8} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--color-stone-400)]">
+                    Giriş · Check-in
+                  </p>
+                  <p className="font-display text-[21px] md:text-[22px] leading-tight text-[var(--color-stone-900)] tabular-nums">
+                    16:00
+                  </p>
+                </div>
+              </div>
+
+              <span
+                aria-hidden="true"
+                className="mx-4 h-10 w-px shrink-0 bg-[var(--color-stone-100)]"
+              />
+
+              <div className="flex flex-1 items-center gap-3 min-w-0">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0973BA]/10 text-[#0973BA]">
+                  <Clock size={16} strokeWidth={1.8} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--color-stone-400)]">
+                    Çıkış · Check-out
+                  </p>
+                  <p className="font-display text-[21px] md:text-[22px] leading-tight text-[var(--color-stone-900)] tabular-nums">
+                    10:00
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </aside>
       </div>
       </div>
