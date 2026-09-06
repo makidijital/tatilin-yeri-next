@@ -96,7 +96,7 @@ export default function PriceList({
   const hasInfo = hasMinStay || hasDeposit;
 
   return (
-    <div className="bg-white">
+    <div className="rounded-[20px] border border-[var(--color-stone-100)] bg-white shadow-sm mt-5 p-6 md:p-7">
       {prices.map((p) => {
         /* Currency conversion — eski mantık AYNEN. */
         const convertedPrice = convertPrice(
@@ -110,7 +110,7 @@ export default function PriceList({
         return (
           <div
             key={p.id}
-            className="border-b border-[var(--color-stone-100)] py-4 md:py-5 last:border-b-0"
+            className="border-b border-[var(--color-stone-100)] py-4 md:py-5 first:pt-0 last:border-b-0 last:pb-0"
           >
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6">
               {/* LEFT — tarih aralığı, büyük/güçlü, ana bilgi. */}
