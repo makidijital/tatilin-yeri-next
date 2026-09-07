@@ -152,20 +152,13 @@ export default function VillaInfoBar({
         {/* ─────────────────────────────────────────────
             ÜST SATIR — micro-label (sol) │ aksiyonlar (sağ)
             ───────────────────────────────────────────── */}
-        <div className="flex items-start justify-between gap-4">
-          <span className="inline-flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.22em] text-[var(--color-stone-400)]">
-            <span
-              aria-hidden="true"
-              className="inline-block w-3.5 h-px bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
-            />
-            Villa Detayları
-          </span>
-
-          {/* Aksiyonlar (video CTA + favori floating).
-              Action slot caller-controlled (FavoriteButton); logic'e
-              ASLA dokunulmaz, yalnız DOM konum/görünürlük. */}
-          {(actions || hasVideo) && (
-            <div className="flex items-center gap-2.5 shrink-0">
+        {/* Aksiyonlar (video CTA + favori floating).
+            Action slot caller-controlled (FavoriteButton); logic'e
+            ASLA dokunulmaz, yalnız DOM konum/görünürlük.
+            Üstteki eski micro-label kaldırıldı; satır artık
+            sadece (varsa) video CTA + favori butonunu sağa yaslar. */}
+        {(actions || hasVideo) && (
+          <div className="flex items-center justify-end gap-2.5">
               {hasVideo && (
                 <button
                   type="button"
@@ -211,7 +204,6 @@ export default function VillaInfoBar({
               {actions}
             </div>
           )}
-        </div>
 
         {/* SOL: VİLLA ADI + BÖLGE/KONUM KARTI ── SAĞ: KİŞİ/YATAK ODASI/
             BANYO/BELGE — hepsi AYNI yatay satırda, aynı görsel ritimde.
@@ -232,7 +224,7 @@ export default function VillaInfoBar({
                 className="
                   group/title relative
                   flex flex-col items-center justify-center text-center gap-1
-                  w-full md:w-auto md:shrink-0 md:max-w-[260px]
+                  w-full md:w-[28%] md:shrink-0
                   rounded-2xl
                   bg-[var(--color-stone-50)]
                   border border-transparent
