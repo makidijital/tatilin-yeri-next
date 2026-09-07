@@ -308,6 +308,7 @@ function InfoItem({
     <div
       className="
         group/item relative
+        flex flex-col items-center justify-center text-center
         rounded-2xl
         bg-[var(--color-stone-50)]
         border border-transparent
@@ -315,7 +316,7 @@ function InfoItem({
         hover:shadow-[0_12px_28px_-18px_rgba(11,31,58,0.22)]
         hover:-translate-y-0.5
         transition-all duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0
-        px-3.5 py-3
+        px-3.5 py-3.5 md:py-4
       "
     >
       <span
@@ -330,10 +331,10 @@ function InfoItem({
       >
         {icon}
       </span>
-      <p className="mt-2.5 font-display text-[17px] md:text-[19px] font-bold text-[var(--color-stone-900)] tracking-[-0.01em] tabular-nums leading-none">
+      <p className="mt-2.5 font-display text-[26px] md:text-[28px] font-bold text-[var(--color-stone-900)] tracking-[-0.01em] tabular-nums leading-none">
         {value}
       </p>
-      <p className="mt-0.5 text-[10px] md:text-[10.5px] font-medium text-[var(--color-stone-500)] leading-snug">
+      <p className="mt-1 text-[11px] md:text-[11.5px] font-medium text-[var(--color-stone-500)] leading-snug">
         {label}
       </p>
     </div>
@@ -353,13 +354,14 @@ function CertificateItem({ documentNumber }: { documentNumber: string }) {
     <div
       className="
         group/cert relative overflow-hidden
+        flex flex-col items-center justify-center text-center
         rounded-2xl
         border border-[#0973BA]/15
         bg-gradient-to-br from-[#0973BA]/[0.07] via-white to-[#ED7926]/[0.06]
         hover:shadow-[0_12px_28px_-18px_rgba(9,115,186,0.28)]
         hover:-translate-y-0.5
         transition-all duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0
-        px-3.5 py-3
+        px-3.5 py-3.5 md:py-4
         min-w-0
       "
     >
@@ -384,7 +386,7 @@ function CertificateItem({ documentNumber }: { documentNumber: string }) {
       <p className="mt-2.5 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#0973BA] leading-snug">
         Turizm Belgesi
       </p>
-      <p className="mt-0.5 text-[10.5px] md:text-[11px] font-medium text-[var(--color-stone-700)] leading-snug truncate">
+      <p className="mt-0.5 w-full text-[10.5px] md:text-[11px] font-medium text-[var(--color-stone-700)] leading-snug truncate">
         Belge No: {documentNumber}
       </p>
     </div>
