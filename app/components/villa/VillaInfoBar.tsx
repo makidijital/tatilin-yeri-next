@@ -6,45 +6,38 @@
    AMAÇ:
      Villa detay sayfasının EN ÜSTÜNDE (Gallery + Booking grid'inin
      ÜSTÜNDE, sayfanın tüm content genişliğini kullanan) tek büyük
-     premium CARD. Önceki "düz editorial rail" versiyonu fazla sade
-     kaldığı için bu revizyonda: gerçek bir card yüzeyi (soft white,
-     ince border, çok hafif shadow, üstte ince turuncu→mavi gradient
-     accent), kişi/yatak/banyo için İKONLU info-item'lar (Users/
-     BedDouble/Bath geri geldi) ve turizm belgesi için ayrı, biraz
-     daha premium bir blok (mevcut bakanlık SVG ikonu geri geldi).
+     premium CARD. Villa adı + lokasyon (SOL kompakt kart, ~%28
+     genişlik) ve kişi/yatak/banyo/turizm belgesi (4 ikonlu
+     info-item) aynı yatay satırda gösterilir.
 
    LAYOUT:
-     ┌─────────────────────────────────────────────────────────┐
-     │ (ince gradient accent çizgisi — üst kenar)               │
-     │ VİLLA DETAYLARI                     [Video CTA] [♡]      │
-     │ Villa Adı (büyük, güçlü)                                 │
-     │ 📍 Bölge / Konum                                         │
-     │ ┌────────┐ ┌──────────────┐ ┌────────┐ ┌──────────────┐ │
-     │ │ 👥 8   │ │ 🛏 4         │ │ 🛁 3   │ │ [BELGE] XXXXX│ │
-     │ │ Kişi   │ │ Yatak Odası  │ │ Banyo  │ │ Turizm Belgesi│ │
-     │ └────────┘ └──────────────┘ └────────┘ └──────────────┘ │
-     └─────────────────────────────────────────────────────────┘
+     ┌───────────────────────────────────────────────────────────┐
+     │ ┌──────────┐ ┌────────┐ ┌──────────────┐ ┌────────┐ ┌──────┐│
+     │ │ Villa Adı│ │ 👥 8   │ │ 🛏 4         │ │ 🛁 3   │ │ BELGE││
+     │ │ 📍 Konum │ │ Kişi   │ │ Yatak Odası  │ │ Banyo  │ │ XXXXX││
+     │ └──────────┘ └────────┘ └──────────────┘ └────────┘ └──────┘│
+     └───────────────────────────────────────────────────────────┘
 
-   - Üst satır: micro-label (sol) │ aksiyonlar (sağ) — video CTA + actions slot
-   - Villa adı + lokasyon card'ın ana görsel odağı
+   - Villa adı + lokasyon card'ın ana görsel odağı (soldaki kart)
    - Info item'lar: mobilde 2x2 grid, desktop'ta tek satır (4 kolon)
    - Belge item'ı diğerlerinden hafif farklı (gradient accent) — "premium"
 
    Konum: parent (`page.tsx`) tarafından Gallery/Booking grid'inin
-   ÜSTÜNE, full-width olarak yerleştiriliyor — bu tur DEĞİŞMEDİ, sadece
-   bu component'in KENDİ iç tasarımı (card'a dönüştü) değişti.
+   ÜSTÜNE, full-width olarak yerleştiriliyor.
 
    FOTOĞRAFIN ÜZERİNE ASLA binmez (gallery'den tamamen ayrı, üstte block).
    Gallery DOM/click/lightbox davranışı SIFIR etkilenir.
 
-   VIDEO MODAL:
-     - VillaVideoModal (mevcut, dokunulmadı) trigger button burada
-     - Local useState modal open/close
-     - Video yoksa CTA görünmez (videos=[] → hasVideo=false)
+   🛡️ VİDEO CTA + FAVORİ BUTONU ARTIK BURADA DEĞİL:
+     Bu iki aksiyon bu component'ten kaldırıldı; Gallery'nin hero
+     görselinin SOL ÜST köşesine overlay olarak taşındı (bkz.
+     `app/components/villa/Gallery.tsx`). Video modal + favori buton
+     logic'i AYNEN korunuyor, yalnız DOM konumu değişti — bu
+     dosyanın artık ilgili prop'ları YOK.
 
    VERİ KONTRATI (DEĞİŞMEDİ):
-     - Props aynı: villaTitle, location, guests, bedrooms, bathrooms,
-       tourismDocumentNumber, videos, actions.
+     - Props: villaTitle, location, guests, bedrooms, bathrooms,
+       tourismDocumentNumber.
      - Conditional'lar AYNEN: guests>0 / bedrooms>0 / bathrooms>0 /
        certificateNo boş değilse. Yeni API/DB sorgusu YOK, fake veri YOK.
 
@@ -57,18 +50,14 @@
        reduced-motion tercihinde hiçbir animasyon çalışmaz.
 
    ASLA dokunulmadı:
-     - VillaVideoModal logic (sadece tüketici)
-     - Gallery component
+     - Gallery component'in görsel/lightbox/swipe/sayaç davranışı —
+       yalnız hero'nun sol üstüne video/favori overlay'i eklendi.
      - Booking sidebar / pricing / availability / reservation flow
      - YouTube helper
-     - FavoriteButton / actions slot logic (yalnız DOM konum)
+     - FavoriteButton / useFavorites logic (yalnız DOM konumu Gallery'ye taşındı)
    =============================================================== */
 
-import { useState, type ReactNode } from "react";
-import { MapPin, Play, Users, BedDouble, Bath } from "lucide-react";
-
-import VillaVideoModal from "./VillaVideoModal";
-import type { VillaYouTubeVideo } from "@/lib/youtube.helper";
+import { MapPin, Users, BedDouble, Bath } from "lucide-react";
 
 type Props = {
   villaTitle: string;
@@ -79,13 +68,6 @@ type Props = {
   /* T.C. Kültür ve Turizm Bakanlığı belge no — opsiyonel ham text.
      null/boş → belge item'ı render edilmez. */
   tourismDocumentNumber?: string | null;
-  /* Video listesi — boş array veya undefined → CTA görünmez. */
-  videos?: VillaYouTubeVideo[] | null;
-  /* 🛡️ Action slot — Favori/Paylaş gibi caller-controlled aksiyonlar.
-     Sağ blokta video CTA'dan SONRA render edilir. Caller logic'e bu
-     component'in zerre etkisi yok (sadece slot). Opsiyonel — verilmezse
-     hiçbir aksiyon görünmez. */
-  actions?: ReactNode;
 };
 
 export default function VillaInfoBar({
@@ -95,19 +77,13 @@ export default function VillaInfoBar({
   bedrooms,
   bathrooms,
   tourismDocumentNumber,
-  videos,
-  actions,
 }: Props) {
-  const [videoOpen, setVideoOpen] = useState(false);
-  const safeVideos = videos ?? [];
-  const hasVideo = safeVideos.length > 0;
   const certificateNo = tourismDocumentNumber?.trim() || "";
   const hasCertificate = certificateNo.length > 0;
   const hasAnyInfoItem =
     guests > 0 || bedrooms > 0 || bathrooms > 0 || hasCertificate;
 
   return (
-    <>
       <div
         className="
           villa-info-card-in
@@ -148,62 +124,6 @@ export default function VillaInfoBar({
             backgroundSize: "220% 100%",
           }}
         />
-
-        {/* ─────────────────────────────────────────────
-            ÜST SATIR — micro-label (sol) │ aksiyonlar (sağ)
-            ───────────────────────────────────────────── */}
-        {/* Aksiyonlar (video CTA + favori floating).
-            Action slot caller-controlled (FavoriteButton); logic'e
-            ASLA dokunulmaz, yalnız DOM konum/görünürlük.
-            Üstteki eski micro-label kaldırıldı; satır artık
-            sadece (varsa) video CTA + favori butonunu sağa yaslar. */}
-        {(actions || hasVideo) && (
-          <div className="flex items-center justify-end gap-2.5">
-              {hasVideo && (
-                <button
-                  type="button"
-                  onClick={() => setVideoOpen(true)}
-                  aria-label={
-                    villaTitle
-                      ? `${villaTitle} villa videosunu oynat`
-                      : "Villa videosunu oynat"
-                  }
-                  className="
-                    group/video
-                    inline-flex items-center gap-2.5
-                    pl-2 pr-5 py-2
-                    rounded-full
-                    bg-[var(--color-stone-900)] hover:bg-[var(--color-stone-800)]
-                    text-white text-[13px] font-semibold tracking-wide
-                    shadow-[0_10px_24px_-8px_rgb(27_26_23/0.5)]
-                    hover:shadow-[0_14px_28px_-8px_rgb(27_26_23/0.55)]
-                    transition-all duration-200 motion-reduce:transition-none
-                    hover:-translate-y-[1px] motion-reduce:hover:translate-y-0
-                    focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40
-                  "
-                >
-                  <span
-                    aria-hidden
-                    className="
-                      relative inline-flex items-center justify-center
-                      w-7 h-7 rounded-full
-                      bg-white text-[var(--color-stone-900)]
-                      shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]
-                    "
-                  >
-                    <Play
-                      size={12}
-                      strokeWidth={1.8}
-                      fill="currentColor"
-                      className="ml-0.5"
-                    />
-                  </span>
-                  <span className="whitespace-nowrap">Villa Videosu</span>
-                </button>
-              )}
-              {actions}
-            </div>
-          )}
 
         {/* SOL: VİLLA ADI + BÖLGE/KONUM KARTI ── SAĞ: KİŞİ/YATAK ODASI/
             BANYO/BELGE — hepsi AYNI yatay satırda, aynı görsel ritimde.
@@ -284,17 +204,6 @@ export default function VillaInfoBar({
           </div>
         )}
       </div>
-
-      {/* VIDEO MODAL — local state. isOpen=false iken iframe yok. */}
-      {hasVideo && (
-        <VillaVideoModal
-          isOpen={videoOpen}
-          onClose={() => setVideoOpen(false)}
-          videos={safeVideos}
-          villaTitle={villaTitle}
-        />
-      )}
-    </>
   );
 }
 
