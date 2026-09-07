@@ -421,115 +421,6 @@ export default async function VillaDetail({
             />
           </div>
 
-          {/* 🏊 HAVUZ BİLGİLERİ — Villa Açıklaması'nın HEMEN
-              üstünde, bağımsız kart. Önceden VillaDetailTabs içinde bir
-              sekmeydi (tıklanmadan görünmüyordu); artık her zaman
-              görünür, ayrı bir section. Veri/hesap mantığı (PoolCard,
-              cards.push, formatPoolDimension) AYNEN korunuyor; yalnız
-              konum ve JSX/tasarım değişti. */}
-          {(villa.pool_type !== "yok" ||
-              villa.indoor_pool ||
-              villa.child_pool) &&
-            (() => {
-              type PoolCard = {
-                key: string;
-                label: string;
-                width: string | null | undefined;
-                length: string | null | undefined;
-                depth: string | null | undefined;
-              };
-              const cards: PoolCard[] = [];
-              if (villa.pool_type && villa.pool_type !== "yok") {
-                cards.push({
-                  key: "main",
-                  label:
-                    villa.pool_type === "ozel"
-                      ? "Özel Korunaklı Havuz"
-                      : "Ortak Havuz",
-                  width: villa.pool_width,
-                  length: villa.pool_length,
-                  depth: villa.pool_depth,
-                });
-              }
-              if (villa.indoor_pool) {
-                cards.push({
-                  key: "indoor",
-                  label: "Kapalı Havuz",
-                  width: villa.indoor_pool_width,
-                  length: villa.indoor_pool_length,
-                  depth: villa.indoor_pool_depth,
-                });
-              }
-              if (villa.child_pool) {
-                cards.push({
-                  key: "child",
-                  label: "Çocuk Havuzu",
-                  width: villa.child_pool_width,
-                  length: villa.child_pool_length,
-                  depth: villa.child_pool_depth,
-                });
-              }
-              if (cards.length === 0) return null;
-              return (
-                <section>
-                  <div className="flex items-center gap-2.5 mb-4">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0973BA]/10 text-[#0973BA]">
-                      <Waves size={16} strokeWidth={1.8} />
-                    </span>
-                    <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
-                      Havuz Bilgileri
-                    </h2>
-                  </div>
-
-                  {/* MODERN INFO BLOCKS — düz açık zemin (gradient yok),
-                      her havuz kendi bloğu; ölçüler küçük kartlar
-                      halinde. Hover/transform/animasyon yok. */}
-                  <div className="rounded-2xl border border-[var(--color-stone-200)] bg-[var(--color-sand-100)] divide-y divide-[var(--color-stone-100)]">
-                    {cards.map((c) => {
-                      const hasDims = !!(c.width || c.length || c.depth);
-                      const rows = [
-                        { k: "Genişlik", v: formatPoolDimension(c.width) },
-                        { k: "Uzunluk", v: formatPoolDimension(c.length) },
-                        { k: "Derinlik", v: formatPoolDimension(c.depth) },
-                      ];
-                      return (
-                        <div key={c.key} className="p-4 md:p-5">
-                          <p className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--color-stone-500)]">
-                            <span
-                              aria-hidden="true"
-                              className="inline-block w-1.5 h-1.5 rounded-full bg-[#ED7926]"
-                            />
-                            {c.label}
-                          </p>
-                          {hasDims ? (
-                            <div className="mt-3 grid grid-cols-3 gap-2.5">
-                              {rows.map((row) => (
-                                <div
-                                  key={row.k}
-                                  className="rounded-lg border border-[var(--color-stone-100)] bg-white px-3 py-2.5"
-                                >
-                                  <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--color-stone-400)]">
-                                    {row.k}
-                                  </p>
-                                  <p className="mt-1 font-display text-[16px] md:text-[17px] text-[var(--color-stone-900)] tabular-nums">
-                                    {row.v}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="mt-2 text-[13px] text-[var(--color-stone-400)] italic">
-                              Ölçü bilgisi yok
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </section>
-              );
-            })()}
-
           {/* DESCRIPTION */}
           <section>
             <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
@@ -695,6 +586,115 @@ export default async function VillaDetail({
             bedrooms={villa.bedroom_layout ?? []}
             bathrooms={villa.bathroom_layout ?? []}
           />
+
+          {/* 🏊 HAVUZ BİLGİLERİ — Villa Açıklaması'nın HEMEN
+              üstünde, bağımsız kart. Önceden VillaDetailTabs içinde bir
+              sekmeydi (tıklanmadan görünmüyordu); artık her zaman
+              görünür, ayrı bir section. Veri/hesap mantığı (PoolCard,
+              cards.push, formatPoolDimension) AYNEN korunuyor; yalnız
+              konum ve JSX/tasarım değişti. */}
+          {(villa.pool_type !== "yok" ||
+              villa.indoor_pool ||
+              villa.child_pool) &&
+            (() => {
+              type PoolCard = {
+                key: string;
+                label: string;
+                width: string | null | undefined;
+                length: string | null | undefined;
+                depth: string | null | undefined;
+              };
+              const cards: PoolCard[] = [];
+              if (villa.pool_type && villa.pool_type !== "yok") {
+                cards.push({
+                  key: "main",
+                  label:
+                    villa.pool_type === "ozel"
+                      ? "Özel Korunaklı Havuz"
+                      : "Ortak Havuz",
+                  width: villa.pool_width,
+                  length: villa.pool_length,
+                  depth: villa.pool_depth,
+                });
+              }
+              if (villa.indoor_pool) {
+                cards.push({
+                  key: "indoor",
+                  label: "Kapalı Havuz",
+                  width: villa.indoor_pool_width,
+                  length: villa.indoor_pool_length,
+                  depth: villa.indoor_pool_depth,
+                });
+              }
+              if (villa.child_pool) {
+                cards.push({
+                  key: "child",
+                  label: "Çocuk Havuzu",
+                  width: villa.child_pool_width,
+                  length: villa.child_pool_length,
+                  depth: villa.child_pool_depth,
+                });
+              }
+              if (cards.length === 0) return null;
+              return (
+                <section>
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0973BA]/10 text-[#0973BA]">
+                      <Waves size={16} strokeWidth={1.8} />
+                    </span>
+                    <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
+                      Havuz Bilgileri
+                    </h2>
+                  </div>
+
+                  {/* MODERN INFO BLOCKS — düz açık zemin (gradient yok),
+                      her havuz kendi bloğu; ölçüler küçük kartlar
+                      halinde. Hover/transform/animasyon yok. */}
+                  <div className="rounded-2xl border border-[var(--color-stone-200)] bg-[var(--color-sand-100)] divide-y divide-[var(--color-stone-100)]">
+                    {cards.map((c) => {
+                      const hasDims = !!(c.width || c.length || c.depth);
+                      const rows = [
+                        { k: "Genişlik", v: formatPoolDimension(c.width) },
+                        { k: "Uzunluk", v: formatPoolDimension(c.length) },
+                        { k: "Derinlik", v: formatPoolDimension(c.depth) },
+                      ];
+                      return (
+                        <div key={c.key} className="p-4 md:p-5">
+                          <p className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--color-stone-500)]">
+                            <span
+                              aria-hidden="true"
+                              className="inline-block w-1.5 h-1.5 rounded-full bg-[#ED7926]"
+                            />
+                            {c.label}
+                          </p>
+                          {hasDims ? (
+                            <div className="mt-3 grid grid-cols-3 gap-2.5">
+                              {rows.map((row) => (
+                                <div
+                                  key={row.k}
+                                  className="rounded-lg border border-[var(--color-stone-100)] bg-white px-3 py-2.5"
+                                >
+                                  <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--color-stone-400)]">
+                                    {row.k}
+                                  </p>
+                                  <p className="mt-1 font-display text-[16px] md:text-[17px] text-[var(--color-stone-900)] tabular-nums">
+                                    {row.v}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-[13px] text-[var(--color-stone-400)] italic">
+                              Ölçü bilgisi yok
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })()}
 
           {/* 🔥 INCLUDES + RULES — desktop 2-kolon side-by-side card pair.
              Tek section varsa wrapper full-width; ikisi de varsa
@@ -909,15 +909,6 @@ export default async function VillaDetail({
               px-5 py-5
             "
           >
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ED7926]/15 to-[#0973BA]/15 text-[#ED7926]">
-                <MapPin size={16} strokeWidth={1.8} />
-              </span>
-              <h2 className="font-display text-[19px] md:text-[20px] text-[var(--color-stone-900)] tracking-[-0.01em]">
-                Nerede?
-              </h2>
-            </div>
-
             <VillaMapModal
               mapType={villa.map_type}
               latitude={villa.latitude}
