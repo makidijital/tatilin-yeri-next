@@ -7,7 +7,11 @@ import {
      eski duplicate header'ı silindiği için burada gerek yok. */
   Waves,
   Check,
-  ExternalLink,
+  /* 🛡️ "Nerede?" harita kartı sağ kolona (booking sidebar altına)
+     taşındı — Harita / Yol Tarifi buton ikonları. `Map` global isimle
+     çakışmasın diye `MapIcon` olarak alınıyor. */
+  Map as MapIcon,
+  Navigation,
   /* 🛡️ FAZ 19 — distance icon mapping */
   UtensilsCrossed,
   ShoppingBag,
@@ -585,7 +589,7 @@ export default async function VillaDetail({
             }
             konum={
               <div className="space-y-10">
-              {/* Yakındaki Noktalar (Mesafeler) — Konum panelinde, haritanın ÜSTÜNDE. */}
+              {/* Yakındaki Noktalar (Mesafeler) — harita artık bu sekmede değil, sağ kolonda (rezervasyon formu altında). */}
               <section>
                 <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em] mb-4">
                   Yakındaki Noktalar
@@ -646,60 +650,6 @@ export default async function VillaDetail({
                     })}
                   </div>
                 )}
-              </section>
-
-              <section>
-                <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
-                  Nerede?
-                </h2>
-                <div className="card-premium mt-5 overflow-hidden">
-                  {villa.map_type === "coords" &&
-                    villa.latitude &&
-                    villa.longitude && (
-                      <>
-                        <iframe
-                          src={`https://www.google.com/maps?q=${villa.latitude},${villa.longitude}&hl=tr&z=14&output=embed`}
-                          className="w-full h-[400px] border-0"
-                          loading="lazy"
-                        />
-                        <div className="p-4 md:px-5 border-t border-[var(--color-stone-100)] flex justify-between items-center text-sm">
-                          <span className="text-[var(--color-stone-500)]">
-                            Yaklaşık konum gösterilmektedir
-                          </span>
-                          <a
-                            href={`https://www.google.com/maps?q=${villa.latitude},${villa.longitude}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[var(--color-champagne-700)] font-medium hover:underline inline-flex items-center gap-1"
-                          >
-                            Google Maps&apos;te aç
-                            <ExternalLink size={13} />
-                          </a>
-                        </div>
-                      </>
-                    )}
-
-                  {villa.map_type === "iframe" && villa.map_embed && (
-                    <>
-                      <div
-                        className="w-full h-[400px]"
-                        dangerouslySetInnerHTML={{ __html: villa.map_embed }}
-                      />
-                      <div className="p-4 md:px-5 border-t border-[var(--color-stone-100)] text-sm text-[var(--color-stone-500)]">
-                        Harita Google Maps üzerinden sağlanmaktadır
-                      </div>
-                    </>
-                  )}
-
-                  {(!villa.map_type ||
-                    (villa.map_type === "coords" &&
-                      (!villa.latitude || !villa.longitude)) ||
-                    (villa.map_type === "iframe" && !villa.map_embed)) && (
-                      <div className="h-[200px] flex items-center justify-center text-[var(--color-stone-400)] italic">
-                        Konum bilgisi bulunamadı
-                      </div>
-                    )}
-                </div>
               </section>
               </div>
             }
@@ -940,6 +890,114 @@ export default async function VillaDetail({
               </div>
             </div>
           </div>
+
+          {/* 🛡️ "Nerede?" — konum & harita kartı. Önceden VillaDetailTabs'ın
+              "Konum & Mesafeler" sekmesindeydi (sol kolon, Yakındaki
+              Noktalar'ın altında); artık rezervasyon formu + Giriş & Çıkış
+              Saatleri panelinin HEMEN altında, sağ kolonda. Harita render
+              mantığı (tüm koşullar ve embed davranışı dahil) BİREBİR aynı —
+              yalnız önizleme
+              yüksekliği (dar kolona sığması için 400px→260px, 200px→160px) ve
+              DOM konumu değişti. "Harita" butonu eski "Google Maps'te aç"
+              linkiyle AYNI href/target/rel'i kullanır. "Yol Tarifi" codebase'de
+              önceden ayrı bir aksiyon olarak yoktu; AYNI lat/lng'den standart
+              Google Maps yol tarifi derin bağlantısı (maps/dir) üretir —
+              yeni veri/API/DB sorgusu YOK, yalnız ikinci bir URL formatı. */}
+          <div
+            className="
+              mt-6 rounded-2xl
+              border border-[var(--color-stone-100)]
+              bg-white
+              shadow-[0_10px_28px_-20px_rgba(11,31,58,0.18)]
+              px-5 py-5
+            "
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ED7926]/15 to-[#0973BA]/15 text-[#ED7926]">
+                <MapPin size={16} strokeWidth={1.8} />
+              </span>
+              <h2 className="font-display text-[19px] md:text-[20px] text-[var(--color-stone-900)] tracking-[-0.01em]">
+                Nerede?
+              </h2>
+            </div>
+
+            <div className="mt-4 rounded-xl overflow-hidden border border-[var(--color-stone-100)]">
+
+                  {villa.map_type === "coords" &&
+                    villa.latitude &&
+                    villa.longitude && (
+                      <>
+                        <iframe
+                          src={`https://www.google.com/maps?q=${villa.latitude},${villa.longitude}&hl=tr&z=14&output=embed`}
+                          className="w-full h-[260px] border-0"
+                          loading="lazy"
+                        />
+                      </>
+                    )}
+
+                  {villa.map_type === "iframe" && villa.map_embed && (
+                    <>
+                      <div
+                        className="w-full h-[260px]"
+                        dangerouslySetInnerHTML={{ __html: villa.map_embed }}
+                      />
+                      <div className="p-4 md:px-5 border-t border-[var(--color-stone-100)] text-sm text-[var(--color-stone-500)]">
+                        Harita Google Maps üzerinden sağlanmaktadır
+                      </div>
+                    </>
+                  )}
+
+                  {(!villa.map_type ||
+                    (villa.map_type === "coords" &&
+                      (!villa.latitude || !villa.longitude)) ||
+                    (villa.map_type === "iframe" && !villa.map_embed)) && (
+                      <div className="h-[160px] flex items-center justify-center text-[var(--color-stone-400)] italic">
+                        Konum bilgisi bulunamadı
+                      </div>
+                    )}
+
+            </div>
+
+            {villa.latitude && villa.longitude && (
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <a
+                  href={`https://www.google.com/maps?q=${villa.latitude},${villa.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="
+                    inline-flex items-center justify-center gap-2
+                    rounded-xl bg-[#ED7926] px-4 py-3
+                    text-[13.5px] font-semibold text-white
+                    shadow-[0_10px_24px_-12px_rgba(237,121,38,0.55)]
+                    transition-[transform,box-shadow] duration-200 motion-reduce:transition-none
+                    hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-12px_rgba(237,121,38,0.65)]
+                    motion-reduce:hover:translate-y-0
+                  "
+                >
+                  <MapIcon size={15} strokeWidth={1.8} />
+                  Harita
+                </a>
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${villa.latitude},${villa.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="
+                    inline-flex items-center justify-center gap-2
+                    rounded-xl border-2 border-[#0973BA] bg-white px-4 py-3
+                    text-[13.5px] font-semibold text-[#0973BA]
+                    transition-[transform,box-shadow,background-color] duration-200 motion-reduce:transition-none
+                    hover:-translate-y-0.5 hover:bg-[#0973BA]/5
+                    hover:shadow-[0_14px_28px_-16px_rgba(9,115,186,0.45)]
+                    motion-reduce:hover:translate-y-0
+                  "
+                >
+                  <Navigation size={15} strokeWidth={1.8} />
+                  Yol Tarifi
+                </a>
+              </div>
+            )}
+          </div>
+
         </aside>
       </div>
       </div>
