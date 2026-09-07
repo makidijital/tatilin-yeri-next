@@ -165,11 +165,23 @@ export default function PriceList({
           rates
         );
         const isOpen = openId === p.id;
+        /* Son sezon satırı — popover'ı yukarı doğru aç (aşağıda
+           içerik/viewport sonu olabilir). Salt render-time hesap;
+           yeni state veya JS ölçüm YOK. */
+        const isLastRow = idx === prices.length - 1;
 
         return (
           <div
             key={p.id}
-            className="pl-row-in group/row relative rounded-2xl border border-[var(--color-stone-100)] bg-white/60 hover:bg-white px-4 py-4 md:px-5 md:py-5 mt-3 first:mt-0 transition-[transform,box-shadow,border-color,background-color] duration-300 motion-reduce:transition-none hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 hover:border-[var(--color-stone-200)] hover:shadow-[0_18px_38px_-24px_rgba(237,121,38,0.4),0_16px_34px_-24px_rgba(9,115,186,0.32)]"
+            className={
+              "pl-row-in group/row relative rounded-2xl border border-[var(--color-stone-100)] bg-white/60 hover:bg-white px-4 py-4 md:px-5 md:py-5 mt-3 first:mt-0 transition-[transform,box-shadow,border-color,background-color] duration-300 motion-reduce:transition-none hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 hover:border-[var(--color-stone-200)] hover:shadow-[0_18px_38px_-24px_rgba(237,121,38,0.4),0_16px_34px_-24px_rgba(9,115,186,0.32)] " +
+              /* 🛡️ Açık olan satır (isOpen) her zaman diğer satırların
+                 üstünde kalsın diye EXPLICIT z-index — auto DEĞİL, bu
+                 yüzden satır kendi stacking context'ini garanti kurar
+                 (hover-transform'un tesadüfen oluşturduğu context'e
+                 bağımlı kalmadan). */
+              (isOpen ? "z-20" : "z-0")
+            }
             style={{ animationDelay: `${idx * 70}ms` }}
           >
             {/* Sol accent çubuğu — turuncu → mavi, hover'da belirginleşir. */}
@@ -246,7 +258,10 @@ export default function PriceList({
                     {isOpen && (
                       <div
                         role="note"
-                        className="pl-popover-in absolute right-0 top-full z-10 mt-2 w-60 overflow-hidden rounded-2xl border border-[var(--color-stone-100)] bg-white p-4 shadow-[0_18px_40px_-18px_rgba(11,31,58,0.28)]"
+                        className={
+                          "pl-popover-in absolute right-0 z-20 w-60 overflow-hidden rounded-2xl border border-[var(--color-stone-100)] bg-white p-4 shadow-[0_18px_40px_-18px_rgba(11,31,58,0.28)] " +
+                          (isLastRow ? "bottom-full mb-2" : "top-full mt-2")
+                        }
                       >
                         <span
                           aria-hidden="true"
