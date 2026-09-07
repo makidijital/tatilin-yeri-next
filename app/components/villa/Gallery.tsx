@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Play } from "lucide-react";
 import WatermarkOverlay from "./WatermarkOverlay";
+import VillaVideoModal from "./VillaVideoModal";
 import type { WatermarkPosition } from "@/app/services/settings.types";
+import type { VillaYouTubeVideo } from "@/lib/youtube.helper";
 
 type WatermarkProps = {
   logo?: string | null;
@@ -36,14 +39,27 @@ export default function Gallery({
   images,
   watermark,
   villaTitle,
+  videos,
+  actions,
 }: {
   images: string[];
   watermark?: WatermarkProps;
   /** 🛡️ SEO + a11y: alt text auto-generation için. Opsiyonel; eski
    *  caller'lar (yoksa) "Villa" generic fallback'a düşer. */
   villaTitle?: string;
+  /* 🛡️ VillaInfoBar'dan taşındı (yalnız DOM konumu) — hero görselinin
+     sol üst köşesinde overlay olarak render edilir. Video listesi boş/
+     undefined ise CTA görünmez; mevcut VillaVideoModal AYNEN tüketiliyor. */
+  videos?: VillaYouTubeVideo[] | null;
+  /* 🛡️ VillaInfoBar'dan taşındı — Favori/Paylaş gibi caller-controlled
+     aksiyon slotu (FavoriteButton). Logic'e ASLA dokunulmaz, yalnız DOM
+     konumu. Opsiyonel — verilmezse hiçbir aksiyon görünmez. */
+  actions?: ReactNode;
 }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [videoOpen, setVideoOpen] = useState(false);
+  const safeVideos = videos ?? [];
+  const hasVideo = safeVideos.length > 0;
 
   /* 🛡️ MOBILE SWIPE — native touch handler (zero dependency).
      Lightbox modal içinde parmakla sağa-sola sürükleme ile prev/next.
@@ -143,6 +159,60 @@ export default function Gallery({
   return (
     <>
       <div className="relative">
+        {/* 🛡️ VIDEO CTA + FAVORİ — hero'nun SOL ÜST köşesinde overlay.
+            VillaInfoBar'dan taşındı; logic AYNEN (video modal aç/kapa,
+            FavoriteButton/useFavorites), yalnız DOM konumu değişti.
+            Gallery'nin lightbox/swipe/sayaç davranışına sıfır etkisi
+            var — "Tüm Fotoğraflar" butonuyla aynı overlay dili
+            (absolute + z-10) kullanılıyor, karşı köşede. */}
+        {(actions || hasVideo) && (
+          <div className="absolute top-3 left-3 md:top-4 md:left-4 z-10 flex items-center gap-2">
+            {hasVideo && (
+              <button
+                type="button"
+                onClick={() => setVideoOpen(true)}
+                aria-label={
+                  villaTitle
+                    ? `${villaTitle} villa videosunu oynat`
+                    : "Villa videosunu oynat"
+                }
+                className="
+                  group/video
+                  inline-flex items-center gap-2.5
+                  pl-2 pr-5 py-2
+                  rounded-full
+                  bg-[var(--color-stone-900)] hover:bg-[var(--color-stone-800)]
+                  text-white text-[13px] font-semibold tracking-wide
+                  shadow-[0_10px_24px_-8px_rgb(27_26_23/0.5)]
+                  hover:shadow-[0_14px_28px_-8px_rgb(27_26_23/0.55)]
+                  transition-all duration-200 motion-reduce:transition-none
+                  hover:-translate-y-[1px] motion-reduce:hover:translate-y-0
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40
+                "
+              >
+                <span
+                  aria-hidden
+                  className="
+                    relative inline-flex items-center justify-center
+                    w-7 h-7 rounded-full
+                    bg-white text-[var(--color-stone-900)]
+                    shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]
+                  "
+                >
+                  <Play
+                    size={12}
+                    strokeWidth={1.8}
+                    fill="currentColor"
+                    className="ml-0.5"
+                  />
+                </span>
+                <span className="whitespace-nowrap">Villa Videosu</span>
+              </button>
+            )}
+            {actions}
+          </div>
+        )}
+
         {/* 🛡️ MOBILE (<768px) — büyük hero + iki secondary; küçültülmüş
            desktop grid DEĞİL, kendine özgü kompozisyon. Tüm tıklamalar
            mevcut lightbox'ı tetikler (setActiveIndex); watermark her
@@ -389,6 +459,17 @@ export default function Gallery({
             </div>
           </div>
         </div>
+      )}
+
+      {/* VIDEO MODAL — local state. isOpen=false iken iframe yok.
+          VillaInfoBar'dan taşındı; logic AYNEN. */}
+      {hasVideo && (
+        <VillaVideoModal
+          isOpen={videoOpen}
+          onClose={() => setVideoOpen(false)}
+          videos={safeVideos}
+          villaTitle={villaTitle}
+        />
       )}
     </>
   );

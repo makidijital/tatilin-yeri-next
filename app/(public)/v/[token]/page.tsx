@@ -330,7 +330,6 @@ export default async function PrivateVillaDetail({
                 guests={villa.guests}
                 bedrooms={villa.bedrooms}
                 bathrooms={villa.bathrooms}
-                videos={youtubeVideos}
               />
 
               <div className="rounded-3xl overflow-hidden ring-1 ring-[var(--color-stone-100)]">
@@ -338,6 +337,7 @@ export default async function PrivateVillaDetail({
                   images={imageUrls}
                   watermark={watermark}
                   villaTitle={villa.title}
+                  videos={youtubeVideos}
                 />
               </div>
             </section>

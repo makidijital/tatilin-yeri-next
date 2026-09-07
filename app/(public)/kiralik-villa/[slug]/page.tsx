@@ -393,8 +393,6 @@ export default async function VillaDetail({
             bedrooms={villa.bedrooms}
             bathrooms={villa.bathrooms}
             tourismDocumentNumber={villa.tourism_document_number}
-            videos={youtubeVideos}
-            actions={<FavoriteButton villaId={villa.id} variant="icon" />}
           />
         </div>
 
@@ -416,6 +414,8 @@ export default async function VillaDetail({
               images={imageUrls}
               watermark={watermark}
               villaTitle={villa.title}
+              videos={youtubeVideos}
+              actions={<FavoriteButton villaId={villa.id} variant="icon" />}
             />
           </div>
 
