@@ -790,7 +790,7 @@ export default function VillaCard({
             <div className="min-w-0">
               {stayTotal !== null ? (
                 <>
-                  <div className="font-display text-[18px] md:text-[19px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
+                  <div className="font-display font-bold text-[18px] md:text-[19px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
                     {formatCurrency(stayTotal, currency)}
                   </div>
                   <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)] tabular-nums">
@@ -799,7 +799,7 @@ export default function VillaCard({
                 </>
               ) : (
                 <>
-                  <div className="font-display text-[18px] md:text-[19px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
+                  <div className="font-display font-bold text-[18px] md:text-[19px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
                     {price ? formatCurrency(convertedPrice, currency) : "Fiyat sorunuz"}
                   </div>
                   {price ? (
@@ -989,7 +989,7 @@ export default function VillaCard({
             <p className="mt-2 text-[13px] text-[var(--color-stone-500)]">
               {price ? (
                 <>
-                  <span className="font-display text-[15px] font-medium text-[var(--color-stone-900)] tabular-nums">
+                  <span className="font-display text-[15px] font-semibold text-[#ED7926] tabular-nums">
                     {formatCurrency(convertedPrice, currency)}
                   </span>{" "}
                   başlayan fiyatlarla
@@ -1065,7 +1065,7 @@ export default function VillaCard({
               <div className="min-w-0">
                 {stayTotal !== null ? (
                   <>
-                    <div className="font-display text-[19px] md:text-[20px] text-[var(--color-stone-900)] tracking-[-0.015em] tabular-nums leading-none">
+                    <div className="font-display font-bold text-[19px] md:text-[20px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
                       {formatCurrency(stayTotal, currency)}
                     </div>
                     <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)] tabular-nums">
