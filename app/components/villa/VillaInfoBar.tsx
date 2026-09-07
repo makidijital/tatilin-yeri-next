@@ -213,41 +213,50 @@ export default function VillaInfoBar({
           )}
         </div>
 
-        {/* VİLLA ADI — en güçlü tipografik eleman, card'ın ana odağı */}
-        <h1
-          className="
-            mt-3 md:mt-4
-            font-display font-bold
-            text-[30px] sm:text-[36px] md:text-[42px] lg:text-[48px]
-            leading-[1.05] tracking-[-0.02em]
-            text-[var(--color-stone-900)]
-          "
-        >
-          {villaTitle}
-        </h1>
-
-        {/* BÖLGE/KONUM (sol) + KİŞİ/YATAK ODASI/BANYO/BELGE (sağ) —
-            artık AYNI yatay satırda. Lokasyon bloğu kendi içinde dikey
-            (ikon üstte, metin altında, flex-col) kalır; masaüstünde bu
-            satırın SOLUNDA sabit/shrink-0 durur, 4 bilgi kutusu grid'i
-            sağda kalan alanı doldurur (flex-1). Mobilde satır flex-col'a
-            döner → lokasyon üstte, bilgi kutuları altında (eski davranış
-            AYNEN). İkon/metin/renk/boyut ve 4 kutunun kendi tasarımı
+        {/* SOL: VİLLA ADI + BÖLGE/KONUM KARTI ── SAĞ: KİŞİ/YATAK ODASI/
+            BANYO/BELGE — hepsi AYNI yatay satırda, aynı görsel ritimde.
+            Eski büyük h1 kaldırıldı; villaTitle artık bu kompakt, diğer
+            4 kart ile aynı border/radius/bg/hover diline sahip SOL
+            kartın İÇİNDE (üstte başlık, altında lokasyon, ikisi de
+            ortalanmış) render ediliyor — h1 etiketi SEO/a11y için
+            korundu, yalnız boyutu/konumu değişti. Masaüstünde SOL kart
+            shrink-0, 4'lü grid flex-1 ile kalan alanı dolduruyor;
+            mobilde satır flex-col'a döner (kart üstte, tam genişlik;
+            bilgi kutuları altında). 4 kutunun kendi tasarımı
             (InfoItem/CertificateItem, grid-cols, koşullar) DEĞİŞMEDİ —
-            yalnızca dış yerleşim/konum değişti. */}
-        {(location || hasAnyInfoItem) && (
+            yalnızca villa adının yeri/boyutu ve lokasyon kartı değişti. */}
+        {(villaTitle || location || hasAnyInfoItem) && (
           <div className="mt-5 md:mt-6 flex flex-col md:flex-row md:items-stretch gap-4 md:gap-6">
-            {location && (
-              <div className="flex flex-col items-start gap-1.5 shrink-0 md:justify-center">
-                <MapPin
-                  size={15}
-                  strokeWidth={1.8}
-                  className="text-[#ED7926] shrink-0"
-                  aria-hidden
-                />
-                <span className="text-[15px] md:text-[16px] text-[var(--color-stone-500)]">
-                  {location}
-                </span>
+            {villaTitle && (
+              <div
+                className="
+                  group/title relative
+                  flex flex-col items-center justify-center text-center gap-1
+                  w-full md:w-auto md:shrink-0 md:max-w-[260px]
+                  rounded-2xl
+                  bg-[var(--color-stone-50)]
+                  border border-transparent
+                  hover:bg-white hover:border-[var(--color-stone-100)]
+                  hover:shadow-[0_12px_28px_-18px_rgba(11,31,58,0.22)]
+                  hover:-translate-y-0.5
+                  transition-all duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0
+                  px-4 py-3.5 md:py-4
+                "
+              >
+                <h1 className="w-full font-display font-bold text-[18px] md:text-[20px] leading-tight tracking-[-0.01em] text-[var(--color-stone-900)] truncate">
+                  {villaTitle}
+                </h1>
+                {location && (
+                  <p className="w-full inline-flex items-center justify-center gap-1.5 text-[12px] md:text-[12.5px] text-[var(--color-stone-500)] truncate">
+                    <MapPin
+                      size={13}
+                      strokeWidth={1.8}
+                      className="text-[#ED7926] shrink-0"
+                      aria-hidden
+                    />
+                    <span className="truncate">{location}</span>
+                  </p>
+                )}
               </div>
             )}
 
