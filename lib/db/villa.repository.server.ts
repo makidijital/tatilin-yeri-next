@@ -1045,6 +1045,12 @@ export const villaAdminRepository = {
       id: string;
       title: string | null;
       slug: string | null;
+      /* 🛡️ Header/Hero canlı arama sonucunda bölge göstermek için eklendi
+         (villa detay/kart akışlarında zaten kullanılan AYNI embed deseni:
+         `location:villa_locations(name)`, bkz. findById/findBySlug/list*).
+         Yeni tablo/migration/ayrı sorgu YOK — mevcut tek SELECT'e bir
+         kolon daha eklendi. */
+      location: { name: string | null } | null;
       villa_images: {
         image_url: string | null;
         is_cover: boolean | null;
@@ -1066,6 +1072,7 @@ export const villaAdminRepository = {
         id: string;
         title: string | null;
         slug: string | null;
+        location: { name: string | null } | null;
         villa_images: {
           image_url: string | null;
           is_cover: boolean | null;
@@ -1073,7 +1080,7 @@ export const villaAdminRepository = {
         }[];
       }>("villa")
       .select(
-        `id, title, slug, villa_images (image_url, is_cover, sort_order)`
+        `id, title, slug, location:villa_locations(name), villa_images (image_url, is_cover, sort_order)`
       )
       .eq("is_active", true)
       .is("deleted_at", null)

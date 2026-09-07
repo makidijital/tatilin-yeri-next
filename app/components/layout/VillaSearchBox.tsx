@@ -161,8 +161,8 @@ export default function VillaSearchBox({
         <span className="text-[13.5px] font-medium text-[var(--color-stone-900)] truncate">
           {villa.title}
         </span>
-        <span className="text-[11px] text-[var(--color-stone-400)] tracking-[0.05em] uppercase">
-          Villayı görüntüle →
+        <span className="text-[11px] text-[var(--color-stone-400)] tracking-[0.05em] uppercase truncate">
+          {villa.location?.name || ""}
         </span>
       </div>
     </>
