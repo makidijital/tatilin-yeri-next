@@ -7,11 +7,6 @@ import {
      eski duplicate header'ı silindiği için burada gerek yok. */
   Waves,
   Check,
-  /* 🛡️ "Nerede?" harita kartı sağ kolona (booking sidebar altına)
-     taşındı — Harita / Yol Tarifi buton ikonları. `Map` global isimle
-     çakışmasın diye `MapIcon` olarak alınıyor. */
-  Map as MapIcon,
-  Navigation,
   /* 🛡️ FAZ 19 — distance icon mapping */
   UtensilsCrossed,
   ShoppingBag,
@@ -97,6 +92,9 @@ import MobileBookingCta from "@/app/components/villa/MobileBookingCta";
    Video CTA mevcut VillaVideoModal'ı tetikler (modal logic dokunulmadı). */
 import VillaInfoBar from "@/app/components/villa/VillaInfoBar";
 import VillaDetailTabs from "@/app/components/villa/VillaDetailTabs";
+/* 🛡️ "Nerede?" kartının Harita/Yol Tarifi butonları + tıklanınca
+   açılan harita modalı (bkz. component'in kendi doc yorumu). */
+import VillaMapModal from "@/app/components/villa/VillaMapModal";
 import {
   normalizeYouTubeVideos,
   type VillaYouTubeVideo,
@@ -891,18 +889,17 @@ export default async function VillaDetail({
             </div>
           </div>
 
-          {/* 🛡️ "Nerede?" — konum & harita kartı. Önceden VillaDetailTabs'ın
+          {/* 🛡️ "Nerede?" — konum kartı. Önceden VillaDetailTabs'ın
               "Konum & Mesafeler" sekmesindeydi (sol kolon, Yakındaki
               Noktalar'ın altında); artık rezervasyon formu + Giriş & Çıkış
-              Saatleri panelinin HEMEN altında, sağ kolonda. Harita render
-              mantığı (tüm koşullar ve embed davranışı dahil) BİREBİR aynı —
-              yalnız önizleme
-              yüksekliği (dar kolona sığması için 400px→260px, 200px→160px) ve
-              DOM konumu değişti. "Harita" butonu eski "Google Maps'te aç"
-              linkiyle AYNI href/target/rel'i kullanır. "Yol Tarifi" codebase'de
-              önceden ayrı bir aksiyon olarak yoktu; AYNI lat/lng'den standart
-              Google Maps yol tarifi derin bağlantısı (maps/dir) üretir —
-              yeni veri/API/DB sorgusu YOK, yalnız ikinci bir URL formatı. */}
+              Saatleri panelinin HEMEN altında, sağ kolonda. Harita ARTIK
+              kart içinde her zaman görünmüyor — yalnız "Harita" butonuna
+              basılınca VillaMapModal içinde açılıyor (tüm map_type/coords/
+              iframe/fallback render mantığı o component'e taşındı, BİREBİR
+              aynı). "Harita" butonu eski "Google Maps'te aç" linkiyle AYNI
+              koordinat verisini kullanır (artık dışa link yerine modal açar).
+              "Yol Tarifi" AYNI lat/lng'den standart Google Maps yol tarifi
+              bağlantısını yeni sekmede açar — yeni veri/API/DB sorgusu YOK. */}
           <div
             className="
               mt-6 rounded-2xl
@@ -921,81 +918,13 @@ export default async function VillaDetail({
               </h2>
             </div>
 
-            <div className="mt-4 rounded-xl overflow-hidden border border-[var(--color-stone-100)]">
-
-                  {villa.map_type === "coords" &&
-                    villa.latitude &&
-                    villa.longitude && (
-                      <>
-                        <iframe
-                          src={`https://www.google.com/maps?q=${villa.latitude},${villa.longitude}&hl=tr&z=14&output=embed`}
-                          className="w-full h-[260px] border-0"
-                          loading="lazy"
-                        />
-                      </>
-                    )}
-
-                  {villa.map_type === "iframe" && villa.map_embed && (
-                    <>
-                      <div
-                        className="w-full h-[260px]"
-                        dangerouslySetInnerHTML={{ __html: villa.map_embed }}
-                      />
-                      <div className="p-4 md:px-5 border-t border-[var(--color-stone-100)] text-sm text-[var(--color-stone-500)]">
-                        Harita Google Maps üzerinden sağlanmaktadır
-                      </div>
-                    </>
-                  )}
-
-                  {(!villa.map_type ||
-                    (villa.map_type === "coords" &&
-                      (!villa.latitude || !villa.longitude)) ||
-                    (villa.map_type === "iframe" && !villa.map_embed)) && (
-                      <div className="h-[160px] flex items-center justify-center text-[var(--color-stone-400)] italic">
-                        Konum bilgisi bulunamadı
-                      </div>
-                    )}
-
-            </div>
-
-            {villa.latitude && villa.longitude && (
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <a
-                  href={`https://www.google.com/maps?q=${villa.latitude},${villa.longitude}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="
-                    inline-flex items-center justify-center gap-2
-                    rounded-xl bg-[#ED7926] px-4 py-3
-                    text-[13.5px] font-semibold text-white
-                    shadow-[0_10px_24px_-12px_rgba(237,121,38,0.55)]
-                    transition-[transform,box-shadow] duration-200 motion-reduce:transition-none
-                    hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-12px_rgba(237,121,38,0.65)]
-                    motion-reduce:hover:translate-y-0
-                  "
-                >
-                  <MapIcon size={15} strokeWidth={1.8} />
-                  Harita
-                </a>
-                <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${villa.latitude},${villa.longitude}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="
-                    inline-flex items-center justify-center gap-2
-                    rounded-xl border-2 border-[#0973BA] bg-white px-4 py-3
-                    text-[13.5px] font-semibold text-[#0973BA]
-                    transition-[transform,box-shadow,background-color] duration-200 motion-reduce:transition-none
-                    hover:-translate-y-0.5 hover:bg-[#0973BA]/5
-                    hover:shadow-[0_14px_28px_-16px_rgba(9,115,186,0.45)]
-                    motion-reduce:hover:translate-y-0
-                  "
-                >
-                  <Navigation size={15} strokeWidth={1.8} />
-                  Yol Tarifi
-                </a>
-              </div>
-            )}
+            <VillaMapModal
+              mapType={villa.map_type}
+              latitude={villa.latitude}
+              longitude={villa.longitude}
+              mapEmbed={villa.map_embed}
+              villaTitle={villa.title}
+            />
           </div>
 
         </aside>
