@@ -226,50 +226,60 @@ export default function VillaInfoBar({
           {villaTitle}
         </h1>
 
-        {/* BÖLGE / KONUM — ikinci seviye */}
-        {location && (
-          <p className="mt-2.5 md:mt-3 inline-flex items-center gap-1.5 text-[15px] md:text-[16px] text-[var(--color-stone-500)]">
-            <MapPin
-              size={15}
-              strokeWidth={1.8}
-              className="text-[#ED7926] shrink-0"
-              aria-hidden
-            />
-            <span>{location}</span>
-          </p>
-        )}
+        {/* BÖLGE/KONUM (sol) + KİŞİ/YATAK ODASI/BANYO/BELGE (sağ) —
+            artık AYNI yatay satırda. Lokasyon bloğu kendi içinde dikey
+            (ikon üstte, metin altında, flex-col) kalır; masaüstünde bu
+            satırın SOLUNDA sabit/shrink-0 durur, 4 bilgi kutusu grid'i
+            sağda kalan alanı doldurur (flex-1). Mobilde satır flex-col'a
+            döner → lokasyon üstte, bilgi kutuları altında (eski davranış
+            AYNEN). İkon/metin/renk/boyut ve 4 kutunun kendi tasarımı
+            (InfoItem/CertificateItem, grid-cols, koşullar) DEĞİŞMEDİ —
+            yalnızca dış yerleşim/konum değişti. */}
+        {(location || hasAnyInfoItem) && (
+          <div className="mt-5 md:mt-6 flex flex-col md:flex-row md:items-stretch gap-4 md:gap-6">
+            {location && (
+              <div className="flex flex-col items-start gap-1.5 shrink-0 md:justify-center">
+                <MapPin
+                  size={15}
+                  strokeWidth={1.8}
+                  className="text-[#ED7926] shrink-0"
+                  aria-hidden
+                />
+                <span className="text-[15px] md:text-[16px] text-[var(--color-stone-500)]">
+                  {location}
+                </span>
+              </div>
+            )}
 
-        {/* KİŞİ / YATAK ODASI / BANYO / BELGE — ikonlu info-item grid.
-            Mobilde 2x2, desktop'ta tek satır (4 kolon). Koşullar AYNEN
-            (>0 / certificateNo boş değil) — eski StatCard/CertificateCard
-            ile birebir aynı görünürlük mantığı. */}
-        {hasAnyInfoItem && (
-          <div className="mt-5 md:mt-6 grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3">
-            {guests > 0 && (
-              <InfoItem
-                icon={<Users size={15} strokeWidth={1.8} />}
-                accentColor="#0973BA"
-                value={guests}
-                label="Kişi"
-              />
+            {hasAnyInfoItem && (
+              <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3">
+                {guests > 0 && (
+                  <InfoItem
+                    icon={<Users size={15} strokeWidth={1.8} />}
+                    accentColor="#0973BA"
+                    value={guests}
+                    label="Kişi"
+                  />
+                )}
+                {bedrooms > 0 && (
+                  <InfoItem
+                    icon={<BedDouble size={15} strokeWidth={1.8} />}
+                    accentColor="#ED7926"
+                    value={bedrooms}
+                    label="Yatak Odası"
+                  />
+                )}
+                {bathrooms > 0 && (
+                  <InfoItem
+                    icon={<Bath size={15} strokeWidth={1.8} />}
+                    accentColor="#0973BA"
+                    value={bathrooms}
+                    label="Banyo"
+                  />
+                )}
+                {hasCertificate && <CertificateItem documentNumber={certificateNo} />}
+              </div>
             )}
-            {bedrooms > 0 && (
-              <InfoItem
-                icon={<BedDouble size={15} strokeWidth={1.8} />}
-                accentColor="#ED7926"
-                value={bedrooms}
-                label="Yatak Odası"
-              />
-            )}
-            {bathrooms > 0 && (
-              <InfoItem
-                icon={<Bath size={15} strokeWidth={1.8} />}
-                accentColor="#0973BA"
-                value={bathrooms}
-                label="Banyo"
-              />
-            )}
-            {hasCertificate && <CertificateItem documentNumber={certificateNo} />}
           </div>
         )}
       </div>
