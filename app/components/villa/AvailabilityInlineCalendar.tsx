@@ -233,9 +233,12 @@ export default function AvailabilityInlineCalendar({
     return formatCurrency(converted, currency);
   };
 
-  /* Responsive month count — admin pattern'iyle aynı: 1/2/3 col. */
+  /* Responsive month count — admin pattern'iyle aynı: 1/2/3 col.
+     3. ay CSS ile yalnız lg+ görünür (bkz. grid className + kart
+     className aşağıda); mobil/tablet önceki 2-aylık görünümü aynen
+     korur. */
   const visibleMonths = useMemo(
-    () => getVisibleMonths(currentMonth, 2),
+    () => getVisibleMonths(currentMonth, 3),
     [currentMonth]
   );
   const todayKey = new Date().toDateString();
@@ -274,25 +277,25 @@ export default function AvailabilityInlineCalendar({
       </div>
 
       {/* ─────────────────────────────────────────────
-          Multi-month grid — clean: mobile 1 col / desktop 2 col
+          Multi-month grid — mobile 1 col / tablet 2 col / desktop (lg+) 3 col
           ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         {visibleMonths.map((viewMonth, monthIdx) => {
           const cells = buildMonthGrid(viewMonth);
           return (
             <div
               key={`${viewMonth.getFullYear()}-${viewMonth.getMonth()}`}
-              className="rounded-2xl border border-[var(--color-stone-100)] bg-white px-3 py-3.5 md:px-4 md:py-4 shadow-[0_6px_18px_-14px_rgba(11,31,58,0.15)]"
+              className={
+                (monthIdx === 2 ? "hidden lg:block " : "") +
+                "rounded-2xl border border-[var(--color-stone-100)] bg-white px-3 py-3.5 md:px-4 md:py-4 shadow-[0_6px_18px_-14px_rgba(11,31,58,0.15)]"
+              }
             >
               <div className="px-1 mb-1.5">
                 <span className="font-display text-[12px] font-semibold text-[var(--color-stone-800)] tracking-[-0.01em] capitalize">
                   {viewMonth.toLocaleDateString("tr-TR", { month: "long" })}
-                  {(monthIdx === visibleMonths.length - 1 ||
-                    monthIdx === 0) && (
-                    <span className="text-[var(--color-stone-400)] font-normal ml-1">
-                      {viewMonth.getFullYear()}
-                    </span>
-                  )}
+                  <span className="text-[var(--color-stone-400)] font-normal ml-1">
+                    {viewMonth.getFullYear()}
+                  </span>
                 </span>
               </div>
 
