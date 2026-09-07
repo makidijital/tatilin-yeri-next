@@ -228,14 +228,14 @@ export default function TopBar() {
       {/* SOL — İletişim (7/24 Destek + Telefon + E-posta). WhatsApp bu
           bölümden kaldırıldı (SAĞ sosyal medya grubunda aynen kalıyor).
           Mobilde sıkışmayı/taşmayı önlemek için md+ görünür. */}
-      <div className="hidden md:flex items-center gap-4 lg:gap-5 shrink-0 text-[12px]">
+      <div className="hidden md:flex items-center gap-4 lg:gap-5 shrink-0 text-[14px]">
         {/* 7/24 DESTEK — premium, küçük; pulse abartısız (tek küçük nokta). */}
         <div className="flex items-center gap-1.5 text-white/85">
           <span className="relative flex h-1.5 w-1.5">
             <span className="absolute inline-flex h-full w-full rounded-full bg-[#ED7926] opacity-70 animate-ping motion-reduce:animate-none" />
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#ED7926]" />
           </span>
-          <span className="font-medium tracking-[0.14em] uppercase text-[10px] whitespace-nowrap">
+          <span className="font-medium tracking-[0.14em] uppercase text-[11.5px] whitespace-nowrap">
             7/24 Destek
           </span>
         </div>
@@ -380,7 +380,7 @@ export default function TopBar() {
               bg-white/10 hover:bg-white/[0.16]
               ring-1 ring-inset ring-white/10 hover:ring-white/25
               text-white/90 hover:text-white
-              text-[12px] font-medium cursor-pointer
+              text-[14px] font-medium cursor-pointer
               transition-colors
               focus:outline-none focus-visible:ring-2
               focus-visible:ring-[#0973BA]/60
@@ -415,7 +415,7 @@ export default function TopBar() {
                       setCurOpen(false);
                     }}
                     className={
-                      "w-full flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-left transition-colors " +
+                      "w-full flex items-center gap-2 px-3 py-1.5 text-[14px] font-medium text-left transition-colors " +
                       (c.code === currency
                         ? "bg-gradient-to-r from-[#ED7926]/10 to-[#0973BA]/10 text-[var(--color-stone-900)]"
                         : "text-[var(--color-stone-700)] hover:bg-[var(--color-stone-50)]")

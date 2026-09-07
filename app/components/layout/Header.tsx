@@ -203,7 +203,7 @@ export default function Header({
             <nav
               className="
                 hidden md:flex gap-8 lg:gap-10
-                text-[13px] font-medium tracking-[0.01em]
+                text-[15px] font-medium tracking-[0.01em]
                 text-[var(--color-stone-700)]
               "
             >
@@ -250,7 +250,7 @@ export default function Header({
                             <Link
                               key={child.id}
                               href={child.href}
-                              className="block px-5 py-3 text-[13.5px] text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)] transition"
+                              className="block px-5 py-3 text-[16px] text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)] transition"
                             >
                               {child.name}
                             </Link>
@@ -454,7 +454,7 @@ export default function Header({
                             <Link
                               key={child.id}
                               href={child.href}
-                              className="block text-sm text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] transition"
+                              className="block text-[16.5px] text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] transition"
                             >
                               {child.name}
                             </Link>
