@@ -6,12 +6,15 @@ import type { LucideIcon } from "lucide-react";
    kartları bölümü.
    ===============================================================
    AMAÇ:
-     Hero'nun sinematik koyu alt tonundan başlayıp sayfanın açık
-     zeminine yumuşakça geçen bir "köprü" section'ı. Hero'nun
-     kendisine (arama paneli, tarih/guest seçimi, CTA'lar, veri akışı,
-     state/handler) SIFIR dokunuş — bu component tamamen ayrı, saf
-     presentational bir bölüm. Homepage'de <Hero /> ile
-     <DiscountCollection /> arasına eklenir (bkz. app/(public)/page.tsx).
+     Hero'nun HEMEN altında, saf presentational bir bölüm. Dış
+     section/wrapper'ın KENDİ arka plan rengi YOK (transparent) —
+     Hero'nun arkasındaki mevcut sayfa arka planı buradan aynen
+     görünür. Yalnızca kartların KENDİ koyu-glass yüzeyi, glow ve
+     shimmer efektleri renkli/dolu görünür; geniş bir dolu panel
+     hissi kasıtlı olarak YOK. Hero'nun kendisine (arama paneli,
+     tarih/guest seçimi, CTA'lar, veri akışı, state/handler) SIFIR
+     dokunuş. Homepage'de <Hero /> ile <DiscountCollection /> arasına
+     eklenir (bkz. app/(public)/page.tsx).
 
    İÇERİK:
      3 kart, sabit — başlık/açıklama metinleri kullanıcı tarafından
@@ -25,10 +28,12 @@ import type { LucideIcon } from "lucide-react";
      küçük bir karakter farkı taşır — kartlar birbirinin aynısı değil.
 
    GÖRSEL/ANİMASYON:
-     - Kart yüzeyi: koyu glass (Hero'nun koyu tonuyla süreklilik +
-       metin okunabilirliği HER ZAMAN garanti — section'ın kendi
-       arka plan gradyanından bağımsız, kartın kendi arka planı
-       yeterince koyu).
+     - Kart yüzeyi: koyu glass — dış wrapper transparent olduğu için
+       metin okunabilirliği kartın KENDİ koyu arka planından gelir
+       (sayfanın altındaki arka plandan bağımsız, her koşulda okunur).
+     - Kart içeriği (ikon/başlık/açıklama) yatay VE dikey olarak
+       ortalanmış (`flex flex-col items-center text-center`); üç
+       kartta da aynı spacing/hizalama şablonu kullanılır.
      - Yavaş ambient glow nabzı + çok ince diagonal shimmer geçişi
        (bu dosyaya scoped <style>, globals.css'e DOKUNULMADI).
        `prefers-reduced-motion: reduce` → sürekli animasyonlar
@@ -120,7 +125,7 @@ export default function HeroAdvantageCards() {
   return (
     <section
       aria-label="Neden bizi tercih etmelisiniz"
-      className="relative bg-gradient-to-b from-[var(--color-stone-900)] to-white pt-10 pb-14 md:pt-14 md:pb-20"
+      className="relative pt-10 pb-14 md:pt-14 md:pb-20"
     >
       {/* 🛡️ Component-scoped animasyonlar — globals.css'e DOKUNULMADI.
          Yalnız bu section render olduğunda basılır. Sürekli
@@ -163,6 +168,7 @@ export default function HeroAdvantageCards() {
                   key={item.key}
                   className={
                     "hac-card group relative overflow-hidden rounded-3xl " +
+                    "flex flex-col items-center text-center " +
                     "border border-white/10 " +
                     tone.border +
                     " bg-[var(--color-stone-900)]/85 backdrop-blur-xl " +
