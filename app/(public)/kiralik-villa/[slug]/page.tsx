@@ -480,15 +480,49 @@ export default async function VillaDetail({
               <div className="space-y-10">
               {/* Yakındaki Noktalar (Mesafeler) — harita artık bu sekmede değil, sağ kolonda (rezervasyon formu altında). */}
               <section>
-                <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em] mb-4">
-                  Yakındaki Noktalar
-                </h2>
+                {/* 🛡️ Header — küçük turuncu→mavi mikro accent + uppercase
+                    label + başlık + kısa açıklama. Sadece sunum; mesafe
+                    verisi/hesaplama/sıralama mantığına dokunulmadı. */}
+                <div className="max-w-xl">
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <span
+                      aria-hidden="true"
+                      className="h-px w-9 bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+                    />
+                    <span className="text-[11px] font-semibold tracking-[0.16em] text-[var(--color-stone-400)]">
+                      ÇEVREYİ KEŞFEDİN
+                    </span>
+                  </div>
+                  <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
+                    Yakındaki Noktalar
+                  </h2>
+                  <p className="mt-2.5 text-[14px] md:text-[14.5px] text-[var(--color-stone-500)] leading-relaxed">
+                    Villaya yürüme ve araçla ulaşım mesafesindeki başlıca noktalar.
+                  </p>
+                </div>
+
+                {/* 🛡️ Component-scoped satır fade/stagger animasyonu +
+                    reduced-motion guard — globals.css'e DOKUNULMADI,
+                    yalnız bu bölüm render olduğunda basılır. */}
+                <style>{`
+                  @media (prefers-reduced-motion: no-preference) {
+                    .ynp-row { animation: ynp-fade-in 500ms ease-out both; }
+                  }
+                  @keyframes ynp-fade-in {
+                    from { opacity: 0; transform: translateY(6px); }
+                    to { opacity: 1; transform: translateY(0); }
+                  }
+                `}</style>
+
                 {distances.length === 0 ? (
-                  <p className="text-[var(--color-stone-400)] text-sm italic">
+                  <p className="mt-6 text-[var(--color-stone-400)] text-sm italic">
                     Bilgi yok
                   </p>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-3.5">
+                  <div
+                    role="list"
+                    className="mt-7 md:mt-8 border-t border-[var(--color-stone-100)]"
+                  >
                     {distances.map((d, i) => {
                       const iconKey: DistanceIconKey = getDistanceIconKey(
                         d.title
@@ -496,44 +530,34 @@ export default async function VillaDetail({
                       const IconCmp: LucideIcon = DISTANCE_ICON_MAP[iconKey];
                       return (
                         <div
+                          role="listitem"
                           key={i}
                           className="
-                            group relative overflow-hidden
-                            rounded-2xl
-                            bg-gradient-to-br from-[#0B1F3A] to-[#132A46]
-                            border border-white/10
-                            px-4 py-4 md:px-5 md:py-[18px]
-                            shadow-[0_12px_30px_-18px_rgba(11,31,58,0.5)]
-                            hover:-translate-y-0.5 hover:border-[var(--color-champagne-400)]/55
-                            hover:shadow-[0_18px_38px_-20px_rgba(11,31,58,0.55)]
-                            transition-[transform,box-shadow,border-color] duration-300
-                            motion-reduce:transition-none motion-reduce:hover:translate-y-0
-                            flex items-center gap-3.5
+                            ynp-row group relative flex items-center gap-4 md:gap-5
+                            py-4 md:py-[18px]
+                            border-b border-[var(--color-stone-100)]
+                            transition-transform duration-300 motion-reduce:transition-none
+                            hover:translate-x-1.5 motion-reduce:hover:translate-x-0
                           "
+                          style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}
                         >
-                          {/* Hover glow accent — turquoise, subtle */}
+                          {/* Sol ince gradient accent çizgisi — hover'da belirir */}
                           <span
-                            aria-hidden
-                            className="pointer-events-none absolute -top-10 -right-8 w-28 h-28 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                            style={{
-                              background:
-                                "radial-gradient(circle, rgba(2, 170, 229,0.25), transparent 70%)",
-                            }}
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-y-2.5 -left-px w-[2.5px] rounded-full bg-gradient-to-b from-[#ED7926] to-[#0973BA] opacity-0 group-hover:opacity-100 transition-opacity duration-300 motion-reduce:transition-none"
                           />
-                          <span className="relative w-9 h-9 shrink-0 rounded-xl bg-white/[0.06] ring-1 ring-inset ring-white/10 text-[var(--color-champagne-300)] flex items-center justify-center">
+                          <span className="relative shrink-0 w-10 h-10 md:w-11 md:h-11 rounded-full bg-gradient-to-br from-[#ED7926]/10 to-[#0973BA]/10 text-[#0973BA] flex items-center justify-center transition-colors duration-300 motion-reduce:transition-none group-hover:from-[#ED7926]/20 group-hover:to-[#0973BA]/20">
                             <IconCmp size={15} strokeWidth={1.75} />
                           </span>
-                          <div className="relative min-w-0 flex-1 flex items-center justify-between gap-3">
-                            <p className="text-[13px] md:text-[13.5px] font-medium text-white/65 truncate tracking-[-0.005em]">
-                              {d.title}
-                            </p>
-                            <p
-                              className="font-display text-[15px] md:text-[16px] text-white shrink-0 tracking-[-0.01em]"
-                              style={{ fontVariantNumeric: "tabular-nums" }}
-                            >
-                              {d.distance}
-                            </p>
-                          </div>
+                          <p className="relative min-w-0 flex-1 text-[14px] md:text-[15px] font-medium text-[var(--color-stone-700)] truncate tracking-[-0.005em]">
+                            {d.title}
+                          </p>
+                          <p
+                            className="relative shrink-0 font-display text-[16px] md:text-[18px] text-[var(--color-stone-900)] tracking-[-0.01em]"
+                            style={{ fontVariantNumeric: "tabular-nums" }}
+                          >
+                            {d.distance}
+                          </p>
                         </div>
                       );
                     })}
