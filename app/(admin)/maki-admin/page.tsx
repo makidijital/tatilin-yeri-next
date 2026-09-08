@@ -8,6 +8,7 @@ import { getDailyReservationCounts } from "@/app/services/analytics.service";
 import { getOperationsSnapshot } from "@/app/services/operations.service";
 import ReservationsChart from "@/app/components/admin/dashboard/ReservationsChart";
 import UpcomingOperations from "@/app/components/admin/dashboard/UpcomingOperations";
+import HideableSection from "@/app/components/admin/dashboard/HideableSection";
 
 export default async function AdminHome() {
   /* Dashboard data fetch — yalnız operasyon odaklı sectionlar için
@@ -49,7 +50,9 @@ export default async function AdminHome() {
           </div>
         </div>
         <div className="p-5">
-          <ReservationsChart data={dailyReservations} />
+          <HideableSection label="Günlük rezervasyon grafiği">
+            <ReservationsChart data={dailyReservations} />
+          </HideableSection>
         </div>
       </section>
 
@@ -70,34 +73,36 @@ export default async function AdminHome() {
         </div>
 
         {recent && recent.length > 0 ? (
-          <div>
-            {recent.map((r: any) => (
-              <Link
-                key={r.id}
-                href={`/maki-admin/reservations/${r.id}`}
-                className="admin-row"
-              >
-                <div className="w-9 h-9 rounded-full bg-[var(--admin-bg-soft)] border border-[var(--admin-border)] flex items-center justify-center text-[var(--admin-muted)] font-medium text-[13px] shrink-0">
-                  {(r.name || "?").slice(0, 1).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-medium text-[var(--admin-text)] truncate">
-                    {r.name || "İsimsiz"}
+          <HideableSection label="Son rezervasyonlar listesi">
+            <div>
+              {recent.map((r: any) => (
+                <Link
+                  key={r.id}
+                  href={`/maki-admin/reservations/${r.id}`}
+                  className="admin-row"
+                >
+                  <div className="w-9 h-9 rounded-full bg-[var(--admin-bg-soft)] border border-[var(--admin-border)] flex items-center justify-center text-[var(--admin-muted)] font-medium text-[13px] shrink-0">
+                    {(r.name || "?").slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] font-medium text-[var(--admin-text)] truncate">
+                      {r.name || "İsimsiz"}
+                    </p>
+                    <p className="text-[12px] text-[var(--admin-muted-2)] truncate mt-0.5">
+                      {r.villa?.title || "Villa yok"}
+                    </p>
+                  </div>
+                  <StatusBadge status={r.status} />
+                  <p className="font-display text-[15px] text-[var(--admin-text)] hidden md:block tabular-nums">
+                    ₺
+                    {new Intl.NumberFormat("tr-TR").format(
+                      Number(r.total_price || 0)
+                    )}
                   </p>
-                  <p className="text-[12px] text-[var(--admin-muted-2)] truncate mt-0.5">
-                    {r.villa?.title || "Villa yok"}
-                  </p>
-                </div>
-                <StatusBadge status={r.status} />
-                <p className="font-display text-[15px] text-[var(--admin-text)] hidden md:block tabular-nums">
-                  ₺
-                  {new Intl.NumberFormat("tr-TR").format(
-                    Number(r.total_price || 0)
-                  )}
-                </p>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          </HideableSection>
         ) : (
           <div className="p-12 text-center">
             <p className="text-[var(--admin-muted-2)] italic">
