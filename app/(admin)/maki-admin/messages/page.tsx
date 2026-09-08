@@ -12,14 +12,19 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
+  Trash2,
 } from "lucide-react";
 
 import {
   listMessagesAction as listMessages,
   markAsReadAction as markAsRead,
   archiveMessageAction as archiveMessage,
+  deleteMessageAction as deleteMessage,
 } from "./messages.action";
-import { useNotify } from "@/app/components/admin/notifications/NotificationProvider";
+import {
+  useNotify,
+  useConfirm,
+} from "@/app/components/admin/notifications/NotificationProvider";
 import type { ContactMessageRow } from "@/types/database";
 import { formatDateTimeTr } from "@/lib/date-format";
 
@@ -39,6 +44,7 @@ type Filter = "active" | "archived";
 
 export default function MessagesPage() {
   const toast = useNotify();
+  const confirm = useConfirm();
 
   const [messages, setMessages] = useState<ContactMessageRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,6 +133,25 @@ export default function MessagesPage() {
       archived ? "Arşivlendi" : "Aktife alındı",
       { id: `msg-archive-${m.id}` }
     );
+    await load();
+  }
+
+  async function handleDelete(m: ContactMessageRow) {
+    const ok = await confirm({
+      title: "Mesaj silinsin mi?",
+      description:
+        "Bu mesaj kalıcı olarak kaldırılır. Bu işlem geri alınamaz.",
+      confirmLabel: "Sil",
+      variant: "danger",
+    });
+    if (!ok) return;
+
+    const deleted = await deleteMessage(m.id);
+    if (!deleted) {
+      toast.error("Silinemedi", { id: `msg-delete-${m.id}` });
+      return;
+    }
+    toast.success("Mesaj silindi", { id: `msg-delete-${m.id}` });
     await load();
   }
 
@@ -306,6 +331,12 @@ export default function MessagesPage() {
                         <Archive size={12} /> Arşivle
                       </button>
                     )}
+                    <button
+                      onClick={() => handleDelete(selected)}
+                      className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-red-600 px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-50 transition"
+                    >
+                      <Trash2 size={12} /> Sil
+                    </button>
                   </div>
                 </div>
 

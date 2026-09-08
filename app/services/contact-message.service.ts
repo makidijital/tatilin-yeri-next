@@ -87,3 +87,13 @@ export async function archiveMessage(
   }
   return true;
 }
+
+/* ----- DELETE (kalıcı silme) ----- */
+export async function deleteMessage(id: string): Promise<boolean> {
+  const { error } = await contactMessageRepository.deleteById(id);
+  if (error) {
+    console.error("❌ deleteMessage error:", error.message);
+    return false;
+  }
+  return true;
+}

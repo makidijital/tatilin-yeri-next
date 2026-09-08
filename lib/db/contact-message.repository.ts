@@ -44,4 +44,10 @@ export const contactMessageRepository = {
   async updateById(id: string, payload: Record<string, unknown>) {
     return await db.from("contact_messages").update(payload).eq("id", id);
   },
+
+  /** Kalıcı silme — RLS "contact_messages_authenticated_delete" policy'si
+   *  (migration 015) zaten mevcut; şema değişmiyor. */
+  async deleteById(id: string) {
+    return await db.from("contact_messages").delete().eq("id", id);
+  },
 };

@@ -5,6 +5,7 @@ import {
   listMessages as listMessagesService,
   markAsRead as markAsReadService,
   archiveMessage as archiveMessageService,
+  deleteMessage as deleteMessageService,
 } from "@/app/services/contact-message.service";
 
 /* ===============================================================
@@ -37,4 +38,8 @@ export async function archiveMessageAction(
   archived: boolean
 ): Promise<boolean> {
   return archiveMessageService(id, archived);
+}
+
+export async function deleteMessageAction(id: string): Promise<boolean> {
+  return deleteMessageService(id);
 }
