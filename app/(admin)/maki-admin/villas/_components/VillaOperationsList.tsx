@@ -451,7 +451,7 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
   return (
     <article
       className={
-        "admin-card p-3 md:p-4 flex items-start gap-3 md:gap-4 group " +
+        "admin-card p-3 md:p-4 flex items-start gap-3 md:gap-4 group relative " +
         /* 🛡️ Pasif villa görsel vurgusu — yalnız is_active === false.
            Soft kırmızı arka plan + kırmızı border (admin-card bg/border'ı
            class ile geldiği için `!` ile override). Aktif villalar
@@ -460,6 +460,24 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
         (isInactive ? "!bg-red-50 !border-red-200 " : "")
       }
     >
+      {/* 🛡️ Kart tıklama → PUBLIC villa detay sayfası (mevcut gerçek
+         slug kullanılır; slug üretimi/hardcode YOK). "Stretched
+         link" deseni: bu Link kartın tamamını kaplar (absolute
+         inset-0) ama z-index'i ACTION TOOLBAR'ın (aşağıda
+         `relative z-[2]`) altında kalır — böylece Düzenle / Galeri /
+         Takvim / Temporary URL / ZIP / Detay / Pasifleştir / Kopyala /
+         Sil aksiyonları kendi tıklama davranışını AYNEN korur; yalnız
+         thumbnail/başlık/durum rozeti gibi boş kart alanına tıklamak
+         public sayfaya gider. slug yoksa hiç render edilmez (kırık
+         link oluşmaz). */}
+      {villa.slug ? (
+        <Link
+          href={`/kiralik-villa/${villa.slug}`}
+          aria-label={`${villa.title} — genel (public) villa sayfasını aç`}
+          className="absolute inset-0 z-[1]"
+        />
+      ) : null}
+
       {/* THUMBNAIL */}
       <div
         className="
@@ -520,7 +538,7 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
         </div>
 
         {/* ACTION TOOLBAR — 8 aksiyon AYNEN korundu. */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="relative z-[2] flex items-center gap-1.5 flex-wrap">
           <Link
             href={`/maki-admin/villas/${villa.id}`}
             className="admin-btn-ghost"
