@@ -473,6 +473,8 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
       {villa.slug ? (
         <Link
           href={`/kiralik-villa/${villa.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
           aria-label={`${villa.title} — genel (public) villa sayfasını aç`}
           className="absolute inset-0 z-[1]"
         />
