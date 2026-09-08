@@ -444,6 +444,10 @@ function primeAdminAudioContext(): void {
   }
 }
 
+// 🔊 "Premium Chime" — settings/gelismis demosunda denenip seçilen
+// alternatif. Yalnız bu fonksiyonun İÇİ değişti; çağrıldığı yer,
+// sıklığı (SOUND_LOOP_INTERVAL_MS) ve tüm loop/baseline/aktif bildirim
+// kümesi mantığı AYNEN korunuyor.
 function playAdminNotificationChime(): void {
   try {
     const ctx = getOrCreateAudioCtx();
@@ -452,19 +456,24 @@ function playAdminNotificationChime(): void {
       ctx.resume().catch(() => {});
     }
     const now = ctx.currentTime;
-    const notes: Array<{ freq: number; start: number }> = [
-      { freq: 880, start: 0 },
-      { freq: 1318.5, start: 0.09 },
+    const notes: Array<{
+      freq: number;
+      start: number;
+      duration: number;
+      peakGain: number;
+    }> = [
+      { freq: 880, start: 0, duration: 0.5, peakGain: 0.12 },
+      { freq: 1318.5, start: 0.05, duration: 0.55, peakGain: 0.09 },
     ];
-    notes.forEach(({ freq, start }) => {
+    notes.forEach(({ freq, start, duration, peakGain }) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
       osc.frequency.value = freq;
       const t0 = now + start;
-      const t1 = t0 + 0.2;
+      const t1 = t0 + duration;
       gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(0.16, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(peakGain, t0 + 0.012);
       gain.gain.exponentialRampToValueAtTime(0.0001, t1);
       osc.connect(gain);
       gain.connect(ctx.destination);
