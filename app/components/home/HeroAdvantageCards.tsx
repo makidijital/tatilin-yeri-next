@@ -81,9 +81,9 @@ const ADVANTAGES: Advantage[] = [
   {
     key: "trust",
     icon: ShieldCheck,
-    title: "Tecrübe ve Güven",
+    title: "Güvenli Rezervasyon",
     description:
-      "Tecrübemiz ve güvenilir hizmet anlayışımızla tatilinizi gönül rahatlığıyla planlayın.",
+      "Rezervasyon sürecinizi güvenilir ve şeffaf bir hizmet anlayışıyla kolayca tamamlayın.",
     tone: "duo",
   },
 ];
