@@ -324,9 +324,12 @@ export const reservationServerRepository = {
      READ — ADMIN LIST (service-role) — /api/admin/reservations GET
      ===============================================================
      Admin rezervasyon liste sayfası. 16-field list projeksiyon +
-     `villa:villa_id ( title )` SPACED embed + created_at DESC. Filter/
-     limit YOK. Select string BİREBİR (route'un RESERVATION_LIST_SELECT
-     constant'ından kopyalandı). */
+     `villa:villa_id ( title, villa_images (...) )` embed + created_at
+     DESC. Filter/limit YOK. Select string'in geri kalanı BİREBİR
+     (route'un RESERVATION_LIST_SELECT constant'ından kopyalandı);
+     tek ek — kart thumbnail'i için villa_images (image_url, is_cover,
+     sort_order) nested embed'i (route/API DEĞİŞMEDİ — data olduğu
+     gibi geçer). */
   async findAllForAdminList() {
     return await dbAdmin
       .from("reservations")
@@ -341,7 +344,10 @@ export const reservationServerRepository = {
          payment_preference,
          damage_deposit,
          status, created_at,
-         villa:villa_id ( title )`
+         villa:villa_id (
+           title,
+           villa_images ( image_url, is_cover, sort_order )
+         )`
       )
       .order("created_at", { ascending: false });
   },

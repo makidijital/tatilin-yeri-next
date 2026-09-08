@@ -16,6 +16,7 @@ import {
   Printer,
   Send,
   Link2,
+  ImageOff,
 } from "lucide-react";
 
 import {
@@ -38,10 +39,39 @@ import {
   buildAdminUrlWithToken,
 } from "@/lib/admin-fetch";
 
+import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+
 import {
   useNotify,
   useConfirm,
 } from "@/app/components/admin/notifications/NotificationProvider";
+
+/* 🛡️ Villa kapak görseli — mevcut villa-listesi/page.tsx deseniyle
+   BİREBİR: is_cover önce, sonra sort_order ASC; resolveVillaImageUrl
+   (client-safe — "server-only" DEĞİL) mevcut R2/CDN altyapısını
+   kullanarak image_url'i (full URL veya bucket-relative path) doğru
+   absolute URL'e çevirir. Yeni storage/CDN kodu YOK. */
+function resolveReservationVillaCoverUrl(
+  villa:
+    | {
+        villa_images?: ReadonlyArray<{
+          image_url: string | null;
+          is_cover: boolean | null;
+          sort_order: number | null;
+        }> | null;
+      }
+    | null
+    | undefined
+): string | null {
+  const imgs = Array.isArray(villa?.villa_images) ? villa!.villa_images! : [];
+  if (imgs.length === 0) return null;
+  const sorted = [...imgs].sort((a, b) => {
+    if (a?.is_cover && !b?.is_cover) return -1;
+    if (!a?.is_cover && b?.is_cover) return 1;
+    return (a?.sort_order ?? 0) - (b?.sort_order ?? 0);
+  });
+  return resolveVillaImageUrl(sorted[0]?.image_url) || null;
+}
 
 export default function AdminReservationsPage() {
   const [data, setData] = useState<any[]>([]);
@@ -567,6 +597,10 @@ export default function AdminReservationsPage() {
                     ? "!bg-red-50 hover:!bg-red-100 !border-b-red-200"
                     : "";
 
+            /* 🖼️ Villa kapak thumbnail — yoksa görsel alanı sessizce
+               fallback ikonuna düşer, kart genişliği/hizası değişmez. */
+            const villaCoverUrl = resolveReservationVillaCoverUrl(r.villa);
+
             return (
               <div
                 key={r.id}
@@ -578,6 +612,23 @@ export default function AdminReservationsPage() {
                 {/* AVATAR */}
                 <div className="w-10 h-10 rounded-full bg-[var(--admin-bg-soft)] border border-[var(--admin-border)] flex items-center justify-center text-[var(--admin-muted)] font-medium text-[14px] shrink-0">
                   {(r.name || "?").slice(0, 1).toUpperCase()}
+                </div>
+
+                {/* VILLA KAPAK GÖRSELİ — küçük thumbnail; görsel yoksa
+                    aynı boyutta nötr fallback (kart hizası bozulmaz). */}
+                <div className="hidden sm:flex w-11 h-11 rounded-lg bg-[var(--admin-bg-soft)] border border-[var(--admin-border)] items-center justify-center overflow-hidden shrink-0">
+                  {villaCoverUrl ? (
+                    <img
+                      src={villaCoverUrl}
+                      alt={r.villa?.title || "Villa"}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <ImageOff
+                      size={16}
+                      className="text-[var(--admin-muted-2)]"
+                    />
+                  )}
                 </div>
 
                 {/* GUEST + VILLA + RESERVATION CODE */}
