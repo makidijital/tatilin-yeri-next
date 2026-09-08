@@ -196,13 +196,7 @@ export default function ShortStayFeeNotice({
           role="note"
           className="ssfn-panel-in mt-2.5 rounded-2xl border border-red-100 bg-white p-4 shadow-[0_18px_40px_-24px_rgba(220,38,38,0.28)]"
         >
-          <p className="text-[10.5px] font-medium uppercase tracking-[0.14em] text-red-400">
-            {cleaningLimit} gece altı konaklamalar için
-          </p>
-          <p className="mt-1.5 text-[13px] font-medium text-[var(--color-stone-700)]">
-            Temizlik ücreti
-          </p>
-          <p className="mt-0.5 font-display text-xl font-bold text-red-600 tabular-nums">
+          <p className="font-display text-xl font-bold text-red-600 tabular-nums">
             {formatCurrency(convertedFee, currency)}
           </p>
         </div>

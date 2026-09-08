@@ -281,7 +281,7 @@ export default function PriceList({
                               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0973BA]/10 text-[#0973BA] shrink-0">
                                 <ShieldCheck size={12} strokeWidth={1.9} aria-hidden />
                               </span>
-                              Depozito: {formatCurrency(convertedDeposit, currency)}
+                              Hasar Depozitosu: {formatCurrency(convertedDeposit, currency)}
                             </li>
                           )}
                         </ul>
