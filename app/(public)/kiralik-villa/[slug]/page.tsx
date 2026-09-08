@@ -49,6 +49,7 @@ const DISTANCE_ICON_MAP: Record<DistanceIconKey, LucideIcon> = {
 };
 
 import PriceList from "@/app/components/villa/PriceList";
+import ShortStayFeeNotice from "@/app/components/villa/ShortStayFeeNotice";
 import CollapsibleDescription from "@/app/components/villa/CollapsibleDescription";
 import AccommodationLayout from "@/app/components/villa/AccommodationLayout";
 
@@ -460,6 +461,16 @@ export default async function VillaDetail({
                     deposit={villa.deposit ?? null}
                   />
                 )}
+
+                {/* 🛡️ Kısa süreli konaklama ücreti uyarı kartı — villa-level
+                    alan (cleaning_fee/limit), sezon fiyatlarından bağımsız;
+                    prices boş olsa da (ternary'nin DIŞINDA) gösterilir.
+                    Hardcode YOK — üçü de mevcut `villa` objesinden. */}
+                <ShortStayFeeNotice
+                  cleaningFee={villa.cleaning_fee}
+                  cleaningCurrency={villa.cleaning_currency}
+                  cleaningLimit={villa.cleaning_limit}
+                />
               </section>
             }
             musaitlik={
