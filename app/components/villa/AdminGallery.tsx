@@ -526,7 +526,7 @@ export default function AdminGallery({
       )}
 
       {/* 🔥 GRID — dnd-kit sortable. Grid yoğunluğu + responsive AYNEN:
-         xl:grid-cols-5 / 2xl:grid-cols-6 / md:gap-3 / mobile gap-4. */}
+         xl:grid-cols-5 / 2xl:grid-cols-7 / md:gap-3 / mobile gap-4. */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -546,7 +546,7 @@ export default function AdminGallery({
           items={images.map((i) => i.id)}
           strategy={rectSortingStrategy}
         >
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7 gap-4 md:gap-3">
             {images.map((img, index) => (
               <GalleryCard
                 key={img.id}
