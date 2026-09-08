@@ -49,6 +49,16 @@ import {
 import { NotificationProvider } from "@/app/components/admin/notifications/NotificationProvider";
 import { NotificationBell } from "@/app/components/admin/notifications/NotificationBell";
 
+/* 🛡️ SIDEBAR BADGE COUNTS — 4 menü öğesi (Rezervasyonlar / Teklif
+   Talepleri / Mesajlar / Yorumlar) için MEVCUT server action/route'lar
+   reuse edilir. Yeni repository/servis/DB alanı YOK — aşağıdaki
+   fonksiyonlar ilgili admin sayfalarının ZATEN çağırdığı fonksiyonların
+   birebir aynısı. */
+import { adminFetch } from "@/lib/admin-fetch";
+import { getOfferRequestsAction } from "./offer-requests/offer-requests.action";
+import { listMessagesAction } from "./messages/messages.action";
+import { getVillaReviewsForAdminAction } from "@/app/services/villa-review.action";
+
 type MenuItem = {
   name: string;
   href: string;
@@ -321,6 +331,39 @@ function filterMenuByPermissions(
     .filter((g) => g.items.length > 0);
 }
 
+/* ---------------------------------------------
+   🔥 NavBadge — sidebar menü satırının sağında küçük sayaç rozeti.
+   - count <= 0 → hiç render edilmez (sidebar genişliğini bozmaz).
+   - count > 99 → "99+".
+   - Pulse/ring animasyonu yalnız `prefers-reduced-motion: no-preference`
+     altında çalışır (.admin-nav-badge-ring base opacity:0 — reduced
+     motion'da hareketsiz/gizli kalır, rozet sayısı yine net okunur).
+---------------------------------------------- */
+function NavBadge({ count }: { count: number }) {
+  if (!count || count <= 0) return null;
+  const label = count > 99 ? "99+" : String(count);
+  return (
+    <span className="relative ml-auto shrink-0 inline-flex">
+      <span
+        aria-hidden="true"
+        className="admin-nav-badge-ring absolute inset-0 rounded-full bg-[#ED7926]/60"
+      />
+      <span
+        className="
+          relative inline-flex items-center justify-center
+          min-w-[19px] h-[19px] px-1.5 rounded-full
+          text-[10.5px] font-bold leading-none text-white
+          bg-[#ED7926]
+          ring-1 ring-[#0973BA]/30
+          shadow-[0_0_8px_-1px_rgba(9,115,186,0.55)]
+        "
+      >
+        {label}
+      </span>
+    </span>
+  );
+}
+
 export default function AdminLayout({
   children,
 }: {
@@ -486,6 +529,13 @@ function AdminShell({
   // yapar; public site nav olunca cleanup link'i kaldırır.
   useAdminFavicon();
 
+  /* 🛡️ SIDEBAR BADGE COUNTS — href → gerçek "bekleyen/okunmamış" sayısı.
+     Hiçbir key'i olmayan menü öğeleri için NavBadge zaten render
+     edilmez (count undefined → 0 → null). */
+  const [pendingCounts, setPendingCounts] = useState<Record<string, number>>(
+    {}
+  );
+
   /* ---------------------------------------------
      🔥 CURRENT USER PERMISSIONS (auth-bağlı)
      - admin null iken (initial loading): tümünü göster
@@ -503,6 +553,99 @@ function AdminShell({
     menuGroups,
     currentPermissions
   );
+
+  /* 🛡️ Sayaçlar — 4 kaynak MEVCUT service/action'lardan (bkz. dosya
+     başı import yorumu). Durum tespiti kod içinden BİREBİR:
+       - Rezervasyonlar  → GET /api/admin/reservations (reservations
+         sayfasıyla AYNI route+auth) → status === "pending".
+       - Teklif Talepleri → getOfferRequestsAction() → status === "pending"
+         (OfferRequestList.tsx'teki `counters.pending` ile AYNI).
+       - Mesajlar         → listMessagesAction() → !is_read && !archived_at
+         (messages/page.tsx'teki `unreadCount` formülüyle AYNI).
+       - Yorumlar         → getVillaReviewsForAdminAction() → !is_approved
+         (ReviewAdminList.tsx'teki `pendingCount` formülüyle AYNI).
+     Yalnız admin authenticate olduktan sonra ve yalnız İZİN VERİLEN
+     (visibleGroups'ta görünen) href'ler için çekilir. */
+  useEffect(() => {
+    if (!admin) return;
+    let cancelled = false;
+
+    const perms: string[] | null = admin.sidebar_permissions;
+    const allowedGroups = filterMenuByPermissions(menuGroups, perms);
+    const allowedHrefs = new Set(
+      allowedGroups.flatMap((g) => g.items.map((i) => i.href))
+    );
+
+    (async () => {
+      const [
+        reservationsCount,
+        offerRequestsCount,
+        messagesCount,
+        reviewsCount,
+      ] = await Promise.all([
+        !allowedHrefs.has("/maki-admin/reservations")
+          ? 0
+          : (async () => {
+              try {
+                const res = await adminFetch("/api/admin/reservations");
+                const json = (await res.json().catch(() => ({}))) as {
+                  ok?: boolean;
+                  reservations?: { status?: string }[];
+                };
+                if (!res.ok || !json.ok) return 0;
+                return (json.reservations || []).filter(
+                  (r) => r.status === "pending"
+                ).length;
+              } catch {
+                return 0;
+              }
+            })(),
+        !allowedHrefs.has("/maki-admin/offer-requests")
+          ? 0
+          : (async () => {
+              try {
+                const rows = await getOfferRequestsAction();
+                return rows.filter((r) => r.status === "pending").length;
+              } catch {
+                return 0;
+              }
+            })(),
+        !allowedHrefs.has("/maki-admin/messages")
+          ? 0
+          : (async () => {
+              try {
+                const rows = await listMessagesAction();
+                return rows.filter((m) => !m.is_read && !m.archived_at)
+                  .length;
+              } catch {
+                return 0;
+              }
+            })(),
+        !allowedHrefs.has("/maki-admin/reviews")
+          ? 0
+          : (async () => {
+              try {
+                const rows = await getVillaReviewsForAdminAction();
+                return rows.filter((r) => !r.is_approved).length;
+              } catch {
+                return 0;
+              }
+            })(),
+      ]);
+
+      if (cancelled) return;
+      setPendingCounts({
+        "/maki-admin/reservations": reservationsCount,
+        "/maki-admin/offer-requests": offerRequestsCount,
+        "/maki-admin/messages": messagesCount,
+        "/maki-admin/reviews": reviewsCount,
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [admin]);
 
   const adminInitial = (admin?.full_name || admin?.email || "M")
     .trim()
@@ -584,6 +727,30 @@ function AdminShell({
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-6">
+          {/* 🛡️ NavBadge pulse/ring — .admin-nav-badge-ring default
+             opacity:0 (hareketsiz); animasyon SADECE
+             prefers-reduced-motion: no-preference altında çalışır. */}
+          <style>{`
+            .admin-nav-badge-ring {
+              opacity: 0;
+            }
+            @media (prefers-reduced-motion: no-preference) {
+              .admin-nav-badge-ring {
+                animation: admin-badge-pulse 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+              }
+            }
+            @keyframes admin-badge-pulse {
+              0% {
+                transform: scale(0.85);
+                opacity: 0.55;
+              }
+              70%,
+              100% {
+                transform: scale(1.7);
+                opacity: 0;
+              }
+            }
+          `}</style>
           {visibleGroups.map((group) => (
             <div key={group.label}>
               <p className="admin-sidebar-group-label px-3 mb-2">
@@ -605,6 +772,7 @@ function AdminShell({
                     >
                       <Icon size={15} className="admin-icon shrink-0" />
                       <span className="truncate">{item.name}</span>
+                      <NavBadge count={pendingCounts[item.href] ?? 0} />
                     </Link>
                   );
                 })}
