@@ -9,11 +9,31 @@
    KONTRAT (yalnız UI/metin/sıralama/renk):
      - formatCurrency çağrı semantic'i DEĞİŞMEZ (tüm değerler aynı).
      - Conditional render kuralları DEĞİŞMEZ (result.cleaning > 0; deposit > 0).
-     - Row order (UI): Konaklama Tutarı (N Gece) → Temizlik Ücreti →
-       [ayraç] Toplam Tutar (yeşil) → Ön ödeme (mor) → Girişte ödenecek
-       (turuncu) → [ayraç] Hasar Depozitosu (ayrı blok + açıklama).
+     - Row order (UI): Konaklama Tutarı (N Gece) → Kısa Süreli Konaklama
+       Ücreti → [ayraç] Toplam Tutar (yeşil, vurgulu) → Ön ödeme (mor) /
+       Girişte ödenecek (turuncu) — iki ayrı vurgu kutusu → Hasar
+       Depozitosu (ayrı, soft bilgi kutusu + açıklama).
      - Hasar depozitosu görsel olarak ayrı; toplama EKLENMEZ (hesap aynı).
+     - "Temizlik Ücreti" label'ı "Kısa Süreli Konaklama Ücreti" oldu —
+       yalnız görünen metin; `result.cleaning` DEĞİŞMEDİ.
+
+   🛡️ GÖRSEL REVİZYON (yalnız bu tur — data/state/handler/hesap DEĞİŞMEDİ):
+     - Kart üstünde ince turuncu→mavi (#ED7926 → #0973BA) accent çizgisi
+       — PriceList.tsx / ShortStayFeeNotice.tsx'teki aynı marka imzası.
+     - Toplam Tutar artık yumuşak yeşil zeminli, vurgulu bir satır
+       (aynı yeşil semantik renk — yalnız daha belirgin).
+     - Ön ödeme / Girişte ödenecek iki ayrı, kendi soft zeminli kutuda
+       yan yana (mor / turuncu semantiği AYNEN korunuyor) — "şimdi
+       ödenecek" ile "girişte ödenecek" ilk bakışta net ayrışıyor.
+     - Hasar Depozitosu artık mavi tonlu, soft bordürlü ayrı bir bilgi
+       kutusu + küçük ShieldCheck rozet ikonu (marka mavisi #0973BA).
+       Açıklama METNİ BİREBİR AYNI.
+     - Tüm değişiklik yalnız JSX/Tailwind class'ları; padding'ler
+       mütevazı tutuldu (büyük kart/aşırı boşluk yok), sidebar genişliği
+       ve responsive davranış etkilenmedi (dış container aynı).
    =============================================================== */
+
+import { ShieldCheck } from "lucide-react";
 
 import { formatCurrency } from "@/lib/currency";
 import { useCurrency } from "@/app/context/CurrencyContext";
@@ -38,7 +58,14 @@ export default function BookingSummary({
   const { currency } = useCurrency();
 
   return (
-    <div className="bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-4 space-y-2.5 text-sm">
+    <div className="relative bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-4 space-y-2.5 text-sm">
+      {/* İnce üst accent çizgisi — turuncu → mavi (marka imzası, PriceList
+          ile aynı desen). Salt dekoratif; layout/ölçüye etkisi yok. */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-4 top-0 h-[2.5px] rounded-full bg-gradient-to-r from-[#ED7926] via-[#ED7926]/50 to-[#0973BA]"
+      />
+
       {/* Konaklama Tutarı — gece sayısı dinamik (Gece satırı kaldırıldı) */}
       <Row
         label={`Konaklama Tutarı (${result.nights} Gece)`}
@@ -46,39 +73,56 @@ export default function BookingSummary({
       />
       {result.cleaning > 0 && (
         <Row
-          label="Temizlik Ücreti"
+          label="Kısa Süreli Konaklama Ücreti"
           value={formatCurrency(result.cleaning, currency)}
         />
       )}
 
-      {/* TOPLAM TUTAR — yeşil */}
-      <div className="border-t border-[var(--color-sand-100)] pt-3 flex justify-between font-semibold text-base text-green-700">
-        <span>Toplam Tutar</span>
-        <span className="font-display text-lg">
-          {formatCurrency(result.total, currency)}
-        </span>
+      {/* TOPLAM TUTAR — yeşil, yumuşak zeminle vurgulu */}
+      <div className="border-t border-[var(--color-sand-100)] pt-3">
+        <div className="flex items-center justify-between rounded-xl bg-green-50/70 px-3 py-2.5">
+          <span className="font-semibold text-green-800">Toplam Tutar</span>
+          <span className="font-display text-lg font-bold text-green-700 tabular-nums">
+            {formatCurrency(result.total, currency)}
+          </span>
+        </div>
       </div>
 
-      {/* ÖN ÖDEME — mor */}
-      <div className="flex justify-between text-purple-700 font-semibold">
-        <span>Ön ödeme (%{prepaymentRate})</span>
-        <span>{formatCurrency(prepayment, currency)}</span>
+      {/* ÖN ÖDEME (mor) + GİRİŞTE ÖDENECEK (turuncu) — iki ayrı vurgu
+          kutusu, yan yana: "şimdi" ile "girişte" ilk bakışta ayrışsın. */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-xl border border-purple-100 bg-purple-50/60 px-3 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-purple-500">
+            Ön ödeme (%{prepaymentRate})
+          </p>
+          <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
+            {formatCurrency(prepayment, currency)}
+          </p>
+        </div>
+        <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
+            Girişte ödenecek
+          </p>
+          <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
+            {formatCurrency(result.total - prepayment, currency)}
+          </p>
+        </div>
       </div>
 
-      {/* GİRİŞTE ÖDENECEK — turuncu */}
-      <div className="flex justify-between text-orange-600 text-xs">
-        <span>Girişte ödenecek</span>
-        <span>
-          {formatCurrency(result.total - prepayment, currency)}
-        </span>
-      </div>
-
-      {/* HASAR DEPOZİTOSU — ayrı blok (toplama dahil değil, hesap aynı) */}
+      {/* HASAR DEPOZİTOSU — ayrı, soft mavi tonlu bilgi kutusu (toplama
+          dahil değil, hesap aynı). Açıklama metni BİREBİR AYNI. */}
       {deposit > 0 && (
-        <div className="border-t border-[var(--color-sand-100)] pt-3">
-          <div className="flex justify-between text-[var(--color-stone-900)] font-medium">
-            <span>Hasar Depozitosu</span>
-            <span>{formatCurrency(convertedDeposit, currency)}</span>
+        <div className="rounded-xl border border-[#0973BA]/15 bg-[#0973BA]/[0.04] p-3">
+          <div className="flex items-center justify-between">
+            <span className="inline-flex items-center gap-1.5 font-medium text-[var(--color-stone-900)]">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#0973BA]/10 text-[#0973BA]">
+                <ShieldCheck size={11} strokeWidth={2} aria-hidden />
+              </span>
+              Hasar Depozitosu
+            </span>
+            <span className="font-semibold text-[var(--color-stone-900)] tabular-nums">
+              {formatCurrency(convertedDeposit, currency)}
+            </span>
           </div>
           <p className="mt-1.5 text-xs text-[var(--color-stone-500)] leading-relaxed">
             Girişte hasar depozitosu ek olarak alınır. Villada herhangi bir
@@ -94,7 +138,7 @@ function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between text-[var(--color-stone-600)]">
       <span>{label}</span>
-      <span className="text-[var(--color-stone-900)] font-medium">
+      <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
         {value}
       </span>
     </div>
