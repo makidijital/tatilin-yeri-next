@@ -368,18 +368,37 @@ function NavBadge({ count }: { count: number }) {
    🔊 BİLDİRİM SESİ — mevcut pendingCounts sistemine minimum
    müdahale ile eklenen ses katmanı. DB/API/service tarafına
    dokunulmadı; yalnızca istemci-taraflı "önceki bilinen sayı"
-   karşılaştırması ve kısa bir Web Audio API "ding" sesi.
-   - SOUND_TRACKED_HREFS: sesle takip edilen 4 sayaç.
-   - sharedAudioCtx: sayfa başına tek AudioContext (autoplay
-     kısıtı nedeniyle ilk kullanıcı etkileşiminde oluşturulur/
-     resume edilir — bkz. AdminShell içindeki gesture listener).
-   - playAdminNotificationChime(): kısa, loop olmayan, iki nota
-     sine-wave "ding". Her adım try/catch içinde; hata durumunda
-     sessizce no-op (console'a basmaz, admin panelini etkilemez).
-   - readBadgeSoundBaseline()/writeBadgeSoundBaseline(): href →
-     "en son bilinen sayı" eşlemesini localStorage'da saklar
-     (sayfa YENİLEMELERİ arası karşılaştırma için gerekli — mevcut
-     counts-effect mount başına yalnız bir kez çalışıyor).
+   karşılaştırması ve kısa, TEKRARLI (loop) bir Web Audio API
+   "ding" sesi.
+
+   DAVRANIŞ:
+   - Bir href'in sayısı ÖNCEKİ bilinen sayıdan artarsa o href
+     "activeSoundHrefs" kümesine eklenir ve PAYLAŞILAN TEK bir
+     interval (setInterval) döngüsü başlatılır (zaten çalışıyorsa
+     yeniden başlatılmaz — startAdminNotificationLoop kendi içinde
+     bunu garanti eder).
+   - Birden fazla href aynı anda artsa bile tek döngü yeterlidir;
+     her artış yalnızca kümeye eklenir, ayrı bir loop açılmaz.
+   - Kullanıcı ilgili href'in sayfasını ziyaret ettiğinde
+     (AdminShell'deki "menüyü ziyaret et" effect'i) o href kümeden
+     çıkarılır; küme boşalırsa döngü HEMEN durur.
+   - Küme (activeSoundHrefs) ve interval id BİLEREK localStorage'a
+     YAZILMAZ — yalnız bellekte (module-level) tutulur: "aktif/
+     onaylanmamış bildirim" durumu tek bir sayfa oturumuna aittir.
+     Sayfa tam yenilendiğinde zaten yeni bir oturum başlar; artış
+     tespiti (baseline karşılaştırması) her zaman olduğu gibi
+     localStorage'daki SAYIYA göre yapılır (readBadgeSoundBaseline/
+     writeBadgeSoundBaseline) — bu sayede aynı sayı için sayfa
+     yenilendikçe gereksiz yere yeniden ses BAŞLATILMAZ.
+   - sharedAudioCtx: sayfa başına tek AudioContext (autoplay kısıtı
+     nedeniyle kullanıcı etkileşiminde oluşturulur/resume edilir —
+     bkz. AdminShell içindeki gesture listener). Döngü her tekrarda
+     zaten "suspended" ise resume dener; bu sayede ilk deneme
+     tarayıcı tarafından engellense bile, kullanıcı panelle ilk
+     etkileşime girdiği an context "running" olur ve BİR SONRAKİ
+     döngü tekrarı gerçekten duyulur.
+   - Her adım try/catch içinde; hata durumunda sessizce no-op
+     (console'a basmaz, admin panelini/badge sistemini etkilemez).
 ---------------------------------------------- */
 const SOUND_TRACKED_HREFS: string[] = [
   "/maki-admin/reservations",
@@ -390,7 +409,13 @@ const SOUND_TRACKED_HREFS: string[] = [
 
 const BADGE_SOUND_BASELINE_KEY = "admin-badge-sound-baseline-v1";
 
+// Ses ~2.6 saniyede bir tekrar eder (rahatsız etmeyecek kısalıkta,
+// istenen "2-3 saniyede bir" aralığı içinde).
+const SOUND_LOOP_INTERVAL_MS = 2600;
+
 let sharedAudioCtx: AudioContext | null = null;
+let soundLoopIntervalId: ReturnType<typeof setInterval> | null = null;
+const activeSoundHrefs: Set<string> = new Set();
 
 function getOrCreateAudioCtx(): AudioContext | null {
   try {
@@ -448,6 +473,40 @@ function playAdminNotificationChime(): void {
     });
   } catch {
     /* ses hatası admin panelini/badge sistemini kesinlikle etkilemez */
+  }
+}
+
+function startAdminNotificationLoop(): void {
+  try {
+    if (soundLoopIntervalId !== null) return; // zaten aktif — yeniden oluşturma
+    playAdminNotificationChime();
+    soundLoopIntervalId = setInterval(() => {
+      playAdminNotificationChime();
+    }, SOUND_LOOP_INTERVAL_MS);
+  } catch {
+    /* loop başlatılamazsa sessizce yut — badge sistemi etkilenmez */
+  }
+}
+
+function stopAdminNotificationLoop(): void {
+  try {
+    if (soundLoopIntervalId !== null) {
+      clearInterval(soundLoopIntervalId);
+      soundLoopIntervalId = null;
+    }
+  } catch {
+    /* sessizce yut */
+  }
+}
+
+function markHrefNotificationActive(href: string): void {
+  activeSoundHrefs.add(href);
+  startAdminNotificationLoop();
+}
+
+function clearHrefNotificationActive(href: string): void {
+  if (activeSoundHrefs.delete(href) && activeSoundHrefs.size === 0) {
+    stopAdminNotificationLoop();
   }
 }
 
@@ -646,24 +705,35 @@ function AdminShell({
     {}
   );
 
-  /* 🛡️ Autoplay-safe aktivasyon — kullanıcının SAYFAYLA yaptığı ilk
+  /* 🛡️ Autoplay-safe aktivasyon — kullanıcının SAYFAYLA yaptığı HER
      etkileşimde (pointerdown/keydown) shared AudioContext oluşturulur/
-     resume edilir. Yalnız BİR KEZ çalışır (once:true), sonra kendini
-     kaldırır. Etkileşim hiç olmazsa ses özelliği sessizce pasif kalır
-     (playAdminNotificationChime zaten kendi içinde güvenli). */
+     resume edilmeye çalışılır (idempotent — zaten "running" ise no-op).
+     Öncesinde once:true kullanılıyordu; tek seferlik dinleyici, tarayıcı
+     ilk denemeyi otomatik/gesture-dışı bir anda (sayfa yüklenir
+     yüklenmez) engellediğinde bir daha asla tekrar denenmiyordu. Artık
+     dinleyici component ömrü boyunca kalıcı — kullanıcı panelle her
+     etkileşime girdiğinde context'i "running" yapmaya çalışır; böylece
+     döngü halinde tekrar eden playAdminNotificationChime() bir sonraki
+     tekrarında gerçekten duyulabilir hale gelir. Etkileşim hiç olmazsa
+     ses özelliği sessizce pasif kalır (chime zaten kendi içinde
+     güvenli). Component unmount olduğunda dinleyiciler kaldırılır. */
   useEffect(() => {
     const activate = () => primeAdminAudioContext();
-    window.addEventListener("pointerdown", activate, {
-      once: true,
-      capture: true,
-    });
-    window.addEventListener("keydown", activate, {
-      once: true,
-      capture: true,
-    });
+    window.addEventListener("pointerdown", activate, { capture: true });
+    window.addEventListener("keydown", activate, { capture: true });
     return () => {
       window.removeEventListener("pointerdown", activate, true);
       window.removeEventListener("keydown", activate, true);
+    };
+  }, []);
+
+  /* 🛡️ Component unmount olduğunda (ör. admin section'dan
+     tamamen çıkılması) devam eden bildirim sesi döngüsü kesinlikle
+     durdurulur — arka planda sonsuza dek çalan bir interval
+     bırakılmaz. */
+  useEffect(() => {
+    return () => {
+      stopAdminNotificationLoop();
     };
   }, []);
 
@@ -774,27 +844,26 @@ function AdminShell({
       setPendingCounts(freshCounts);
 
       /* 🔊 Artış tespiti — yalnız ÖNCEKİ bilinen (localStorage'da
-         saklı) sayıdan BÜYÜKSE ses çal. İlk yüklemede stored[href]
-         tanımsız olduğu için `> stored` koşulu hiçbir zaman true
-         olmaz → ilk açılışta ses ÇALMAZ. Azalışta da (newCount <
-         stored) koşul false → ses YOK. Birden fazla sayı aynı anda
-         artsa bile `shouldPlayChime` tek bir boolean, chime tek
-         çağrıyla (aşağıda) tek sefer çalınır. */
+         saklı) sayıdan BÜYÜKSE o href için bildirim sesi AKTİF hale
+         gelir (markHrefNotificationActive → activeSoundHrefs kümesine
+         ekler + paylaşılan tek loop'u başlatır/sürdürür). İlk
+         yüklemede stored[href] tanımsız olduğu için `> stored` koşulu
+         hiçbir zaman true olmaz → ilk açılışta ses BAŞLAMAZ. Azalışta
+         da (newCount < stored) koşul false → ses tetiklenmez. Birden
+         fazla href aynı anda artsa bile startAdminNotificationLoop
+         kendi içinde "zaten çalışıyorsa yeniden başlatma" garantisi
+         verir → tek bir sürekli döngü yeterlidir. */
       const storedBaseline = readBadgeSoundBaseline();
-      let shouldPlayChime = false;
       const nextBaseline: Record<string, number> = { ...storedBaseline };
       for (const href of SOUND_TRACKED_HREFS) {
         const newCount = freshCounts[href] ?? 0;
         const prevCount = storedBaseline[href];
         if (typeof prevCount === "number" && newCount > prevCount) {
-          shouldPlayChime = true;
+          markHrefNotificationActive(href);
         }
         nextBaseline[href] = newCount;
       }
       writeBadgeSoundBaseline(nextBaseline);
-      if (shouldPlayChime) {
-        playAdminNotificationChime();
-      }
     })();
 
     return () => {
@@ -808,6 +877,11 @@ function AdminShell({
     .toUpperCase() || "M";
 
   const handleLogout = async (): Promise<void> => {
+    // 🔊 Çıkış yapılırken devam eden bildirim sesi döngüsü ve
+    // "onaylanmamış bildirim" durumu temizlenir (bir sonraki admin
+    // oturumuna sızmasın diye).
+    stopAdminNotificationLoop();
+    activeSoundHrefs.clear();
     await signOut();
   };
 
@@ -847,13 +921,20 @@ function AdminShell({
   const currentEyebrow = currentGroup?.label || "Admin";
 
   /* 🔊 "Menüyü ziyaret ettiğinde bildirim temizlenir" — kullanıcı
-     ilgili admin sayfasını (activeHref) açtığında, o href için
-     bilinen son sayı zaten pendingCounts'ta güncelidir; bu sayıyı
-     ses baseline'ına da yazarak "okundu" kabul ederiz. Böylece aynı
-     sayı için tekrar sayfaya dönüldüğünde ses çalmaz; yalnız bu
-     sayıdan SONRA gelen yeni bir artış tekrar ses tetikler. */
+     ilgili admin sayfasını (activeHref) açtığında:
+       1) O href HEMEN activeSoundHrefs kümesinden çıkarılır
+          (clearHrefNotificationActive) — küme boşalırsa devam eden
+          ses döngüsü ANINDA durur.
+       2) Bilinen son sayı (pendingCounts'taki güncel değer) ses
+          baseline'ına da yazılır — böylece aynı sayı için tekrar bu
+          sayfaya dönüldüğünde/sayfa yenilendiğinde ses tekrar
+          BAŞLATILMAZ; yalnız bu sayıdan SONRA gelen yeni bir artış
+          tekrar tetikler.
+     clearHrefNotificationActive her zaman güvenle çağrılabilir
+     (href hiç aktif değilse no-op). */
   useEffect(() => {
     if (!SOUND_TRACKED_HREFS.includes(activeHref)) return;
+    clearHrefNotificationActive(activeHref);
     const currentCount = pendingCounts[activeHref];
     if (typeof currentCount !== "number") return;
     const stored = readBadgeSoundBaseline();
