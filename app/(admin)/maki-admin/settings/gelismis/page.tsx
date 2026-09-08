@@ -11,6 +11,10 @@ import {
   ToggleField,
   SaveButton,
 } from "../_components/SettingsField";
+// 🛡️ GEÇİCİ — bildirim sesi alternatiflerini dinleme demosu.
+// Karar verildikten sonra bu import + <NotificationSoundDemo />
+// satırı kaldırılabilir; başka hiçbir şeye bağımlı değildir.
+import NotificationSoundDemo from "../_components/NotificationSoundDemo";
 
 export default function SettingsAdvancedPage() {
   const toast = useNotify();
@@ -73,6 +77,10 @@ export default function SettingsAdvancedPage() {
           Yanlış konfigürasyon site renderını bozabilir.
         </p>
       </div>
+
+      {/* 🛡️ GEÇİCİ DEMO — form dışında, ayarlar kaydetme akışından
+          tamamen izole. Bkz. NotificationSoundDemo.tsx dosya başı yorumu. */}
+      <NotificationSoundDemo />
 
       <form onSubmit={handleSubmit} className="space-y-6" aria-busy={loading}>
         <SettingsSection
