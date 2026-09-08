@@ -364,6 +364,116 @@ function NavBadge({ count }: { count: number }) {
   );
 }
 
+/* ---------------------------------------------
+   🔊 BİLDİRİM SESİ — mevcut pendingCounts sistemine minimum
+   müdahale ile eklenen ses katmanı. DB/API/service tarafına
+   dokunulmadı; yalnızca istemci-taraflı "önceki bilinen sayı"
+   karşılaştırması ve kısa bir Web Audio API "ding" sesi.
+   - SOUND_TRACKED_HREFS: sesle takip edilen 4 sayaç.
+   - sharedAudioCtx: sayfa başına tek AudioContext (autoplay
+     kısıtı nedeniyle ilk kullanıcı etkileşiminde oluşturulur/
+     resume edilir — bkz. AdminShell içindeki gesture listener).
+   - playAdminNotificationChime(): kısa, loop olmayan, iki nota
+     sine-wave "ding". Her adım try/catch içinde; hata durumunda
+     sessizce no-op (console'a basmaz, admin panelini etkilemez).
+   - readBadgeSoundBaseline()/writeBadgeSoundBaseline(): href →
+     "en son bilinen sayı" eşlemesini localStorage'da saklar
+     (sayfa YENİLEMELERİ arası karşılaştırma için gerekli — mevcut
+     counts-effect mount başına yalnız bir kez çalışıyor).
+---------------------------------------------- */
+const SOUND_TRACKED_HREFS: string[] = [
+  "/maki-admin/reservations",
+  "/maki-admin/offer-requests",
+  "/maki-admin/messages",
+  "/maki-admin/reviews",
+];
+
+const BADGE_SOUND_BASELINE_KEY = "admin-badge-sound-baseline-v1";
+
+let sharedAudioCtx: AudioContext | null = null;
+
+function getOrCreateAudioCtx(): AudioContext | null {
+  try {
+    if (sharedAudioCtx) return sharedAudioCtx;
+    if (typeof window === "undefined") return null;
+    const w = window as typeof window & {
+      webkitAudioContext?: typeof AudioContext;
+    };
+    const Ctor = w.AudioContext || w.webkitAudioContext;
+    if (!Ctor) return null;
+    sharedAudioCtx = new Ctor();
+    return sharedAudioCtx;
+  } catch {
+    return null;
+  }
+}
+
+function primeAdminAudioContext(): void {
+  try {
+    const ctx = getOrCreateAudioCtx();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+  } catch {
+    /* sessizce yut — autoplay kısıtı/etkileşim olmaması normal */
+  }
+}
+
+function playAdminNotificationChime(): void {
+  try {
+    const ctx = getOrCreateAudioCtx();
+    if (!ctx) return;
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+    const now = ctx.currentTime;
+    const notes: Array<{ freq: number; start: number }> = [
+      { freq: 880, start: 0 },
+      { freq: 1318.5, start: 0.09 },
+    ];
+    notes.forEach(({ freq, start }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const t0 = now + start;
+      const t1 = t0 + 0.2;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.16, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t1);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t1 + 0.02);
+    });
+  } catch {
+    /* ses hatası admin panelini/badge sistemini kesinlikle etkilemez */
+  }
+}
+
+function readBadgeSoundBaseline(): Record<string, number> {
+  try {
+    const raw = window.localStorage.getItem(BADGE_SOUND_BASELINE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeBadgeSoundBaseline(next: Record<string, number>): void {
+  try {
+    window.localStorage.setItem(
+      BADGE_SOUND_BASELINE_KEY,
+      JSON.stringify(next)
+    );
+  } catch {
+    /* localStorage yoksa/doluysa sessizce yut — ses özelliği devre
+       dışı kalır, badge sistemi etkilenmez */
+  }
+}
+
 export default function AdminLayout({
   children,
 }: {
@@ -536,6 +646,27 @@ function AdminShell({
     {}
   );
 
+  /* 🛡️ Autoplay-safe aktivasyon — kullanıcının SAYFAYLA yaptığı ilk
+     etkileşimde (pointerdown/keydown) shared AudioContext oluşturulur/
+     resume edilir. Yalnız BİR KEZ çalışır (once:true), sonra kendini
+     kaldırır. Etkileşim hiç olmazsa ses özelliği sessizce pasif kalır
+     (playAdminNotificationChime zaten kendi içinde güvenli). */
+  useEffect(() => {
+    const activate = () => primeAdminAudioContext();
+    window.addEventListener("pointerdown", activate, {
+      once: true,
+      capture: true,
+    });
+    window.addEventListener("keydown", activate, {
+      once: true,
+      capture: true,
+    });
+    return () => {
+      window.removeEventListener("pointerdown", activate, true);
+      window.removeEventListener("keydown", activate, true);
+    };
+  }, []);
+
   /* ---------------------------------------------
      🔥 CURRENT USER PERMISSIONS (auth-bağlı)
      - admin null iken (initial loading): tümünü göster
@@ -634,12 +765,36 @@ function AdminShell({
       ]);
 
       if (cancelled) return;
-      setPendingCounts({
+      const freshCounts: Record<string, number> = {
         "/maki-admin/reservations": reservationsCount,
         "/maki-admin/offer-requests": offerRequestsCount,
         "/maki-admin/messages": messagesCount,
         "/maki-admin/reviews": reviewsCount,
-      });
+      };
+      setPendingCounts(freshCounts);
+
+      /* 🔊 Artış tespiti — yalnız ÖNCEKİ bilinen (localStorage'da
+         saklı) sayıdan BÜYÜKSE ses çal. İlk yüklemede stored[href]
+         tanımsız olduğu için `> stored` koşulu hiçbir zaman true
+         olmaz → ilk açılışta ses ÇALMAZ. Azalışta da (newCount <
+         stored) koşul false → ses YOK. Birden fazla sayı aynı anda
+         artsa bile `shouldPlayChime` tek bir boolean, chime tek
+         çağrıyla (aşağıda) tek sefer çalınır. */
+      const storedBaseline = readBadgeSoundBaseline();
+      let shouldPlayChime = false;
+      const nextBaseline: Record<string, number> = { ...storedBaseline };
+      for (const href of SOUND_TRACKED_HREFS) {
+        const newCount = freshCounts[href] ?? 0;
+        const prevCount = storedBaseline[href];
+        if (typeof prevCount === "number" && newCount > prevCount) {
+          shouldPlayChime = true;
+        }
+        nextBaseline[href] = newCount;
+      }
+      writeBadgeSoundBaseline(nextBaseline);
+      if (shouldPlayChime) {
+        playAdminNotificationChime();
+      }
     })();
 
     return () => {
@@ -690,6 +845,21 @@ function AdminShell({
   );
   const currentTitle = currentItem?.name || "Admin";
   const currentEyebrow = currentGroup?.label || "Admin";
+
+  /* 🔊 "Menüyü ziyaret ettiğinde bildirim temizlenir" — kullanıcı
+     ilgili admin sayfasını (activeHref) açtığında, o href için
+     bilinen son sayı zaten pendingCounts'ta güncelidir; bu sayıyı
+     ses baseline'ına da yazarak "okundu" kabul ederiz. Böylece aynı
+     sayı için tekrar sayfaya dönüldüğünde ses çalmaz; yalnız bu
+     sayıdan SONRA gelen yeni bir artış tekrar ses tetikler. */
+  useEffect(() => {
+    if (!SOUND_TRACKED_HREFS.includes(activeHref)) return;
+    const currentCount = pendingCounts[activeHref];
+    if (typeof currentCount !== "number") return;
+    const stored = readBadgeSoundBaseline();
+    if (stored[activeHref] === currentCount) return;
+    writeBadgeSoundBaseline({ ...stored, [activeHref]: currentCount });
+  }, [activeHref, pendingCounts]);
 
   return (
     <div className="admin-shell flex min-h-screen">
