@@ -1,24 +1,34 @@
 /* ===============================================================
    📦 Reservation Detail — MisafirBilgisiCard (presentational wrapper)
    ===============================================================
-   🛡️ UI/yerleşim turu — YENİ dosya. Daha önce PersonalInfoCard.tsx
-   ("Kişisel bilgiler") + LocationCard.tsx ("Konum bilgisi") olarak
-   2 ayrı, yalnızca wizard'ın 1. adımında (currentStep === 1) görünen
-   kart olarak render ediliyordu. Bu component o İKİ kartın alanlarını
-   TEK, her zaman görünür "Misafir Bilgisi" kartında birleştirir.
+   🛡️ UI/yerleşim turu — Bu component ESKİ 3 ayrı karti TEK, yalnızca
+   wizard'ın 1. adımında (currentStep === 1) görünen "Misafir Bilgisi"
+   kartında birleştirir:
+     - PersonalInfoCard.tsx ("Kişisel bilgiler": Ad Soyad/Telefon/
+       E-posta/TC-Pasaport)
+     - LocationCard.tsx ("Konum bilgisi": Şehir/Ülke/Adres)
+     - GuestsCard.tsx ("Misafir bilgisi": Toplam misafir + Diğer
+       misafirler) — önceden ayrı bir 3. sekmede (currentStep === 3)
+       gösteriliyordu; DÜZELTME turunda buraya taşındı, 3. sekme
+       kaldırıldı.
 
    ⚠️ SIFIR LOGIC DEĞİŞİKLİĞİ:
      - Alan listesi (name/phone/email/identity_number/city/country/
-       address) PersonalInfoCard.tsx + LocationCard.tsx'ten BİREBİR
-       aynı şekilde kopyalandı — hiçbir alan eklenmedi/çıkarılmadı.
-     - onChange handler'ları (setData functional update) BİREBİR AYNI.
+       address/guests/guestNames) yukarıdaki 3 karttan BİREBİR aynı
+       şekilde kopyalandı — hiçbir alan eklenmedi/çıkarılmadı.
+     - onChange handler'ları (setData functional update, setGuestNames)
+       BİREBİR AYNI.
      - city/country select'lerin "önce ülke seç" disabled davranışı
-       ve seçenek sırası (city select üstte, country select altta)
-       LocationCard.tsx'teki mevcut JSX sırasıyla AYNI korundu.
-     - getCountryLabel importu LocationCard.tsx'ten AYNI şekilde
-       kullanılıyor.
-     - Veri kaynağı (data/setData, countryOptions/cityOptions —
-       page.tsx'teki mevcut useMemo'lardan gelir) DEĞİŞMEDİ.
+       ve seçenek sırası LocationCard.tsx'teki mevcut JSX sırasıyla
+       AYNI korundu.
+     - guestNames.map + "Misafir {i+2} Ad Soyad" placeholder deseni
+       GuestsCard.tsx ile BİREBİR AYNI.
+     - Veri kaynağı (data/setData, countryOptions/cityOptions,
+       guestNames/setGuestNames — page.tsx'teki mevcut state/
+       useMemo'lardan gelir) DEĞİŞMEDİ.
+
+   Bu component YALNIZCA page.tsx'te {currentStep === 1 && (...)}
+   koşulu içinde render edilmelidir — her sekmede görünmez.
 
    Tasarım: Section wrapper (= "Fiyat bilgisi" kartıyla AYNI beyaz
    card-premium, border/shadow/radius) + 2 sütunlu kompakt grid
@@ -34,17 +44,21 @@ export default function MisafirBilgisiCard({
   setData,
   countryOptions,
   cityOptions,
+  guestNames,
+  setGuestNames,
 }: {
   data: Record<string, any>;
   setData: (updater: (prev: any) => any) => void;
   countryOptions: ReadonlyArray<{ isoCode: string; name: string }>;
   cityOptions: ReadonlyArray<{ isoCode: string; name: string }>;
+  guestNames: string[];
+  setGuestNames: (next: string[]) => void;
 }) {
   return (
     <Section
       eyebrow="Bilgiler"
       title="Misafir Bilgisi"
-      subtitle="İletişim, kimlik ve konum bilgileri"
+      subtitle="İletişim, kimlik, konum ve misafir bilgileri"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* PersonalInfoCard.tsx ile BİREBİR AYNI alanlar/handler. */}
@@ -124,6 +138,52 @@ export default function MisafirBilgisiCard({
           />
         </div>
       </div>
+
+      {/* GuestsCard.tsx ile BİREBİR AYNI: toplam misafir sayısı.
+          setData functional update DEĞİŞMEDİ. */}
+      <div className="space-y-1.5 mt-4">
+        <Label>Toplam misafir</Label>
+        <input
+          type="number"
+          value={data.guests || 1}
+          onChange={(e) =>
+            /* 🛡️ FUNCTIONAL UPDATE (Faz 3A): guests recompute
+               guestNames sync useEffect'iyle eşzamanlı; race
+               sırasında prev üzerinden update edildiğinde
+               guests sayısı kaybolmaz. */
+            setData((prev) => ({
+              ...prev,
+              guests: Math.max(Number(e.target.value) || 0, 0),
+            }))
+          }
+          className="input"
+          min={1}
+        />
+      </div>
+
+      {/* GuestsCard.tsx ile BİREBİR AYNI: ek misafir isimleri. */}
+      {guestNames.length > 0 && (
+        <div className="space-y-2 mt-4">
+          <p className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)]">
+            Diğer misafirler
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {guestNames.map((g: string, i: number) => (
+              <input
+                key={i}
+                value={g}
+                placeholder={`Misafir ${i + 2} Ad Soyad`}
+                onChange={(e) => {
+                  const updated = [...guestNames];
+                  updated[i] = e.target.value;
+                  setGuestNames(updated);
+                }}
+                className="input"
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </Section>
   );
 }

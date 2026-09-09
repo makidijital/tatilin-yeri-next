@@ -58,7 +58,6 @@ import ReservationPageHeader, {
 } from "./_components/ReservationPageHeader";
 import WizardStepBar from "./_components/WizardStepBar";
 import StickyFooterNav from "./_components/StickyFooterNav";
-import GuestsCard from "./_components/GuestsCard";
 import StatusCard from "./_components/StatusCard";
 import PaymentPreferenceCard from "./_components/PaymentPreferenceCard";
 import PaymentRequestCard from "./_components/PaymentRequestCard";
@@ -264,10 +263,9 @@ export default function AdminReservationDetailPage() {
   const STEPS: { id: number; label: string }[] = [
     { id: 1, label: "Kişi Bilgileri" },
     { id: 2, label: "Villa & Tarih" },
-    { id: 3, label: "Misafirler" },
-    { id: 4, label: "Fiyat & Ödeme" },
-    { id: 5, label: "Tahsilat & Ödeme Yönetimi" },
-    { id: 6, label: "Notlar & Durum" },
+    { id: 3, label: "Fiyat & Ödeme" },
+    { id: 4, label: "Tahsilat & Ödeme Yönetimi" },
+    { id: 5, label: "Notlar & Durum" },
   ];
   const TOTAL_STEPS = STEPS.length;
 
@@ -1257,20 +1255,25 @@ export default function AdminReservationDetailPage() {
           reservationCodeDisplay={reservationCodeDisplay}
         />
 
-        {/* 🛡️ UI/yerleşim turu — "Misafir Bilgisi" artık HER ZAMAN
-            görünür (wizard adımına gitmeden), rezervasyon kartının
-            (ReservationMetaCards) hemen altında. Önceden bu alanlar
-            2 ayrı kart (PersonalInfoCard/LocationCard) olarak yalnız
-            currentStep === 1 iken görünüyordu. Alan/veri/handler
-            BİREBİR AYNI — bkz. MisafirBilgisiCard.tsx üst yorumu.
-            currentStep/STEPS/WizardStepBar navigasyon state mantığına
-            DOKUNULMADI (kasıtlı — talep yalnızca UI yerleşimi). */}
-        <MisafirBilgisiCard
-          data={data}
-          setData={setData}
-          countryOptions={countryOptions}
-          cityOptions={cityOptions}
-        />
+        {/* 🛡️ DÜZELTME — "Misafir Bilgisi" YALNIZCA 1. sekmede (Kişi
+            Bilgileri) görünür; önceki turda yanlışlıkla her sekmede
+            görünür (unconditional) hale getirilmişti, currentStep === 1
+            koşulu geri eklendi. Eski 3. sekmenin (GuestsCard: Toplam
+            misafir + Diğer misafirler) alanları da AYNI karta taşındı
+            ve 3. sekme tamamen kaldırıldı — bkz. MisafirBilgisiCard.tsx
+            üst yorumu. data/setData/guestNames/setGuestNames state'i ve
+            handler'ları BİREBİR AYNI; yalnız hangi kartın/sekmenin
+            render ettiği değişti. */}
+        {currentStep === 1 && (
+          <MisafirBilgisiCard
+            data={data}
+            setData={setData}
+            countryOptions={countryOptions}
+            cityOptions={cityOptions}
+            guestNames={guestNames}
+            setGuestNames={setGuestNames}
+          />
+        )}
 
         {/* VILLA SELECT (FAZ 2: VillaSelectCard'a extract)
             handleVillaChange — 65-satır business logic page.tsx'te;
@@ -1310,22 +1313,14 @@ export default function AdminReservationDetailPage() {
           />
         )}
 
-        {/* GUESTS — dynamic guest count + ek misafir input'ları */}
-        {/* GUESTS (FAZ 2: GuestsCard'a extract) */}
-        {currentStep === 3 && (
-          <GuestsCard
-            data={data}
-            setData={setData}
-            guestNames={guestNames}
-            setGuestNames={setGuestNames}
-          />
-        )}
-
         {/* PRICE */}
         {/* PRICE (FAZ 2: PriceCard'a extract)
             handleCustomPriceToggle + handleCustomPriceAmountChange page.tsx'te
-            named function olarak; algoritma byte-identical. */}
-        {currentStep === 4 && (
+            named function olarak; algoritma byte-identical.
+            🛡️ DÜZELTME — eski 3. sekme (Misafirler) kaldırıldığı için
+            adım numarası 4 → 3 (yalnız numaralandırma; STEPS dizisi de
+            aynı şekilde güncellendi). */}
+        {currentStep === 3 && (
           <PriceCard
             data={data}
             setData={setData}
@@ -1341,19 +1336,22 @@ export default function AdminReservationDetailPage() {
             🔥 PAYMENT — paid_amount + payment status
             DB kolonu YOK; status frontend'de derive edilir.
         ==================================================== */}
-        {/* PAYMENT (FAZ 2: PaymentCard'a extract) */}
-        {currentStep === 5 && (
+        {/* PAYMENT (FAZ 2: PaymentCard'a extract)
+            🛡️ DÜZELTME — adım numarası 5 → 4. */}
+        {currentStep === 4 && (
           <PaymentCard data={data} setData={setData} />
         )}
 
-        {/* PAYMENT PREFERENCE (FAZ 2: PaymentPreferenceCard'a extract) */}
-        {currentStep === 4 && (
+        {/* PAYMENT PREFERENCE (FAZ 2: PaymentPreferenceCard'a extract)
+            🛡️ DÜZELTME — adım numarası 4 → 3. */}
+        {currentStep === 3 && (
           <PaymentPreferenceCard data={data} setData={setData} />
         )}
 
         {/* PAYMENT REQUEST (FAZ 2: PaymentRequestCard'a extract)
-            Conditional rendering guard caller'da; component yalnız render alır. */}
-        {currentStep === 5 && isPaymentRequestSupported(data?.payment_method) && (
+            Conditional rendering guard caller'da; component yalnız render alır.
+            🛡️ DÜZELTME — adım numarası 5 → 4. */}
+        {currentStep === 4 && isPaymentRequestSupported(data?.payment_method) && (
           <PaymentRequestCard
             data={data}
             setData={setData}
@@ -1365,13 +1363,15 @@ export default function AdminReservationDetailPage() {
         )}
 
         {/* STATUS */}
-        {/* STATUS (FAZ 2: StatusCard'a extract) */}
-        {currentStep === 6 && (
+        {/* STATUS (FAZ 2: StatusCard'a extract)
+            🛡️ DÜZELTME — adım numarası 6 → 5. */}
+        {currentStep === 5 && (
           <StatusCard data={data} setData={setData} toast={toast} />
         )}
 
-        {/* NOTE (FAZ 2: NoteCard'a extract) */}
-        {currentStep === 6 && (
+        {/* NOTE (FAZ 2: NoteCard'a extract)
+            🛡️ DÜZELTME — adım numarası 6 → 5. */}
+        {currentStep === 5 && (
           <NoteCard data={data} setData={setData} />
         )}
       </div>
