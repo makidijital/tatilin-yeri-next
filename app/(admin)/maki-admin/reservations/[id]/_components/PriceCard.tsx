@@ -269,11 +269,17 @@ export default function PriceCard({
 
               <Row label="Gece" value={`${priceDetail.nights} gece`} />
 
-              {/* KONAKLAMA */}
+              {/* KONAKLAMA
+                  🛡️ HAVUZ ISITMA — admin gösterim adımı. Konaklama =
+                  total - cleaning - poolHeating. pool_heating_total_try
+                  NULL/0 iken (data.pool_heating_total_try || 0) → 0,
+                  mevcut (havuz ısıtma öncesi) davranış AYNEN korunur. */}
               <Row
                 label="Konaklama"
                 value={`₺${Number(
-                  (data.total_price_try || 0) - (data.cleaning_fee_try || 0)
+                  (data.total_price_try || 0) -
+                    (data.cleaning_fee_try || 0) -
+                    (data.pool_heating_total_try || 0)
                 ).toLocaleString("tr-TR", {
                   maximumFractionDigits: 0,
                 })}`}
@@ -296,6 +302,25 @@ export default function PriceCard({
                   }
                 />
               )}
+
+              {/* HAVUZ ISITMA — 🛡️ admin gösterim adımı. reservations
+                  tablosundaki server-authoritative snapshot alanlarından
+                  (pool_heating_selected / pool_heating_total_try) DOĞRUDAN
+                  okunur — priceDetail (live recalc state) KULLANILMAZ,
+                  böylece admin düzenleme/recalculate akışına dokunulmamış
+                  olur. Seçili değilse (veya total 0/NULL ise) satır hiç
+                  render edilmez — Temizlik satırıyla aynı desen. */}
+              {!!data.pool_heating_selected &&
+                Number(data.pool_heating_total_try) > 0 && (
+                  <Row
+                    label="Havuz Isıtma"
+                    value={`₺${Number(
+                      data.pool_heating_total_try || 0
+                    ).toLocaleString("tr-TR", {
+                      maximumFractionDigits: 0,
+                    })}`}
+                  />
+                )}
 
               {/* TOTAL */}
               <div className="border-t border-[var(--color-sand-100)] pt-3 flex justify-between text-[var(--color-stone-900)] font-semibold text-base">
