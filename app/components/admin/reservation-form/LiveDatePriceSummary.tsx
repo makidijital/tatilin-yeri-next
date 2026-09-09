@@ -52,9 +52,15 @@ export default function LiveDatePriceSummary({
 
   return (
     <aside
-      className="rounded-2xl border border-[var(--color-sand-100)] bg-white/70 backdrop-blur-sm shadow-[0_8px_24px_-16px_rgb(27_26_23/0.18)] p-4 lg:p-5 lg:sticky lg:top-4 self-start"
+      className="relative card-premium p-4 lg:p-5 lg:sticky lg:top-4 self-start"
       aria-label="Canlı fiyat özeti"
     >
+      {/* 🛡️ UI turu — BookingSummary.tsx ile AYNI marka imzası: ince
+          turuncu→mavi accent çizgisi. Salt dekoratif. */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-4 top-0 h-[2.5px] rounded-full bg-gradient-to-r from-[#ED7926] via-[#ED7926]/50 to-[#0973BA]"
+      />
       <div className="flex items-center justify-between mb-3">
         <p className="eyebrow !text-[10px] !tracking-[0.16em] text-[var(--color-stone-500)]">
           Anlık özet
@@ -106,9 +112,12 @@ export default function LiveDatePriceSummary({
           value={hasRange ? `₺${fmtTRY(stayTRY)}` : "—"}
           muted
         />
+        {/* 🛡️ Metin standardizasyonu: "Temizlik" → "Kısa Süreli Konaklama
+            Ücreti" — public BookingSummary.tsx/ReservationForm.tsx ile AYNI
+            terminoloji. cleaningTRY değeri DEĞİŞMEDİ. */}
         {cleaningTRY > 0 && (
           <Row
-            label="Temizlik"
+            label="Kısa Süreli Konaklama Ücreti"
             value={`₺${fmtTRY(cleaningTRY)}`}
             muted
           />
@@ -125,27 +134,43 @@ export default function LiveDatePriceSummary({
 
         <div className="border-t border-[var(--color-sand-100)] my-2.5" />
 
-        <Row
-          label="Toplam"
-          value={hasRange ? `₺${fmtTRY(totalTRY)}` : "—"}
-          strong
-        />
-
-        <div className="border-t border-[var(--color-sand-100)] my-2.5" />
-
-        <Row
-          label={payNowLabel}
-          value={hasRange ? `₺${fmtTRY(payNow)}` : "—"}
-          accent
-        />
-        {!isFullPayment && (
-          <Row
-            label="Girişte ödenecek"
-            value={hasRange ? `₺${fmtTRY(remainingOnArrival)}` : "—"}
-            muted
-          />
-        )}
+        {/* TOPLAM TUTAR — BookingSummary.tsx ile AYNI: yeşil, yumuşak
+            zeminli, vurgulu satır (daha belirgin). totalTRY DEĞİŞMEDİ. */}
+        <div className="flex items-center justify-between rounded-xl bg-green-50/70 px-3 py-2.5">
+          <span className="text-[12px] uppercase tracking-[0.08em] font-semibold text-green-800">
+            Toplam Tutar
+          </span>
+          <span className="font-display text-base font-bold text-green-700 tabular-nums">
+            {hasRange ? `₺${fmtTRY(totalTRY)}` : "—"}
+          </span>
+        </div>
       </dl>
+
+      {/* ÖN ÖDEME/ŞİMDİ ÖDENECEK (mor) + GİRİŞTE ÖDENECEK (turuncu) —
+          BookingSummary.tsx ile AYNI iki ayrı vurgu kutusu. isFullPayment
+          dalı BİREBİR AYNI (dal DEĞİŞMEZ) — yalnız görsel olarak
+          BookingSummary'nin kutu tasarımına uyarlandı. payNow/
+          remainingOnArrival DEĞİŞMEDİ. */}
+      <div className={`mt-2.5 grid gap-2 ${isFullPayment ? "grid-cols-1" : "grid-cols-2"}`}>
+        <div className="rounded-xl border border-purple-100 bg-purple-50/60 px-3 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-purple-500">
+            {payNowLabel}
+          </p>
+          <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
+            {hasRange ? `₺${fmtTRY(payNow)}` : "—"}
+          </p>
+        </div>
+        {!isFullPayment && (
+          <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
+              Girişte ödenecek
+            </p>
+            <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
+              {hasRange ? `₺${fmtTRY(remainingOnArrival)}` : "—"}
+            </p>
+          </div>
+        )}
+      </div>
 
       {hasForeignCurrency && hasRange && !isCustomPrice && (
         <p className="mt-4 text-[10.5px] leading-snug text-[var(--color-stone-500)]">

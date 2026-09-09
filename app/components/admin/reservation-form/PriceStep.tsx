@@ -145,39 +145,48 @@ export default function PriceStep({
           </div>
 
           {/* CUSTOM SUMMARY */}
-          <div className="bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-5 space-y-3 text-sm mt-2">
-            <div className="border-t border-[var(--color-sand-100)] pt-3 flex justify-between text-[var(--color-stone-900)] font-semibold text-base">
-              <span>Toplam</span>
-              <span className="font-display text-lg">
-                ₺
-                {Number(data.total_price_try || 0).toLocaleString(
-                  "tr-TR",
-                  { maximumFractionDigits: 0 }
-                )}
-              </span>
+          <div className="relative bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-5 space-y-3 text-sm mt-2">
+            <span
+              aria-hidden="true"
+              className="absolute inset-x-4 top-0 h-[2.5px] rounded-full bg-gradient-to-r from-[#ED7926] via-[#ED7926]/50 to-[#0973BA]"
+            />
+            <div className="border-t border-[var(--color-sand-100)] pt-3">
+              <div className="flex items-center justify-between rounded-xl bg-green-50/70 px-3 py-2.5">
+                <span className="font-semibold text-green-800">Toplam Tutar</span>
+                <span className="font-display text-lg font-bold text-green-700 tabular-nums">
+                  ₺
+                  {Number(data.total_price_try || 0).toLocaleString(
+                    "tr-TR",
+                    { maximumFractionDigits: 0 }
+                  )}
+                </span>
+              </div>
             </div>
 
-            <div className="flex justify-between text-[var(--color-champagne-700)] font-semibold">
-              <span>{payNowLabel}</span>
-              <span>
-                ₺
-                {Number(payment.payNow).toLocaleString("tr-TR", {
-                  maximumFractionDigits: 0,
-                })}
-              </span>
-            </div>
-
-            <div className="flex justify-between text-xs text-[var(--color-stone-500)]">
-              <span>
-                {payment.isFullPayment ? "Kalan" : "Girişte ödenecek"}
-              </span>
-              <span>
-                ₺
-                {Number(payment.remainingOnArrival).toLocaleString(
-                  "tr-TR",
-                  { maximumFractionDigits: 0 }
-                )}
-              </span>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-purple-100 bg-purple-50/60 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-purple-500">
+                  {payNowLabel}
+                </p>
+                <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
+                  ₺
+                  {Number(payment.payNow).toLocaleString("tr-TR", {
+                    maximumFractionDigits: 0,
+                  })}
+                </p>
+              </div>
+              <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
+                  {payment.isFullPayment ? "Kalan" : "Girişte ödenecek"}
+                </p>
+                <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
+                  ₺
+                  {Number(payment.remainingOnArrival).toLocaleString(
+                    "tr-TR",
+                    { maximumFractionDigits: 0 }
+                  )}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -253,7 +262,11 @@ export default function PriceStep({
           </div>
 
           {priceDetail && (
-            <div className="bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-5 space-y-3 text-sm mt-4">
+            <div className="relative bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-5 space-y-3 text-sm mt-4">
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-4 top-0 h-[2.5px] rounded-full bg-gradient-to-r from-[#ED7926] via-[#ED7926]/50 to-[#0973BA]"
+              />
               {/* 🔥 EXTRA INFO — sadece dövizli rezervasyonlarda */}
               {hasForeignCurrency && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
@@ -330,10 +343,13 @@ export default function PriceStep({
                 )}`}
               />
 
-              {/* 🔥 TEMİZLİK — TRY karşılığı */}
+              {/* 🔥 TEMİZLİK — TRY karşılığı.
+                  🛡️ Metin standardizasyonu: "Temizlik" → "Kısa Süreli
+                  Konaklama Ücreti" — public BookingSummary.tsx/
+                  ReservationForm.tsx ile AYNI terminoloji. Değer DEĞİŞMEDİ. */}
               {Number(priceDetail.cleaning) > 0 && (
                 <Row
-                  label="Temizlik"
+                  label="Kısa Süreli Konaklama Ücreti"
                   value={`₺${Number(cleaningTRYDisplay).toLocaleString(
                     "tr-TR",
                     { maximumFractionDigits: 0 }
@@ -354,40 +370,50 @@ export default function PriceStep({
                 />
               )}
 
-              {/* TOTAL */}
-              <div className="border-t border-[var(--color-sand-100)] pt-3 flex justify-between text-[var(--color-stone-900)] font-semibold text-base">
-                <span>Toplam</span>
-                <span className="font-display text-lg">
-                  ₺
-                  {Number(totalTRYDisplay).toLocaleString("tr-TR", {
-                    maximumFractionDigits: 0,
-                  })}
-                </span>
+              {/* TOTAL — BookingSummary.tsx ile AYNI: yeşil, yumuşak
+                  zeminli, vurgulu satır (daha belirgin). totalTRYDisplay
+                  DEĞİŞMEDİ. */}
+              <div className="border-t border-[var(--color-sand-100)] pt-3">
+                <div className="flex items-center justify-between rounded-xl bg-green-50/70 px-3 py-2.5">
+                  <span className="font-semibold text-green-800">Toplam Tutar</span>
+                  <span className="font-display text-lg font-bold text-green-700 tabular-nums">
+                    ₺
+                    {Number(totalTRYDisplay).toLocaleString("tr-TR", {
+                      maximumFractionDigits: 0,
+                    })}
+                  </span>
+                </div>
               </div>
 
-              {/* PAY NOW — payment_preference'a göre dinamik */}
-              <div className="flex justify-between text-[var(--color-champagne-700)] font-semibold">
-                <span>{payNowLabel}</span>
-                <span>
-                  ₺
-                  {Number(payment.payNow).toLocaleString("tr-TR", {
-                    maximumFractionDigits: 0,
-                  })}
-                </span>
-              </div>
-
-              {/* REMAINING ON ARRIVAL — full_payment'ta ₺0 */}
-              <div className="flex justify-between text-xs text-[var(--color-stone-500)]">
-                <span>
-                  {payment.isFullPayment ? "Kalan" : "Girişte ödenecek"}
-                </span>
-                <span>
-                  ₺
-                  {Number(payment.remainingOnArrival).toLocaleString(
-                    "tr-TR",
-                    { maximumFractionDigits: 0 }
-                  )}
-                </span>
+              {/* PAY NOW (mor) + REMAINING ON ARRIVAL (turuncu) —
+                  BookingSummary.tsx ile AYNI iki ayrı vurgu kutusu.
+                  payment_preference dalı BİREBİR AYNI (dal DEĞİŞMEZ) —
+                  yalnız görsel olarak BookingSummary'nin kutu tasarımına
+                  uyarlandı. */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-purple-100 bg-purple-50/60 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-purple-500">
+                    {payNowLabel}
+                  </p>
+                  <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
+                    ₺
+                    {Number(payment.payNow).toLocaleString("tr-TR", {
+                      maximumFractionDigits: 0,
+                    })}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
+                    {payment.isFullPayment ? "Kalan" : "Girişte ödenecek"}
+                  </p>
+                  <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
+                    ₺
+                    {Number(payment.remainingOnArrival).toLocaleString(
+                      "tr-TR",
+                      { maximumFractionDigits: 0 }
+                    )}
+                  </p>
+                </div>
               </div>
             </div>
           )}

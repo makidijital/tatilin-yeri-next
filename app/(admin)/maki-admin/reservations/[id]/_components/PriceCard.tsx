@@ -135,41 +135,52 @@ export default function PriceCard({
           </div>
 
           {/* CUSTOM SUMMARY */}
-          <div className="bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-5 space-y-3 text-sm">
-            <div className="border-t border-[var(--color-sand-100)] pt-3 flex justify-between text-[var(--color-stone-900)] font-semibold text-base">
-              <span>Toplam</span>
-              <span className="font-display text-lg">
-                ₺
-                {Number(data.total_price_try || 0).toLocaleString("tr-TR", {
-                  maximumFractionDigits: 0,
-                })}
-              </span>
+          <div className="relative bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-5 space-y-3 text-sm">
+            <span
+              aria-hidden="true"
+              className="absolute inset-x-4 top-0 h-[2.5px] rounded-full bg-gradient-to-r from-[#ED7926] via-[#ED7926]/50 to-[#0973BA]"
+            />
+            <div className="border-t border-[var(--color-sand-100)] pt-3">
+              <div className="flex items-center justify-between rounded-xl bg-green-50/70 px-3 py-2.5">
+                <span className="font-semibold text-green-800">Toplam Tutar</span>
+                <span className="font-display text-lg font-bold text-green-700 tabular-nums">
+                  ₺
+                  {Number(data.total_price_try || 0).toLocaleString("tr-TR", {
+                    maximumFractionDigits: 0,
+                  })}
+                </span>
+              </div>
             </div>
 
-            {/* PAY NOW — payment_preference dinamik (helper) */}
-            <div className="flex justify-between text-[var(--color-champagne-700)] font-semibold">
-              <span>{paymentDisplayPayNowLabel}</span>
-              <span>
-                ₺
-                {Number(paymentDisplay.payNow).toLocaleString("tr-TR", {
-                  maximumFractionDigits: 0,
-                })}
-              </span>
-            </div>
-
-            {/* KALAN — paid_amount bazlı accounting (DEĞİŞMEDİ) */}
-            <div className="flex justify-between text-xs text-[var(--color-stone-500)]">
-              <span>Kalan (toplam − ödenen)</span>
-              <span>
-                ₺
-                {Math.max(
-                  Number(data.total_price_try || 0) -
-                    Number(data.paid_amount || 0),
-                  0
-                ).toLocaleString("tr-TR", {
-                  maximumFractionDigits: 0,
-                })}
-              </span>
+            {/* PAY NOW (mor) + KALAN (turuncu) — BookingSummary.tsx ile AYNI
+                iki ayrı vurgu kutusu. paid_amount bazlı accounting DEĞİŞMEDİ. */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-purple-100 bg-purple-50/60 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-purple-500">
+                  {paymentDisplayPayNowLabel}
+                </p>
+                <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
+                  ₺
+                  {Number(paymentDisplay.payNow).toLocaleString("tr-TR", {
+                    maximumFractionDigits: 0,
+                  })}
+                </p>
+              </div>
+              <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
+                  Kalan (toplam − ödenen)
+                </p>
+                <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
+                  ₺
+                  {Math.max(
+                    Number(data.total_price_try || 0) -
+                      Number(data.paid_amount || 0),
+                    0
+                  ).toLocaleString("tr-TR", {
+                    maximumFractionDigits: 0,
+                  })}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -197,7 +208,11 @@ export default function PriceCard({
           </div>
 
           {priceDetail && (
-            <div className="bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-5 space-y-3 text-sm mt-4">
+            <div className="relative bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-5 space-y-3 text-sm mt-4">
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-4 top-0 h-[2.5px] rounded-full bg-gradient-to-r from-[#ED7926] via-[#ED7926]/50 to-[#0973BA]"
+              />
               {/* EXTRA INFO */}
               {(data.exchange_rate > 1 ||
                 data.original_currency !== "TRY" ||
@@ -285,10 +300,13 @@ export default function PriceCard({
                 })}`}
               />
 
-              {/* TEMİZLİK */}
+              {/* TEMİZLİK.
+                  🛡️ Metin standardizasyonu: "Temizlik" → "Kısa Süreli
+                  Konaklama Ücreti" — public BookingSummary.tsx/
+                  ReservationForm.tsx ile AYNI terminoloji. Değer DEĞİŞMEDİ. */}
               {priceDetail.cleaning > 0 && (
                 <Row
-                  label="Temizlik"
+                  label="Kısa Süreli Konaklama Ücreti"
                   value={
                     data.original_cleaning_currency !== "TRY"
                       ? `₺${Number(data.cleaning_fee_try || 0).toLocaleString(
@@ -324,42 +342,50 @@ export default function PriceCard({
                   />
                 )}
 
-              {/* TOTAL */}
-              <div className="border-t border-[var(--color-sand-100)] pt-3 flex justify-between text-[var(--color-stone-900)] font-semibold text-base">
-                <span>Toplam</span>
-
-                <span className="font-display text-lg">
-                  ₺
-                  {Number(data.total_price_try || 0).toLocaleString("tr-TR", {
-                    maximumFractionDigits: 0,
-                  })}
-                </span>
+              {/* TOTAL — BookingSummary.tsx ile AYNI: yeşil, yumuşak
+                  zeminli, vurgulu satır (daha belirgin). total_price_try
+                  DEĞİŞMEDİ. */}
+              <div className="border-t border-[var(--color-sand-100)] pt-3">
+                <div className="flex items-center justify-between rounded-xl bg-green-50/70 px-3 py-2.5">
+                  <span className="font-semibold text-green-800">Toplam Tutar</span>
+                  <span className="font-display text-lg font-bold text-green-700 tabular-nums">
+                    ₺
+                    {Number(data.total_price_try || 0).toLocaleString("tr-TR", {
+                      maximumFractionDigits: 0,
+                    })}
+                  </span>
+                </div>
               </div>
 
-              {/* PAY NOW — payment_preference dinamik (helper)
-                  full_payment → toplam, prepayment → ön ödeme */}
-              <div className="flex justify-between text-[var(--color-champagne-700)] font-semibold">
-                <span>{paymentDisplayPayNowLabel}</span>
-                <span>
-                  ₺
-                  {Number(paymentDisplay.payNow).toLocaleString("tr-TR", {
-                    maximumFractionDigits: 0,
-                  })}
-                </span>
-              </div>
-
-              {/* REMAINING ON ARRIVAL — full_payment'ta ₺0 */}
-              <div className="flex justify-between text-xs text-[var(--color-stone-500)]">
-                <span>
-                  {paymentDisplay.isFullPayment ? "Kalan" : "Girişte ödenecek"}
-                </span>
-                <span>
-                  ₺
-                  {Number(paymentDisplay.remainingOnArrival).toLocaleString(
-                    "tr-TR",
-                    { maximumFractionDigits: 0 }
-                  )}
-                </span>
+              {/* PAY NOW (mor) + REMAINING ON ARRIVAL (turuncu) —
+                  BookingSummary.tsx ile AYNI iki ayrı vurgu kutusu.
+                  payment_preference dalı BİREBİR AYNI (dal DEĞİŞMEZ) —
+                  yalnız görsel olarak BookingSummary'nin kutu tasarımına
+                  uyarlandı. */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-purple-100 bg-purple-50/60 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-purple-500">
+                    {paymentDisplayPayNowLabel}
+                  </p>
+                  <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
+                    ₺
+                    {Number(paymentDisplay.payNow).toLocaleString("tr-TR", {
+                      maximumFractionDigits: 0,
+                    })}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
+                    {paymentDisplay.isFullPayment ? "Kalan" : "Girişte ödenecek"}
+                  </p>
+                  <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
+                    ₺
+                    {Number(paymentDisplay.remainingOnArrival).toLocaleString(
+                      "tr-TR",
+                      { maximumFractionDigits: 0 }
+                    )}
+                  </p>
+                </div>
               </div>
             </div>
           )}
