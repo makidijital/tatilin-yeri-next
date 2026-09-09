@@ -42,7 +42,19 @@ export default function PricingStep({
         title="Ekstra ücretler"
         subtitle="Ek maliyetleri belirle"
       >
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* 🛡️ UI turu — Depozito/Temizlik ücreti/Temizlik sınırı/Özel Ön
+            Ödeme/Havuz Isıtma Ücreti artık TEK 5-kolonlu satırda
+            (md:grid-cols-5, önceden 2 ayrı 4-col grid'e bölünmüştü).
+            Alan/state/handler/payload/normalizer/hesaplama mantığı
+            BİREBİR AYNI — yalnız JSX/className değişti. Input+currency
+            alt-grid'lerinde (Temizlik ücreti, Havuz Isıtma Ücreti) sabit
+            kolon genişliği 120px → 88px, gap 2 → 1.5 ve para birimi
+            select'inde küçük font (text-xs) + azaltılmış sol padding
+            (!pl-2) ile 5 kolona sığacak şekilde kompaktlaştırıldı —
+            sağ padding (chevron ikonu için) DEĞİŞMEDİ. Mobilde
+            (< md) grid-cols-1 korunduğu için mevcut tek-sütun davranış
+            AYNEN devam eder. */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <div className="space-y-2">
             <Label>Depozito</Label>
             <input
@@ -59,11 +71,11 @@ export default function PricingStep({
             <Label>Temizlik ücreti</Label>
 
             {showCleaningCurrency ? (
-              <div className="grid grid-cols-[1fr_120px] gap-2">
+              <div className="grid grid-cols-[1fr_88px] gap-1.5">
                 <input
                   type="number"
                   placeholder="Ücret"
-                  className="input"
+                  className="input !px-2"
                   value={form.cleaning_fee || ""}
                   onChange={(e) =>
                     setForm({
@@ -81,7 +93,7 @@ export default function PricingStep({
                       cleaning_currency: e.target.value,
                     })
                   }
-                  className="input"
+                  className="input !pl-2 text-xs"
                 >
                   <option value="TRY">₺ TRY</option>
                   <option value="USD">$ USD</option>
@@ -121,8 +133,9 @@ export default function PricingStep({
           </div>
 
           {/* 🔥 CUSTOM PREPAYMENT RATE — villa-level override.
-              Aynı 3-col grid içinde; diğer alanlarla vertical
-              alignment'ta. Hint metni grid hücresinin altında. */}
+              Artık 5-col grid içinde; diğer alanlarla vertical
+              alignment'ta. Hint metni grid hücresinin altında, taşma
+              yapmadan wrap olur (grid row height otomatik uyum sağlar). */}
           <div className="space-y-2">
             <Label>Özel Ön Ödeme Oranı (%)</Label>
             <input
@@ -143,26 +156,30 @@ export default function PricingStep({
               Boş bırakılırsa genel ayarlardaki oran kullanılır.
             </p>
           </div>
-        </div>
 
-        {/* 🛡️ HAVUZ ISITMA — 3. adım (admin form hazırlığı, hesaplama YOK).
-            Temizlik ücreti ile BİREBİR AYNI pattern: gecelik ücret input +
-            currency dropdown (showCleaningCurrency ile ilişkilendirilmedi;
-            her iki sayfada da (ekle/[id]) showCleaningCurrency default
-            true kullanıldığı için mevcut davranışta zaten her zaman
-            gösteriliyor — burada da koşulsuz gösterilir).
-            NULL veya 0 → villa havuz ısıtma hizmeti SUNMUYOR kabul
-            edilir (migration 074 semantiği). Girilen değer TOPLAM
-            DEĞİL, GECELİK ücrettir — hesaplama (nights × fee) bu
-            adımda YAPILMAZ (price.engine.ts 2. adımda zaten hazır). */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+          {/* 🛡️ HAVUZ ISITMA ÜCRETİ — 3. adım (admin form hazırlığı,
+              hesaplama YOK). Metin standardizasyonu: "Havuz Isıtma" →
+              "Havuz Isıtma Ücreti" (yalnız görünen başlık — form.
+              pool_heating_fee/pool_heating_currency alan adları, state,
+              handler, hesaplama DEĞİŞMEDİ). Artık Depozito/Temizlik/Özel
+              Ön Ödeme ile AYNI 5-kolonlu satırda (önceden ayrı bir 4-col
+              grid'de tek başınaydı). Temizlik ücreti ile BİREBİR AYNI
+              pattern: gecelik ücret input + currency dropdown
+              (showCleaningCurrency ile ilişkilendirilmedi; her iki
+              sayfada da (ekle/[id]) showCleaningCurrency default true
+              kullanıldığı için mevcut davranışta zaten her zaman
+              gösteriliyor — burada da koşulsuz gösterilir).
+              NULL veya 0 → villa havuz ısıtma hizmeti SUNMUYOR kabul
+              edilir (migration 074 semantiği). Girilen değer TOPLAM
+              DEĞİL, GECELİK ücrettir — hesaplama (nights × fee) bu
+              adımda YAPILMAZ (price.engine.ts 2. adımda zaten hazır). */}
           <div className="space-y-2">
-            <Label>Havuz Isıtma</Label>
-            <div className="grid grid-cols-[1fr_120px] gap-2">
+            <Label>Havuz Isıtma Ücreti</Label>
+            <div className="grid grid-cols-[1fr_88px] gap-1.5">
               <input
                 type="number"
                 placeholder="Gecelik ücret"
-                className="input"
+                className="input !px-2"
                 value={form.pool_heating_fee ?? ""}
                 onChange={(e) =>
                   setForm({
@@ -180,7 +197,7 @@ export default function PricingStep({
                     pool_heating_currency: e.target.value,
                   })
                 }
-                className="input"
+                className="input !pl-2 text-xs"
               >
                 <option value="TRY">₺ TRY</option>
                 <option value="USD">$ USD</option>
