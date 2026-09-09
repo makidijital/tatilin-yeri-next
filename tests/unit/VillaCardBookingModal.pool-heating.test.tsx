@@ -152,7 +152,14 @@ describe("VillaCardBookingModal — havuz ısıtma veri zinciri (availability AP
     await openModalAndSelectDates(1000);
 
     expect(await screen.findByText("Havuz Isıtma")).toBeInTheDocument();
-    expect(screen.getByText(/Gece başına/)).toHaveTextContent("₺1.000");
+    /* 🛡️ HAVUZ ISITMA — yerleşim turu. Eski "Gece başına ₺1.000" metni
+       artık "₺1.000 / gece" (SUMMARY içindeki kompakt satır — bkz.
+       BookingSummary.tsx). Yalnız görünen metin/konum değişti; oran
+       değeri/kaynağı AYNEN. Regex villa'nın üst özet bandındaki
+       (ilgisiz) "₺4.000 / gece" başlangıç fiyatıyla ÇAKIŞMASIN diye
+       tutarı da kapsayacak şekilde daraltıldı (yalnız test seçici —
+       component'te değişiklik YOK). */
+    expect(screen.getByText(/₺1\.000\s*\/\s*gece/)).toBeInTheDocument();
   });
 
   it("3) checkbox işaretlenince 5 gece × 1.000 TL = 5.000 TL gösterilir (engine — yeniden hesaplanmadı)", async () => {

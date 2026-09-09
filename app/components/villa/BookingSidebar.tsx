@@ -49,13 +49,11 @@ import BookingCalendar from "@/app/components/villa/booking/BookingCalendar";
 import BookingSummary from "@/app/components/villa/booking/BookingSummary";
 import BookingMinStayWarning from "@/app/components/villa/booking/BookingMinStayWarning";
 
-/* 🛡️ HAVUZ ISITMA — 5. adım (public villa detail UI). Yalnız display
-   amaçlı: "Gece başına {ücret}" villa'nın KENDİ para biriminde
-   (pool_heating_currency) — dönüşüm YOK. Çalışma toplamı satırı
-   (poolHeatingTotal) engine'in zaten display currency'ye çevirdiği
-   değer — burada YENİDEN dönüşüm YAPILMAZ (bkz. useBookingEngine.ts). */
-import { formatCurrency } from "@/lib/currency";
-import { useCurrency } from "@/app/context/CurrencyContext";
+/* 🛡️ HAVUZ ISITMA — yerleşim turu. Satır BookingSummary'nin içine
+   taşındı (bkz. o dosyadaki yorum); bu dosyada artık formatCurrency/
+   useCurrency import'una gerek yok — poolHeatingFee/Currency/Total
+   AYNEN prop olarak BookingSummary'ye geçiliyor, dönüşüm/format
+   YENİDEN BURADA YAPILMAZ. */
 
 /* 🛡️ PURE UI FORMAT HELPER — CHECK-IN/CHECK-OUT pill'lerinde tek bir
    tarihin gösterim biçimi. Eski tek-pill kodundaki
@@ -161,11 +159,6 @@ export default function BookingSidebar({
     poolHeatingTotal,
   } = engine;
 
-  /* 🛡️ HAVUZ ISITMA — 5. adım. Yalnız "Çalışma toplamı" satırının
-     display currency'sini okumak için (poolHeatingTotal zaten bu
-     currency'de — burada YENİ dönüşüm YAPILMAZ, yalnız hangi sembolün
-     kullanılacağını okuyoruz; BookingSummary'nin kullandığı AYNI hook). */
-  const { currency: displayCurrency } = useCurrency();
 
   /* === UI STATE — CONTAINER OWNS === */
   const [openGuests, setOpenGuests] = useState(false);
@@ -349,57 +342,6 @@ export default function BookingSidebar({
       </div>
 
       {/* ═══════════════════════════════════════════════════════
-          🛡️ HAVUZ ISITMA — 5. adım (public villa detail UI).
-          ═══════════════════════════════════════════════════════
-          Görünürlük: pool_heating_fee>0 + startDate&&endDate +
-          selectedNights>0 (NULL/0/tarihsiz → HİÇ render edilmez —
-          migration 074 semantiği). Checkbox deseni FilterSidebar.tsx
-          ile BİREBİR aynı (native input+label → native a11y/keyboard).
-          Yalnız engine değerleri kullanılır: poolHeatingSelected /
-          setPoolHeatingSelected / poolHeatingTotal — YENİ hesaplama,
-          gece sayımı veya currency dönüşümü YAZILMADI. Gece başına
-          oran villa'nın KENDİ para biriminde (pool_heating_currency);
-          çalışma toplamı poolHeatingTotal (engine zaten display
-          currency'ye çevirmiş) AYNEN gösterilir. */}
-      {startDate &&
-        endDate &&
-        selectedNights > 0 &&
-        typeof pool_heating_fee === "number" &&
-        pool_heating_fee > 0 && (
-          <div className="space-y-2">
-            <label className="flex items-center gap-3 rounded-2xl border border-[var(--color-stone-100)] px-4 py-3.5 cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:border-[#0973BA]/40">
-              <input
-                type="checkbox"
-                checked={poolHeatingSelected}
-                onChange={(e) => setPoolHeatingSelected(e.target.checked)}
-                className="!w-4 !h-4 accent-[var(--color-champagne-500)] !rounded"
-              />
-              <span className="flex-1 min-w-0">
-                <span className="block text-[14px] font-medium text-[var(--color-stone-900)]">
-                  Havuz Isıtma
-                </span>
-                <span className="block mt-0.5 text-[12px] text-[var(--color-stone-500)]">
-                  Gece başına{" "}
-                  {formatCurrency(
-                    pool_heating_fee,
-                    pool_heating_currency || "TRY"
-                  )}
-                </span>
-              </span>
-            </label>
-
-            {poolHeatingSelected && (
-              <p className="px-1 text-[12px] text-[var(--color-stone-500)]">
-                {selectedNights} gece ·{" "}
-                <span className="font-semibold text-[var(--color-stone-700)]">
-                  {formatCurrency(poolHeatingTotal, displayCurrency)}
-                </span>
-              </p>
-            )}
-          </div>
-        )}
-
-      {/* ═══════════════════════════════════════════════════════
           🛡️ FAZ 26B — MINIMUM STAY WARNING CARD
           ═══════════════════════════════════════════════════════
           Yalnız: threshold>0 + BOTH dates selected + nights<threshold.
@@ -436,6 +378,15 @@ export default function BookingSidebar({
             prepaymentRate={prepaymentRate}
             convertedDeposit={convertedDeposit}
             deposit={deposit}
+            /* 🛡️ HAVUZ ISITMA — yerleşim turu. Satır artık SUMMARY'nin
+               içinde (Kısa Süreli Konaklama Ücreti altında); değerler
+               AYNEN engine'den (poolHeatingSelected/setPoolHeatingSelected/
+               poolHeatingTotal — YENİ hesaplama YOK, yalnız konum değişti). */
+            poolHeatingFee={pool_heating_fee}
+            poolHeatingCurrency={pool_heating_currency}
+            poolHeatingSelected={poolHeatingSelected}
+            onPoolHeatingChange={setPoolHeatingSelected}
+            poolHeatingTotal={poolHeatingTotal}
           />
         </div>
       )}

@@ -90,13 +90,13 @@ import BookingCalendar from "@/app/components/villa/booking/BookingCalendar";
 import BookingSummary from "@/app/components/villa/booking/BookingSummary";
 import BookingMinStayWarning from "@/app/components/villa/booking/BookingMinStayWarning";
 
-/* 🛡️ HAVUZ ISITMA — BookingSidebar'daki checkbox bloğunun AYNI
-   görsel/format helper'ları (bkz. o dosyadaki gerekçe). apiData.config.
-   pool_heating_fee artık /api/public/villas/[id]/availability route'u
-   (villaAdminRepository.findAvailabilityConfigById) üzerinden GERÇEK
-   villa değerini taşır — checkbox villa'da ücret varsa render edilir. */
-import { formatCurrency } from "@/lib/currency";
-import { useCurrency } from "@/app/context/CurrencyContext";
+/* 🛡️ HAVUZ ISITMA — yerleşim turu. Checkbox artık BookingSummary'nin
+   içinde render ediliyor (bkz. o dosyadaki gerekçe); bu dosyada ayrı
+   format/currency import'una gerek kalmadı — apiData.config.
+   pool_heating_fee/currency ve poolHeatingTotal AYNEN prop olarak
+   BookingSummary'ye geçiliyor. apiData.config.pool_heating_fee hâlâ
+   /api/public/villas/[id]/availability route'u üzerinden GERÇEK villa
+   değerini taşır (veri zinciri değişmedi). */
 
 type Props = {
   /* Modal open/close (parent owned). false ise content render
@@ -431,10 +431,6 @@ function ModalContent({
     poolHeatingTotal,
   } = engine;
 
-  /* Bkz. BookingSidebar — "Çalışma toplamı" satırı için display
-     currency (poolHeatingTotal zaten bu currency'de). */
-  const { currency: displayCurrency } = useCurrency();
-
   /* Calendar always-visible (modal'da popup pattern yok).
      currentMonth — modal local UI state. freshSelection state'i
      UX polish ile kaldırıldı (BookingCalendar onSelect kendi
@@ -599,49 +595,6 @@ function ModalContent({
           )}
         </div>
 
-        {/* 🛡️ HAVUZ ISITMA — BookingSidebar ile AYNI koşul/pattern
-            (bkz. o dosyadaki ayrıntılı gerekçe). apiData.config.
-            pool_heating_fee artık villa'nın gerçek değeri (route
-            fix'i) → villa'da ücret varsa + tarih seçiliyse render
-            edilir. */}
-        {startDate &&
-          endDate &&
-          selectedNights > 0 &&
-          typeof apiData.config.pool_heating_fee === "number" &&
-          apiData.config.pool_heating_fee > 0 && (
-            <div className="space-y-2">
-              <label className="flex items-center gap-3 rounded-2xl border border-[var(--color-stone-100)] px-4 py-3.5 cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:border-[#0973BA]/40">
-                <input
-                  type="checkbox"
-                  checked={poolHeatingSelected}
-                  onChange={(e) => setPoolHeatingSelected(e.target.checked)}
-                  className="!w-4 !h-4 accent-[var(--color-champagne-500)] !rounded"
-                />
-                <span className="flex-1 min-w-0">
-                  <span className="block text-[14px] font-medium text-[var(--color-stone-900)]">
-                    Havuz Isıtma
-                  </span>
-                  <span className="block mt-0.5 text-[12px] text-[var(--color-stone-500)]">
-                    Gece başına{" "}
-                    {formatCurrency(
-                      apiData.config.pool_heating_fee,
-                      apiData.config.pool_heating_currency || "TRY"
-                    )}
-                  </span>
-                </span>
-              </label>
-
-              {poolHeatingSelected && (
-                <p className="px-1 text-[12px] text-[var(--color-stone-500)]">
-                  {selectedNights} gece ·{" "}
-                  <span className="font-semibold text-[var(--color-stone-700)]">
-                    {formatCurrency(poolHeatingTotal, displayCurrency)}
-                  </span>
-                </p>
-              )}
-            </div>
-          )}
-
         {minStayThreshold > 0 &&
           !!startDate &&
           !!endDate &&
@@ -669,6 +622,15 @@ function ModalContent({
             prepaymentRate={prepaymentRate}
             convertedDeposit={convertedDeposit}
             deposit={apiData.config.deposit ?? 0}
+            /* 🛡️ HAVUZ ISITMA — yerleşim turu. Satır artık SUMMARY'nin
+               içinde (BookingSidebar ile AYNI yerleşim); değerler AYNEN
+               engine'den (poolHeatingSelected/setPoolHeatingSelected/
+               poolHeatingTotal — YENİ hesaplama YOK, yalnız konum değişti). */
+            poolHeatingFee={apiData.config.pool_heating_fee}
+            poolHeatingCurrency={apiData.config.pool_heating_currency}
+            poolHeatingSelected={poolHeatingSelected}
+            onPoolHeatingChange={setPoolHeatingSelected}
+            poolHeatingTotal={poolHeatingTotal}
           />
         )}
 

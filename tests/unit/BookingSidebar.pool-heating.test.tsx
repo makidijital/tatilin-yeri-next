@@ -134,7 +134,11 @@ describe("BookingSidebar — havuz ısıtma UI (5. adım)", () => {
     );
 
     expect(await screen.findByText("Havuz Isıtma")).toBeInTheDocument();
-    expect(screen.getByText(/Gece başına/)).toHaveTextContent("₺1.000");
+    /* 🛡️ HAVUZ ISITMA — yerleşim turu. Eski "Gece başına ₺1.000" metni
+       artık "₺1.000 / gece" (SUMMARY içindeki kompakt satır — bkz.
+       BookingSummary.tsx). Yalnız görünen metin/konum değişti; oran
+       değeri/kaynağı AYNEN. */
+    expect(screen.getByText(/\/ gece/)).toHaveTextContent("₺1.000");
   });
 
   it("4) checkbox işaretlenince seçim true olur ve çalışma toplamı görünür", async () => {

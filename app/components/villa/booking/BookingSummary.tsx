@@ -17,6 +17,27 @@
      - "Temizlik Ücreti" label'ı "Kısa Süreli Konaklama Ücreti" oldu —
        yalnız görünen metin; `result.cleaning` DEĞİŞMEDİ.
 
+   🛡️ HAVUZ ISITMA — yerleşim turu (yalnız bu tur — data/state/handler/
+   hesap DEĞİŞMEDİ):
+     - Havuz Isıtma satırı artık BURADA (Kısa Süreli Konaklama Ücreti'nin
+       hemen altında, Toplam Tutar'ın hemen üstünde) — daha önce
+       BookingSidebar/VillaCardBookingModal'da SUMMARY'nin DIŞINDA, ayrı
+       büyük bordered bir kart olarak duruyordu (Misafir alanının altında).
+       O kart tamamen kaldırıldı; checkbox + tutar artık normal bir fiyat
+       satırı deseninde (Row ile aynı hizada, sol=checkbox+label, sağ=
+       seçiliyse toplam).
+     - Görünürlük koşulu AYNEN (yalnız taşındı): `poolHeatingFee` sayı ve
+       >0. Eskiden ayrıca `startDate&&endDate&&selectedNights>0` de
+       kontrol ediliyordu — bu component zaten yalnız `result` mevcutken
+       (yani tarih seçili + gece>0) render edildiği için `result.nights>0`
+       ile AYNI garantiyi taşır; caller'daki dış koşul DEĞİŞMEDİ.
+     - Checked/unchecked state, handler (`onPoolHeatingChange` →
+       `setPoolHeatingSelected`), toplam (`poolHeatingTotal` — engine'den,
+       YENİDEN hesaplanmadı) BİREBİR aynı; yalnız JSX konumu/görünümü
+       değişti.
+     - Gecelik oran villa'nın KENDİ para biriminde (`poolHeatingCurrency`)
+       gösterilir — eski "Gece başına X" metniyle AYNI kaynak/format.
+
    🛡️ GÖRSEL REVİZYON (yalnız bu tur — data/state/handler/hesap DEĞİŞMEDİ):
      - Kart üstünde ince turuncu→mavi (#ED7926 → #0973BA) accent çizgisi
        — PriceList.tsx / ShortStayFeeNotice.tsx'teki aynı marka imzası.
@@ -46,6 +67,16 @@ type Props = {
   prepaymentRate: number;
   convertedDeposit: number;
   deposit: number;
+  /* 🛡️ HAVUZ ISITMA — yerleşim turu. Hepsi caller'ın zaten sahip olduğu
+     engine değerleri (useBookingEngine) — burada YENİ bir hesaplama
+     YAPILMAZ, yalnız render edilir. `poolHeatingFee`/`poolHeatingCurrency`
+     villa'nın KENDİ (orijinal) gecelik ücreti/para birimi; `poolHeatingTotal`
+     engine'in zaten display currency'ye çevirdiği çalışma toplamı. */
+  poolHeatingFee?: number | null;
+  poolHeatingCurrency?: string | null;
+  poolHeatingSelected?: boolean;
+  onPoolHeatingChange?: (checked: boolean) => void;
+  poolHeatingTotal?: number;
 };
 
 export default function BookingSummary({
@@ -54,6 +85,11 @@ export default function BookingSummary({
   prepaymentRate,
   convertedDeposit,
   deposit,
+  poolHeatingFee = null,
+  poolHeatingCurrency = "TRY",
+  poolHeatingSelected = false,
+  onPoolHeatingChange,
+  poolHeatingTotal = 0,
 }: Props) {
   const { currency } = useCurrency();
 
@@ -76,6 +112,37 @@ export default function BookingSummary({
           label="Kısa Süreli Konaklama Ücreti"
           value={formatCurrency(result.cleaning, currency)}
         />
+      )}
+
+      {/* HAVUZ ISITMA — normal fiyat satırı (Row ile aynı hizada);
+          ayrı bordered kart YOK. Checkbox solda label ile birlikte;
+          sağda yalnız SEÇİLİYSE toplam görünür. Görünürlük: fee sayı
+          ve >0 (result mevcut olduğu için nights>0 zaten garanti). */}
+      {typeof poolHeatingFee === "number" && poolHeatingFee > 0 && (
+        <div>
+          <label className="flex items-center justify-between gap-3 cursor-pointer group">
+            <span className="flex items-center gap-2.5 min-w-0">
+              <input
+                type="checkbox"
+                checked={poolHeatingSelected}
+                onChange={(e) => onPoolHeatingChange?.(e.target.checked)}
+                className="!w-4 !h-4 shrink-0 accent-[var(--color-champagne-500)] !rounded"
+              />
+              <span className="text-[var(--color-stone-600)] group-hover:text-[var(--color-stone-900)] transition-colors">
+                Havuz Isıtma
+              </span>
+            </span>
+            {poolHeatingSelected && (
+              <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
+                {formatCurrency(poolHeatingTotal, currency)}
+              </span>
+            )}
+          </label>
+          <p className="pl-[26px] mt-0.5 text-[11px] text-[var(--color-stone-400)]">
+            {formatCurrency(poolHeatingFee, poolHeatingCurrency || "TRY")} / gece
+            {poolHeatingSelected && ` × ${result.nights} gece`}
+          </p>
+        </div>
       )}
 
       {/* TOPLAM TUTAR — yeşil, yumuşak zeminle vurgulu */}
