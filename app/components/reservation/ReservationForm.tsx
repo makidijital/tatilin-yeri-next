@@ -510,39 +510,53 @@ export default function ReservationForm({
               </div>
             )}
 
-            <div className="bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-4 space-y-2.5 text-sm">
+            {/* 🛡️ UI/layout turu — fiyat özeti kartı artık villa detayındaki
+                BookingSummary.tsx ile AYNI görsel dil (accent çizgi, Toplam
+                Tutar yeşil vurgu kutusu, Ön ödeme/Girişte ödenecek mor/turuncu
+                iki kutu, "Kısa Süreli Konaklama Ücreti" / "Havuz Isıtma
+                Ücreti" metinleri). result/formatCurrency/totalPrice/
+                prepayment/prepaymentRate/getNights()/villa.pool_heating_fee
+                değerleri ve form.payment_preference dalı BİREBİR AYNI; YENİ
+                hesaplama YAZILMADI — yalnız JSX/className değişti. */}
+            <div className="relative bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-4 space-y-2.5 text-sm">
+              {/* İnce üst accent çizgisi — BookingSummary.tsx ile AYNI marka
+                  imzası (turuncu → mavi). Salt dekoratif. */}
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-4 top-0 h-[2.5px] rounded-full bg-gradient-to-r from-[#ED7926] via-[#ED7926]/50 to-[#0973BA]"
+              />
 
               {/* Konaklama Tutarı — gece sayısı dinamik (mevcut result.stay) */}
               <div className="flex justify-between text-[var(--color-stone-600)]">
                 <span>Konaklama Tutarı ({getNights()} Gece)</span>
-                <span className="text-[var(--color-stone-900)] font-medium">
+                <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
                   {formatCurrency(result?.stay || 0, currency)}
                 </span>
               </div>
 
+              {/* 🛡️ Metin standardizasyonu: "Temizlik Ücreti" → "Kısa Süreli
+                  Konaklama Ücreti" — villa detayındaki BookingSummary.tsx ile
+                  AYNI terminoloji (aynı bilgi, farklı isimle gösterilmesin).
+                  result.cleaning değeri DEĞİŞMEDİ. */}
               {(result?.cleaning || 0) > 0 && (
                 <div className="flex justify-between text-[var(--color-stone-600)]">
-                  <span>Temizlik Ücreti</span>
-                  <span className="text-[var(--color-stone-900)] font-medium">
+                  <span>Kısa Süreli Konaklama Ücreti</span>
+                  <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
                     {formatCurrency((result as any).cleaning || 0, currency)}
                   </span>
                 </div>
               )}
 
-              {/* 🛡️ HAVUZ ISITMA — 6. adım. Temizlik Ücreti satırıyla
-                  BİREBİR aynı stil/desen; yalnız poolHeating>0 iken görünür.
-                  🛡️ Metin standardizasyonu turu: "Havuz Isıtma" →
-                  "Havuz Isıtma Ücreti" (yalnız görünen metin — result.
-                  poolHeating/formatCurrency DEĞİŞMEDİ). Altına, villa
-                  detayındaki BookingSummary.tsx ile AYNI tasarım ailesi
-                  için gecelik oran/gece sayısı bilgisi eklendi — mevcut
-                  villa.pool_heating_fee/currency ve getNights() DEĞERLERİ
-                  kullanılır, YENİ bir hesaplama YAPILMAZ. */}
+              {/* HAVUZ ISITMA — BookingSummary.tsx'teki normal fiyat satırı
+                  deseniyle AYNI (yalnız burada checkbox yok, salt bilgi
+                  satırı — seçim villa detay/kart aşamasında zaten yapıldı).
+                  result.poolHeating / villa.pool_heating_fee/currency /
+                  getNights() DEĞİŞMEDİ, YENİ hesaplama YAPILMAZ. */}
               {(result?.poolHeating || 0) > 0 && (
                 <div>
                   <div className="flex justify-between text-[var(--color-stone-600)]">
                     <span>Havuz Isıtma Ücreti</span>
-                    <span className="text-[var(--color-stone-900)] font-medium">
+                    <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
                       {formatCurrency((result as any).poolHeating || 0, currency)}
                     </span>
                   </div>
@@ -559,46 +573,63 @@ export default function ReservationForm({
                 </div>
               )}
 
-              {/* TOPLAM TUTAR — yeşil */}
-              <div className="border-t border-[var(--color-sand-100)] pt-3 flex justify-between font-semibold text-base text-green-700">
-                <span>Toplam Tutar</span>
-                <span className="font-display text-lg">
-                  {formatCurrency(totalPrice, currency)}
-                </span>
+              {/* TOPLAM TUTAR — BookingSummary.tsx ile AYNI: yeşil, yumuşak
+                  zeminli, vurgulu satır. totalPrice DEĞİŞMEDİ. */}
+              <div className="border-t border-[var(--color-sand-100)] pt-3">
+                <div className="flex items-center justify-between rounded-xl bg-green-50/70 px-3 py-2.5">
+                  <span className="font-semibold text-green-800">Toplam Tutar</span>
+                  <span className="font-display text-lg font-bold text-green-700 tabular-nums">
+                    {formatCurrency(totalPrice, currency)}
+                  </span>
+                </div>
               </div>
 
-              {/* 🔥 ŞİMDİ ÖDENECEK — payment_preference'a göre (dal DEĞİŞMEZ) */}
-              {form.payment_preference === "full_payment" ? (
-                <>
-                  {/* Şimdi ödenecek — mor */}
-                  <div className="flex justify-between text-purple-700 font-semibold">
-                    <span>Şimdi ödenecek (Tüm tutar)</span>
-                    <span>{formatCurrency(totalPrice, currency)}</span>
-                  </div>
-
-                  {/* Girişte ödenecek — turuncu */}
-                  <div className="flex justify-between text-orange-600 text-xs">
-                    <span>Girişte ödenecek</span>
-                    <span>{formatCurrency(0, currency)}</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* Ön ödeme — mor */}
-                  <div className="flex justify-between text-purple-700 font-semibold">
-                    <span>Ön ödeme (%{prepaymentRate})</span>
-                    <span>{formatCurrency(prepayment, currency)}</span>
-                  </div>
-
-                  {/* Girişte ödenecek — turuncu */}
-                  <div className="flex justify-between text-orange-600 text-xs">
-                    <span>Girişte ödenecek</span>
-                    <span>
-                      {formatCurrency(totalPrice - prepayment, currency)}
-                    </span>
-                  </div>
-                </>
-              )}
+              {/* ÖN ÖDEME/ŞİMDİ ÖDENECEK (mor) + GİRİŞTE ÖDENECEK (turuncu) —
+                  BookingSummary.tsx ile AYNI iki ayrı vurgu kutusu, yan yana.
+                  🔥 payment_preference dalı (form.payment_preference ===
+                  "full_payment") BİREBİR AYNI (dal DEĞİŞMEZ) — yalnız
+                  görsel olarak BookingSummary'nin kutu tasarımına uyarlandı. */}
+              <div className="grid grid-cols-2 gap-2">
+                {form.payment_preference === "full_payment" ? (
+                  <>
+                    <div className="rounded-xl border border-purple-100 bg-purple-50/60 px-3 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-purple-500">
+                        Şimdi ödenecek (Tüm tutar)
+                      </p>
+                      <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
+                        {formatCurrency(totalPrice, currency)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
+                        Girişte ödenecek
+                      </p>
+                      <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
+                        {formatCurrency(0, currency)}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="rounded-xl border border-purple-100 bg-purple-50/60 px-3 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-purple-500">
+                        Ön ödeme (%{prepaymentRate})
+                      </p>
+                      <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
+                        {formatCurrency(prepayment, currency)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
+                        Girişte ödenecek
+                      </p>
+                      <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
+                        {formatCurrency(totalPrice - prepayment, currency)}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
           </div>
