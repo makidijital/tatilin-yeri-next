@@ -34,6 +34,28 @@
      - lib/external-calendar.public.helper > externalStringsToDateArrays,
        EMPTY_EXTERNAL_STRING_ARRAYS
      - app/services/settings.service > getSettings
+
+   🛡️ HAVUZ ISITMA — 4. adım (public booking engine altyapısı, migration
+   074 + price.engine 2. adım üzerine).
+     - Yeni input (opsiyonel, güvenli default): pool_heating_fee,
+       pool_heating_currency. Mevcut caller'lar (BookingSidebar,
+       VillaCardBookingModal) bu prop'ları hiç geçmez → BYTE-IDENTICAL
+       davranış korunur (pool_heating_fee=0 → calculateGrandTotal
+       içindeki calculatePoolHeatingFee 0 döner, total değişmez).
+     - Yeni state: poolHeatingSelected (başlangıç false; villaId
+       değişince false'a reset — reservations-fetch effect'i ile aynı
+       dep). poolHeatingTotal AYRI bir state DEĞİL — result.poolHeating
+       üzerinden türetilir (result zaten calculateGrandTotal'ın
+       pool_heating_selected/fee/currency parametreleriyle hesaplıyor;
+       burada YENİ bir hesaplama YAZILMADI).
+     - calculateGrandTotal / accommodationBase çağrı semantic'i: pool
+       heating parametreleri EKLENDİ (mevcut cleaning_fee/cleaning_currency/
+       cleaning_limit parametreleri AYNEN); accommodationBase artık 3.
+       parametre (poolHeating) ile çağrılıyor — prepayment yine SADECE
+       konaklama bedelinden hesaplanır (cleaning + pool heating hariç).
+     - UI bağlantısı bu adımda YOK — poolHeatingSelected/setPoolHeatingSelected/
+       poolHeatingTotal yalnız return'de expose edilir; BookingSidebar/
+       VillaCardBookingModal/ReservationForm bu adımda DOKUNULMADI.
    =============================================================== */
 
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
@@ -98,6 +120,13 @@ export type UseBookingEngineInput = {
   externalBlocks?: ExternalCalendarStringArrays;
   initialStart?: string | null;
   initialEnd?: string | null;
+
+  /* 🛡️ HAVUZ ISITMA — 4. adım (migration 074 villa alanları).
+     NULL/undefined/0 → hizmet yok (calculateGrandTotal içindeki
+     calculatePoolHeatingFee zaten bu semantiği uygular). Opsiyonel;
+     mevcut caller'lar geçmeden BYTE-IDENTICAL çalışır. */
+  pool_heating_fee?: number | null;
+  pool_heating_currency?: string | null;
 };
 
 /* ===============================================================
@@ -149,6 +178,14 @@ export type UseBookingEngineReturn = {
   convertedDeposit: number;
   startingPrice: string;
 
+  /* 🛡️ HAVUZ ISITMA — 4. adım (booking engine altyapısı; UI bu adımda
+     hiçbir component tarafından tüketilmiyor olabilir — normal).
+     poolHeatingTotal display currency'de (result.poolHeating ile aynı —
+     result null ise 0). */
+  poolHeatingSelected: boolean;
+  setPoolHeatingSelected: Dispatch<SetStateAction<boolean>>;
+  poolHeatingTotal: number;
+
   /* Pure helpers (closure over engine state) */
   parseLocalDate: (s: string) => Date;
   formatDate: (d: Date) => string;
@@ -186,6 +223,8 @@ export function useBookingEngine(
     externalBlocks = EMPTY_EXTERNAL_STRING_ARRAYS,
     initialStart = null,
     initialEnd = null,
+    pool_heating_fee = 0,
+    pool_heating_currency = "TRY",
   } = input;
 
   const { currency, rates } = useCurrency();
@@ -237,6 +276,12 @@ export function useBookingEngine(
   const [children, setChildren] = useState(0);
 
   const [prepaymentRate, setPrepaymentRate] = useState(0);
+
+  /* 🛡️ HAVUZ ISITMA — 4. adım. Başlangıç false; villaId değişince
+     aşağıdaki effect ile false'a reset edilir (bkz. reservations-fetch
+     effect'i, aynı dep [villaId]). poolHeatingTotal AYRI bir state
+     DEĞİL — result.poolHeating'ten türetilir (aşağıda). */
+  const [poolHeatingSelected, setPoolHeatingSelected] = useState(false);
 
   /* 🛡️ FAZ 56H-C — External iCal 3. kaynak olarak merge edilir.
      `useMemo` gerekmez — bu inline merge zaten her render'da çalışıyordu
@@ -528,6 +573,22 @@ export function useBookingEngine(
     fetchReservations();
   }, [villaId]);
 
+  /* ---------------------------------------------
+     🛡️ HAVUZ ISITMA — 4. adım. Villa değişince seçim sıfırlanır.
+     poolHeatingTotal ayrı bir state olmadığı için (result.poolHeating'ten
+     türetilir), poolHeatingSelected=false olunca otomatik 0'a döner —
+     ek bir reset gerekmez. Reservations-fetch effect'i ile aynı dep
+     [villaId] (yukarıdaki effect ile aynı "villa değişti" sinyali).
+  ---------------------------------------------- */
+  useEffect(() => {
+    /* prepaymentRate effect'indeki AYNI desen (yukarıda) — davranış
+       BYTE-IDENTICAL kalması için senkron reset korunur; alternatif
+       derived-state refactor "villa değişti" sinyalini karmaşıklaştırır.
+       Trivial cascading render (tek setState, deps [villaId]). */
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPoolHeatingSelected(false);
+  }, [villaId]);
+
   /* ═══════════════════════════════════════════════════════════
      🛡️ FAZ 26B — MINIMUM STAY VALIDATION
      ═══════════════════════════════════════════════════════════
@@ -631,12 +692,31 @@ export function useBookingEngine(
           cleaning_fee,
           cleaning_currency,
           cleaning_limit,
+          /* 🛡️ HAVUZ ISITMA — 4. adım. Opsiyonel parametreler; NULL
+             fee → 0 (calculatePoolHeatingFee içinde zaten "hizmet yok"
+             semantiği var, 0 fallback yalnız type uyumu için). Seçim
+             false ise (default) poolHeating=0 → total mevcut formülle
+             (stay+cleaning) BYTE-IDENTICAL kalır. */
+          pool_heating_fee: pool_heating_fee ?? 0,
+          pool_heating_currency: pool_heating_currency || "TRY",
+          pool_heating_selected: poolHeatingSelected,
         })
       : null;
 
+  /* 🛡️ HAVUZ ISITMA — 4. adım. result.poolHeating'ten türetilir; YENİ
+     bir hesaplama YOK (calculateGrandTotal dahili calculatePoolHeatingFee
+     çağırıyor — bkz. lib/price.engine.ts, 2. adım). result null ise
+     (tarih seçilmedi / minStay veya orphan-gap geçersiz) 0. */
+  const poolHeatingTotal = result ? result.poolHeating : 0;
+
+  /* 🔥 PREPAYMENT — KRİTİK KURAL DEĞİŞMEDİ: SADECE konaklama bedeli.
+     accommodationBase artık 3. parametre (poolHeating) alıyor — cleaning
+     fee davranışı AYNEN; pool heating de aynı şekilde ön ödeme dışı
+     tutuluyor (poolHeatingSelected=false / result null iken 3. parametre
+     0 → accommodationBase 2-parametreli eski davranışla BYTE-IDENTICAL). */
   const prepayment = result
     ? calculatePrepayment(
-        accommodationBase(result.total, result.cleaning),
+        accommodationBase(result.total, result.cleaning, result.poolHeating),
         prepaymentRate
       )
     : 0;
@@ -737,6 +817,11 @@ export function useBookingEngine(
     prepayment,
     convertedDeposit,
     startingPrice,
+
+    /* 🛡️ HAVUZ ISITMA — 4. adım (altyapı; UI sonraki adımda bağlanacak) */
+    poolHeatingSelected,
+    setPoolHeatingSelected,
+    poolHeatingTotal,
 
     /* Helpers */
     parseLocalDate,

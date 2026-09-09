@@ -83,6 +83,14 @@ export type Villa = {
 
   cleaning_limit?: number;
 
+  /* 🛡️ Migration 074 — Havuz Isıtma (5. adım, public villa detail UI
+   *  entegrasyonu). NULL/0 → hizmet yok. `select *` ile zaten geliyordu
+   *  (repository katmanı değişmedi); bu raw type'a eklenmesi sadece
+   *  TS-level passthrough sağlıyor. */
+  pool_heating_fee?: number | null;
+
+  pool_heating_currency?: string | null;
+
   slug?: string;
 
   created_at?: string | null;
@@ -216,6 +224,16 @@ export type VillaDTO = {
   cleaning_currency: string;
 
   cleaning_limit: number;
+
+  /* 🛡️ Migration 074 — Havuz Isıtma (5. adım, public villa detail UI).
+   *  NULL/0 → BookingSidebar seçeneği göstermez (useBookingEngine
+   *  calculatePoolHeatingFee ile aynı semantik). Hesaplama burada
+   *  YAPILMAZ — yalnız raw passthrough (cleaning_fee ile aynı desen,
+   *  ancak nullable — pool_heating_fee=0 fallback DEĞİL, gerçek NULL
+   *  "hizmet yok" anlamına geliyor, admin formu da bu semantiği kullanıyor). */
+  pool_heating_fee: number | null;
+
+  pool_heating_currency: string | null;
 
   slug: string;
 
@@ -407,6 +425,15 @@ function mapVilla(
 
     cleaning_limit:
       villa.cleaning_limit ?? 0,
+
+    /* 🛡️ Migration 074 — Havuz Isıtma. NULL passthrough KORUNUR
+       (cleaning_fee'nin aksine `?? 0` fallback YOK) — NULL "hizmet yok"
+       anlamına geliyor ve BookingSidebar bu ayrımı kullanıyor. */
+    pool_heating_fee:
+      villa.pool_heating_fee ?? null,
+
+    pool_heating_currency:
+      villa.pool_heating_currency || "TRY",
 
     slug:
       villa.slug ?? "",

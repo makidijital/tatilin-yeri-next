@@ -849,6 +849,11 @@ export default async function VillaDetail({
             cleaning_fee={villa.cleaning_fee}
             cleaning_currency={villa.cleaning_currency}
             cleaning_limit={villa.cleaning_limit}
+            /* 🛡️ Migration 074 — Havuz Isıtma (5. adım). NULL/0 →
+               BookingSidebar seçeneği göstermez (villa.service.ts
+               mapVilla zaten NULL passthrough uyguluyor). */
+            pool_heating_fee={villa.pool_heating_fee}
+            pool_heating_currency={villa.pool_heating_currency}
             custom_prepayment_rate={villa.custom_prepayment_rate ?? null}
             /* 🛡️ FAZ 26B — minimum konaklama gece sayısı.
                null/<=1 → BookingSidebar enforcement bypass eder,

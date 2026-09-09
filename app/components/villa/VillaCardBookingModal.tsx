@@ -88,6 +88,15 @@ import BookingCalendar from "@/app/components/villa/booking/BookingCalendar";
 import BookingSummary from "@/app/components/villa/booking/BookingSummary";
 import BookingMinStayWarning from "@/app/components/villa/booking/BookingMinStayWarning";
 
+/* 🛡️ HAVUZ ISITMA — 5. adım. BookingSidebar'daki checkbox bloğunun
+   AYNI görsel/format helper'ları (bkz. o dosyadaki gerekçe). Bu
+   modalda apiData.config.pool_heating_fee HER ZAMAN null döner
+   (/api/public/villas/[id]/availability route'u bu adımda
+   DOKUNULMADI — kapsam dışı) → checkbox pratikte HİÇBİR ZAMAN
+   render edilmez; yalnız type-level/prop-level wiring tamamlanır. */
+import { formatCurrency } from "@/lib/currency";
+import { useCurrency } from "@/app/context/CurrencyContext";
+
 type Props = {
   /* Modal open/close (parent owned). false ise content render
      edilmez → mount maliyeti yok. */
@@ -108,6 +117,12 @@ type VillaConfig = {
   cleaning_limit: number | null;
   custom_prepayment_rate: number | null;
   minimum_stay_nights: number | null;
+  /* 🛡️ HAVUZ ISITMA — 5. adım. API route (availability) bu alanları
+     HENÜZ döndürmüyor (route bu adımda DOKUNULMADI — kapsam dışı) →
+     runtime'da her zaman null. Yalnız type-level/prop-level wiring;
+     gerçek veri akışı route güncellenene kadar bağlı DEĞİL. */
+  pool_heating_fee: number | null;
+  pool_heating_currency: string | null;
 };
 
 const EMPTY_CONFIG: VillaConfig = {
@@ -117,6 +132,8 @@ const EMPTY_CONFIG: VillaConfig = {
   cleaning_limit: null,
   custom_prepayment_rate: null,
   minimum_stay_nights: null,
+  pool_heating_fee: null,
+  pool_heating_currency: null,
 };
 
 type AvailabilityApiResponse = {
@@ -210,6 +227,17 @@ export default function VillaCardBookingModal({
           minimum_stay_nights:
             typeof data?.config?.minimum_stay_nights === "number"
               ? data.config.minimum_stay_nights
+              : null,
+          /* 🛡️ HAVUZ ISITMA — 5. adım. Route bu alanları henüz
+             döndürmüyor → defansif parse aynı desende, pratikte
+             her zaman null (route güncellenirse otomatik akar). */
+          pool_heating_fee:
+            typeof data?.config?.pool_heating_fee === "number"
+              ? data.config.pool_heating_fee
+              : null,
+          pool_heating_currency:
+            typeof data?.config?.pool_heating_currency === "string"
+              ? data.config.pool_heating_currency
               : null,
         };
 
@@ -374,6 +402,8 @@ function ModalContent({
     cleaning_fee: apiData.config.cleaning_fee ?? 0,
     cleaning_currency: apiData.config.cleaning_currency ?? "TRY",
     cleaning_limit: apiData.config.cleaning_limit ?? 0,
+    pool_heating_fee: apiData.config.pool_heating_fee,
+    pool_heating_currency: apiData.config.pool_heating_currency,
     custom_prepayment_rate: apiData.config.custom_prepayment_rate,
     minimum_stay_nights: apiData.config.minimum_stay_nights,
     externalBlocks: apiData.externalBlocks,
@@ -396,7 +426,17 @@ function ModalContent({
     convertedDeposit,
     startingPrice,
     handleReservation,
+    /* 🛡️ HAVUZ ISITMA — 5. adım. apiData.config.pool_heating_fee bu
+       adımda her zaman null olduğundan poolHeatingTotal/selected
+       pratikte inert kalır — yalnız wiring tamamlanmış olur. */
+    poolHeatingSelected,
+    setPoolHeatingSelected,
+    poolHeatingTotal,
   } = engine;
+
+  /* Bkz. BookingSidebar — "Çalışma toplamı" satırı için display
+     currency (poolHeatingTotal zaten bu currency'de). */
+  const { currency: displayCurrency } = useCurrency();
 
   /* Calendar always-visible (modal'da popup pattern yok).
      currentMonth — modal local UI state. freshSelection state'i
@@ -561,6 +601,49 @@ function ModalContent({
             </div>
           )}
         </div>
+
+        {/* 🛡️ HAVUZ ISITMA — 5. adım. BookingSidebar ile AYNI koşul/
+            pattern (bkz. o dosyadaki ayrıntılı gerekçe). apiData.config.
+            pool_heating_fee bu adımda API route güncellenmediği için
+            HER ZAMAN null → bu blok modalda pratikte HİÇ render edilmez
+            (kapsam dışı API route bağlanana kadar inert). */}
+        {startDate &&
+          endDate &&
+          selectedNights > 0 &&
+          typeof apiData.config.pool_heating_fee === "number" &&
+          apiData.config.pool_heating_fee > 0 && (
+            <div className="space-y-2">
+              <label className="flex items-center gap-3 rounded-2xl border border-[var(--color-stone-100)] px-4 py-3.5 cursor-pointer transition-colors duration-200 motion-reduce:transition-none hover:border-[#0973BA]/40">
+                <input
+                  type="checkbox"
+                  checked={poolHeatingSelected}
+                  onChange={(e) => setPoolHeatingSelected(e.target.checked)}
+                  className="!w-4 !h-4 accent-[var(--color-champagne-500)] !rounded"
+                />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[14px] font-medium text-[var(--color-stone-900)]">
+                    Havuz Isıtma
+                  </span>
+                  <span className="block mt-0.5 text-[12px] text-[var(--color-stone-500)]">
+                    Gece başına{" "}
+                    {formatCurrency(
+                      apiData.config.pool_heating_fee,
+                      apiData.config.pool_heating_currency || "TRY"
+                    )}
+                  </span>
+                </span>
+              </label>
+
+              {poolHeatingSelected && (
+                <p className="px-1 text-[12px] text-[var(--color-stone-500)]">
+                  {selectedNights} gece ·{" "}
+                  <span className="font-semibold text-[var(--color-stone-700)]">
+                    {formatCurrency(poolHeatingTotal, displayCurrency)}
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
 
         {minStayThreshold > 0 &&
           !!startDate &&
