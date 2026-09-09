@@ -447,9 +447,170 @@ export default function ReservationForm({
   const inputErr = "!border-red-500";
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
-      {/* LEFT — FORM */}
-      <div className="lg:col-span-2 card-premium p-6 md:p-8 space-y-9">
+    <div className="space-y-8 lg:space-y-10">
+      {/* ÜST — REZERVASYON ÖZETİ (villa görseli + fiyat özeti, geniş
+          yatay kart). 🛡️ UI/layout turu — Sadece bu bloğun konumu ve iç
+          düzeni değişti: daha önce sağda dar "sticky" bir sidebar olarak
+          duruyordu, artık sayfanın üstünde geniş, yatay bir özet kartı.
+          İçerik/veri/hesaplama (result, formatCurrency, totalPrice,
+          prepayment, prepaymentRate, form.payment_preference vb.)
+          BİREBİR AYNI; yeni hesaplama YAZILMADI. */}
+      <div className="card-premium overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-5">
+          <div className="md:col-span-2 relative">
+            <img
+              src={image || "/placeholder.jpg"}
+              className="w-full h-56 md:h-full object-cover"
+              alt={villa.title}
+            />
+          </div>
+
+          <div className="md:col-span-3 p-6 space-y-5">
+            <div>
+              <p className="eyebrow">Konaklama</p>
+              <h3 className="font-display text-xl text-[var(--color-stone-900)] mt-1.5 leading-snug">
+                {villa.title}
+              </h3>
+            </div>
+
+            {start && end && (
+              <div className="flex items-center gap-3 text-sm text-[var(--color-stone-700)] border-y border-[var(--color-stone-100)] py-4">
+                <Calendar
+                  size={16}
+                  className="text-[var(--color-champagne-500)]"
+                />
+                <span>
+                  {/* 🛡️ Europe/Istanbul explicit — server SSR / client
+                       hidrasyon aynı çıktı (UTC server'da day kayması yok). */}
+                  {new Date(start).toLocaleDateString("tr-TR", {
+                    day: "numeric",
+                    month: "long",
+                    timeZone: "Europe/Istanbul",
+                  })}{" "}
+                  –{" "}
+                  {new Date(end).toLocaleDateString("tr-TR", {
+                    day: "numeric",
+                    month: "long",
+                    timeZone: "Europe/Istanbul",
+                  })}
+                  <span className="text-[var(--color-stone-400)] ml-2">
+                    {getNights()} gece
+                  </span>
+                </span>
+              </div>
+            )}
+
+            {form.guests && (
+              <div className="flex items-center gap-3 text-sm text-[var(--color-stone-700)] -mt-1">
+                <Users
+                  size={16}
+                  className="text-[var(--color-champagne-500)]"
+                />
+                <span>{form.guests} misafir</span>
+              </div>
+            )}
+
+            <div className="bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-4 space-y-2.5 text-sm">
+
+              {/* Konaklama Tutarı — gece sayısı dinamik (mevcut result.stay) */}
+              <div className="flex justify-between text-[var(--color-stone-600)]">
+                <span>Konaklama Tutarı ({getNights()} Gece)</span>
+                <span className="text-[var(--color-stone-900)] font-medium">
+                  {formatCurrency(result?.stay || 0, currency)}
+                </span>
+              </div>
+
+              {(result?.cleaning || 0) > 0 && (
+                <div className="flex justify-between text-[var(--color-stone-600)]">
+                  <span>Temizlik Ücreti</span>
+                  <span className="text-[var(--color-stone-900)] font-medium">
+                    {formatCurrency((result as any).cleaning || 0, currency)}
+                  </span>
+                </div>
+              )}
+
+              {/* 🛡️ HAVUZ ISITMA — 6. adım. Temizlik Ücreti satırıyla
+                  BİREBİR aynı stil/desen; yalnız poolHeating>0 iken görünür.
+                  🛡️ Metin standardizasyonu turu: "Havuz Isıtma" →
+                  "Havuz Isıtma Ücreti" (yalnız görünen metin — result.
+                  poolHeating/formatCurrency DEĞİŞMEDİ). Altına, villa
+                  detayındaki BookingSummary.tsx ile AYNI tasarım ailesi
+                  için gecelik oran/gece sayısı bilgisi eklendi — mevcut
+                  villa.pool_heating_fee/currency ve getNights() DEĞERLERİ
+                  kullanılır, YENİ bir hesaplama YAPILMAZ. */}
+              {(result?.poolHeating || 0) > 0 && (
+                <div>
+                  <div className="flex justify-between text-[var(--color-stone-600)]">
+                    <span>Havuz Isıtma Ücreti</span>
+                    <span className="text-[var(--color-stone-900)] font-medium">
+                      {formatCurrency((result as any).poolHeating || 0, currency)}
+                    </span>
+                  </div>
+                  {typeof villa.pool_heating_fee === "number" &&
+                    villa.pool_heating_fee > 0 && (
+                      <p className="mt-0.5 text-[11px] text-[var(--color-stone-400)]">
+                        {formatCurrency(
+                          villa.pool_heating_fee,
+                          villa.pool_heating_currency || "TRY"
+                        )}{" "}
+                        / gece × {getNights()} gece
+                      </p>
+                    )}
+                </div>
+              )}
+
+              {/* TOPLAM TUTAR — yeşil */}
+              <div className="border-t border-[var(--color-sand-100)] pt-3 flex justify-between font-semibold text-base text-green-700">
+                <span>Toplam Tutar</span>
+                <span className="font-display text-lg">
+                  {formatCurrency(totalPrice, currency)}
+                </span>
+              </div>
+
+              {/* 🔥 ŞİMDİ ÖDENECEK — payment_preference'a göre (dal DEĞİŞMEZ) */}
+              {form.payment_preference === "full_payment" ? (
+                <>
+                  {/* Şimdi ödenecek — mor */}
+                  <div className="flex justify-between text-purple-700 font-semibold">
+                    <span>Şimdi ödenecek (Tüm tutar)</span>
+                    <span>{formatCurrency(totalPrice, currency)}</span>
+                  </div>
+
+                  {/* Girişte ödenecek — turuncu */}
+                  <div className="flex justify-between text-orange-600 text-xs">
+                    <span>Girişte ödenecek</span>
+                    <span>{formatCurrency(0, currency)}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Ön ödeme — mor */}
+                  <div className="flex justify-between text-purple-700 font-semibold">
+                    <span>Ön ödeme (%{prepaymentRate})</span>
+                    <span>{formatCurrency(prepayment, currency)}</span>
+                  </div>
+
+                  {/* Girişte ödenecek — turuncu */}
+                  <div className="flex justify-between text-orange-600 text-xs">
+                    <span>Girişte ödenecek</span>
+                    <span>
+                      {formatCurrency(totalPrice - prepayment, currency)}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {/* ALT — FORM (artık tam genişlik; dar sağ-sidebar kolonuna
+          sıkışmıyor). 🛡️ UI/layout turu — yalnız dış wrapper/className
+          değişti (grid-cols-3 + lg:col-span-2 kaldırıldı). Form içeriği
+          (adımlar, inputlar, state, handler'lar, validation) BİREBİR
+          AYNI. */}
+      <div className="card-premium p-6 md:p-8 space-y-9">
         {/* 🛡️ INLINE ERROR BANNER — submitError null değilse görünür.
            alert() yerine modern inline feedback. */}
         {submitError && (
@@ -744,155 +905,6 @@ export default function ReservationForm({
           )}
         </button>
       </div>
-
-      {/* RIGHT — SUMMARY */}
-      <aside className="lg:col-span-1">
-        <div className="lg:sticky lg:top-32 card-premium overflow-hidden">
-          <img
-            src={image || "/placeholder.jpg"}
-            className="w-full h-56 object-cover"
-            alt={villa.title}
-          />
-
-          <div className="p-6 space-y-5">
-            <div>
-              <p className="eyebrow">Konaklama</p>
-              <h3 className="font-display text-xl text-[var(--color-stone-900)] mt-1.5 leading-snug">
-                {villa.title}
-              </h3>
-            </div>
-
-            {start && end && (
-              <div className="flex items-center gap-3 text-sm text-[var(--color-stone-700)] border-y border-[var(--color-stone-100)] py-4">
-                <Calendar
-                  size={16}
-                  className="text-[var(--color-champagne-500)]"
-                />
-                <span>
-                  {/* 🛡️ Europe/Istanbul explicit — server SSR / client
-                       hidrasyon aynı çıktı (UTC server'da day kayması yok). */}
-                  {new Date(start).toLocaleDateString("tr-TR", {
-                    day: "numeric",
-                    month: "long",
-                    timeZone: "Europe/Istanbul",
-                  })}{" "}
-                  –{" "}
-                  {new Date(end).toLocaleDateString("tr-TR", {
-                    day: "numeric",
-                    month: "long",
-                    timeZone: "Europe/Istanbul",
-                  })}
-                  <span className="text-[var(--color-stone-400)] ml-2">
-                    {getNights()} gece
-                  </span>
-                </span>
-              </div>
-            )}
-
-            {form.guests && (
-              <div className="flex items-center gap-3 text-sm text-[var(--color-stone-700)] -mt-1">
-                <Users
-                  size={16}
-                  className="text-[var(--color-champagne-500)]"
-                />
-                <span>{form.guests} misafir</span>
-              </div>
-            )}
-
-            <div className="bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-4 space-y-2.5 text-sm">
-
-              {/* Konaklama Tutarı — gece sayısı dinamik (mevcut result.stay) */}
-              <div className="flex justify-between text-[var(--color-stone-600)]">
-                <span>Konaklama Tutarı ({getNights()} Gece)</span>
-                <span className="text-[var(--color-stone-900)] font-medium">
-                  {formatCurrency(result?.stay || 0, currency)}
-                </span>
-              </div>
-
-              {(result?.cleaning || 0) > 0 && (
-                <div className="flex justify-between text-[var(--color-stone-600)]">
-                  <span>Temizlik Ücreti</span>
-                  <span className="text-[var(--color-stone-900)] font-medium">
-                    {formatCurrency((result as any).cleaning || 0, currency)}
-                  </span>
-                </div>
-              )}
-
-              {/* 🛡️ HAVUZ ISITMA — 6. adım. Temizlik Ücreti satırıyla
-                  BİREBİR aynı stil/desen; yalnız poolHeating>0 iken görünür.
-                  🛡️ Metin standardizasyonu turu: "Havuz Isıtma" →
-                  "Havuz Isıtma Ücreti" (yalnız görünen metin — result.
-                  poolHeating/formatCurrency DEĞİŞMEDİ). Altına, villa
-                  detayındaki BookingSummary.tsx ile AYNI tasarım ailesi
-                  için gecelik oran/gece sayısı bilgisi eklendi — mevcut
-                  villa.pool_heating_fee/currency ve getNights() DEĞERLERİ
-                  kullanılır, YENİ bir hesaplama YAPILMAZ. */}
-              {(result?.poolHeating || 0) > 0 && (
-                <div>
-                  <div className="flex justify-between text-[var(--color-stone-600)]">
-                    <span>Havuz Isıtma Ücreti</span>
-                    <span className="text-[var(--color-stone-900)] font-medium">
-                      {formatCurrency((result as any).poolHeating || 0, currency)}
-                    </span>
-                  </div>
-                  {typeof villa.pool_heating_fee === "number" &&
-                    villa.pool_heating_fee > 0 && (
-                      <p className="mt-0.5 text-[11px] text-[var(--color-stone-400)]">
-                        {formatCurrency(
-                          villa.pool_heating_fee,
-                          villa.pool_heating_currency || "TRY"
-                        )}{" "}
-                        / gece × {getNights()} gece
-                      </p>
-                    )}
-                </div>
-              )}
-
-              {/* TOPLAM TUTAR — yeşil */}
-              <div className="border-t border-[var(--color-sand-100)] pt-3 flex justify-between font-semibold text-base text-green-700">
-                <span>Toplam Tutar</span>
-                <span className="font-display text-lg">
-                  {formatCurrency(totalPrice, currency)}
-                </span>
-              </div>
-
-              {/* 🔥 ŞİMDİ ÖDENECEK — payment_preference'a göre (dal DEĞİŞMEZ) */}
-              {form.payment_preference === "full_payment" ? (
-                <>
-                  {/* Şimdi ödenecek — mor */}
-                  <div className="flex justify-between text-purple-700 font-semibold">
-                    <span>Şimdi ödenecek (Tüm tutar)</span>
-                    <span>{formatCurrency(totalPrice, currency)}</span>
-                  </div>
-
-                  {/* Girişte ödenecek — turuncu */}
-                  <div className="flex justify-between text-orange-600 text-xs">
-                    <span>Girişte ödenecek</span>
-                    <span>{formatCurrency(0, currency)}</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* Ön ödeme — mor */}
-                  <div className="flex justify-between text-purple-700 font-semibold">
-                    <span>Ön ödeme (%{prepaymentRate})</span>
-                    <span>{formatCurrency(prepayment, currency)}</span>
-                  </div>
-
-                  {/* Girişte ödenecek — turuncu */}
-                  <div className="flex justify-between text-orange-600 text-xs">
-                    <span>Girişte ödenecek</span>
-                    <span>
-                      {formatCurrency(totalPrice - prepayment, currency)}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-
-          </div>
-        </div>
-      </aside>
     </div>
   );
 }
