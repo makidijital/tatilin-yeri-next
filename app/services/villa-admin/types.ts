@@ -38,6 +38,8 @@ export type VillaForm = {
   child_pool_width?: string;
   child_pool_length?: string;
 
+  pool_sheltered?: boolean;
+
   seo_title?: string | null;
   seo_description?: string | null;
   noindex?: boolean;

@@ -90,6 +90,7 @@ export type VillaFormData = VillaFormShape & {
   child_pool_depth: string;
   child_pool_width: string;
   child_pool_length: string;
+  pool_sheltered: boolean;
 
   /* SEO */
   seo_title: string;
@@ -166,6 +167,7 @@ export function initialVillaFormData(
     child_pool_depth: "",
     child_pool_width: "",
     child_pool_length: "",
+    pool_sheltered: false,
 
     /* 🔥 SEO */
     seo_title: "",

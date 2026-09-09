@@ -77,6 +77,15 @@ export default function AmenitiesStep({
                 }}
               />
             )}
+            {form.pool_type === "ozel" && (
+              <ChipCheckbox
+                label="Korunaklı Havuz"
+                checked={!!form.pool_sheltered}
+                onChange={(checked) =>
+                  setForm({ ...form, pool_sheltered: checked })
+                }
+              />
+            )}
           </PoolBlock>
 
           <PoolBlock title="Kapalı havuz">

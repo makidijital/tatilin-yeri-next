@@ -70,6 +70,7 @@ export interface VillaRow {
   child_pool_depth: string | null;
   child_pool_width: string | null;
   child_pool_length: string | null;
+  pool_sheltered: boolean | null;
   /* Map */
   map_type: string | null;
   latitude: number | null;

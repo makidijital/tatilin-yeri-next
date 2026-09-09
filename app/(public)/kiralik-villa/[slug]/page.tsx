@@ -645,7 +645,9 @@ export default async function VillaDetail({
                   key: "main",
                   label:
                     villa.pool_type === "ozel"
-                      ? "Özel Korunaklı Havuz"
+                      ? villa.pool_sheltered
+                        ? "Özel Korunaklı Havuz"
+                        : "Özel Havuz"
                       : "Ortak Havuz",
                   width: villa.pool_width,
                   length: villa.pool_length,

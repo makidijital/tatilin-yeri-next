@@ -33,7 +33,7 @@ import type { VillaForm, VillaMapData } from "../types";
      - Audit log diff'i / future codegen sırası için stable
      - INSERT-RETURNING projeksiyon order'ı için stable
 
-   COVERAGE (40 alan):
+   COVERAGE (41 alan):
      Basic           : title, description
      Relation pointer: location_id
      Counts          : guests, bedrooms, bathrooms
@@ -44,6 +44,7 @@ import type { VillaForm, VillaMapData } from "../types";
      Pool            : pool_type/depth/width/length
      Indoor pool     : indoor_pool/_depth/_width/_length
      Child pool      : child_pool/_depth/_width/_length
+     Pool sheltered  : pool_sheltered
      SEO             : seo_title, seo_description, noindex
      Reservation cfg : custom_prepayment_rate
      Legal           : tourism_document_number
@@ -96,6 +97,7 @@ export type VillaCorePayload = {
   child_pool_depth: VillaForm["child_pool_depth"];
   child_pool_width: VillaForm["child_pool_width"];
   child_pool_length: VillaForm["child_pool_length"];
+  pool_sheltered: VillaForm["pool_sheltered"];
   seo_title: string | null;
   seo_description: string | null;
   noindex: boolean;
@@ -220,6 +222,9 @@ export function buildVillaCorePayload(
 
     child_pool_length:
       form.child_pool_length,
+
+    pool_sheltered:
+      !!form.pool_sheltered,
 
     // 🔥 SEO
     seo_title:

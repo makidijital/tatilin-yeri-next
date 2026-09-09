@@ -112,6 +112,8 @@ export type Villa = {
 
   child_pool_length?: string;
 
+  pool_sheltered?: boolean;
+
   // 🔥 MAP
   map_type?: string;
 
@@ -243,6 +245,8 @@ export type VillaDTO = {
   child_pool_width?: string;
 
   child_pool_length?: string;
+
+  pool_sheltered?: boolean;
 
   // 🔥 MAP DTO
   map_type?: string;
@@ -445,6 +449,9 @@ function mapVilla(
 
     child_pool_length:
       villa.child_pool_length || "",
+
+    pool_sheltered:
+      villa.pool_sheltered ?? false,
 
     // 🔥 MAP
     map_type:

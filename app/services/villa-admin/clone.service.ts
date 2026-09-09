@@ -35,6 +35,7 @@ import { setVillaDistancesServer } from "../villa-distance.service.server";
      bathrooms, deposit, cleaning_fee, cleaning_currency,
      cleaning_limit, map_type/latitude/longitude/map_embed,
      pool_type/depth/width/length, indoor_pool*, child_pool*,
+     pool_sheltered,
      seo_title, seo_description, noindex, custom_prepayment_rate,
      tourism_document_number, minimum_stay_nights, youtube_videos,
      commission_rate, owner_id, bedroom_layout, bathroom_layout
