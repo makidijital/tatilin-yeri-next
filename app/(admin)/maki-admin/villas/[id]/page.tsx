@@ -154,6 +154,7 @@ export default function EditVilla() {
     { id: 4, label: "Fiyatlandırma" },
     { id: 5, label: "Kurallar & Dahil" },
     { id: 6, label: "SEO" },
+    { id: 7, label: "iCal" },
   ];
   const TOTAL_STEPS = STEPS.length;
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -510,12 +511,14 @@ export default function EditVilla() {
       </div>
 
       {/* 🛡️ FAZ 56E — Takvim Senkronizasyonları kartı.
-          Wizard step content'in dışında, kalıcı section olarak mount.
-          Step-bağımsız görünür (admin hangi adımda olursa olsun erişebilir).
-          BookingSidebar / availability / reservation pipeline'a dokunmaz —
-          yalnız external_calendar_sources + sync endpoint'i okur/yazar.
-          FAZ 56C tamamlanana kadar bu kayıtlar availability'ye etki etmez. */}
-      {id && (
+          🛡️ DÜZELTME turu — artık yalnız "iCal" sekmesinde
+          (currentStep === 7) görünür; önceden wizard step'lerinden
+          bağımsız, her adımda mount ediliyordu. IcalSyncCard'ın kendisi,
+          prop'ları (villaId/villaSlug/villaTitle), external_calendar_sources
+          okuma/yazma + sync endpoint çağrıları, state/handler mantığı
+          BİREBİR AYNI — yalnız hangi sekmede render edildiği değişti.
+          BookingSidebar / availability / reservation pipeline'a dokunulmadı. */}
+      {id && currentStep === 7 && (
         <IcalSyncCard
           villaId={id as string}
           villaSlug={slug || slugifyTr(form.title)}
