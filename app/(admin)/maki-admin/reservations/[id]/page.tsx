@@ -52,13 +52,12 @@ import {
 
 /* FAZ 1+2: extracted section + helper component'leri. */
 import NoteCard from "./_components/NoteCard";
-import PersonalInfoCard from "./_components/PersonalInfoCard";
+import MisafirBilgisiCard from "./_components/MisafirBilgisiCard";
 import ReservationPageHeader, {
   ReservationMetaCards,
 } from "./_components/ReservationPageHeader";
 import WizardStepBar from "./_components/WizardStepBar";
 import StickyFooterNav from "./_components/StickyFooterNav";
-import LocationCard from "./_components/LocationCard";
 import GuestsCard from "./_components/GuestsCard";
 import StatusCard from "./_components/StatusCard";
 import PaymentPreferenceCard from "./_components/PaymentPreferenceCard";
@@ -1258,21 +1257,20 @@ export default function AdminReservationDetailPage() {
           reservationCodeDisplay={reservationCodeDisplay}
         />
 
-        {/* PERSONAL (FAZ 2: PersonalInfoCard'a extract) */}
-        {currentStep === 1 && (
-          <PersonalInfoCard data={data} setData={setData} />
-        )}
-
-        {/* LOCATION */}
-        {/* LOCATION (FAZ 2: LocationCard'a extract) */}
-        {currentStep === 1 && (
-          <LocationCard
-            data={data}
-            setData={setData}
-            countryOptions={countryOptions}
-            cityOptions={cityOptions}
-          />
-        )}
+        {/* 🛡️ UI/yerleşim turu — "Misafir Bilgisi" artık HER ZAMAN
+            görünür (wizard adımına gitmeden), rezervasyon kartının
+            (ReservationMetaCards) hemen altında. Önceden bu alanlar
+            2 ayrı kart (PersonalInfoCard/LocationCard) olarak yalnız
+            currentStep === 1 iken görünüyordu. Alan/veri/handler
+            BİREBİR AYNI — bkz. MisafirBilgisiCard.tsx üst yorumu.
+            currentStep/STEPS/WizardStepBar navigasyon state mantığına
+            DOKUNULMADI (kasıtlı — talep yalnızca UI yerleşimi). */}
+        <MisafirBilgisiCard
+          data={data}
+          setData={setData}
+          countryOptions={countryOptions}
+          cityOptions={cityOptions}
+        />
 
         {/* VILLA SELECT (FAZ 2: VillaSelectCard'a extract)
             handleVillaChange — 65-satır business logic page.tsx'te;
