@@ -1303,7 +1303,7 @@ export const villaAdminRepository = {
     return await dbAdmin
       .from("villa")
       .select(
-        "id, title, cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate, deposit"
+        "id, title, cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate, deposit, pool_heating_fee, pool_heating_currency"
       )
       .eq("id", id)
       .single();

@@ -75,6 +75,27 @@ export function buildUpdateReservationPayload(
     payload.exchange_rate = Number(data.exchange_rate) || 1;
 
   /* ------------------------------------------------------------
+     🔥 HAVUZ ISITMA — 8. adım (admin edit doğruluk düzeltmesi).
+     Cleaning-fee grubuyla BİREBİR desen: sadece tanımlı alanlar
+     payload'a girer → eski rezervasyonlar (pool heating alanları
+     hiç yok) bozulmaz.
+  ------------------------------------------------------------ */
+  if (data.pool_heating_selected !== undefined)
+    payload.pool_heating_selected = !!data.pool_heating_selected;
+
+  if (data.original_pool_heating_total !== undefined)
+    payload.original_pool_heating_total =
+      Number(data.original_pool_heating_total) || 0;
+
+  if (data.original_pool_heating_currency !== undefined)
+    payload.original_pool_heating_currency =
+      data.original_pool_heating_currency || "TRY";
+
+  if (data.pool_heating_total_try !== undefined)
+    payload.pool_heating_total_try =
+      Number(data.pool_heating_total_try) || 0;
+
+  /* ------------------------------------------------------------
      🔥 FINANCIAL SNAPSHOT
      Sadece undefined olmayanlar payload'a girer.
      Bu sayede eski rezervasyonlar bozulmaz, paid_amount

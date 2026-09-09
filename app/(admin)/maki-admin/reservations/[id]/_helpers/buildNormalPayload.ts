@@ -55,13 +55,23 @@ export function buildNormalPayload(input: {
   const cleaningTRY =
     Number(data.cleaning_fee_try) || Number(priceDetail?.cleaning) || 0;
 
+  // 🔥 HAVUZ ISITMA — 8. adım. `data.pool_heating_total_try` DOĞRUDAN
+  // okunur — bu alan computeReservationPriceRecalc / computeCustomPriceToggle
+  // helper'ları tarafından `data` state'inde zaten güncel tutulur (aynı
+  // `cleaning_fee_try` deseni: recalc sonucu `setData` merge'i ile senkron).
+  const poolHeatingTRY = Number(data.pool_heating_total_try) || 0;
+
   const exchangeRate =
     isForeignStay || isForeignCleaning
       ? Number(data.exchange_rate) || 1
       : 1;
 
+  // Ön ödeme havuz ısıtmayı İÇERMEZ: accommodationBase 3. parametre ile
+  // havuz ısıtmayı da toplamdan düşer (total - cleaning - poolHeating).
   const rawPrepayment = Math.round(
-    (accommodationBase(totalTRY, cleaningTRY) * prepaymentRate) / 100
+    (accommodationBase(totalTRY, cleaningTRY, poolHeatingTRY) *
+      prepaymentRate) /
+      100
   );
   const writePayment = getPaymentDisplayValues({
     total_price_try: totalTRY,
@@ -102,6 +112,15 @@ export function buildNormalPayload(input: {
     original_cleaning_currency: isForeignCleaning ? cleaningCurrency : "TRY",
 
     cleaning_fee_try: cleaningTRY,
+
+    // 🔥 HAVUZ ISITMA snapshot — 8. adım. `data.pool_heating_*` her
+    // zaman doğrudan yazılır (always-write, cleaning_fee_try ile aynı
+    // desen) — eski rezervasyonlarda bu alanlar undefined→0/false olur,
+    // regresyon yok.
+    pool_heating_selected: !!data.pool_heating_selected,
+    original_pool_heating_total: Number(data.original_pool_heating_total) || 0,
+    original_pool_heating_currency: data.original_pool_heating_currency || "TRY",
+    pool_heating_total_try: poolHeatingTRY,
 
     // 🔥 KUR
     exchange_rate: exchangeRate,

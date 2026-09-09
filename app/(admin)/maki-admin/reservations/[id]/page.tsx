@@ -1190,7 +1190,11 @@ export default function AdminReservationDetailPage() {
      PriceCard içinde `data.original_currency` üzerinden render eder. */
   const prepayment = priceDetail
     ? Math.round(
-        (accommodationBase(priceDetail.total, priceDetail.cleaning) *
+        (accommodationBase(
+          priceDetail.total,
+          priceDetail.cleaning,
+          priceDetail.poolHeating
+        ) *
           prepaymentRate) /
           100
       )
@@ -1215,7 +1219,8 @@ export default function AdminReservationDetailPage() {
           Math.round(
             (accommodationBase(
               Number(data?.total_price_try || 0),
-              Number(data?.cleaning_fee_try || 0)
+              Number(data?.cleaning_fee_try || 0),
+              Number(data?.pool_heating_total_try || 0)
             ) *
               prepaymentRate) /
               100

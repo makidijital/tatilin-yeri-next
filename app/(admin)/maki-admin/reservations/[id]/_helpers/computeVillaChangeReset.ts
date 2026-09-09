@@ -46,6 +46,16 @@ export function computeVillaChangeReset(
     cleaning_fee_try: 0,
     exchange_rate: 1,
 
+    // 🔥 HAVUZ ISITMA — 8. adım. Yalnız TUTAR alanları sıfırlanır
+    // (yeni villanın recalc'ı zaten doğru tutarı yazacak — bkz.
+    // computeReservationPriceRecalc CASE 2). `pool_heating_selected`
+    // BİLİNÇLİ OLARAK BU PATCH'E DAHİL EDİLMEDİ — kullanıcı talimatı:
+    // "mevcut rezervasyondaki pool_heating_selected durumu korunmalı".
+    // `{...prev, ...patch}` merge'i sayesinde prev'deki seçim aynen kalır.
+    pool_heating_total_try: 0,
+    original_pool_heating_total: 0,
+    original_pool_heating_currency: "TRY",
+
     prepayment_amount: 0,
     remaining_payment: 0,
 

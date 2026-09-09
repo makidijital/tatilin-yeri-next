@@ -42,6 +42,11 @@ export type ReservationUpdatePayloadShape = {
   original_cleaning_currency: string;
   cleaning_fee_try: number;
   exchange_rate: number;
+  // 🔥 HAVUZ ISITMA — 8. adım (admin edit doğruluk düzeltmesi).
+  pool_heating_selected: boolean;
+  original_pool_heating_total: number;
+  original_pool_heating_currency: string;
+  pool_heating_total_try: number;
   prepayment_amount: number;
   remaining_payment: number;
   paid_amount: number;
@@ -107,6 +112,16 @@ export function buildCustomPricePayload(input: {
     original_cleaning_currency: "TRY",
     cleaning_fee_try: 0,
     exchange_rate: 1,
+
+    // 🔥 HAVUZ ISITMA — 8. adım. Custom price = tek düz TRY tutar,
+    // itemization yok; cleaning-fee nötrleme deseninin aynısı. Bu
+    // kayıt Supabase partial-update semantiğinde DB'ye kalıcı yazılır
+    // (computeCustomPriceToggle TOGGLE ON'daki local state nötrlemesini
+    // save anında persist eder).
+    pool_heating_selected: false,
+    original_pool_heating_total: 0,
+    original_pool_heating_currency: "TRY",
+    pool_heating_total_try: 0,
 
     // FINANCIAL SNAPSHOT
     prepayment_amount: customPrepayment,

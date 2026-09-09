@@ -38,6 +38,14 @@ function buildPayload(
     original_cleaning_currency: "TRY",
     cleaning_fee_try: 2500,
     exchange_rate: 1,
+    // 🔥 HAVUZ ISITMA — 8. adım. ReservationUpdatePayloadShape'e eklenen
+    // 4 zorunlu alan (buildCustomPricePayload.ts). buildReservationAfterSnapshot
+    // bu alanları OKUMUYOR (17-alan kontratı değişmedi) — yalnız tip
+    // uyumluluğu için eklendi.
+    pool_heating_selected: false,
+    original_pool_heating_total: 0,
+    original_pool_heating_currency: "TRY",
+    pool_heating_total_try: 0,
     prepayment_amount: 10000,
     remaining_payment: 40000,
     paid_amount: 0,

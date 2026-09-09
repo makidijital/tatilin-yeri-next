@@ -58,6 +58,11 @@ export type ReservationVillaEmbed = {
   cleaning_currency: string | null;
   cleaning_limit: number | null;
   custom_prepayment_rate: number | string | null;
+  /** 🔥 HAVUZ ISITMA — 8. adım. select-shapes.ts'in SELECT_RESERVATION_DETAIL
+   *  villa embed'ine eklendi (bkz. o dosya). Admin edit/recalculate akışı
+   *  için villa'nın gerçek havuz ısıtma ücretini taşır. */
+  pool_heating_fee: number | null;
+  pool_heating_currency: string | null;
 } | null;
 
 /* ---------------- PAYMENT METHOD EMBED ----------------
@@ -101,17 +106,29 @@ export type PriceDetailSnapshot = {
   stay: number;
   /** Temizlik tutarı (TRY, cleaning_limit muafiyeti uygulanmış). */
   cleaning: number;
-  /** Toplam tutar (TRY) = stay + cleaning. */
+  /** Toplam tutar (TRY) = stay + cleaning + poolHeating. */
   total: number;
+  /** Havuz ısıtma tutarı (TRY). 🔥 8. adım — calculateGrandTotal'ın
+   *  `poolHeating` dönüşüyle birebir. OPTIONAL tutuldu (cleaning/total'dan
+   *  FARKLI olarak) — bu tip'i literal olarak inşa eden mevcut çağıranlar
+   *  (ör. DateRangeCard/LiveDatePriceSummary — bu adımda dokunulmadı)
+   *  bu alanı hiç bilmeyebilir; `priceDetail.poolHeating` okunduğunda
+   *  `undefined` → tüketen taraf (accommodationBase 3. param, default=0)
+   *  bunu 0 gibi ele alır → regresyon yok. */
+  poolHeating?: number;
   /** Multi-currency snapshot: orijinal konaklama tutarı (foreign
    *  currency başlangıç değeri). Foreign currency yoksa null. */
   original_stay?: number | null;
   /** Multi-currency snapshot: orijinal temizlik tutarı. */
   original_cleaning?: number | null;
+  /** 🔥 8. adım — Multi-currency snapshot: orijinal havuz ısıtma tutarı. */
+  original_pool_heating?: number | null;
   /** Orijinal konaklama currency'si (foreign ise). */
   original_currency?: string | null;
   /** Orijinal temizlik currency'si (foreign ise). */
   original_cleaning_currency?: string | null;
+  /** 🔥 8. adım — Orijinal havuz ısıtma currency'si (foreign ise). */
+  original_pool_heating_currency?: string | null;
   /** Target currency (display tarafı; "TRY" default). custom_price
    *  branch'ında snapshot olarak yazılır; price recalc result'da
    *  helper'dan akar. */
@@ -128,6 +145,11 @@ export type SelectedVilla = {
   cleaning_currency?: string | null;
   cleaning_limit?: number | null;
   custom_prepayment_rate?: number | string | null;
+  /** 🔥 HAVUZ ISITMA — 8. adım. Villa change sonrası async fetch edilen
+   *  villa detayının pool heating alanları (bkz. villa.repository.server.ts
+   *  findContextById). */
+  pool_heating_fee?: number | null;
+  pool_heating_currency?: string | null;
 } | null;
 
 /* ---------------- SETTER ALIAS ----------------

@@ -94,11 +94,18 @@ export function computeReservationPriceRecalc(
       ),
       stay: Number(data?.total_price_try || 0),
       cleaning: 0,
+      // 🔥 HAVUZ ISITMA — 8. adım. Custom price = tek düz TRY tutar,
+      // itemization yok (temizlik ile aynı muamele). Redesign DEĞİL —
+      // mevcut custom price mantığı korunuyor, yalnız tip-shape
+      // (PriceDetailSnapshot.poolHeating zorunlu) tamamlanıyor.
+      poolHeating: 0,
       total: Number(data?.total_price_try || 0),
       original_stay: 0,
       original_currency: "TRY",
       original_cleaning: 0,
       original_cleaning_currency: "TRY",
+      original_pool_heating: 0,
+      original_pool_heating_currency: "TRY",
       currency: "TRY",
     };
 
@@ -151,9 +158,14 @@ export function computeReservationPriceRecalc(
 
       stay:
         Number(data?.total_price_try || 0) -
-        Number(data?.cleaning_fee_try || 0),
+        Number(data?.cleaning_fee_try || 0) -
+        Number(data?.pool_heating_total_try || 0),
 
       cleaning: Number(data?.cleaning_fee_try || 0),
+
+      // 🔥 HAVUZ ISITMA — 8. adım. Tarih/villa DEĞİŞMEDİĞİ için mevcut
+      // reservation snapshot'ı aynen okunur (recalc YOK — CASE 1).
+      poolHeating: Number(data?.pool_heating_total_try || 0),
 
       total: Number(data?.total_price_try || 0),
 
@@ -165,6 +177,11 @@ export function computeReservationPriceRecalc(
 
       original_cleaning_currency:
         data?.original_cleaning_currency || "TRY",
+
+      original_pool_heating: Number(data?.original_pool_heating_total || 0),
+
+      original_pool_heating_currency:
+        data?.original_pool_heating_currency || "TRY",
 
       currency: "TRY",
     };
@@ -196,6 +213,24 @@ export function computeReservationPriceRecalc(
       selectedVilla?.cleaning_limit ??
       data?.villa?.cleaning_limit ??
       0,
+
+    /* 🔥 HAVUZ ISITMA — 8. adım. Cleaning fallback zinciriyle BİREBİR
+       desen: SERVER-authoritative villa context (selectedVilla → async
+       fetch edilen YENİ villa; data?.villa → embed fallback) — client'tan
+       gelen ücrete ASLA güvenilmez. `pool_heating_selected` MEVCUT
+       rezervasyondan (`data?.pool_heating_selected`) OKUNUR ve KORUNUR —
+       villa değişse de kullanıcının "havuz ısıtma istiyorum" seçimi
+       sıfırlanmaz (kullanıcı talimatı). Yeni villada ücret yoksa
+       (0/null) engine `poolHeating: 0` döner → hesap doğru devam eder. */
+    pool_heating_fee:
+      selectedVilla?.pool_heating_fee ??
+      data?.villa?.pool_heating_fee ??
+      0,
+    pool_heating_currency:
+      selectedVilla?.pool_heating_currency ||
+      data?.villa?.pool_heating_currency ||
+      "TRY",
+    pool_heating_selected: !!data?.pool_heating_selected,
   });
 
   const stayCurrency = result.original_currency || "TRY";
@@ -215,12 +250,20 @@ export function computeReservationPriceRecalc(
 
   const nextTotalTRY = Number(result.total) || 0;
   const nextCleaningTRY = Number(result.cleaning) || 0;
+  // 🔥 HAVUZ ISITMA — 8. adım. Gece başına ücret olduğu için `result`
+  // (calculateGrandTotal) YENİ gece sayısına göre zaten yeniden
+  // hesaplandı (start/end ISO değişmiş olabilir — tarih değişikliği).
+  const nextPoolHeatingTRY = Number(result.poolHeating) || 0;
 
   /* ---------------------------------------------
      🔥 FINANCIAL SNAPSHOT — paid_amount KORUNUR
+     Ön ödeme havuz ısıtmayı İÇERMEZ: accommodationBase 3. parametre
+     ile havuz ısıtmayı da toplamdan düşer (total - cleaning - poolHeating).
   ---------------------------------------------- */
   const newPrepayment = Math.round(
-    (accommodationBase(nextTotalTRY, nextCleaningTRY) * prepaymentRate) / 100
+    (accommodationBase(nextTotalTRY, nextCleaningTRY, nextPoolHeatingTRY) *
+      prepaymentRate) /
+      100
   );
   const newRemaining = Math.max(nextTotalTRY - newPrepayment, 0);
 
@@ -252,6 +295,16 @@ export function computeReservationPriceRecalc(
       // KUR
       exchange_rate:
         isForeignStay || isForeignCleaning ? exchangeRate : 1,
+
+      // 🔥 HAVUZ ISITMA snapshot — 8. adım. `pool_heating_selected`
+      // mevcut rezervasyondan korunur (yukarıdaki calculateGrandTotal
+      // çağrısıyla AYNI değer — tek source-of-truth).
+      pool_heating_selected: !!data?.pool_heating_selected,
+      pool_heating_total_try: nextPoolHeatingTRY,
+      original_pool_heating_total: Number(result.original_pool_heating) || 0,
+      original_pool_heating_currency:
+        (result.original_pool_heating_currency ||
+          "TRY") as ReservationDetailData["original_pool_heating_currency"],
 
       // 🔥 FINANCIAL SNAPSHOT
       prepayment_amount: newPrepayment,

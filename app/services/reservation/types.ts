@@ -136,6 +136,15 @@ export type ReservationUpdateInput = {
   cleaning_fee_try?: number | null;
   exchange_rate?: number | null;
 
+  // 🔥 HAVUZ ISITMA — 8. adım (admin edit doğruluk düzeltmesi).
+  // Create input'taki (satır 63-66) aynı 4 alan; admin update akışında
+  // (tarih/villa değişikliği, recalculate) doğru snapshot yazılabilmesi
+  // için eklendi. Field set + isim DB kolonlarıyla birebir (migration 075).
+  pool_heating_selected?: boolean | null;
+  original_pool_heating_total?: number | null;
+  original_pool_heating_currency?: string | null;
+  pool_heating_total_try?: number | null;
+
   payment_method_id?: string | null;
   /* TUR 1: ReservationStatus enum ile aligned (cancelled dahil).
      Migration 030'da allow-list pending+confirmed availability'ye
@@ -195,6 +204,10 @@ export type ReservationUpdatePayload = {
   original_cleaning_currency?: string;
   cleaning_fee_try?: number;
   exchange_rate?: number;
+  pool_heating_selected?: boolean;
+  original_pool_heating_total?: number;
+  original_pool_heating_currency?: string;
+  pool_heating_total_try?: number;
   payment_method_id?: string | null;
   status?: ReservationStatusFull;
   prepayment_amount?: number;

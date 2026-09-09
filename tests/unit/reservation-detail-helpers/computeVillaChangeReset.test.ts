@@ -61,7 +61,7 @@ describe("computeVillaChangeReset", () => {
     expect(p.paid_amount).toBe(0);
   });
 
-  it("patch contains exactly 15 keys (regression guard)", () => {
+  it("patch contains exactly 18 keys (regression guard — 8. adım: +3 havuz ısıtma tutar alanı)", () => {
     const p = computeVillaChangeReset({ prev, newVillaId: "villa-new" });
     expect(Object.keys(p).sort()).toEqual([
       "villa_id",
@@ -79,6 +79,17 @@ describe("computeVillaChangeReset", () => {
       "prepayment_amount",
       "remaining_payment",
       "paid_amount",
+      // 🔥 HAVUZ ISITMA — 8. adım. Yalnız TUTAR alanları; `pool_heating_selected`
+      // BİLİNÇLİ OLARAK YOK (mevcut rezervasyonun seçimi korunmalı — bkz.
+      // computeVillaChangeReset.pool-heating.test.ts).
+      "pool_heating_total_try",
+      "original_pool_heating_total",
+      "original_pool_heating_currency",
     ].sort());
+  });
+
+  it("8. adım: patch 'pool_heating_selected' key'ini İÇERMEZ (mevcut seçim korunmalı)", () => {
+    const p = computeVillaChangeReset({ prev, newVillaId: "villa-new" });
+    expect("pool_heating_selected" in p).toBe(false);
   });
 });

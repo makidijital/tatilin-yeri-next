@@ -75,6 +75,19 @@ export function computeCustomPriceToggle(
           selectedVilla?.cleaning_limit ??
           prev?.villa?.cleaning_limit ??
           0,
+
+        /* 🔥 HAVUZ ISITMA — 8. adım. computeReservationPriceRecalc CASE 2
+           ile BİREBİR desen: server-authoritative villa context, mevcut
+           rezervasyonun `pool_heating_selected` durumu KORUNUR. */
+        pool_heating_fee:
+          selectedVilla?.pool_heating_fee ??
+          prev?.villa?.pool_heating_fee ??
+          0,
+        pool_heating_currency:
+          selectedVilla?.pool_heating_currency ||
+          prev?.villa?.pool_heating_currency ||
+          "TRY",
+        pool_heating_selected: !!prev?.pool_heating_selected,
       });
 
       const stayCurrency = result.original_currency || "TRY";
@@ -90,9 +103,12 @@ export function computeCustomPriceToggle(
 
       const nextTotalTRY = Number(result.total) || 0;
       const nextCleaningTRY = Number(result.cleaning) || 0;
+      const nextPoolHeatingTRY = Number(result.poolHeating) || 0;
 
       const newPrepayment = Math.round(
-        (accommodationBase(nextTotalTRY, nextCleaningTRY) * prepaymentRate) / 100
+        (accommodationBase(nextTotalTRY, nextCleaningTRY, nextPoolHeatingTRY) *
+          prepaymentRate) /
+          100
       );
       const newRemaining = Math.max(nextTotalTRY - newPrepayment, 0);
 
@@ -121,6 +137,15 @@ export function computeCustomPriceToggle(
         exchange_rate:
           isForeignStay || isForeignCleaning ? exchangeRate : 1,
 
+        // 🔥 HAVUZ ISITMA snapshot — 8. adım. `pool_heating_selected`
+        // prev'den korunur (yukarıdaki calculateGrandTotal ile aynı değer).
+        pool_heating_selected: !!prev?.pool_heating_selected,
+        pool_heating_total_try: nextPoolHeatingTRY,
+        original_pool_heating_total: Number(result.original_pool_heating) || 0,
+        original_pool_heating_currency:
+          (result.original_pool_heating_currency ||
+            "TRY") as ReservationDetailData["original_pool_heating_currency"],
+
         prepayment_amount: newPrepayment,
         remaining_payment: newRemaining,
         // paid_amount korunur
@@ -146,5 +171,14 @@ export function computeCustomPriceToggle(
     original_cleaning_currency: "TRY",
     cleaning_fee_try: 0,
     exchange_rate: 1,
+    // 🔥 HAVUZ ISITMA — 8. adım. Custom price = tek düz TRY tutar,
+    // itemization yok; cleaning-fee nötrleme deseninin AYNI mantıkla
+    // genişletilmesi (redesign DEĞİL). buildCustomPricePayload bu
+    // nötrlemeyi DB'ye kalıcı yazar (Supabase partial-update stale
+    // değer bırakmasın diye).
+    pool_heating_selected: false,
+    pool_heating_total_try: 0,
+    original_pool_heating_total: 0,
+    original_pool_heating_currency: "TRY",
   };
 }

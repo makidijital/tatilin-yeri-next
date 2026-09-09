@@ -45,6 +45,12 @@ type Partial = Pick<
   | "country"
   | "city"
   | "address"
+  // 🔥 HAVUZ ISITMA — 8. adım. buildNormalPayload/buildCustomPricePayload
+  // pool heating regression testleri bu 4 alanı okuyor.
+  | "pool_heating_selected"
+  | "original_pool_heating_total"
+  | "original_pool_heating_currency"
+  | "pool_heating_total_try"
 >;
 
 /** Tipik prepayment rezervasyon (foreign currency yok). */
@@ -79,6 +85,13 @@ export const baseReservation: Partial = {
   country: "Türkiye",
   city: "Antalya",
   address: null,
+  // 🔥 HAVUZ ISITMA — 8. adım. Default: eski (havuz ısıtmasız) rezervasyon
+  // (regresyon fixture'ı — baseReservation kullanan mevcut tüm testler
+  // bu değerlerle DEĞİŞMEDEN çalışmaya devam eder).
+  pool_heating_selected: false,
+  original_pool_heating_total: 0,
+  original_pool_heating_currency: "TRY",
+  pool_heating_total_try: 0,
 };
 
 /** Multi-currency rezervasyon (foreign stay + foreign cleaning). */
