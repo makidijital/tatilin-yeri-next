@@ -56,8 +56,27 @@ export async function POST(req: Request): Promise<Response> {
      cleaning_fee_try / prepayment_amount / remaining_payment) sunucuda
      mevcut price engine ile yeniden hesaplayıp karşılaştırır; drift'i
      structured log'lar. Fail-open: ASLA booking'i bloklamaz/throw etmez.
-     Enforcement bir SONRAKİ fazda (strict) eklenecek. */
-  await verifyPublicReservationPrice(body);
+     Enforcement bir SONRAKİ fazda (strict) eklenecek.
+
+     🛡️ HAVUZ ISITMA — 6. adım: EXPLICIT ENFORCEMENT (kullanıcı kuralı —
+     bu 4 kolon ASLA client'tan güvenilmez). `verification.poolHeating`
+     doluysa (server recompute başarılıysa) `body`'nin 4 pool heating
+     snapshot alanı server-authoritative değerlerle OVERRIDE edilir —
+     `createReservation`'a ve dolayısıyla `create.service.ts`'e (DOKUNULMADI,
+     admin path ile paylaşılıyor) bu adımdan SONRA, zaten düzeltilmiş
+     `body` geçer. Recompute başarısızsa (fail-open) `body` DEĞİŞTİRİLMEZ —
+     client'ın gönderdiği (zaten ReservationForm'da doğru hesaplanan)
+     değerler aynen kullanılır. */
+  const verification = await verifyPublicReservationPrice(body);
+  if (verification.poolHeating) {
+    body.pool_heating_selected = verification.poolHeating.pool_heating_selected;
+    body.original_pool_heating_total =
+      verification.poolHeating.original_pool_heating_total;
+    body.original_pool_heating_currency =
+      verification.poolHeating.original_pool_heating_currency;
+    body.pool_heating_total_try =
+      verification.poolHeating.pool_heating_total_try;
+  }
 
   try {
     /* 🛡️ ORPHAN-GAP GATE — frontend bypass edilirse min-stay'den kısa

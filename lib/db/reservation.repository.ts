@@ -200,12 +200,16 @@ export const reservationRepository = {
         precedent'i ile aynı sahiplik (villa repository donmuş).
         4-field projeksiyon BİREBİR; `findAvailabilityConfigById`
         (6-field superset) REUSE EDİLMEZ. Anon `db` (villa public_read).
-        Fail-open mapping caller'da (helper). */
+        Fail-open mapping caller'da (helper).
+
+     🛡️ HAVUZ ISITMA — 6. adım: `pool_heating_fee, pool_heating_currency`
+        EKLENDİ (6-field projeksiyon). Metod adı DEĞİŞTİRİLMEDİ (tek
+        call site — price-verify.ts); diff yüzeyi minimize edildi. */
   async findVillaCleaningConfig(villaId: string) {
     return await db
       .from("villa")
       .select(
-        "cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate"
+        "cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate, pool_heating_fee, pool_heating_currency"
       )
       .eq("id", villaId)
       .maybeSingle();

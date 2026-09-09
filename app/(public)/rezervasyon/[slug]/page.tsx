@@ -13,6 +13,10 @@ type Props = {
     end?: string | string[];
     adults?: string | string[];
     children?: string | string[];
+    // 🛡️ HAVUZ ISITMA — 6. adım. useBookingEngine.handleReservation
+    // hard-navigation (window.location.href) URL'ine ekliyor; burada
+    // parse edilip ReservationForm'a prop olarak geçiyor.
+    poolHeating?: string | string[];
   }>;
 };
 
@@ -61,6 +65,7 @@ export default async function ReservationPage({
   const end = getParam(sp.end);
   const adults = getParam(sp.adults);
   const children = getParam(sp.children);
+  const poolHeating = getParam(sp.poolHeating);
 
   return (
     <>
@@ -87,6 +92,7 @@ export default async function ReservationPage({
           end={end}
           image={coverImage}
           adults={adults}
+          poolHeatingSelected={poolHeating === "1"}
           /* 🛡️ false-positive: `children` burada misafir sayısı
              (rezervasyon domain prop'u), React.children DEĞİL. */
           // eslint-disable-next-line react/no-children-prop

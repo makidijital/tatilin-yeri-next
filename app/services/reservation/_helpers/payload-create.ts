@@ -74,6 +74,21 @@ export function buildCreateReservationPayload(
     cleaning_fee_try:
       Number(data.cleaning_fee_try) || 0,
 
+    // 🔥 HAVUZ ISITMA — 6. adım. Cleaning fee ile AYNI always-write
+    // coercion deseni (conditional-spread DEĞİL) — snapshot her zaman
+    // dört kolonu yazar; seçilmemiş/fee'siz rezervasyonlarda 0/"TRY"/false
+    // default'ları DB'ye net yazılır (undefined bırakılmaz).
+    pool_heating_selected: !!data.pool_heating_selected,
+
+    original_pool_heating_total:
+      Number(data.original_pool_heating_total) || 0,
+
+    original_pool_heating_currency:
+      data.original_pool_heating_currency || "TRY",
+
+    pool_heating_total_try:
+      Number(data.pool_heating_total_try) || 0,
+
     name: data.name,
     phone: data.phone,
     email: data.email || null,

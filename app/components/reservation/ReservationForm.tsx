@@ -52,6 +52,11 @@ export default function ReservationForm({
   image,
   adults,
   children,
+  // 🛡️ HAVUZ ISITMA — 6. adım. `/rezervasyon/[slug]/page.tsx`'in
+  // `poolHeating` search param'ından türettiği boolean prop —
+  // useBookingEngine'in hard-navigation URL'i üzerinden taşınıyor
+  // (bkz. useBookingEngine.ts handleReservation).
+  poolHeatingSelected,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }: any) {
   const router = useRouter();
@@ -217,6 +222,19 @@ export default function ReservationForm({
 
         cleaning_limit:
           villa.cleaning_limit || 0,
+
+        // 🛡️ HAVUZ ISITMA — 6. adım. Opsiyonel parametreler; villa'da
+        // fee yoksa (null/0) calculateGrandTotal içindeki
+        // calculatePoolHeatingFee zaten 0 döner — mevcut davranış
+        // BYTE-IDENTICAL kalır (bkz. lib/price.engine.ts).
+        pool_heating_fee:
+          villa.pool_heating_fee || 0,
+
+        pool_heating_currency:
+          villa.pool_heating_currency || "TRY",
+
+        pool_heating_selected:
+          !!poolHeatingSelected,
       })
       : null;
 
@@ -245,6 +263,17 @@ export default function ReservationForm({
 
         cleaning_limit:
           villa.cleaning_limit || 0,
+
+        // 🛡️ HAVUZ ISITMA — 6. adım. Display result ile AYNI parametreler
+        // (yalnız currency:"TRY" farkı — snapshot deseni zaten böyle).
+        pool_heating_fee:
+          villa.pool_heating_fee || 0,
+
+        pool_heating_currency:
+          villa.pool_heating_currency || "TRY",
+
+        pool_heating_selected:
+          !!poolHeatingSelected,
       })
       : null;
 
@@ -264,7 +293,10 @@ export default function ReservationForm({
 
   const prepayment = result
     ? calculatePrepayment(
-      accommodationBase(result.total, result.cleaning),
+      /* 🛡️ HAVUZ ISITMA — 6. adım. 3. parametre eklendi — pool heating
+         de (cleaning gibi) ön ödeme dışı tutulur. poolHeatingSelected=false
+         iken result.poolHeating=0 → BYTE-IDENTICAL eski davranış. */
+      accommodationBase(result.total, result.cleaning, result.poolHeating),
       prepaymentRate
     )
     : 0;
@@ -273,9 +305,17 @@ export default function ReservationForm({
   // Snapshot'a yazılan prepayment ASLA TRY değerinden üretilir.
   const snapshotTotalTRY = snapshot?.total || 0;
   const snapshotCleaningTRY = snapshot?.cleaning || 0;
+  // 🛡️ HAVUZ ISITMA — 6. adım. TRY snapshot — DB'ye yazılan
+  // pool_heating_total_try'ın client-side kaynağı (server bunu
+  // AYRICA authoritative olarak yeniden hesaplayıp override eder).
+  const snapshotPoolHeatingTRY = snapshot?.poolHeating || 0;
 
   const snapshotPrepayment = calculatePrepayment(
-    accommodationBase(snapshotTotalTRY, snapshotCleaningTRY),
+    accommodationBase(
+      snapshotTotalTRY,
+      snapshotCleaningTRY,
+      snapshotPoolHeatingTRY
+    ),
     prepaymentRate
   );
 
@@ -340,6 +380,8 @@ export default function ReservationForm({
             snapshotRemaining,
             exchangeRate,
             hasForeignCurrency,
+            poolHeatingSelected: !!poolHeatingSelected,
+            snapshotPoolHeatingTRY,
           })
         ),
       });
@@ -772,6 +814,17 @@ export default function ReservationForm({
                   <span>Temizlik Ücreti</span>
                   <span className="text-[var(--color-stone-900)] font-medium">
                     {formatCurrency((result as any).cleaning || 0, currency)}
+                  </span>
+                </div>
+              )}
+
+              {/* 🛡️ HAVUZ ISITMA — 6. adım. Temizlik Ücreti satırıyla
+                  BİREBİR aynı stil/desen; yalnız poolHeating>0 iken görünür. */}
+              {(result?.poolHeating || 0) > 0 && (
+                <div className="flex justify-between text-[var(--color-stone-600)]">
+                  <span>Havuz Isıtma</span>
+                  <span className="text-[var(--color-stone-900)] font-medium">
+                    {formatCurrency((result as any).poolHeating || 0, currency)}
                   </span>
                 </div>
               )}

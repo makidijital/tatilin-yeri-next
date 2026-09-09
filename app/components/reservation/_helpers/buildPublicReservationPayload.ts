@@ -56,6 +56,11 @@ export type PublicReservationSnapshot = {
   original_cleaning_currency?: string | null;
   original_stay?: number | null;
   original_cleaning?: number | null;
+  // 🔥 HAVUZ ISITMA — 6. adım. calculateGrandTotal'ın TRY snapshot
+  // çağrısının döndürdüğü ek alanlar (bkz. lib/price.engine.ts).
+  poolHeating?: number;
+  original_pool_heating?: number | null;
+  original_pool_heating_currency?: string | null;
 };
 
 export type BuildPublicReservationPayloadInput = {
@@ -71,6 +76,12 @@ export type BuildPublicReservationPayloadInput = {
   snapshotRemaining: number;
   exchangeRate: number;
   hasForeignCurrency: boolean;
+  // 🔥 HAVUZ ISITMA — 6. adım. OPSİYONEL — geçilmezse eski davranış
+  // (poolHeatingSelected=false, snapshotPoolHeatingTRY=undefined→0)
+  // BYTE-IDENTICAL kalır; mevcut test dosyası (buildPublicReservationPayload.test.ts)
+  // bu iki alanı hiç geçmeden aynı sonucu üretmeye devam eder.
+  poolHeatingSelected?: boolean;
+  snapshotPoolHeatingTRY?: number;
 };
 
 export function buildPublicReservationPayload(
@@ -89,6 +100,8 @@ export function buildPublicReservationPayload(
     snapshotRemaining,
     exchangeRate,
     hasForeignCurrency,
+    poolHeatingSelected,
+    snapshotPoolHeatingTRY,
   } = input;
 
   return {
@@ -130,6 +143,26 @@ export function buildPublicReservationPayload(
     total_price_try: snapshotTotalTRY,
 
     cleaning_fee_try: snapshotCleaningTRY,
+
+    // 🔥 HAVUZ ISITMA — 6. adım. Cleaning fee'nin foreign-currency
+    // ternary deseni BİREBİR: TRY ise 0/"TRY", döviz ise gerçek villa
+    // değeri. Server (route.ts → price-verify) bu client değerini
+    // GÜVENMEZ, kendi hesapladığı authoritative snapshot ile override eder;
+    // burada yine de doğru (client-side) değer üretilir — normal/honest
+    // akışta server'ın üreteceğiyle eşleşir.
+    pool_heating_selected: !!poolHeatingSelected,
+
+    original_pool_heating_total:
+      snapshot?.original_pool_heating_currency !== "TRY"
+        ? snapshot?.original_pool_heating || 0
+        : 0,
+
+    original_pool_heating_currency:
+      snapshot?.original_pool_heating_currency !== "TRY"
+        ? snapshot?.original_pool_heating_currency || "TRY"
+        : "TRY",
+
+    pool_heating_total_try: snapshotPoolHeatingTRY,
 
     // USER
     name: form.name.trim(),

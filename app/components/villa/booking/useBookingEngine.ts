@@ -778,7 +778,12 @@ export function useBookingEngine(
     const start = format(startDate);
     const end = format(endDate);
 
-    const url = `/rezervasyon/${villaSlug}?start=${start}&end=${end}&adults=${adults}&children=${children}`;
+    /* 🛡️ HAVUZ ISITMA — 6. adım. handleReservation `window.location.href`
+       ile HARD navigation yapıyor — React state/props bu sınırı geçemez.
+       poolHeatingSelected zaten bu hook'un closure'ında (prop threading
+       gerekmiyor); URL query param olarak taşınıp `/rezervasyon/[slug]/page.tsx`
+       tarafından okunuyor. Yeni global state/context YOK. */
+    const url = `/rezervasyon/${villaSlug}?start=${start}&end=${end}&adults=${adults}&children=${children}&poolHeating=${poolHeatingSelected ? "1" : "0"}`;
 
     window.location.href = url;
   };

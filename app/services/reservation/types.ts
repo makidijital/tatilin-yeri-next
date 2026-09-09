@@ -54,6 +54,17 @@ export type ReservationCreateInput = {
   original_cleaning_currency?: string;
   cleaning_fee_try?: number;
 
+  // 🔥 HAVUZ ISITMA — 6. adım (public reservation create snapshot).
+  // Sadece tanımlıysa yazılır tarzında DEĞİL — payload-create.ts'de
+  // cleaning fee ile AYNI always-write coercion deseni kullanılır
+  // (bkz. buildCreateReservationPayload). Field set + isim DB kolonlarıyla
+  // birebir (migration 075): pool_heating_selected, original_pool_heating_total,
+  // original_pool_heating_currency, pool_heating_total_try.
+  pool_heating_selected?: boolean;
+  original_pool_heating_total?: number;
+  original_pool_heating_currency?: string;
+  pool_heating_total_try?: number;
+
   name: string;
   phone: string;
   email?: string;

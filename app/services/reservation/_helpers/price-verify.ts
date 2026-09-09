@@ -3,6 +3,7 @@ import "server-only";
 import { reservationRepository } from "@/lib/db/reservation.repository";
 import {
   calculateGrandTotal,
+  calculateNights,
   calculatePrepayment,
   accommodationBase,
 } from "@/lib/price.engine";
@@ -11,6 +12,11 @@ import { getVillaPrices } from "@/app/services/villa-price.service";
 import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
 import { getPublicSettings } from "@/app/services/settings.service";
 import type { ReservationCreateInput } from "../types";
+/* 🛡️ HAVUZ ISITMA — 6. adım. Server-authoritative pool heating snapshot
+   — SAF helper (server-only İŞARETİ YOK, bkz. dosyanın kendi doc-comment'i).
+   Client'ın gönderdiği pool heating total'a GÜVENMEZ; villanın gerçek
+   pool_heating_fee/currency + burada hesaplanan nights ile YENİDEN üretir. */
+import { computeAuthoritativePoolHeatingSnapshot } from "./pool-heating-verify";
 
 /* ===============================================================
    🛡️ PUBLIC RESERVATION — SERVER-SIDE PRICE VERIFY (COMPARE/LOG)
@@ -59,14 +65,25 @@ export type ServerPriceResult = {
   prepaymentAmount: number;
   remainingPayment: number;
   prepaymentRate: number;
+  // 🛡️ HAVUZ ISITMA — 6. adım. Server-authoritative snapshot (villanın
+  // gerçek pool_heating_fee/currency + server nights ile hesaplanmış;
+  // client'ın gönderdiği değerlere bağımlı DEĞİL).
+  poolHeatingSelected: boolean;
+  originalPoolHeatingTotal: number;
+  originalPoolHeatingCurrency: string;
+  poolHeatingTotalTry: number;
 };
 
 export async function recomputePublicReservationPrice(input: {
   villa_id: string;
   start_date: string;
   end_date: string;
+  // 🛡️ HAVUZ ISITMA — 6. adım. Client'ın "seçtim/seçmedim" tercihi —
+  // BU alan güvenilir (bir tercih, bir tutar değil); tutar HER ZAMAN
+  // sunucuda villanın gerçek fee'sinden yeniden üretilir.
+  pool_heating_selected?: boolean;
 }): Promise<ServerPriceResult | null> {
-  const { villa_id, start_date, end_date } = input;
+  const { villa_id, start_date, end_date, pool_heating_selected } = input;
   if (!villa_id || !start_date || !end_date) return null;
 
   const [prices, ratesMap, settings, villaRes] = await Promise.all([
@@ -106,10 +123,38 @@ export async function recomputePublicReservationPrice(input: {
     prepaymentRate = Number(settings.prepayment_rate);
   }
 
-  const totalPriceTry = snapshot.total || 0;
+  /* 🛡️ HAVUZ ISITMA — 6. adım. `calculateGrandTotal` çağrısı YUKARIDA
+     BİLEREK pool heating parametreleri OLMADAN bırakıldı (risk minimizasyonu
+     — mevcut snapshot semantiği/davranışı hiç dokunulmadan korunuyor).
+     Pool heating totali AYRI, saf helper (`computeAuthoritativePoolHeatingSnapshot`)
+     ile hesaplanır ve additive olarak totale eklenir — server KURALI
+     (selected=false → 0; fee NULL/<=0 → 0; aksi halde nights×fee) birebir
+     bu helper içinde uygulanıyor (bkz. pool-heating-verify.ts). */
+  const nights = calculateNights(start_date, end_date);
+
+  const poolHeatingSnapshot = computeAuthoritativePoolHeatingSnapshot({
+    nights,
+    poolHeatingSelected: !!pool_heating_selected,
+    villaPoolHeatingFee: villaRow?.pool_heating_fee as
+      | number
+      | null
+      | undefined,
+    villaPoolHeatingCurrency: villaRow?.pool_heating_currency as
+      | string
+      | null
+      | undefined,
+    rates,
+  });
+
   const cleaningFeeTry = snapshot.cleaning || 0;
+  const totalPriceTry =
+    (snapshot.total || 0) + poolHeatingSnapshot.pool_heating_total_try;
   const prepaymentAmount = calculatePrepayment(
-    accommodationBase(totalPriceTry, cleaningFeeTry),
+    accommodationBase(
+      totalPriceTry,
+      cleaningFeeTry,
+      poolHeatingSnapshot.pool_heating_total_try
+    ),
     prepaymentRate
   );
   const remainingPayment = Math.max(
@@ -123,6 +168,11 @@ export async function recomputePublicReservationPrice(input: {
     prepaymentAmount,
     remainingPayment,
     prepaymentRate,
+    poolHeatingSelected: poolHeatingSnapshot.pool_heating_selected,
+    originalPoolHeatingTotal: poolHeatingSnapshot.original_pool_heating_total,
+    originalPoolHeatingCurrency:
+      poolHeatingSnapshot.original_pool_heating_currency,
+    poolHeatingTotalTry: poolHeatingSnapshot.pool_heating_total_try,
   };
 }
 
@@ -166,6 +216,13 @@ export function comparePublicReservationPrice(
       Number(payload.remaining_payment) || 0,
       server.remainingPayment,
     ],
+    // 🛡️ HAVUZ ISITMA — 6. adım. Log-only karşılaştırma (enforcement YOK —
+    // mevcut fail-open felsefe aynen).
+    [
+      "pool_heating_total_try",
+      Number(payload.pool_heating_total_try) || 0,
+      server.poolHeatingTotalTry,
+    ],
   ];
 
   const deltas: PriceComparison["deltas"] = {};
@@ -179,24 +236,50 @@ export function comparePublicReservationPrice(
   return { match, deltas };
 }
 
+/* 🛡️ HAVUZ ISITMA — 6. adım. Route'un (`api/public/reservations/route.ts`)
+   `body`'deki 4 pool heating snapshot alanını server-authoritative
+   değerlerle override edebilmesi için — `verifyPublicReservationPrice`'ın
+   tek caller'ı bu route; return değeri ÖNCEDEN tamamen ignore ediliyordu
+   (grep ile doğrulandı), bu yüzden shape genişletmek güvenli. */
+export type PublicReservationPoolHeatingSnapshot = {
+  pool_heating_selected: boolean;
+  original_pool_heating_total: number;
+  original_pool_heating_currency: string;
+  pool_heating_total_try: number;
+};
+
+export type PublicReservationServerVerification = {
+  comparison: PriceComparison | null;
+  /* null → recompute başarısız (fail-open); route bu durumda client'ın
+     ORİJİNAL gönderdiği pool heating alanlarını DEĞİŞTİRMEDEN bırakır. */
+  poolHeating: PublicReservationPoolHeatingSnapshot | null;
+};
+
 /* ---------------------------------------------------------------
-   🔥 verifyPublicReservationPrice — orchestrator (COMPARE/LOG)
+   🔥 verifyPublicReservationPrice — orchestrator (COMPARE/LOG +
+   HAVUZ ISITMA server-authoritative snapshot)
    ---------------------------------------------------------------
    Route'tan çağrılır. Recompute + compare + structured log yapar.
-   ASLA throw etmez; booking'i bloklamaz (fail-open). Enforcement
-   fazına geçildiğinde return değeri (match/deltas) karar için
-   kullanılabilir; şimdilik yalnız gözlemlenir.
+   Fiyat karşılaştırması (total/cleaning/prepayment/remaining) HÂLÂ
+   yalnız COMPARE/LOG (enforcement YOK, fail-open, mevcut felsefe aynen).
+   Pool heating snapshot'ı AYRI: route bunu (varsa) `body` üzerine
+   YAZAR — çünkü kullanıcı KURALI (server bu 4 alanı ASLA client'tan
+   güvenmemeli) yalnız bu 4 kolon için EXPLICIT enforcement istiyor;
+   diğer finansal alanlar (total_price_try vb.) bu adımın kapsamı
+   dışında client-trusted kalmaya devam ediyor (bkz. final rapor,
+   Risk/uyarı bölümü).
 =============================================================== */
 export async function verifyPublicReservationPrice(
   payload: ReservationCreateInput
-): Promise<PriceComparison | null> {
+): Promise<PublicReservationServerVerification> {
   try {
     const server = await recomputePublicReservationPrice({
       villa_id: payload.villa_id,
       start_date: payload.start_date,
       end_date: payload.end_date,
+      pool_heating_selected: payload.pool_heating_selected,
     });
-    if (!server) return null;
+    if (!server) return { comparison: null, poolHeating: null };
 
     const cmp = comparePublicReservationPrice(payload, server);
 
@@ -216,13 +299,22 @@ export async function verifyPublicReservationPrice(
         villa_id: payload.villa_id,
       });
     }
-    return cmp;
+    return {
+      comparison: cmp,
+      poolHeating: {
+        pool_heating_selected: server.poolHeatingSelected,
+        original_pool_heating_total: server.originalPoolHeatingTotal,
+        original_pool_heating_currency: server.originalPoolHeatingCurrency,
+        pool_heating_total_try: server.poolHeatingTotalTry,
+      },
+    };
   } catch (err) {
-    /* FAIL-OPEN: recompute patlasa bile booking sürer. */
+    /* FAIL-OPEN: recompute patlasa bile booking sürer; pool heating
+       snapshot'ı da override EDİLMEZ (route client değerini korur). */
     console.error(
       "[price-verify] recompute FAILED (fail-open, booking sürüyor):",
       err instanceof Error ? err.message : err
     );
-    return null;
+    return { comparison: null, poolHeating: null };
   }
 }
