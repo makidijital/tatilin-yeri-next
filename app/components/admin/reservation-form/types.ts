@@ -44,6 +44,12 @@ export type ReservationFormShape = {
   cleaning_fee_try?: number;
   exchange_rate?: number;
 
+  // Havuz ısıtma
+  pool_heating_selected?: boolean;
+  original_pool_heating_total?: number;
+  original_pool_heating_currency?: string;
+  pool_heating_total_try?: number;
+
   // Custom price (admin override)
   custom_price?: boolean;
   custom_price_note?: string;
@@ -100,11 +106,14 @@ export type ReservationPriceDetail = {
   nights?: number;
   stay?: number;
   cleaning?: number;
+  poolHeating?: number;
   total?: number;
   original_stay?: number;
   original_cleaning?: number;
+  original_pool_heating?: number;
   original_currency?: string;
   original_cleaning_currency?: string;
+  original_pool_heating_currency?: string;
   currency?: string;
 } & Record<string, unknown>;
 
@@ -115,6 +124,8 @@ export type SelectedVillaMeta = {
   cleaning_limit?: number | null;
   custom_prepayment_rate?: number | string | null;
   deposit?: number | null;
+  pool_heating_fee?: number | null;
+  pool_heating_currency?: string | null;
 } & Record<string, unknown>;
 
 /* ---------------- PAYMENT DISPLAY (helper output mirror) ---------------- */

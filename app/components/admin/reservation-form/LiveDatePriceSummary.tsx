@@ -22,6 +22,7 @@ export default function LiveDatePriceSummary({
   nights,
   stayTRY,
   cleaningTRY,
+  poolHeatingTRY = 0,
   totalTRY,
   payNow,
   remainingOnArrival,
@@ -35,6 +36,10 @@ export default function LiveDatePriceSummary({
   nights: number;
   stayTRY: number;
   cleaningTRY: number;
+  /** 🔥 HAVUZ ISITMA — uçtan uca tamamlama turu. Opsiyonel (default 0)
+   *  ki bu component'i çağıran her yer aynı anda güncellenmek
+   *  zorunda kalmasın (byte-identical geriye dönük uyum). */
+  poolHeatingTRY?: number;
   totalTRY: number;
   payNow: number;
   remainingOnArrival: number;
@@ -105,6 +110,13 @@ export default function LiveDatePriceSummary({
           <Row
             label="Temizlik"
             value={`₺${fmtTRY(cleaningTRY)}`}
+            muted
+          />
+        )}
+        {poolHeatingTRY > 0 && (
+          <Row
+            label="Havuz Isıtma"
+            value={`₺${fmtTRY(poolHeatingTRY)}`}
             muted
           />
         )}

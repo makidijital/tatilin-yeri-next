@@ -748,6 +748,8 @@ export default async function PrivateVillaDetail({
                 cleaning_fee={villa.cleaning_fee}
                 cleaning_currency={villa.cleaning_currency}
                 cleaning_limit={villa.cleaning_limit}
+                pool_heating_fee={villa.pool_heating_fee}
+                pool_heating_currency={villa.pool_heating_currency}
                 custom_prepayment_rate={villa.custom_prepayment_rate ?? null}
                 minimum_stay_nights={villa.minimum_stay_nights ?? null}
                 initialStart={hasInitialRange ? initialStart : undefined}

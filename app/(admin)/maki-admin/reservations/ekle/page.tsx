@@ -8,7 +8,7 @@ import { adminFetch } from "@/lib/admin-fetch";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { calculateGrandTotal } from "@/lib/price.engine";
+import { calculateGrandTotal, accommodationBase } from "@/lib/price.engine";
 
 import { getPaymentDisplayValues } from "@/lib/payment.helper";
 
@@ -586,6 +586,14 @@ export default function AdminReservationDetailPage() {
       cleaning_fee: selectedVilla?.cleaning_fee || 0,
       cleaning_currency: selectedVilla?.cleaning_currency || "TRY",
       cleaning_limit: selectedVilla?.cleaning_limit || 0,
+      /* 🔥 HAVUZ ISITMA — uçtan uca tamamlama turu. Server-authoritative
+         villa context'ten (selectedVilla) gelen gerçek gecelik ücret;
+         client hiçbir zaman fiyat/kur üretmez. Seçim admin toggle'ından
+         (data.pool_heating_selected) gelir. Villa'da ücret yoksa
+         calculateGrandTotal zaten 0 döner → eski davranış korunur. */
+      pool_heating_fee: selectedVilla?.pool_heating_fee || 0,
+      pool_heating_currency: selectedVilla?.pool_heating_currency || "TRY",
+      pool_heating_selected: !!data?.pool_heating_selected,
     });
 
     setPriceDetail(result);
@@ -608,6 +616,7 @@ export default function AdminReservationDetailPage() {
     setData((prev) => {
       const nextTotal = Number(result.total) || 0;
       const nextCleaningTRY = Number(result.cleaning) || 0;
+      const nextPoolHeatingTRY = Number(result.poolHeating) || 0;
 
       return {
         ...prev,
@@ -634,6 +643,15 @@ export default function AdminReservationDetailPage() {
 
         cleaning_fee_try: nextCleaningTRY,
 
+        /* 🔥 HAVUZ ISITMA snapshot — always-write (cleaning_fee_try ile
+           aynı desen). `pool_heating_selected` burada YAZILMAZ — o
+           admin toggle'ının kendi state alanı (PriceStep checkbox);
+           tarih/villa recalculation'ı seçim durumunu değiştirmez. */
+        original_pool_heating_total: Number(result.original_pool_heating) || 0,
+        original_pool_heating_currency:
+          result.original_pool_heating_currency || "TRY",
+        pool_heating_total_try: nextPoolHeatingTRY,
+
         // KUR
         exchange_rate:
           isForeignStay || isForeignCleaning ? exchangeRate : 1,
@@ -645,9 +663,12 @@ export default function AdminReservationDetailPage() {
     prices,
     rates,
     data?.custom_price,
+    data?.pool_heating_selected,
     selectedVilla?.cleaning_fee,
     selectedVilla?.cleaning_currency,
     selectedVilla?.cleaning_limit,
+    selectedVilla?.pool_heating_fee,
+    selectedVilla?.pool_heating_currency,
   ]);
 
   /* ---------------------------------------------
@@ -823,7 +844,25 @@ export default function AdminReservationDetailPage() {
   const cleaningTRYDisplay =
     Number(data.cleaning_fee_try) || Number(priceDetail?.cleaning) || 0;
 
-  const stayTRYDisplay = Math.max(totalTRYDisplay - cleaningTRYDisplay, 0);
+  /* 🔥 HAVUZ ISITMA — uçtan uca tamamlama turu. Custom price'ta 0
+     (custom total tek kalem; pool heating ayrı satır olarak taşınmaz —
+     buildCreateCustomPricePayload ile aynı nötrleme kuralı). */
+  const poolHeatingTRYDisplay = data.custom_price
+    ? 0
+    : Number(data.pool_heating_total_try) ||
+      Number(priceDetail?.poolHeating) ||
+      0;
+
+  /* 🛡️ FIX — eski hand-rolled `Math.max(totalTRYDisplay - cleaningTRYDisplay, 0)`
+     formülü havuz ısıtmayı hesaba katmıyordu (accommodationBase() çağırmıyordu,
+     bu yüzden ilk grep taramasında görünmüyordu). accommodationBase 3. parametre
+     ile pool heating'i de düşer; poolHeatingTRYDisplay=0 iken eski formülle
+     BYTE-IDENTICAL. */
+  const stayTRYDisplay = accommodationBase(
+    totalTRYDisplay,
+    cleaningTRYDisplay,
+    poolHeatingTRYDisplay
+  );
 
   const prepayment = priceDetail
     ? Math.round((stayTRYDisplay * prepaymentRate) / 100)
@@ -995,6 +1034,7 @@ export default function AdminReservationDetailPage() {
                   data.custom_price ? totalTRYDisplay : stayTRYDisplay
                 }
                 cleaningTRY={data.custom_price ? 0 : cleaningTRYDisplay}
+                poolHeatingTRY={data.custom_price ? 0 : poolHeatingTRYDisplay}
                 totalTRY={totalTRYDisplay}
                 payNow={payment.payNow}
                 remainingOnArrival={payment.remainingOnArrival}
@@ -1037,7 +1077,14 @@ export default function AdminReservationDetailPage() {
             totalTRYDisplay={totalTRYDisplay}
             cleaningTRYDisplay={cleaningTRYDisplay}
             stayTRYDisplay={stayTRYDisplay}
+            poolHeatingTRYDisplay={poolHeatingTRYDisplay}
             selectedVilla={selectedVilla}
+            onPoolHeatingToggle={() =>
+              setData((prev) => ({
+                ...prev,
+                pool_heating_selected: !prev.pool_heating_selected,
+              }))
+            }
             onCustomToggle={() =>
               setData((prev) => {
                 /* ---------------------------------------------
@@ -1068,6 +1115,13 @@ export default function AdminReservationDetailPage() {
                 /* ---------------------------------------------
                    🔥 TOGGLE ON (false → true)
                    multi-currency alanları nötrlenir.
+                   🔥 HAVUZ ISITMA — buildCreateCustomPricePayload'ın
+                   always-write false/0 davranışıyla AYNI: custom
+                   price'ta pool heating ayrı satır olarak taşınmaz,
+                   checkbox da bu blok gizli olduğu için render
+                   edilmez. State'i de nötrleyerek UI/payload
+                   tutarlılığı sağlanır (section 16: "havuz ısıtma
+                   custom price'ın içine gizlenmemeli").
                 ---------------------------------------------- */
                 return {
                   ...prev,
@@ -1078,6 +1132,10 @@ export default function AdminReservationDetailPage() {
                   original_cleaning_currency: "TRY",
                   cleaning_fee_try: 0,
                   exchange_rate: 1,
+                  pool_heating_selected: false,
+                  original_pool_heating_total: 0,
+                  original_pool_heating_currency: "TRY",
+                  pool_heating_total_try: 0,
                 };
               })
             }

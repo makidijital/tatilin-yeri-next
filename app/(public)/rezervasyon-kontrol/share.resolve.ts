@@ -61,6 +61,11 @@ export type ReservationShareDTO = {
    *  Değer yoksa null → satır gösterilmez. */
   damageDeposit: number | null;
   cleaningFee: number | null;
+  /** 🔥 HAVUZ ISITMA — uçtan uca tamamlama turu. cleaningFee ile AYNI
+   *  desen: yalnız seçiliyse ve TRY snapshot > 0 ise dolu, aksi halde
+   *  null → view satırı hiç göstermez (eski/havuz-ısıtmasız rezervasyon
+   *  davranışı BYTE-IDENTICAL korunur). */
+  poolHeatingFee: number | null;
   /** "Havale/EFT" | "Kredi Kartı" | null (yöntem tanımlı değilse). */
   paymentMethodLabel: string | null;
   /* Mülk sahibi — yalnız ad + telefon (email/iban ASLA). villa.owner yoksa null. */
@@ -149,6 +154,8 @@ export async function resolveReservationShare(
           original_currency: string | null;
           damage_deposit: number | null;
           cleaning_fee_try: number | null;
+          pool_heating_selected: boolean | null;
+          pool_heating_total_try: number | null;
           payment_method: { type: string | null } | null;
           villa: {
             title: string | null;
@@ -208,6 +215,12 @@ export async function resolveReservationShare(
      DTO'ya konur; aksi halde null → view satırı hiç göstermez. */
   const damageDepositVal = num(row.damage_deposit);
   const cleaningFeeVal = num(row.cleaning_fee_try);
+  /* 🔥 HAVUZ ISITMA — yalnız pool_heating_selected=true VE snapshot>0
+     iken gösterilir; eski (pool_heating_selected=false/NULL) rezervasyon
+     davranışı BYTE-IDENTICAL (poolHeatingFee=null → view satırı yok). */
+  const poolHeatingFeeVal = row.pool_heating_selected
+    ? num(row.pool_heating_total_try)
+    : 0;
 
   /* Villa kapak görseli — is_cover öncelik, yoksa ilk geçerli (mevcut
      resolveVillaImageUrl; yeni storage sistemi yok). Yoksa null. */
@@ -265,6 +278,7 @@ export async function resolveReservationShare(
       isFullPayment,
       damageDeposit: damageDepositVal > 0 ? damageDepositVal : null,
       cleaningFee: cleaningFeeVal > 0 ? cleaningFeeVal : null,
+      poolHeatingFee: poolHeatingFeeVal > 0 ? poolHeatingFeeVal : null,
       paymentMethodLabel,
       ownerName,
       ownerPhone,

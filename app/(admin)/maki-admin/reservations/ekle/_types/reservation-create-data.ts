@@ -70,6 +70,13 @@ export type SelectedVillaCreate = {
    *  damage_deposit snapshot olarak yazılır (informational).
    *  null/undefined → 0 fallback (mevcut davranış). */
   deposit?: number | null;
+  /** 🔥 HAVUZ ISITMA — uçtan uca tamamlama turu. villaAdminRepository
+   *  findContextById'nin (villa.repository.server.ts) `/api/admin/villas/[id]`
+   *  GET response'unda zaten döndüğü alanlar (Step 8'de eklendi) — create
+   *  flow'un bu API'yi zaten çağıran fetchPrices effect'i sayesinde ek bir
+   *  server değişikliği gerekmedi. */
+  pool_heating_fee?: number | null;
+  pool_heating_currency?: string | null;
 } | null;
 
 /* ---------------- VILLA LIST ITEM ----------------
@@ -148,6 +155,14 @@ export type ReservationCreateData = ReservationFormShape & {
   cleaning_fee_try: number;
   exchange_rate: number;
 
+  /* 🔥 HAVUZ ISITMA — uçtan uca tamamlama turu. `pool_heating_selected`
+     admin'in kendi seçimidir (checkbox); diğer 3 alan cleaning_fee_try
+     ile AYNI desende, price-calc effect'i tarafından türetilip yazılır. */
+  pool_heating_selected: boolean;
+  original_pool_heating_total: number;
+  original_pool_heating_currency: Currency | string;
+  pool_heating_total_try: number;
+
   /* CUSTOM PRICE — initial false / "" */
   custom_price: boolean;
   custom_price_note: string;
@@ -202,6 +217,12 @@ export function initialReservationCreateData(): ReservationCreateData {
 
     cleaning_fee_try: 0,
     exchange_rate: 1,
+
+    /* HAVUZ ISITMA */
+    pool_heating_selected: false,
+    original_pool_heating_total: 0,
+    original_pool_heating_currency: "TRY",
+    pool_heating_total_try: 0,
 
     /* CUSTOM PRICE — admin override (manuel fiyat) */
     custom_price: false,

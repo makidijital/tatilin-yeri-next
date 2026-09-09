@@ -162,6 +162,8 @@ export const reservationShareRepository = {
          original_currency,
          damage_deposit,
          cleaning_fee_try,
+         pool_heating_selected,
+         pool_heating_total_try,
          payment_method:payment_method_id ( type ),
          villa:villa_id ( title, villa_images ( image_url, is_cover, sort_order ), owner:owner_id ( first_name, last_name, phone ) )`
       )

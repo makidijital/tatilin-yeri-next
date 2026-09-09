@@ -40,9 +40,11 @@ export default function PriceStep({
   hasForeignCurrency,
   totalTRYDisplay,
   cleaningTRYDisplay,
+  poolHeatingTRYDisplay = 0,
   stayTRYDisplay,
   selectedVilla,
   onCustomToggle,
+  onPoolHeatingToggle,
 }: {
   data: ReservationFormShape;
   setData: ReservationFormSetter;
@@ -53,9 +55,17 @@ export default function PriceStep({
   hasForeignCurrency: boolean;
   totalTRYDisplay: number;
   cleaningTRYDisplay: number;
+  /** 🔥 HAVUZ ISITMA — uçtan uca tamamlama turu. Opsiyonel (default 0):
+   *  bu component'i çağıran her yer aynı anda güncellenmek zorunda
+   *  kalmasın (byte-identical geriye dönük uyum). */
+  poolHeatingTRYDisplay?: number;
   stayTRYDisplay: number;
   selectedVilla: SelectedVillaMeta | null;
   onCustomToggle: () => void;
+  /** 🔥 HAVUZ ISITMA checkbox handler — opsiyonel; verilmezse checkbox
+   *  render edilmez (geriye dönük uyum, caller güncellenmemişse UI
+   *  sessizce eskisi gibi kalır). */
+  onPoolHeatingToggle?: () => void;
 }) {
   return (
     <Section
@@ -176,6 +186,50 @@ export default function PriceStep({
       {/* 🔥 NORMAL FLOW — sadece custom_price kapalıysa */}
       {!data.custom_price && (
         <>
+          {/* 🔥 HAVUZ ISITMA — yalnız villanın gecelik ücreti varsa
+              gösterilir (public BookingSidebar ile aynı gating kuralı:
+              pool_heating_fee > 0). Seçim `data.pool_heating_selected`'e
+              yazılır; gerçek tutar (pool_heating_total_try) page'in
+              price-calc effect'i tarafından calculateGrandTotal ile
+              server-authoritative villa ücretinden türetilir — burada
+              hesap YAPILMAZ. */}
+          {onPoolHeatingToggle &&
+            typeof selectedVilla?.pool_heating_fee === "number" &&
+            selectedVilla.pool_heating_fee > 0 && (
+              <div className="flex items-center justify-between bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl px-4 py-3 mb-4">
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-stone-900)]">
+                    Havuz Isıtma
+                  </p>
+                  <p className="text-xs text-[var(--color-stone-500)] mt-0.5">
+                    {poolHeatingTRYDisplay > 0
+                      ? `Gece başına ücret dahil — ₺${Number(
+                          poolHeatingTRYDisplay
+                        ).toLocaleString("tr-TR", {
+                          maximumFractionDigits: 0,
+                        })}`
+                      : "Tarih seçildiğinde gece sayısına göre hesaplanır"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onPoolHeatingToggle}
+                  className={`relative w-11 h-6 rounded-full transition shrink-0 ${
+                    data.pool_heating_selected
+                      ? "bg-[var(--color-champagne-500)]"
+                      : "bg-[var(--color-stone-200)]"
+                  }`}
+                  aria-label="Havuz ısıtma aç/kapa"
+                >
+                  <span
+                    className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${
+                      data.pool_heating_selected ? "left-[22px]" : "left-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
+
           {/* 🔥 READ-ONLY TOTAL — pricing engine üretir */}
           <div className="space-y-1.5">
             <Label>Toplam tutar (TRY)</Label>
@@ -277,6 +331,17 @@ export default function PriceStep({
                 <Row
                   label="Temizlik"
                   value={`₺${Number(cleaningTRYDisplay).toLocaleString(
+                    "tr-TR",
+                    { maximumFractionDigits: 0 }
+                  )}`}
+                />
+              )}
+
+              {/* 🔥 HAVUZ ISITMA — yalnız seçiliyse ve tutar > 0 ise */}
+              {!!data.pool_heating_selected && poolHeatingTRYDisplay > 0 && (
+                <Row
+                  label="Havuz Isıtma"
+                  value={`₺${Number(poolHeatingTRYDisplay).toLocaleString(
                     "tr-TR",
                     { maximumFractionDigits: 0 }
                   )}`}

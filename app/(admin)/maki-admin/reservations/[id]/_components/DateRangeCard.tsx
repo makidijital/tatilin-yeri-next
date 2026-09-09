@@ -138,6 +138,7 @@ export default function DateRangeCard({
           nights={Number(priceDetail?.nights || 0)}
           stayTRY={Number(priceDetail?.stay || 0)}
           cleaningTRY={Number(priceDetail?.cleaning || 0)}
+          poolHeatingTRY={Number(priceDetail?.poolHeating || 0)}
           totalTRY={Number(priceDetail?.total || 0)}
           payNow={Number(paymentDisplay.payNow || 0)}
           remainingOnArrival={Number(paymentDisplay.remainingOnArrival || 0)}

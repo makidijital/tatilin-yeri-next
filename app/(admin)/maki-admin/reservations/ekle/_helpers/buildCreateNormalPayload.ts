@@ -99,6 +99,14 @@ export function buildCreateNormalPayload(
     Number(priceDetail?.cleaning) ||
     0;
 
+  /* 🔥 HAVUZ ISITMA — uçtan uca tamamlama turu. `data.pool_heating_total_try`
+     doğrudan okunur — bu alan page'in price-calc effect'i tarafından
+     `data` state'inde zaten güncel tutulur (cleaning_fee_try ile aynı desen). */
+  const poolHeatingTRY =
+    Number(data.pool_heating_total_try) ||
+    Number(priceDetail?.poolHeating) ||
+    0;
+
   /* ---------------------------------------------
      🔥 FINANCIAL SNAPSHOT — payment_preference dinamik
      Tek source-of-truth: getPaymentDisplayValues
@@ -106,9 +114,13 @@ export function buildCreateNormalPayload(
        prepayment    → prepayment_amount=raw,   remaining_payment=total−raw
      paid_amount: 0 (ilk kayıtta; create page'de gönderilmiyor,
                      DB default kullanılıyor)
+     Ön ödeme havuz ısıtmayı İÇERMEZ: accommodationBase 3. parametre
+     ile havuz ısıtmayı da toplamdan düşer (total - cleaning - poolHeating).
   ---------------------------------------------- */
   const rawPrepayment = Math.round(
-    (accommodationBase(totalTRY, cleaningTRY) * prepaymentRate) / 100
+    (accommodationBase(totalTRY, cleaningTRY, poolHeatingTRY) *
+      prepaymentRate) /
+      100
   );
   const writePayment = getPaymentDisplayValues({
     total_price_try: totalTRY,
@@ -160,6 +172,17 @@ export function buildCreateNormalPayload(
     original_cleaning_currency: isForeignCleaning ? cleaningCurrency : "TRY",
 
     cleaning_fee_try: cleaningTRY,
+
+    /* 🔥 HAVUZ ISITMA SNAPSHOT — her zaman doğrudan yazılır (always-write,
+       cleaning_fee_try ile aynı desen). Villa'da ücret yoksa/seçili
+       değilse tüm alanlar 0/false olur — eski (havuz ısıtmasız)
+       davranışla BYTE-IDENTICAL. */
+    pool_heating_selected: !!data.pool_heating_selected,
+    original_pool_heating_total:
+      Number(data.original_pool_heating_total) || 0,
+    original_pool_heating_currency:
+      data.original_pool_heating_currency || "TRY",
+    pool_heating_total_try: poolHeatingTRY,
 
     /* 🔥 KUR */
     exchange_rate: exchangeRate,

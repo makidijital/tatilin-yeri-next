@@ -60,6 +60,13 @@ export type ReservationCreatePayloadShape = {
   cleaning_fee_try: number;
   exchange_rate: number;
 
+  /* HAVUZ ISITMA — custom price'ta nötrlenir (custom total zaten
+     havuz ısıtmayı da kapsar; ayrı satır kalemi olarak taşınmaz). */
+  pool_heating_selected: boolean;
+  original_pool_heating_total: number;
+  original_pool_heating_currency: string;
+  pool_heating_total_try: number;
+
   /* FINANCIAL SNAPSHOT */
   prepayment_amount: number;
   remaining_payment: number;
@@ -144,6 +151,16 @@ export function buildCreateCustomPricePayload(
     original_cleaning_currency: "TRY",
     cleaning_fee_try: 0,
     exchange_rate: 1,
+
+    /* 🔥 HAVUZ ISITMA — custom price'ta nötrlenir (Step 8 [id] custom
+       price payload'ıyla AYNI desen). Custom total tek kalem manuel
+       TRY tutarı olduğundan havuz ısıtma ayrı satır olarak taşınmaz;
+       eski (havuz ısıtmasız) custom price rezervasyonlarıyla
+       BYTE-IDENTICAL davranış korunur. */
+    pool_heating_selected: false,
+    original_pool_heating_total: 0,
+    original_pool_heating_currency: "TRY",
+    pool_heating_total_try: 0,
 
     /* 🔥 FINANCIAL SNAPSHOT (paid_amount create'te yazılmaz;
        DB default 0; tahsilat detail page'de yönetilir) */
