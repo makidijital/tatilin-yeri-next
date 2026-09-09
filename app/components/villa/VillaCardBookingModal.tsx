@@ -26,6 +26,8 @@
      cleaning_limit                       ↔  apiData.config.cleaning_limit
      custom_prepayment_rate               ↔  apiData.config.custom_prepayment_rate
      minimum_stay_nights                  ↔  apiData.config.minimum_stay_nights
+     pool_heating_fee                     ↔  apiData.config.pool_heating_fee
+     pool_heating_currency                ↔  apiData.config.pool_heating_currency
      externalBlocks                       ↔  apiData.externalBlocks
      villaId / villaSlug                  ↔  Parent (VillaCard) prop
 
@@ -88,12 +90,11 @@ import BookingCalendar from "@/app/components/villa/booking/BookingCalendar";
 import BookingSummary from "@/app/components/villa/booking/BookingSummary";
 import BookingMinStayWarning from "@/app/components/villa/booking/BookingMinStayWarning";
 
-/* 🛡️ HAVUZ ISITMA — 5. adım. BookingSidebar'daki checkbox bloğunun
-   AYNI görsel/format helper'ları (bkz. o dosyadaki gerekçe). Bu
-   modalda apiData.config.pool_heating_fee HER ZAMAN null döner
-   (/api/public/villas/[id]/availability route'u bu adımda
-   DOKUNULMADI — kapsam dışı) → checkbox pratikte HİÇBİR ZAMAN
-   render edilmez; yalnız type-level/prop-level wiring tamamlanır. */
+/* 🛡️ HAVUZ ISITMA — BookingSidebar'daki checkbox bloğunun AYNI
+   görsel/format helper'ları (bkz. o dosyadaki gerekçe). apiData.config.
+   pool_heating_fee artık /api/public/villas/[id]/availability route'u
+   (villaAdminRepository.findAvailabilityConfigById) üzerinden GERÇEK
+   villa değerini taşır — checkbox villa'da ücret varsa render edilir. */
 import { formatCurrency } from "@/lib/currency";
 import { useCurrency } from "@/app/context/CurrencyContext";
 
@@ -117,10 +118,8 @@ type VillaConfig = {
   cleaning_limit: number | null;
   custom_prepayment_rate: number | null;
   minimum_stay_nights: number | null;
-  /* 🛡️ HAVUZ ISITMA — 5. adım. API route (availability) bu alanları
-     HENÜZ döndürmüyor (route bu adımda DOKUNULMADI — kapsam dışı) →
-     runtime'da her zaman null. Yalnız type-level/prop-level wiring;
-     gerçek veri akışı route güncellenene kadar bağlı DEĞİL. */
+  /* 🛡️ HAVUZ ISITMA — API route (availability) bu alanları artık
+     villa'nın gerçek değerleriyle döndürüyor (bkz. route.ts). */
   pool_heating_fee: number | null;
   pool_heating_currency: string | null;
 };
@@ -228,9 +227,8 @@ export default function VillaCardBookingModal({
             typeof data?.config?.minimum_stay_nights === "number"
               ? data.config.minimum_stay_nights
               : null,
-          /* 🛡️ HAVUZ ISITMA — 5. adım. Route bu alanları henüz
-             döndürmüyor → defansif parse aynı desende, pratikte
-             her zaman null (route güncellenirse otomatik akar). */
+          /* 🛡️ HAVUZ ISITMA — route artık gerçek villa değerini
+             döndürür; defansif parse aynı desende korunur. */
           pool_heating_fee:
             typeof data?.config?.pool_heating_fee === "number"
               ? data.config.pool_heating_fee
@@ -426,9 +424,8 @@ function ModalContent({
     convertedDeposit,
     startingPrice,
     handleReservation,
-    /* 🛡️ HAVUZ ISITMA — 5. adım. apiData.config.pool_heating_fee bu
-       adımda her zaman null olduğundan poolHeatingTotal/selected
-       pratikte inert kalır — yalnız wiring tamamlanmış olur. */
+    /* 🛡️ HAVUZ ISITMA — apiData.config.pool_heating_fee artık gerçek
+       villa değeri olduğundan poolHeatingTotal/selected aktif çalışır. */
     poolHeatingSelected,
     setPoolHeatingSelected,
     poolHeatingTotal,
@@ -602,11 +599,11 @@ function ModalContent({
           )}
         </div>
 
-        {/* 🛡️ HAVUZ ISITMA — 5. adım. BookingSidebar ile AYNI koşul/
-            pattern (bkz. o dosyadaki ayrıntılı gerekçe). apiData.config.
-            pool_heating_fee bu adımda API route güncellenmediği için
-            HER ZAMAN null → bu blok modalda pratikte HİÇ render edilmez
-            (kapsam dışı API route bağlanana kadar inert). */}
+        {/* 🛡️ HAVUZ ISITMA — BookingSidebar ile AYNI koşul/pattern
+            (bkz. o dosyadaki ayrıntılı gerekçe). apiData.config.
+            pool_heating_fee artık villa'nın gerçek değeri (route
+            fix'i) → villa'da ücret varsa + tarih seçiliyse render
+            edilir. */}
         {startDate &&
           endDate &&
           selectedNights > 0 &&

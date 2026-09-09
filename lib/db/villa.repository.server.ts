@@ -163,12 +163,25 @@ export const villaAdminRepository = {
         custom_prepayment_rate/minimum_stay_nights numeric→number,
         cleaning_currency text→string (pg-type-parsers) → anon ile field
         parity. Mapping/fallback caller'da (route) AYNEN.
-  =============================================================== */
+
+     🛡️ HAVUZ ISITMA — VillaCardBookingModal fix turu: `pool_heating_fee,
+        pool_heating_currency` EKLENDİ (6-field → 8-field projeksiyon).
+        Bu, `/api/public/villas/[id]/availability` route'unun (modal'ın
+        TEK veri kaynağı) config response'una havuz ısıtma alanlarını
+        akıtmak için gereken TEK repository değişikliği — modal ve
+        useBookingEngine zaten bu alanları bekliyordu, yalnız kaynakta
+        eksikti. `findVillaCleaningConfig` (price-verify.ts, public
+        create flow) İLE KARIŞTIRILMASIN — ayrı call site, ayrı amaç
+        (server-authoritative snapshot recompute), bilerek reuse
+        edilmiyor (yukarıdaki reservation.repository.ts'teki not).
+        stay-verify.ts'in bu metodu okuyan tek diğer caller'ı yalnız
+        `minimum_stay_nights` alanını narrow tip ile okur — ek 2 alan
+        ona etkisiz (BYTE-IDENTICAL davranış). */
   async findAvailabilityConfigById(id: string) {
     return await dbAdmin
       .from("villa")
       .select(
-        "deposit, cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate, minimum_stay_nights"
+        "deposit, cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate, minimum_stay_nights, pool_heating_fee, pool_heating_currency"
       )
       .eq("id", id)
       .maybeSingle();

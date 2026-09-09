@@ -35,9 +35,18 @@ import { applyRateLimit } from "@/lib/rate-limit";
        cleaning_limit                       ↔  config.cleaning_limit
        custom_prepayment_rate               ↔  config.custom_prepayment_rate
        minimum_stay_nights                  ↔  config.minimum_stay_nights
+       pool_heating_fee                     ↔  config.pool_heating_fee
+       pool_heating_currency                ↔  config.pool_heating_currency
        externalBlocks                       ↔  externalBlocks
 
      (villaId + villaSlug parent VillaCard zaten biliyor.)
+
+     🛡️ HAVUZ ISITMA — VillaCardBookingModal fix turu: `config.pool_heating_fee`
+        / `config.pool_heating_currency` EKLENDİ. VillaCardBookingModal +
+        useBookingEngine wiring'i ÖNCEDEN tamamlanmıştı (bkz. o dosyadaki
+        yorum) ama bu route alanları döndürmediği için checkbox hiç
+        render edilmiyordu — kaynak (`findAvailabilityConfigById`) ve bu
+        route'un mapping'i eksikti, yalnız burası düzeltildi.
 
    CALLER:
      - app/components/villa/VillaCardBookingModal.tsx (client)
@@ -52,7 +61,9 @@ import { applyRateLimit } from "@/lib/rate-limit";
          cleaning_currency: string | null,
          cleaning_limit: number | null,
          custom_prepayment_rate: number | null,
-         minimum_stay_nights: number | null
+         minimum_stay_nights: number | null,
+         pool_heating_fee: number | null,
+         pool_heating_currency: string | null
        },
        prices: VillaPriceEmbed[],          // villa_prices rows
        externalBlocks: ExternalCalendarStringArrays
@@ -88,6 +99,9 @@ type VillaConfig = {
   cleaning_limit: number | null;
   custom_prepayment_rate: number | null;
   minimum_stay_nights: number | null;
+  /* 🛡️ HAVUZ ISITMA — VillaCardBookingModal fix turu. */
+  pool_heating_fee: number | null;
+  pool_heating_currency: string | null;
 };
 
 type ResponseShape = {
@@ -103,6 +117,8 @@ const EMPTY_CONFIG: VillaConfig = {
   cleaning_limit: null,
   custom_prepayment_rate: null,
   minimum_stay_nights: null,
+  pool_heating_fee: null,
+  pool_heating_currency: null,
 };
 
 export async function GET(
@@ -170,6 +186,19 @@ export async function GET(
           minimum_stay_nights:
             typeof raw.minimum_stay_nights === "number"
               ? raw.minimum_stay_nights
+              : null,
+          /* 🛡️ HAVUZ ISITMA — VillaCardBookingModal fix turu. Villa'da
+             ücret tanımlı değilse (NULL/0) `findAvailabilityConfigById`
+             null döner → defansif parse aynı desende null'a düşer;
+             modal checkbox'ı zaten `pool_heating_fee > 0` guard'ı ile
+             gizli tutar (BookingSidebar ile AYNI kural). */
+          pool_heating_fee:
+            typeof raw.pool_heating_fee === "number"
+              ? raw.pool_heating_fee
+              : null,
+          pool_heating_currency:
+            typeof raw.pool_heating_currency === "string"
+              ? raw.pool_heating_currency
               : null,
         }
       : EMPTY_CONFIG;
