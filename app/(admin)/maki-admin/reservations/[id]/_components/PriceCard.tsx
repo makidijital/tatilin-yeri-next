@@ -309,11 +309,13 @@ export default function PriceCard({
                   okunur — priceDetail (live recalc state) KULLANILMAZ,
                   böylece admin düzenleme/recalculate akışına dokunulmamış
                   olur. Seçili değilse (veya total 0/NULL ise) satır hiç
-                  render edilmez — Temizlik satırıyla aynı desen. */}
+                  render edilmez — Temizlik satırıyla aynı desen.
+                  🛡️ Metin standardizasyonu turu: "Havuz Isıtma" → "Havuz
+                  Isıtma Ücreti" (yalnız label metni). */}
               {!!data.pool_heating_selected &&
                 Number(data.pool_heating_total_try) > 0 && (
                   <Row
-                    label="Havuz Isıtma"
+                    label="Havuz Isıtma Ücreti"
                     value={`₺${Number(
                       data.pool_heating_total_try || 0
                     ).toLocaleString("tr-TR", {

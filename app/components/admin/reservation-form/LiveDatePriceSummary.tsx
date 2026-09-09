@@ -113,9 +113,11 @@ export default function LiveDatePriceSummary({
             muted
           />
         )}
+        {/* 🛡️ Metin standardizasyonu turu: "Havuz Isıtma" → "Havuz Isıtma
+            Ücreti" (yalnız label metni — poolHeatingTRY/hesap DEĞİŞMEDİ). */}
         {poolHeatingTRY > 0 && (
           <Row
-            label="Havuz Isıtma"
+            label="Havuz Isıtma Ücreti"
             value={`₺${fmtTRY(poolHeatingTRY)}`}
             muted
           />

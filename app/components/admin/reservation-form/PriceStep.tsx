@@ -198,8 +198,12 @@ export default function PriceStep({
             selectedVilla.pool_heating_fee > 0 && (
               <div className="flex items-center justify-between bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl px-4 py-3 mb-4">
                 <div>
+                  {/* 🛡️ Metin standardizasyonu turu: "Havuz Isıtma" →
+                      "Havuz Isıtma Ücreti" — satır alttaki subtitle'da
+                      ücret tutarı gösterdiği için ücret ifade eden bir
+                      toggle başlığı (yalnız metin — toggle/hesap DEĞİŞMEDİ). */}
                   <p className="text-sm font-medium text-[var(--color-stone-900)]">
-                    Havuz Isıtma
+                    Havuz Isıtma Ücreti
                   </p>
                   <p className="text-xs text-[var(--color-stone-500)] mt-0.5">
                     {poolHeatingTRYDisplay > 0
@@ -337,10 +341,12 @@ export default function PriceStep({
                 />
               )}
 
-              {/* 🔥 HAVUZ ISITMA — yalnız seçiliyse ve tutar > 0 ise */}
+              {/* 🔥 HAVUZ ISITMA — yalnız seçiliyse ve tutar > 0 ise.
+                  🛡️ Metin standardizasyonu turu: "Havuz Isıtma" →
+                  "Havuz Isıtma Ücreti" (yalnız label metni). */}
               {!!data.pool_heating_selected && poolHeatingTRYDisplay > 0 && (
                 <Row
-                  label="Havuz Isıtma"
+                  label="Havuz Isıtma Ücreti"
                   value={`₺${Number(poolHeatingTRYDisplay).toLocaleString(
                     "tr-TR",
                     { maximumFractionDigits: 0 }

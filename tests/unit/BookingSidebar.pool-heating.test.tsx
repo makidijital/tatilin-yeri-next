@@ -133,7 +133,12 @@ describe("BookingSidebar — havuz ısıtma UI (5. adım)", () => {
       />
     );
 
-    expect(await screen.findByText("Havuz Isıtma")).toBeInTheDocument();
+    /* 🛡️ Metin standardizasyonu turu: "Havuz Isıtma" → "Havuz Isıtma
+       Ücreti" (yalnız BookingSummary.tsx'teki görünen metin değişti —
+       state/handler/hesap AYNEN). */
+    expect(
+      await screen.findByText("Havuz Isıtma Ücreti")
+    ).toBeInTheDocument();
     /* 🛡️ HAVUZ ISITMA — yerleşim turu. Eski "Gece başına ₺1.000" metni
        artık "₺1.000 / gece" (SUMMARY içindeki kompakt satır — bkz.
        BookingSummary.tsx). Yalnız görünen metin/konum değişti; oran

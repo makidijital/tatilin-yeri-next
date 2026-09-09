@@ -66,7 +66,9 @@ describe("LiveDatePriceSummary — havuz ısıtma canlı önizleme", () => {
   it("2) poolHeatingTRY=5000 → 'Havuz Isıtma' satırı görünür, Toplam/Ön ödeme worked example ile tutarlı", () => {
     renderSummary(5000);
 
-    expect(screen.getByText("Havuz Isıtma")).toBeInTheDocument();
+    /* 🛡️ Metin standardizasyonu turu: "Havuz Isıtma" → "Havuz Isıtma
+       Ücreti" (yalnız görünen label metni — hesap/veri AYNEN). */
+    expect(screen.getByText("Havuz Isıtma Ücreti")).toBeInTheDocument();
     expect(screen.getByText("₺5.000")).toBeInTheDocument();
     expect(screen.getByText("₺20.000")).toBeInTheDocument(); // Konaklama
     expect(screen.getByText("₺3.500")).toBeInTheDocument(); // Temizlik

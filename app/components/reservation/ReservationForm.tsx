@@ -819,13 +819,32 @@ export default function ReservationForm({
               )}
 
               {/* 🛡️ HAVUZ ISITMA — 6. adım. Temizlik Ücreti satırıyla
-                  BİREBİR aynı stil/desen; yalnız poolHeating>0 iken görünür. */}
+                  BİREBİR aynı stil/desen; yalnız poolHeating>0 iken görünür.
+                  🛡️ Metin standardizasyonu turu: "Havuz Isıtma" →
+                  "Havuz Isıtma Ücreti" (yalnız görünen metin — result.
+                  poolHeating/formatCurrency DEĞİŞMEDİ). Altına, villa
+                  detayındaki BookingSummary.tsx ile AYNI tasarım ailesi
+                  için gecelik oran/gece sayısı bilgisi eklendi — mevcut
+                  villa.pool_heating_fee/currency ve getNights() DEĞERLERİ
+                  kullanılır, YENİ bir hesaplama YAPILMAZ. */}
               {(result?.poolHeating || 0) > 0 && (
-                <div className="flex justify-between text-[var(--color-stone-600)]">
-                  <span>Havuz Isıtma</span>
-                  <span className="text-[var(--color-stone-900)] font-medium">
-                    {formatCurrency((result as any).poolHeating || 0, currency)}
-                  </span>
+                <div>
+                  <div className="flex justify-between text-[var(--color-stone-600)]">
+                    <span>Havuz Isıtma Ücreti</span>
+                    <span className="text-[var(--color-stone-900)] font-medium">
+                      {formatCurrency((result as any).poolHeating || 0, currency)}
+                    </span>
+                  </div>
+                  {typeof villa.pool_heating_fee === "number" &&
+                    villa.pool_heating_fee > 0 && (
+                      <p className="mt-0.5 text-[11px] text-[var(--color-stone-400)]">
+                        {formatCurrency(
+                          villa.pool_heating_fee,
+                          villa.pool_heating_currency || "TRY"
+                        )}{" "}
+                        / gece × {getNights()} gece
+                      </p>
+                    )}
                 </div>
               )}
 

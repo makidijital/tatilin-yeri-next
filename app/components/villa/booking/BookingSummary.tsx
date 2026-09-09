@@ -38,6 +38,14 @@
      - Gecelik oran villa'nın KENDİ para biriminde (`poolHeatingCurrency`)
        gösterilir — eski "Gece başına X" metniyle AYNI kaynak/format.
 
+   🛡️ HAVUZ ISITMA — metin standardizasyonu turu (yalnız bu tur — data/
+   state/handler/hesap DEĞİŞMEDİ):
+     - Checkbox label'ı "Havuz Isıtma" → "Havuz Isıtma Ücreti" oldu (satır
+       hem toplam tutarı hem gecelik oranı gösterdiği için ücret ifade
+       eden bir satır — repo genelinde aynı standarda çekildi). Teknik
+       prop/field isimleri (`poolHeatingFee`, `poolHeatingSelected`,
+       `poolHeatingTotal`, `pool_heating_fee` vb.) DEĞİŞMEDİ.
+
    🛡️ GÖRSEL REVİZYON (yalnız bu tur — data/state/handler/hesap DEĞİŞMEDİ):
      - Kart üstünde ince turuncu→mavi (#ED7926 → #0973BA) accent çizgisi
        — PriceList.tsx / ShortStayFeeNotice.tsx'teki aynı marka imzası.
@@ -129,7 +137,7 @@ export default function BookingSummary({
                 className="!w-4 !h-4 shrink-0 accent-[var(--color-champagne-500)] !rounded"
               />
               <span className="text-[var(--color-stone-600)] group-hover:text-[var(--color-stone-900)] transition-colors">
-                Havuz Isıtma
+                Havuz Isıtma Ücreti
               </span>
             </span>
             {poolHeatingSelected && (

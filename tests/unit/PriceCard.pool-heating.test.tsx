@@ -73,7 +73,9 @@ describe("PriceCard — havuz ısıtma gösterimi (admin detay ekranı)", () => 
       pool_heating_total_try: 5000,
     });
 
-    expect(screen.getByText("Havuz Isıtma")).toBeInTheDocument();
+    /* 🛡️ Metin standardizasyonu turu: "Havuz Isıtma" → "Havuz Isıtma
+       Ücreti" (yalnız görünen label metni — hesap/veri AYNEN). */
+    expect(screen.getByText("Havuz Isıtma Ücreti")).toBeInTheDocument();
     expect(screen.getByText("₺5.000")).toBeInTheDocument();
     // Konaklama = 28.500 - 3.500 - 5.000 = 20.000
     expect(screen.getByText("₺20.000")).toBeInTheDocument();

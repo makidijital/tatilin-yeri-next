@@ -243,11 +243,13 @@ export default async function ReservationShareView({
 
             {/* 🔥 HAVUZ ISITMA — bilgilendirme (pool_heating_total_try,
                 hesaba KATILMAZ; total zaten dahil). Temizlik Ücreti ile
-                AYNI desen — yalnız seçili ve tutar > 0 ise gösterilir. */}
+                AYNI desen — yalnız seçili ve tutar > 0 ise gösterilir.
+                🛡️ Metin standardizasyonu turu: "Havuz Isıtma" → "Havuz
+                Isıtma Ücreti" (yalnız label metni). */}
             {data.poolHeatingFee !== null && (
               <div className="flex items-center justify-between">
                 <dt className="text-[14px] text-[var(--color-stone-600)]">
-                  Havuz Isıtma{" "}
+                  Havuz Isıtma Ücreti{" "}
                   <span className="text-[var(--color-stone-400)]">
                     (Fiyata Dahildir.)
                   </span>

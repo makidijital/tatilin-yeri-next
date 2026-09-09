@@ -73,10 +73,12 @@ describe("ReservationShareView — havuz ısıtma gösterimi (müşteri paylaş�
     expect(screen.getByText(/Temizlik Ücreti/)).toBeInTheDocument();
   });
 
-  it("2) poolHeatingFee=5000 → 'Havuz Isıtma (Fiyata Dahildir.)' satırı görünür, doğru TRY tutarı", async () => {
+  it("2) poolHeatingFee=5000 → 'Havuz Isıtma Ücreti (Fiyata Dahildir.)' satırı görünür, doğru TRY tutarı", async () => {
     await renderShareView({ poolHeatingFee: 5000 });
 
-    expect(screen.getByText("Havuz Isıtma")).toBeInTheDocument();
+    /* 🛡️ Metin standardizasyonu turu: "Havuz Isıtma" → "Havuz Isıtma
+       Ücreti" (yalnız görünen label metni — hesap/veri AYNEN). */
+    expect(screen.getByText("Havuz Isıtma Ücreti")).toBeInTheDocument();
     // "(Fiyata Dahildir.)" hem Temizlik hem Havuz Isıtma satırında var
     // (cleaningFee=3500 baseDTO'dan) → getAllByText, tekil değil.
     expect(screen.getAllByText("(Fiyata Dahildir.)").length).toBe(2);

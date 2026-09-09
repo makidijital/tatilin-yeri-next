@@ -151,7 +151,12 @@ describe("VillaCardBookingModal — havuz ısıtma veri zinciri (availability AP
   it("2) API config.pool_heating_fee=1000 + tarih seçili → checkbox görünür, gecelik ücret doğru", async () => {
     await openModalAndSelectDates(1000);
 
-    expect(await screen.findByText("Havuz Isıtma")).toBeInTheDocument();
+    /* 🛡️ Metin standardizasyonu turu: "Havuz Isıtma" → "Havuz Isıtma
+       Ücreti" (yalnız BookingSummary.tsx'teki görünen metin değişti —
+       state/handler/hesap AYNEN). */
+    expect(
+      await screen.findByText("Havuz Isıtma Ücreti")
+    ).toBeInTheDocument();
     /* 🛡️ HAVUZ ISITMA — yerleşim turu. Eski "Gece başına ₺1.000" metni
        artık "₺1.000 / gece" (SUMMARY içindeki kompakt satır — bkz.
        BookingSummary.tsx). Yalnız görünen metin/konum değişti; oran
