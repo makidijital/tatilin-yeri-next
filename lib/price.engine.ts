@@ -247,6 +247,33 @@ export const calculateCleaningFee = (
     : 0;
 };
 
+/* 🔥 HAVUZ ISITMA TOPLAMI (opsiyonel ek hizmet — 2. adım, İLK KULLANIM)
+   ===============================================================
+   selected=false → 0. fee null/undefined/0 → 0. nights<=0 → 0.
+   Aksi halde nights × fee. Currency conversion BURADA yapılmaz —
+   cleaning fee ile aynı desen: raw (orijinal currency) burada
+   hesaplanır, convertPrice çağrısı calculateGrandTotal içinde
+   (cleaning ile birebir aynı noktada) yapılır. */
+export const calculatePoolHeatingFee = (
+  nights: number,
+  poolHeatingFee: number | null | undefined,
+  selected: boolean
+) => {
+  if (!selected) {
+    return 0;
+  }
+
+  if (!poolHeatingFee) {
+    return 0;
+  }
+
+  if (!nights || nights <= 0) {
+    return 0;
+  }
+
+  return nights * poolHeatingFee;
+};
+
 // 🔥 GENEL TOPLAM
 export const calculateGrandTotal = ({
   start,
@@ -257,6 +284,9 @@ export const calculateGrandTotal = ({
   cleaning_fee = 0,
   cleaning_currency = "TRY",
   cleaning_limit = 0,
+  pool_heating_fee = 0,
+  pool_heating_currency = "TRY",
+  pool_heating_selected = false,
 }: {
   start: string;
 
@@ -273,6 +303,15 @@ export const calculateGrandTotal = ({
   cleaning_currency?: string;
 
   cleaning_limit?: number;
+
+  /* 🛡️ Havuz Isıtma (2. adım) — hepsi OPSİYONEL, güvenli default'lar
+     eskiden default vermemiş çağrılarda davranışı BYTE-IDENTICAL
+     bırakır (pool_heating_selected=false → poolHeatingTotal=0). */
+  pool_heating_fee?: number;
+
+  pool_heating_currency?: string;
+
+  pool_heating_selected?: boolean;
 }) => {
 
   const nights = calculateNights(
@@ -320,9 +359,34 @@ export const calculateGrandTotal = ({
   const original_cleaning_currency =
     cleaning_currency || "TRY";
 
-  // toplam (kullanıcının gördüğü)
+  // 🔥 HAVUZ ISITMA — cleaning ile birebir aynı desen (raw → convert).
+  // pool_heating_selected=false (default) → rawPoolHeating=0 →
+  // poolHeating=0 → total mevcut davranışla BYTE-IDENTICAL kalır.
+  const rawPoolHeating =
+    calculatePoolHeatingFee(
+      nights,
+      pool_heating_fee,
+      pool_heating_selected
+    );
+
+  // kullanıcı currency'sine çevrilen
+  const poolHeating = convertPrice(
+    rawPoolHeating,
+    pool_heating_currency || "TRY",
+    currency,
+    rates
+  );
+
+  // ORJİNAL pool heating
+  const original_pool_heating =
+    rawPoolHeating;
+
+  const original_pool_heating_currency =
+    pool_heating_currency || "TRY";
+
+  // toplam (kullanıcının gördüğü) — stayTotal + cleaningTotal + poolHeatingTotal
   const total =
-    stay + cleaning;
+    stay + cleaning + poolHeating;
 
 
   return {
@@ -332,15 +396,21 @@ export const calculateGrandTotal = ({
 
     cleaning,
 
+    poolHeating,
+
     total,
 
     original_stay,
 
     original_cleaning,
 
+    original_pool_heating,
+
     original_currency,
 
     original_cleaning_currency,
+
+    original_pool_heating_currency,
 
     currency,
   };
@@ -348,17 +418,24 @@ export const calculateGrandTotal = ({
 
 /* 🔥 KONAKLAMA BEDELİ (prepayment base) — CANONICAL.
    Ön ödeme YALNIZ konaklama bedelinden hesaplanır. Grand total
-   (`total = stay + cleaning`) içinden temizlik ÇIKARILIR; hasar
-   depozitosu zaten total'e dahil değildir (yalnız snapshot).
-   accommodationBase(total, cleaning) = max(total - cleaning, 0)
-   ⚠️ total ve cleaning AYNI para biriminde olmalı (ikisi de display
-   currency ya da ikisi de TRY snapshot). */
+   (`total = stay + cleaning [+ poolHeating]`) içinden temizlik VE
+   (varsa) havuz ısıtma ÇIKARILIR; hasar depozitosu zaten total'e
+   dahil değildir (yalnız snapshot).
+   accommodationBase(total, cleaning, poolHeating=0) =
+     max(total - cleaning - poolHeating, 0)
+   ⚠️ total, cleaning VE poolHeating AYNI para biriminde olmalı
+   (üçü de display currency ya da üçü de TRY snapshot).
+   🛡️ Havuz Isıtma (2. adım): poolHeatingFee OPSİYONEL, default 0 —
+   mevcut 2-parametreli çağrılar BYTE-IDENTICAL kalır. */
 export const accommodationBase = (
   total: number,
-  cleaningFee: number
+  cleaningFee: number,
+  poolHeatingFee: number = 0
 ) =>
   Math.max(
-    (Number(total) || 0) - (Number(cleaningFee) || 0),
+    (Number(total) || 0) -
+      (Number(cleaningFee) || 0) -
+      (Number(poolHeatingFee) || 0),
     0
   );
 

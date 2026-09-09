@@ -144,6 +144,57 @@ export default function PricingStep({
             </p>
           </div>
         </div>
+
+        {/* 🛡️ HAVUZ ISITMA — 3. adım (admin form hazırlığı, hesaplama YOK).
+            Temizlik ücreti ile BİREBİR AYNI pattern: gecelik ücret input +
+            currency dropdown (showCleaningCurrency ile ilişkilendirilmedi;
+            her iki sayfada da (ekle/[id]) showCleaningCurrency default
+            true kullanıldığı için mevcut davranışta zaten her zaman
+            gösteriliyor — burada da koşulsuz gösterilir).
+            NULL veya 0 → villa havuz ısıtma hizmeti SUNMUYOR kabul
+            edilir (migration 074 semantiği). Girilen değer TOPLAM
+            DEĞİL, GECELİK ücrettir — hesaplama (nights × fee) bu
+            adımda YAPILMAZ (price.engine.ts 2. adımda zaten hazır). */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+          <div className="space-y-2">
+            <Label>Havuz Isıtma</Label>
+            <div className="grid grid-cols-[1fr_120px] gap-2">
+              <input
+                type="number"
+                placeholder="Gecelik ücret"
+                className="input"
+                value={form.pool_heating_fee ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    pool_heating_fee: e.target.value,
+                  })
+                }
+              />
+
+              <select
+                value={form.pool_heating_currency || "TRY"}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    pool_heating_currency: e.target.value,
+                  })
+                }
+                className="input"
+              >
+                <option value="TRY">₺ TRY</option>
+                <option value="USD">$ USD</option>
+                <option value="EUR">€ EUR</option>
+                <option value="GBP">£ GBP</option>
+              </select>
+            </div>
+            <p className="text-[11px] text-[var(--color-stone-400)]">
+              Gece başına ücret. Boş bırakılırsa havuz ısıtma hizmeti
+              sunulmuyor kabul edilir.
+            </p>
+          </div>
+        </div>
+
         <p className="text-xs text-[var(--color-stone-400)] mt-3">
           Temizlik ücreti, belirlenen gece sayısının altındaki
           rezervasyonlarda uygulanır.

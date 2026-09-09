@@ -71,6 +71,11 @@ export interface VillaRow {
   child_pool_width: string | null;
   child_pool_length: string | null;
   pool_sheltered: boolean | null;
+  /* 🛡️ Migration 074 — Havuz Isıtma (opsiyonel ücretli hizmet, İLK ADIM).
+   *  NULL veya 0 → villa havuz ısıtma hizmeti SUNMUYOR kabul edilecek.
+   *  Hesaplama mantığı bu adımda uygulanmadı — sadece veri modeli. */
+  pool_heating_fee: number | null;
+  pool_heating_currency: string | null;
   /* Map */
   map_type: string | null;
   latitude: number | null;
@@ -279,6 +284,13 @@ export interface ReservationRow {
   original_cleaning_fee: number | null;
   original_cleaning_currency: string | null;
   cleaning_fee_try: number | null;
+  /* 🛡️ Migration 075 — Havuz Isıtma snapshot alanları (İLK ADIM).
+   *  Gece sayısı ayrıca saklanmaz (start_date/end_date'ten türetilir).
+   *  Hesaplama mantığı bu adımda uygulanmadı — sadece veri modeli. */
+  pool_heating_selected: boolean;
+  original_pool_heating_total: number | null;
+  original_pool_heating_currency: string | null;
+  pool_heating_total_try: number | null;
   name: string;
   phone: string;
   email: string | null;

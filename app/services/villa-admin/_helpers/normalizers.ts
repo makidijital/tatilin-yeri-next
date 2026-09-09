@@ -49,6 +49,26 @@ export function normalizeCustomPrepaymentRate(
 }
 
 /* ---------------------------------------------------------------
+   🛡️ HAVUZ ISITMA GECELİK ÜCRETİ (db/migrations/074 — 3. adım)
+   ---------------------------------------------------------------
+   NULL = "villa havuz ısıtma hizmeti sunmuyor" (migration 074
+   semantiği). Boş string / null / undefined → null. 0 LİTERAL
+   olarak korunur (normalizeMinimumStayNights'ın aksine 0'ı null'a
+   düşürmez — admin 0 girebilir, NULL ile fonksiyonel eşdeğerdir
+   ama veri modelinde ayrı bir değerdir). Diğer her şey → Number(raw).
+   normalizeCustomPrepaymentRate ile BİREBİR AYNI desen.
+   ⚠️ Bu adımda sadece veri modeli/form hazırlığı — hesaplama
+   (nights × fee) price.engine.ts'te (2. adımda) zaten hazır, burada
+   TEKRARLANMAZ.
+*/
+export function normalizePoolHeatingFee(
+  raw: VillaForm["pool_heating_fee"]
+): number | null {
+  if (raw === "" || raw === null || raw === undefined) return null;
+  return Number(raw);
+}
+
+/* ---------------------------------------------------------------
    🛡️ TOURISM DOCUMENT NUMBER (db/migrations/017 — Faz 22)
    ---------------------------------------------------------------
    T.C. Kültür ve Turizm Bakanlığı belge no — ham text passthrough.

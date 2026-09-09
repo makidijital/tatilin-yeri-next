@@ -21,6 +21,15 @@ export type VillaForm = {
   cleaning_fee?: number | string;
   cleaning_currency?: string;
   cleaning_limit?: number | string;
+
+  /* 🛡️ HAVUZ ISITMA — 3. adım (admin form hazırlığı, hesaplama YOK).
+   *  NULL = "hizmet sunulmuyor" (migration 074 semantiği). Boş string/
+   *  null/undefined → normalizePoolHeatingFee ile NULL'a normalize
+   *  edilir (custom_prepayment_rate ile aynı desen); 0 literal olarak
+   *  korunur. */
+  pool_heating_fee?: number | string | null;
+  pool_heating_currency?: string | null;
+
   badge?: string;
 
   pool_type?: string;

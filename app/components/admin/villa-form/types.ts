@@ -31,6 +31,15 @@ export type VillaFormShape = {
   cleaning_currency?: string;
   cleaning_limit?: number;
 
+  /* 🛡️ HAVUZ ISITMA — 3. adım (admin form hazırlığı, hesaplama YOK).
+   *  Gecelik ücret. Boş ("") / null → payload'da NULL'a normalize
+   *  edilir ("hizmet sunulmuyor"); 0 da geçerli literal bir değerdir.
+   *  cleaning_fee'den FARKLI: cleaning_fee her zaman number'a coerce
+   *  edilir (0 fallback), pool_heating_fee NULL semantiğini korur
+   *  (custom_prepayment_rate ile aynı desen). */
+  pool_heating_fee?: number | string | null;
+  pool_heating_currency?: string | null;
+
   badge?: string;
 
   pool_type?: string;

@@ -74,6 +74,13 @@ export type VillaFormData = VillaFormShape & {
   cleaning_currency: string;
   cleaning_limit: number;
 
+  /* 🛡️ Havuz Isıtma — 3. adım (admin form hazırlığı, hesaplama YOK).
+     OPTIONAL kalır (cleaning_fee'nin aksine): initial değer "" (boş
+     string) — NULL semantiğini korumak için custom_prepayment_rate
+     ile aynı desen; required + concrete number narrow YAPILMAZ. */
+  pool_heating_fee?: number | string | null;
+  pool_heating_currency?: string | null;
+
   /* Badge */
   badge: string;
 
@@ -150,6 +157,13 @@ export function initialVillaFormData(
        okuyor; "TRY" default form-side. */
     cleaning_currency: "TRY",
     cleaning_limit: 0,
+
+    /* 🛡️ Havuz Isıtma — 3. adım (admin form hazırlığı, hesaplama YOK).
+       Boş string → normalizePoolHeatingFee payload'da NULL'a çevirir
+       ("hizmet sunulmuyor" — migration 074 semantiği). Currency
+       default'u migration'daki DEFAULT 'TRY' ile tutarlı. */
+    pool_heating_fee: "",
+    pool_heating_currency: "TRY",
 
     badge: "",
 

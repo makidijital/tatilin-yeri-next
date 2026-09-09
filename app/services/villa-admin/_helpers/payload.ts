@@ -6,6 +6,7 @@ import {
   normalizeCommissionRate,
   normalizeBedroomLayoutForVilla,
   normalizeBathroomLayoutForVilla,
+  normalizePoolHeatingFee,
 } from "./normalizers";
 
 /* 🛡️ Rich text description — KAYIT anında XSS-güvenli sanitize
@@ -33,11 +34,13 @@ import type { VillaForm, VillaMapData } from "../types";
      - Audit log diff'i / future codegen sırası için stable
      - INSERT-RETURNING projeksiyon order'ı için stable
 
-   COVERAGE (41 alan):
+   COVERAGE (43 alan):
      Basic           : title, description
      Relation pointer: location_id
      Counts          : guests, bedrooms, bathrooms
      Pricing meta    : deposit, cleaning_fee, cleaning_currency, cleaning_limit
+     Pool heating    : pool_heating_fee, pool_heating_currency (migration 074 —
+                        3. adım, sadece veri modeli; hesaplama YAPILMAZ)
      Visual badge    : badge
      Slug            : slug (caller'dan input olarak gelir)
      Map             : map_type, latitude, longitude, map_embed
@@ -79,6 +82,10 @@ export type VillaCorePayload = {
   cleaning_fee: number;
   cleaning_currency: string;
   cleaning_limit: number;
+  /* 🛡️ Migration 074 — Havuz Isıtma (3. adım, sadece veri modeli).
+     NULL = hizmet sunulmuyor. Hesaplama YOK. */
+  pool_heating_fee: number | null;
+  pool_heating_currency: string;
   badge: string;
   slug: string;
   map_type: VillaMapData["map_type"];
@@ -161,6 +168,15 @@ export function buildVillaCorePayload(
 
     cleaning_limit:
       Number(form.cleaning_limit) || 0,
+
+    /* 🛡️ Migration 074 — Havuz Isıtma (3. adım, sadece veri modeli).
+       normalizePoolHeatingFee: ""/null/undefined → null ("hizmet
+       sunulmuyor"); 0 literal korunur; aksi → Number(raw).
+       Hesaplama (nights × fee) BU ADIMDA YAPILMAZ. */
+    pool_heating_fee: normalizePoolHeatingFee(form.pool_heating_fee),
+
+    pool_heating_currency:
+      form.pool_heating_currency || "TRY",
 
     badge:
       form.badge || "",

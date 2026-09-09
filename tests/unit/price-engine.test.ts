@@ -6,6 +6,8 @@
      • calculateCleaningFee
      • calculateGrandTotal
      • normalizeDate
+     • calculatePoolHeatingFee (Havuz Isıtma — 2. adım)
+     • accommodationBase (Havuz Isıtma — 2. adım genişletmesi)
    Hiçbir DB / Supabase mock'u yok — pure math + date.
 =============================================================== */
 
@@ -15,6 +17,8 @@ import {
   calculateCleaningFee,
   calculateGrandTotal,
   calculatePrepayment,
+  calculatePoolHeatingFee,
+  accommodationBase,
   normalizeDate,
 } from "@/lib/price.engine";
 import type { PriceRange } from "@/lib/villa-row.types";
@@ -188,5 +192,176 @@ describe("calculateGrandTotal", () => {
     expect(res.nights).toBe(7);
     expect(res.stay).toBe(1000); // fallback single price
     expect(res.original_stay).toBe(1000);
+  });
+});
+
+/* ===============================================================
+   🛡️ HAVUZ ISITMA — 2. adım (calculatePoolHeatingFee — pure fonksiyon)
+   =============================================================== */
+describe("calculatePoolHeatingFee", () => {
+  it("returns 0 when not selected", () => {
+    expect(calculatePoolHeatingFee(5, 1000, false)).toBe(0);
+  });
+
+  it("returns 0 when fee is null/undefined/0", () => {
+    expect(calculatePoolHeatingFee(5, 0, true)).toBe(0);
+    expect(calculatePoolHeatingFee(5, null, true)).toBe(0);
+    expect(calculatePoolHeatingFee(5, undefined, true)).toBe(0);
+  });
+
+  it("returns 0 when nights <= 0", () => {
+    expect(calculatePoolHeatingFee(0, 1000, true)).toBe(0);
+    expect(calculatePoolHeatingFee(-1, 1000, true)).toBe(0);
+  });
+
+  it("returns nights × fee when selected and fee > 0 (5 Ekim → 10 Ekim, 5 gece × 1.000 TL)", () => {
+    expect(calculateNights("2026-10-05", "2026-10-10")).toBe(5);
+    expect(calculatePoolHeatingFee(5, 1000, true)).toBe(5000);
+  });
+});
+
+/* ===============================================================
+   🛡️ HAVUZ ISITMA — 2. adım (calculateGrandTotal genişletmesi)
+   ===============================================================
+   Örnek senaryo (kullanıcı spesifikasyonu ile birebir):
+     5 gece × 4.000 TL/gece konaklama = 20.000 TL (stayTotal)
+     Temizlik (cleaning): 3.500 TL
+     Havuz ısıtma: 1.000 TL/gece × 5 gece = 5.000 TL (poolHeatingTotal)
+     Grand total: 20.000 + 3.500 + 5.000 = 28.500 TL
+     Prepayment base (havuz ısıtma + temizlik HARİÇ): 20.000 TL
+     Prepayment %20 → 4.000 TL · Remaining → 24.500 TL
+=============================================================== */
+describe("calculateGrandTotal — pool heating (2. adım)", () => {
+  const stayPrices: PriceRange[] = [
+    { start_date: "2026-10-01", end_date: "2026-12-31", price: 4000, currency: "TRY" },
+  ];
+  const rates = { USD: 30, EUR: 33, GBP: 38 };
+  const baseArgs = {
+    start: "2026-10-05",
+    end: "2026-10-10", // 5 nights
+    prices: stayPrices,
+    currency: "TRY",
+    rates,
+    cleaning_fee: 3500,
+    cleaning_currency: "TRY",
+    cleaning_limit: 0, // her zaman uygulanır
+  };
+
+  it("1) pool heating seçili değil → poolHeating=0, grand total=23.500, prepayment base=20.000", () => {
+    const res = calculateGrandTotal(baseArgs);
+    expect(res.nights).toBe(5);
+    expect(res.stay).toBe(20000);
+    expect(res.cleaning).toBe(3500);
+    expect(res.poolHeating).toBe(0);
+    expect(res.total).toBe(23500);
+    expect(accommodationBase(res.total, res.cleaning, res.poolHeating)).toBe(20000);
+  });
+
+  it("2) pool heating seçili (1.000 TL/gece × 5 gece) → poolHeatingTotal=5.000, grand total=28.500, prepayment base=20.000", () => {
+    const res = calculateGrandTotal({
+      ...baseArgs,
+      pool_heating_fee: 1000,
+      pool_heating_currency: "TRY",
+      pool_heating_selected: true,
+    });
+    expect(res.nights).toBe(5);
+    expect(res.stay).toBe(20000);
+    expect(res.cleaning).toBe(3500);
+    expect(res.poolHeating).toBe(5000);
+    expect(res.total).toBe(28500);
+    expect(accommodationBase(res.total, res.cleaning, res.poolHeating)).toBe(20000);
+
+    // Kritik iş kuralı — örnek doğrulaması: prepayment %20 → 4.000, remaining → 24.500
+    const prepayment = calculatePrepayment(
+      accommodationBase(res.total, res.cleaning, res.poolHeating),
+      20
+    );
+    expect(prepayment).toBe(4000);
+    expect(res.total - prepayment).toBe(24500);
+  });
+
+  it("3) pool heating fee NULL/0 (seçili olsa dahi) → poolHeatingTotal=0", () => {
+    const resNull = calculateGrandTotal({
+      ...baseArgs,
+      pool_heating_selected: true,
+      // pool_heating_fee verilmedi → engine default 0 uygular
+    });
+    expect(resNull.poolHeating).toBe(0);
+    expect(resNull.total).toBe(23500);
+
+    const resZero = calculateGrandTotal({
+      ...baseArgs,
+      pool_heating_fee: 0,
+      pool_heating_selected: true,
+    });
+    expect(resZero.poolHeating).toBe(0);
+    expect(resZero.total).toBe(23500);
+  });
+
+  it("4) pool heating seçili ama fee 0 → poolHeatingTotal=0 (senaryo 3 ile aynı davranış, ayrıca doğrulama)", () => {
+    const res = calculateGrandTotal({
+      ...baseArgs,
+      pool_heating_fee: 0,
+      pool_heating_currency: "TRY",
+      pool_heating_selected: true,
+    });
+    expect(res.poolHeating).toBe(0);
+    expect(res.original_pool_heating).toBe(0);
+    expect(res.total).toBe(23500);
+  });
+
+  it("5) eski çağrılar (pool heating parametreleri verilmeden) BUGÜNKÜ hesaplamayla birebir aynı sonucu verir", () => {
+    const res = calculateGrandTotal(baseArgs); // pool_heating_* hiç geçilmedi
+    expect(res.poolHeating).toBe(0);
+    expect(res.original_pool_heating).toBe(0);
+    expect(res.original_pool_heating_currency).toBe("TRY");
+    expect(res.total).toBe(res.stay + res.cleaning); // mevcut (pre-existing) formül
+    expect(res.total).toBe(23500);
+    // accommodationBase da 2-parametreli eski çağrılarla BYTE-IDENTICAL:
+    expect(accommodationBase(res.total, res.cleaning)).toBe(20000);
+  });
+
+  it("6) 5 Ekim → 10 Ekim: nights=5, 1.000 TL/gece → pool heating 5.000 TL", () => {
+    const res = calculateGrandTotal({
+      ...baseArgs,
+      pool_heating_fee: 1000,
+      pool_heating_currency: "TRY",
+      pool_heating_selected: true,
+    });
+    expect(res.nights).toBe(5);
+    expect(res.poolHeating).toBe(5000);
+    expect(res.original_pool_heating).toBe(5000);
+  });
+
+  it("USD hedef currency'de pool heating de cleaning gibi convertPrice ile çevrilir", () => {
+    const res = calculateGrandTotal({
+      ...baseArgs,
+      currency: "USD", // 1 USD = 30 TRY
+      pool_heating_fee: 300, // 300 TRY/gece × 5 = 1500 TRY → 50 USD
+      pool_heating_currency: "TRY",
+      pool_heating_selected: true,
+    });
+    expect(res.original_pool_heating).toBe(1500);
+    expect(res.original_pool_heating_currency).toBe("TRY");
+    expect(res.poolHeating).toBeCloseTo(50, 2);
+    expect(res.currency).toBe("USD");
+  });
+});
+
+/* ===============================================================
+   🛡️ HAVUZ ISITMA — 2. adım (accommodationBase genişletmesi)
+   =============================================================== */
+describe("accommodationBase", () => {
+  it("2-parametreli eski çağrılar BYTE-IDENTICAL kalır (poolHeatingFee default 0)", () => {
+    expect(accommodationBase(3500, 500)).toBe(3000);
+    expect(accommodationBase(23500, 3500)).toBe(20000);
+  });
+
+  it("3. parametre (poolHeatingFee) verildiğinde grand total'dan hem cleaning hem pool heating çıkarılır", () => {
+    expect(accommodationBase(28500, 3500, 5000)).toBe(20000);
+  });
+
+  it("negatife düşmez (Math.max ile 0'da clamp)", () => {
+    expect(accommodationBase(100, 60, 60)).toBe(0);
   });
 });
