@@ -1037,7 +1037,7 @@ export const villaAdminRepository = {
      🛡️ MIGRATION 072 GENİŞLETMESİ — real_title OR eşleşmesi:
        Eskiden tek `.ilike("search_title", pattern)`. Şimdi AYNI `pattern`
        değeri `.or()` ile İKİ koluna uygulanıyor:
-         search_title.ilike.<pattern>  OR  real_title.ilike.<pattern>
+         search_title.ilike.<pattern>  OR  real_title_search.ilike.<pattern>
        `.or(...)` önceki `.eq("is_active",true).is("deleted_at",null)`
        filtreleriyle AND olarak birleşir (bkz. listForAdmin/S6A aynı
        zincir deseni, satır ~756). Quoting/escape `buildVillaSearchOrClauseNative`
@@ -1045,10 +1045,25 @@ export const villaAdminRepository = {
        backslash + `%`/`_` escape ediyor; `.or()` taşıma-string'i için
        AYRICA çift tırnak escape edilip değer `"..."` içine sarılıyor
        (query-builder `unquoteOrValue`'nun tersi — round-trip doğrulandı).
-       `real_title` SADECE WHERE/OR filtresinde kullanılıyor; `.select()`
-       listesine EKLENMEDİ → response'a asla dahil olmaz (title, mevcut
-       public villa adı olarak dönmeye devam eder). search_title kolu
-       davranışça birebir korunur (aynı pattern, aynı normalize).
+
+       🛡️ MIGRATION 078 DÜZELTMESİ — Türkçe karakterli real_title araması:
+       Önceden bu OR-kolu ham `real_title` kolonuna karşı çalışıyordu.
+       Ama `pattern` HER ZAMAN `normalizeSearchText` ile ASCII'ye
+       foldlanmış oluyor (TR-fold, arama TERİMİNE uygulanıyor) — ham
+       `real_title` ise Türkçe karakterleri OLDUĞU GİBİ tutuyor. Bu
+       asimetri yüzünden "Villa Aydoğdu" gibi bir real_title'da
+       "Aydoğdu" da "Aydogdu" da BULUNAMIYORDU (audit: bu migration'ın
+       hazırlandığı konuşma). Migration 078, search_title ile BİREBİR
+       AYNI normalize formülünü kullanan `real_title_search` GENERATED
+       STORED kolonunu ekledi; artık OR-kolu bu normalize edilmiş
+       kolona karşı çalışıyor → pattern (ASCII) ile kolon (ASCII) AYNI
+       kanonda → simetrik eşleşme. `real_title`'ın KENDİSİ hâlâ hiç
+       değişmedi, hâlâ yalnız admin panelinde ham gösteriliyor.
+       `real_title_search` SADECE WHERE/OR filtresinde kullanılıyor;
+       `.select()` listesine EKLENMEDİ → response'a asla dahil olmaz
+       (title, mevcut public villa adı olarak dönmeye devam eder).
+       search_title kolu davranışça birebir korunur (aynı pattern,
+       aynı normalize, HİÇ dokunulmadı).
   =============================================================== */
   async searchByTitle(
     term: string,
@@ -1077,8 +1092,9 @@ export const villaAdminRepository = {
     /* 🛡️ Migration 072 — .or() taşıma-quoting'i (buildVillaSearchOrClauseNative
        ile BİREBİR desen, satır ~104): escapeLikePattern zaten \ ve %/_
        escape etti; burada SADECE .or() string parser'ı için çift tırnak
-       escape edilip `"..."` içine sarılıyor. real_title WHERE'de kullanılır,
-       SELECT'e eklenmez. */
+       escape edilip `"..."` içine sarılıyor. real_title_search (migration
+       078 — search_title ile aynı normalize edilmiş GENERATED STORED
+       kolon) WHERE'de kullanılır, SELECT'e eklenmez. */
     const orQuoted = `"${pattern.replace(/"/g, '\\"')}"`;
     const { data, error } = await dbAdmin
       .from<{
@@ -1097,7 +1113,7 @@ export const villaAdminRepository = {
       )
       .eq("is_active", true)
       .is("deleted_at", null)
-      .or(`search_title.ilike.${orQuoted},real_title.ilike.${orQuoted}`)
+      .or(`search_title.ilike.${orQuoted},real_title_search.ilike.${orQuoted}`)
       .limit(limit);
 
     if (error) {
