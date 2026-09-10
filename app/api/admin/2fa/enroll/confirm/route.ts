@@ -130,13 +130,13 @@ export async function POST(req: Request) {
 
   if (codesErr) {
     // 2FA zaten enabled=true oldu; kurtarma kodu yazımı başarısız olsa
-    // bile login akışı bozulmaz — admin "Hesabım" sayfasından "kodları
-    // yenile" ile tekrar üretebilir.
+    // bile login akışı bozulmaz — admin "Kullanıcılar" sayfasındaki kendi
+    // satırından "kodları yenile" ile tekrar üretebilir.
     return NextResponse.json({
       ok: true,
       recoveryCodes: [],
       warning:
-        "2FA aktif ancak kurtarma kodları oluşturulamadı — 'Hesabım' sayfasından yenileyin.",
+        "2FA aktif ancak kurtarma kodları oluşturulamadı — 'Kullanıcılar' sayfasından kendi satırınızdan yenileyin.",
     });
   }
 

@@ -31,9 +31,13 @@ import "server-only";
 
 import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
-/** Liste + detail için ortak slim projeksiyon (password HARİÇ). */
+/** Liste + detail için ortak slim projeksiyon (password HARİÇ).
+ *  🛡️ TOTP 2FA — `totp_enabled` eklendi (additive, boolean-only —
+ *  secret/hash İÇERMEZ) → /maki-admin/users listesinde her satırın
+ *  2FA rozetini göstermek için. Backend mantığı (enroll/confirm/
+ *  disable/reset) DEĞİŞMEDİ, yalnız bu READ projeksiyonu genişledi. */
 const LIST_SELECT =
-  "id, full_name, email, sidebar_permissions, is_active, last_login_at, created_at";
+  "id, full_name, email, sidebar_permissions, is_active, last_login_at, created_at, totp_enabled";
 
 export const adminUserPanelServerRepository = {
   /** LIST — password hariç kolonlar, created_at DESC. */

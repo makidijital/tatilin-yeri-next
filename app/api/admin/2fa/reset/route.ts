@@ -67,7 +67,7 @@ export async function POST(req: Request) {
       {
         ok: false,
         error:
-          "Kendi 2FA'nızı bu şekilde kapatamazsınız — 'Hesabım' sayfasından kapatın",
+          "Kendi 2FA'nızı bu şekilde kapatamazsınız — 'Kullanıcılar' sayfasından kendi satırınızdan kapatın",
       },
       { status: 403 }
     );

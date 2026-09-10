@@ -23,6 +23,9 @@ export type AdminUser = {
   is_active?: boolean | null;
   last_login_at?: string | null;
   created_at?: string | null;
+  /* 🛡️ TOTP 2FA — ADDITIVE, boolean-only (secret/hash İÇERMEZ).
+     /maki-admin/users listesinde 2FA rozeti için. */
+  totp_enabled?: boolean | null;
 };
 
 export type AdminUserInput = {

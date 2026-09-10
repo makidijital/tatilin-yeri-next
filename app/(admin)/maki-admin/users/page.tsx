@@ -27,6 +27,10 @@ import {
   Loader2,
   KeyRound,
   ShieldCheck,
+  ShieldOff,
+  Lock,
+  Copy,
+  Check,
   User as UserIcon,
 } from "lucide-react";
 import {
@@ -34,6 +38,16 @@ import {
   useConfirm,
 } from "@/app/components/admin/notifications/NotificationProvider";
 import { logActivity } from "@/lib/activity-log.client";
+/* 🛡️ TOTP 2FA — eski /maki-admin/hesabim'den taşındı. `useAdmin()`
+   yalnız "bu satır BENİM satırım mı" (admin.id === u.id) client-side
+   UI kararı + kendi totp_enabled durumunu (context) taze tutmak için
+   kullanılır. GERÇEK yetki sınırı HER ZAMAN server'dadır: aşağıdaki
+   handler'ların çağırdığı /api/admin/2fa/* route'ları hiçbirinde
+   body'den target admin id okunmaz — hepsi authorizeAdminSession()'ın
+   döndürdüğü ÇAĞIRANIN kendi session'ı (caller.id/caller.email)
+   üzerinden çalışır. Bu import/kontrol o server sınırının ÜSTÜNE
+   eklenen bir UI filtresidir, ONUN YERİNE GEÇMEZ. */
+import { useAdmin } from "@/app/components/admin/AdminSessionGuard";
 
 /* ===============================================================
    🔥 ADMIN USERS — multi-user yönetim paneli
@@ -152,6 +166,23 @@ const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
   { key: "inactive", label: "Pasif" },
 ];
 
+/* 🛡️ TOTP 2FA — eski /maki-admin/hesabim'den BİREBİR taşınan tip/sabit
+   (bkz. dosya sonundaki modal + yukarıdaki handler bloğu). */
+type TwoFaView =
+  | "status"
+  | "enroll"
+  | "recovery-reveal"
+  | "disable"
+  | "regenerate";
+
+type EnrollState = {
+  secret: string;
+  otpauthUri: string;
+  qrDataUrl: string;
+};
+
+const TWO_FA_SOFT_BG = "rgba(15, 23, 42, 0.04)";
+
 /* group SIDEBAR_PERMISSIONS by group label (display order korunur) */
 function groupPermissions(items: PermissionItem[]) {
   const map = new Map<string, PermissionItem[]>();
@@ -168,11 +199,28 @@ function groupPermissions(items: PermissionItem[]) {
 export default function AdminUsersPage() {
   const toast = useNotify();
   const confirm = useConfirm();
+  /* 🛡️ TOTP 2FA — current admin id (client-side UI filtresi; gerçek
+     yetki sınırı server'da — bkz. import block'taki not). */
+  const { admin: currentAdmin, refresh: refreshCurrentAdmin } = useAdmin();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
+  /* 🛡️ TOTP 2FA — kendi 2FA yönetim modal state'i (eski
+     /maki-admin/hesabim'den BİREBİR taşındı). */
+  const [twoFaOpen, setTwoFaOpen] = useState(false);
+  const [twoFaView, setTwoFaView] = useState<TwoFaView>("status");
+  const [twoFaBusy, setTwoFaBusy] = useState(false);
+  const [enroll, setEnroll] = useState<EnrollState | null>(null);
+  const [enrollCode, setEnrollCode] = useState("");
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+  const [copiedSecret, setCopiedSecret] = useState(false);
+  const [reauthMode, setReauthMode] = useState<"password" | "code">(
+    "password"
+  );
+  const [reauthValue, setReauthValue] = useState("");
 
   // modal state
   const [open, setOpen] = useState(false);
@@ -376,6 +424,193 @@ export default function AdminUsersPage() {
     }
   }
 
+  /* ---------------------------------------------------------------
+     🛡️ TOTP 2FA — kendi hesabı yönetimi (eski /maki-admin/hesabim'den
+     BİREBİR taşındı — akış/endpoint/body/response şekli DEĞİŞMEDİ).
+     ---------------------------------------------------------------
+     GÜVENLİK: `/api/admin/2fa/enroll/start`, `/enroll/confirm`,
+     `/disable`, `/recovery-codes/regenerate` HİÇBİRİ body'de bir
+     "target admin id" ALMAZ — hepsi `authorizeAdminSession()`'ın
+     döndürdüğü ÇAĞIRANIN OWN session'ı (`caller.id`/`caller.email`)
+     üzerinden çalışır (bkz. ilgili route dosyaları — bu turda hiç
+     dokunulmadı). Bu yüzden bu handler'lar HANGİ satırdan
+     tetiklendiğine bakılmaksızın YALNIZ giriş yapmış adminin kendi
+     2FA'sını etkiler — buton yalnız kendi satırında gösterilse de
+     (aşağıda `u.id === currentAdmin?.id`), asıl güvenlik sınırı
+     burada değil, server'dadır.
+  --------------------------------------------------------------- */
+  const resetTwoFaReauth = (): void => {
+    setReauthMode("password");
+    setReauthValue("");
+  };
+
+  const parseTwoFaJson = async (
+    res: Response
+  ): Promise<{ ok?: boolean; error?: string; [k: string]: unknown } | null> => {
+    try {
+      return await res.json();
+    } catch {
+      return null;
+    }
+  };
+
+  function openTwoFaModal(): void {
+    setTwoFaView("status");
+    setEnroll(null);
+    setEnrollCode("");
+    setRecoveryCodes([]);
+    resetTwoFaReauth();
+    setTwoFaOpen(true);
+  }
+
+  function closeTwoFaModal(): void {
+    if (twoFaBusy) return;
+    setTwoFaOpen(false);
+  }
+
+  const handleStartEnroll = async (): Promise<void> => {
+    setTwoFaBusy(true);
+    try {
+      const res = await adminFetch("/api/admin/2fa/enroll/start", {
+        method: "POST",
+      });
+      const json = await parseTwoFaJson(res);
+      if (!res.ok || !json?.ok) {
+        toast.error((json?.error as string) || "2FA kurulumu başlatılamadı");
+        return;
+      }
+      setEnroll({
+        secret: (json.secret as string) || "",
+        otpauthUri: (json.otpauthUri as string) || "",
+        qrDataUrl: (json.qrDataUrl as string) || "",
+      });
+      setEnrollCode("");
+      setTwoFaView("enroll");
+    } catch {
+      toast.error("Sunucuya ulaşılamadı");
+    } finally {
+      setTwoFaBusy(false);
+    }
+  };
+
+  const handleConfirmEnroll = async (
+    e: React.FormEvent<HTMLFormElement>
+  ): Promise<void> => {
+    e.preventDefault();
+    if (!/^\d{6}$/.test(enrollCode.trim())) {
+      toast.error("6 haneli kodu eksiksiz gir.");
+      return;
+    }
+    setTwoFaBusy(true);
+    try {
+      const res = await adminFetch("/api/admin/2fa/enroll/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: enrollCode.trim() }),
+      });
+      const json = await parseTwoFaJson(res);
+      if (!res.ok || !json?.ok) {
+        toast.error((json?.error as string) || "Geçersiz doğrulama kodu");
+        return;
+      }
+      setRecoveryCodes((json.recoveryCodes as string[]) || []);
+      setEnroll(null);
+      setTwoFaView("recovery-reveal");
+      await refreshCurrentAdmin();
+      await load(false);
+      toast.success("2FA etkinleştirildi.");
+    } catch {
+      toast.error("Sunucuya ulaşılamadı");
+    } finally {
+      setTwoFaBusy(false);
+    }
+  };
+
+  const handleDisableTwoFa = async (
+    e: React.FormEvent<HTMLFormElement>
+  ): Promise<void> => {
+    e.preventDefault();
+    if (!reauthValue.trim()) {
+      toast.error(reauthMode === "password" ? "Şifre gerekli" : "Kod gerekli");
+      return;
+    }
+    setTwoFaBusy(true);
+    try {
+      const res = await adminFetch("/api/admin/2fa/disable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          reauthMode === "password"
+            ? { password: reauthValue.trim() }
+            : { code: reauthValue.trim() }
+        ),
+      });
+      const json = await parseTwoFaJson(res);
+      if (!res.ok || !json?.ok) {
+        toast.error((json?.error as string) || "2FA kapatılamadı");
+        return;
+      }
+      resetTwoFaReauth();
+      setTwoFaView("status");
+      await refreshCurrentAdmin();
+      await load(false);
+      toast.success("2FA kapatıldı.");
+    } catch {
+      toast.error("Sunucuya ulaşılamadı");
+    } finally {
+      setTwoFaBusy(false);
+    }
+  };
+
+  const handleRegenerateRecovery = async (
+    e: React.FormEvent<HTMLFormElement>
+  ): Promise<void> => {
+    e.preventDefault();
+    if (!reauthValue.trim()) {
+      toast.error(reauthMode === "password" ? "Şifre gerekli" : "Kod gerekli");
+      return;
+    }
+    setTwoFaBusy(true);
+    try {
+      const res = await adminFetch(
+        "/api/admin/2fa/recovery-codes/regenerate",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            reauthMode === "password"
+              ? { password: reauthValue.trim() }
+              : { code: reauthValue.trim() }
+          ),
+        }
+      );
+      const json = await parseTwoFaJson(res);
+      if (!res.ok || !json?.ok) {
+        toast.error((json?.error as string) || "Kurtarma kodları yenilenemedi");
+        return;
+      }
+      resetTwoFaReauth();
+      setRecoveryCodes((json.recoveryCodes as string[]) || []);
+      setTwoFaView("recovery-reveal");
+      toast.success("Kurtarma kodları yenilendi.");
+    } catch {
+      toast.error("Sunucuya ulaşılamadı");
+    } finally {
+      setTwoFaBusy(false);
+    }
+  };
+
+  const handleCopySecret = async (): Promise<void> => {
+    if (!enroll) return;
+    try {
+      await navigator.clipboard.writeText(enroll.secret);
+      setCopiedSecret(true);
+      setTimeout(() => setCopiedSecret(false), 2000);
+    } catch {
+      /* clipboard erişimi yoksa sessizce yok say — secret zaten ekranda görünür */
+    }
+  };
+
   /* ---------------- RENDER ---------------- */
   const groupedPerms = useMemo(
     () => groupPermissions(SIDEBAR_PERMISSIONS),
@@ -525,6 +760,27 @@ export default function AdminUsersPage() {
                   </span>
                 </div>
 
+                {/* 2FA durumu — TÜM satırlarda salt-okunur rozet olarak
+                    gösterilir (istek #2). Yönetim butonu ise yalnız
+                    aşağıda, giriş yapmış adminin KENDİ satırında
+                    render edilir (istek #3/#4). */}
+                <div className="hidden md:block shrink-0">
+                  <span
+                    className={`admin-badge ${
+                      u.totp_enabled
+                        ? "admin-badge--confirmed"
+                        : "admin-badge--neutral"
+                    }`}
+                  >
+                    {u.totp_enabled ? (
+                      <ShieldCheck size={11} />
+                    ) : (
+                      <ShieldOff size={11} />
+                    )}
+                    {u.totp_enabled ? "2FA Aktif" : "2FA Kapalı"}
+                  </span>
+                </div>
+
                 {/* Permissions count */}
                 <div className="hidden lg:block shrink-0 min-w-[100px]">
                   <span className="admin-badge admin-badge--info">
@@ -547,6 +803,36 @@ export default function AdminUsersPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1.5 shrink-0">
+                  {/* 🛡️ TOTP 2FA yönetim butonu — YALNIZ giriş yapmış
+                      adminin KENDİ satırında render edilir
+                      (u.id === currentAdmin?.id). Bu yalnızca bir UI
+                      kolaylığıdır; asıl güvenlik sınırı server'dadır:
+                      /api/admin/2fa/* route'ları body'de hiçbir target
+                      admin id kabul etmez, daima authorizeAdminSession()
+                      ile çözülen ÇAĞIRANIN kendi session'ı üzerinden
+                      çalışır. Yani bu buton gizlenmese/bypass edilse
+                      bile başka bir adminin 2FA'sı API üzerinden de
+                      yönetilemez. */}
+                  {u.id === currentAdmin?.id && (
+                    <button
+                      type="button"
+                      onClick={openTwoFaModal}
+                      className="admin-icon-btn"
+                      title={
+                        u.totp_enabled ? "2FA'yı Yönet" : "2FA'yı Etkinleştir"
+                      }
+                      aria-label="2FA yönetimi"
+                    >
+                      {u.totp_enabled ? (
+                        <ShieldCheck size={14} className="text-emerald-600" />
+                      ) : (
+                        <ShieldOff
+                          size={14}
+                          className="text-[var(--admin-muted)]"
+                        />
+                      )}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleToggleActive(u)}
@@ -835,6 +1121,379 @@ export default function AdminUsersPage() {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===============================================================
+          🛡️ TOTP 2FA MODAL — eski /maki-admin/hesabim'den BİREBİR
+          taşındı (view state machine + JSX aynı, yalnız modal içine
+          sarıldı). Yalnızca kendi satırındaki butonla açılır
+          (u.id === currentAdmin?.id — bkz. yukarıdaki Actions bloğu).
+          Akış/endpoint'ler DEĞİŞMEDİ; bkz. handler yorumları.
+          =============================================================== */}
+      {twoFaOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020617]/45 backdrop-blur-sm">
+          <div className="admin-card-flat w-full max-w-xl max-h-[90vh] overflow-y-auto bg-[var(--admin-surface)]">
+            <div className="admin-card__header sticky top-0 bg-[var(--admin-surface)] z-10">
+              <div>
+                <h3 className="admin-card__title">İki Adımlı Doğrulama</h3>
+                <p className="admin-card__sub">
+                  {currentAdmin?.full_name || currentAdmin?.email || "Hesabın"}{" "}
+                  için 2FA yönetimi
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeTwoFaModal}
+                disabled={twoFaBusy}
+                className="admin-icon-btn"
+                aria-label="Kapat"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {twoFaView === "status" && (
+                <div className="flex items-start gap-4">
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                    style={{
+                      background: currentAdmin?.totp_enabled
+                        ? "rgba(16, 185, 129, 0.12)"
+                        : "rgba(148, 163, 184, 0.15)",
+                      color: currentAdmin?.totp_enabled
+                        ? "rgb(5, 150, 105)"
+                        : "var(--admin-muted)",
+                    }}
+                  >
+                    {currentAdmin?.totp_enabled ? (
+                      <ShieldCheck size={20} />
+                    ) : (
+                      <ShieldOff size={20} />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-[var(--color-stone-900)]">
+                      İki Adımlı Doğrulama
+                    </p>
+                    <p className="text-[13px] text-[var(--admin-muted)] mt-1 leading-relaxed">
+                      {currentAdmin?.totp_enabled
+                        ? "Aktif — girişte authenticator uygulamandaki 6 haneli kod istenir."
+                        : "Pasif — hesabın yalnızca şifreyle korunuyor."}
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {!currentAdmin?.totp_enabled ? (
+                        <button
+                          type="button"
+                          onClick={handleStartEnroll}
+                          disabled={twoFaBusy}
+                          className="admin-btn-primary"
+                        >
+                          {twoFaBusy ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <ShieldCheck size={14} />
+                          )}
+                          2FA&apos;yı Etkinleştir
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              resetTwoFaReauth();
+                              setTwoFaView("regenerate");
+                            }}
+                            className="admin-btn-ghost"
+                          >
+                            <RefreshCw size={14} />
+                            Kurtarma Kodlarını Yenile
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              resetTwoFaReauth();
+                              setTwoFaView("disable");
+                            }}
+                            className="admin-btn-ghost hover:!text-rose-600"
+                          >
+                            <ShieldOff size={14} />
+                            2FA&apos;yı Kapat
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {twoFaView === "enroll" && enroll && (
+                <div className="space-y-5">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-stone-900)]">
+                      1. QR kodu tara
+                    </p>
+                    <p className="text-[13px] text-[var(--admin-muted)] mt-1">
+                      Google Authenticator, Authy veya benzeri bir uygulamayla
+                      aşağıdaki kodu tara.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-3 py-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={enroll.qrDataUrl}
+                      alt="TOTP QR kodu"
+                      width={200}
+                      height={200}
+                      className="rounded-xl border border-[var(--admin-border)]"
+                    />
+                    <div className="flex items-center gap-2">
+                      <code
+                        className="text-[12px] px-2.5 py-1.5 rounded-lg font-mono tracking-wide"
+                        style={{ background: TWO_FA_SOFT_BG }}
+                      >
+                        {enroll.secret}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={handleCopySecret}
+                        className="admin-btn-ghost !px-2.5 !py-1.5"
+                        title="Secret'ı kopyala"
+                      >
+                        {copiedSecret ? <Check size={13} /> : <Copy size={13} />}
+                      </button>
+                    </div>
+                    <p className="text-[11.5px] text-[var(--admin-muted)]">
+                      QR taranamıyorsa bu kodu uygulamana manuel gir.
+                    </p>
+                </div>
+
+                  <form
+                    onSubmit={handleConfirmEnroll}
+                    className="space-y-3 pt-4 border-t border-[var(--admin-border)]"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--color-stone-900)]">
+                        2. Kodu doğrula
+                      </p>
+                      <p className="text-[13px] text-[var(--admin-muted)] mt-1">
+                        Uygulamada görünen 6 haneli kodu gir.
+                      </p>
+                    </div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={enrollCode}
+                      onChange={(e) =>
+                        setEnrollCode(
+                          e.target.value.replace(/\D/g, "").slice(0, 6)
+                        )
+                      }
+                      disabled={twoFaBusy}
+                      className="input !h-14 text-center text-2xl tracking-[0.4em] font-semibold max-w-[220px]"
+                      placeholder="000000"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={twoFaBusy}
+                        className="admin-btn-primary"
+                      >
+                        {twoFaBusy ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <ShieldCheck size={14} />
+                        )}
+                        Doğrula ve Etkinleştir
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEnroll(null);
+                          setTwoFaView("status");
+                        }}
+                        disabled={twoFaBusy}
+                        className="admin-btn-ghost"
+                      >
+                        Vazgeç
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {twoFaView === "recovery-reveal" && (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-stone-900)]">
+                      Kurtarma Kodları
+                    </p>
+                    <p className="text-[13px] text-[var(--admin-muted)] mt-1 leading-relaxed">
+                      Bu kodlar yalnız ŞİMDI gösteriliyor — daha sonra tekrar
+                      görüntülenemez. Her kod tek kullanımlıktır. Güvenli bir
+                      yere (parola yöneticisi vb.) kaydet.
+                    </p>
+                </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {recoveryCodes.map((c) => (
+                      <code
+                        key={c}
+                        className="text-[13px] px-3 py-2 rounded-lg font-mono text-center tracking-wide"
+                        style={{ background: TWO_FA_SOFT_BG }}
+                      >
+                        {c}
+                      </code>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecoveryCodes([]);
+                      setTwoFaView("status");
+                    }}
+                    className="admin-btn-primary"
+                  >
+                    <Check size={14} />
+                    Kaydettim, Devam Et
+                  </button>
+                </div>
+              )}
+
+              {(twoFaView === "disable" || twoFaView === "regenerate") && (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-stone-900)]">
+                      {twoFaView === "disable"
+                        ? "2FA'yı Kapat"
+                        : "Kurtarma Kodlarını Yenile"}
+                    </p>
+                    <p className="text-[13px] text-[var(--admin-muted)] mt-1 leading-relaxed">
+                      {twoFaView === "disable"
+                        ? "Bu işlem 2FA'yı kapatır ve tüm kurtarma kodlarını geçersiz kılar."
+                        : "Bu işlem mevcut tüm kurtarma kodlarını geçersiz kılıp yenilerini üretir."}{" "}
+                      Devam etmek için şifreni veya mevcut doğrulama kodunu
+                      gir.
+                    </p>
+                  </div>
+
+                  <form
+                    onSubmit={
+                      twoFaView === "disable"
+                        ? handleDisableTwoFa
+                        : handleRegenerateRecovery
+                    }
+                    className="space-y-3"
+                  >
+                    <div className="flex gap-2 text-[12.5px]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReauthMode("password");
+                          setReauthValue("");
+                        }}
+                        className="px-3 py-1.5 rounded-lg border transition-colors"
+                        style={
+                          reauthMode === "password"
+                            ? {
+                                borderColor: "var(--admin-accent-strong)",
+                                color: "var(--admin-accent-strong)",
+                            }
+                            : {
+                                borderColor: "var(--admin-border)",
+                                color: "var(--admin-muted)",
+                              }
+                        }
+                      >
+                        Şifre ile
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReauthMode("code");
+                          setReauthValue("");
+                        }}
+                        className="px-3 py-1.5 rounded-lg border transition-colors"
+                        style={
+                          reauthMode === "code"
+                            ? {
+                                borderColor: "var(--admin-accent-strong)",
+                                color: "var(--admin-accent-strong)",
+                            }
+                            : {
+                                borderColor: "var(--admin-border)",
+                                color: "var(--admin-muted)",
+                              }
+                        }
+                      >
+                        Doğrulama kodu ile
+                      </button>
+                    </div>
+
+                    <div className="relative max-w-xs">
+                      <Lock
+                        size={15}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--admin-muted)] pointer-events-none"
+                      />
+                      <input
+                        type={reauthMode === "password" ? "password" : "text"}
+                        inputMode={reauthMode === "code" ? "numeric" : undefined}
+                        maxLength={reauthMode === "code" ? 6 : undefined}
+                        value={reauthValue}
+                        onChange={(e) =>
+                          setReauthValue(
+                            reauthMode === "code"
+                              ? e.target.value.replace(/\D/g, "").slice(0, 6)
+                              : e.target.value
+                          )
+                        }
+                        disabled={twoFaBusy}
+                        className="input !h-12 !pl-10"
+                        placeholder={
+                          reauthMode === "password" ? "Mevcut şifren" : "000000"
+                        }
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={twoFaBusy}
+                        className={
+                          twoFaView === "disable"
+                            ? "admin-btn-ghost hover:!text-rose-600"
+                            : "admin-btn-primary"
+                        }
+                      >
+                        {twoFaBusy ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <KeyRound size={14} />
+                        )}
+                        {twoFaView === "disable" ? "2FA'yı Kapat" : "Kodları Yenile"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          resetTwoFaReauth();
+                          setTwoFaView("status");
+                        }}
+                        disabled={twoFaBusy}
+                        className="admin-btn-ghost"
+                      >
+                        Vazgeç
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
             </div>
           </div>
         </div>
