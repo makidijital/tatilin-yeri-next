@@ -22,7 +22,7 @@ import {
    ===============================================================
    - Auth state listener (login/logout/refresh)
    - Session restore validation (admin_users tekrar kontrol)
-   - 30 dakika inactivity timeout (mousemove/keydown/click/scroll/touch)
+   - 60 dakika inactivity timeout (mousemove/keydown/click/scroll/touch)
    - /maki-admin/login dışındaki tüm admin route'ları korur
    - login sayfasındaki admin'i /maki-admin'e yönlendirir
    - Marker cookie set/clear (middleware redirect hint için)
@@ -31,7 +31,7 @@ import {
    useAdmin() hook ile sidebar/topbar permission/avatar bilgisi alınır
    =============================================================== */
 
-const INACTIVITY_MS = 30 * 60 * 1000; // 30 dakika
+const INACTIVITY_MS = 60 * 60 * 1000; // 60 dakika
 const MARKER_COOKIE = "admin-session";
 const LOGIN_PATH = "/maki-admin/login";
 
