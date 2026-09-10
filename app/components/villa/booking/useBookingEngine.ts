@@ -74,6 +74,7 @@ import {
   calculateNights,
   calculatePrepayment,
   accommodationBase,
+  isPoolHeatingActiveForRange,
 } from "@/lib/price.engine";
 
 /* getValidEndDate → lib/date-range (TEK source-of-truth).
@@ -127,6 +128,11 @@ export type UseBookingEngineInput = {
      mevcut caller'lar geçmeden BYTE-IDENTICAL çalışır. */
   pool_heating_fee?: number | null;
   pool_heating_currency?: string | null;
+
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. NULL/undefined = "ay
+     kısıtlaması yok" (12 ay aktif) — mevcut caller'lar geçmeden
+     BYTE-IDENTICAL çalışır. */
+  pool_heating_months?: number[] | null;
 };
 
 /* ===============================================================
@@ -186,6 +192,10 @@ export type UseBookingEngineReturn = {
   setPoolHeatingSelected: Dispatch<SetStateAction<boolean>>;
   poolHeatingTotal: number;
 
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. Checkbox görünürlüğü için;
+     BookingSummary'nin `poolHeatingActiveForRange` prop'una geçirilir. */
+  poolHeatingActiveForRange: boolean;
+
   /* Pure helpers (closure over engine state) */
   parseLocalDate: (s: string) => Date;
   formatDate: (d: Date) => string;
@@ -225,6 +235,7 @@ export function useBookingEngine(
     initialEnd = null,
     pool_heating_fee = 0,
     pool_heating_currency = "TRY",
+    pool_heating_months = null,
   } = input;
 
   const { currency, rates } = useCurrency();
@@ -700,8 +711,26 @@ export function useBookingEngine(
           pool_heating_fee: pool_heating_fee ?? 0,
           pool_heating_currency: pool_heating_currency || "TRY",
           pool_heating_selected: poolHeatingSelected,
+          /* 🛡️ Migration 076 — sezonluk ay kısıtı. NULL/undefined
+             ise calculateGrandTotal içinde isPoolHeatingActiveForRange
+             her zaman true döner (davranış BYTE-IDENTICAL). */
+          pool_heating_months,
         })
       : null;
+
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. Checkbox GÖRÜNÜRLÜĞÜ için
+     AYRI bir boolean — calculateGrandTotal'ın kendisi yalnız TUTARI
+     sıfırlar (rawPoolHeating), checkbox'ın kendisini GİZLEMEZ. Tarih
+     seçilmemişse (startDate/endDate yok) true — BookingSummary zaten
+     yalnız result mevcutken render edilir, bu durumda hiç kullanılmaz. */
+  const poolHeatingActiveForRange =
+    startDate && endDate
+      ? isPoolHeatingActiveForRange(
+          formatDate(startDate),
+          formatDate(endDate),
+          pool_heating_months
+        )
+      : true;
 
   /* 🛡️ HAVUZ ISITMA — 4. adım. result.poolHeating'ten türetilir; YENİ
      bir hesaplama YOK (calculateGrandTotal dahili calculatePoolHeatingFee
@@ -827,6 +856,9 @@ export function useBookingEngine(
     poolHeatingSelected,
     setPoolHeatingSelected,
     poolHeatingTotal,
+
+    /* 🛡️ Migration 076 — sezonluk ay kısıtı (checkbox görünürlüğü). */
+    poolHeatingActiveForRange,
 
     /* Helpers */
     parseLocalDate,

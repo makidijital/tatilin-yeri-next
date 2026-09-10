@@ -23,7 +23,8 @@ export const SELECT_RESERVATION_DETAIL = `
         cleaning_limit,
         custom_prepayment_rate,
         pool_heating_fee,
-        pool_heating_currency
+        pool_heating_currency,
+        pool_heating_months
       ),
       payment_method:payment_method_id (
         id,

@@ -8,7 +8,11 @@ import { adminFetch } from "@/lib/admin-fetch";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { calculateGrandTotal, accommodationBase } from "@/lib/price.engine";
+import {
+  calculateGrandTotal,
+  accommodationBase,
+  isPoolHeatingActiveForRange,
+} from "@/lib/price.engine";
 
 import { getPaymentDisplayValues } from "@/lib/payment.helper";
 
@@ -594,6 +598,10 @@ export default function AdminReservationDetailPage() {
       pool_heating_fee: selectedVilla?.pool_heating_fee || 0,
       pool_heating_currency: selectedVilla?.pool_heating_currency || "TRY",
       pool_heating_selected: !!data?.pool_heating_selected,
+      /* 🛡️ Migration 076 — sezonluk ay kısıtı. selectedVilla'da
+         kısıtlama tanımlı değilse (NULL) her zaman aktif — davranış
+         BYTE-IDENTICAL kalır. */
+      pool_heating_months: selectedVilla?.pool_heating_months,
     });
 
     setPriceDetail(result);
@@ -669,6 +677,7 @@ export default function AdminReservationDetailPage() {
     selectedVilla?.cleaning_limit,
     selectedVilla?.pool_heating_fee,
     selectedVilla?.pool_heating_currency,
+    selectedVilla?.pool_heating_months,
   ]);
 
   /* ---------------------------------------------
@@ -1066,6 +1075,18 @@ export default function AdminReservationDetailPage() {
             data={data}
             setData={setDataLoose}
             errors={errors}
+            /* 🛡️ Migration 076 — sezonluk ay kısıtı (toggle görünürlüğü).
+               Tarih seçilmemişse true (result/priceDetail zaten null
+               olur, PriceStep normal flow'u göstermez). */
+            poolHeatingActiveForRange={
+              startDate && endDate
+                ? isPoolHeatingActiveForRange(
+                    formatLocalDate(startDate),
+                    formatLocalDate(endDate),
+                    selectedVilla?.pool_heating_months
+                  )
+                : true
+            }
             /* 🛡️ FAZ 1 — PriceDetailSnapshot ([id] tipinden) nullable
                foreign currency alanları içerir; child `ReservationPriceDetail`
                undefined-only istiyor. Runtime: null → "field yok" semantic'i

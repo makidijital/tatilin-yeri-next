@@ -91,6 +91,10 @@ export type Villa = {
 
   pool_heating_currency?: string | null;
 
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. `select *` ile zaten
+   *  geliyor (repository katmanı değişmedi); TS-level passthrough. */
+  pool_heating_months?: number[] | null;
+
   slug?: string;
 
   created_at?: string | null;
@@ -234,6 +238,12 @@ export type VillaDTO = {
   pool_heating_fee: number | null;
 
   pool_heating_currency: string | null;
+
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. NULL passthrough KORUNUR
+   *  (pool_heating_fee ile aynı desen) — NULL "ay kısıtlaması yok,
+   *  12 ay aktif" anlamına geliyor (isPoolHeatingActiveForRange bu
+   *  semantiği uygular). */
+  pool_heating_months: number[] | null;
 
   slug: string;
 
@@ -434,6 +444,12 @@ function mapVilla(
 
     pool_heating_currency:
       villa.pool_heating_currency || "TRY",
+
+    /* 🛡️ Migration 076 — sezonluk ay kısıtı. NULL passthrough KORUNUR
+       (pool_heating_fee ile aynı desen) — NULL "ay kısıtlaması yok"
+       anlamına geliyor. */
+    pool_heating_months:
+      villa.pool_heating_months ?? null,
 
     slug:
       villa.slug ?? "",

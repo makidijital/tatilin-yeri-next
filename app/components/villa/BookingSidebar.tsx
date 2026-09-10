@@ -79,6 +79,9 @@ type Props = {
      render edilmez (useBookingEngine ile aynı semantik). */
   pool_heating_fee?: number | null;
   pool_heating_currency?: string | null;
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. NULL/undefined = "ay
+     kısıtlaması yok" (12 ay aktif). */
+  pool_heating_months?: number[] | null;
   /* Villaya özel ön ödeme oranı (override).
      null/undefined ise global settings kullanılır. */
   custom_prepayment_rate?: number | null;
@@ -107,6 +110,7 @@ export default function BookingSidebar({
   cleaning_limit = 0,
   pool_heating_fee = null,
   pool_heating_currency = "TRY",
+  pool_heating_months = null,
   custom_prepayment_rate = null,
   minimum_stay_nights = null,
   orphanGapRuleEnabled = false,
@@ -125,6 +129,7 @@ export default function BookingSidebar({
     cleaning_limit,
     pool_heating_fee,
     pool_heating_currency,
+    pool_heating_months,
     custom_prepayment_rate,
     minimum_stay_nights,
     orphanGapRuleEnabled,
@@ -157,6 +162,8 @@ export default function BookingSidebar({
     poolHeatingSelected,
     setPoolHeatingSelected,
     poolHeatingTotal,
+    /* 🛡️ Migration 076 — sezonluk ay kısıtı (checkbox görünürlüğü). */
+    poolHeatingActiveForRange,
   } = engine;
 
 
@@ -387,6 +394,7 @@ export default function BookingSidebar({
             poolHeatingSelected={poolHeatingSelected}
             onPoolHeatingChange={setPoolHeatingSelected}
             poolHeatingTotal={poolHeatingTotal}
+            poolHeatingActiveForRange={poolHeatingActiveForRange}
           />
         </div>
       )}

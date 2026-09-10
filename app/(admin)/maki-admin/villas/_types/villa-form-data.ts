@@ -81,6 +81,13 @@ export type VillaFormData = VillaFormShape & {
   pool_heating_fee?: number | string | null;
   pool_heating_currency?: string | null;
 
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. Create modunda önerilen
+     varsayılan ([1,2,3,4,5,9,10,11,12]) ile initialize edilir; edit
+     modunda key YOK — fetchVilla setForm spread DB'nin gerçek
+     değerini (mevcut ~1595 villada NULL) atar. commission_rate ile
+     BİREBİR AYNI conditional-initial deseni. */
+  pool_heating_months?: number[] | null;
+
   /* Badge */
   badge: string;
 
@@ -164,6 +171,16 @@ export function initialVillaFormData(
        default'u migration'daki DEFAULT 'TRY' ile tutarlı. */
     pool_heating_fee: "",
     pool_heating_currency: "TRY",
+
+    /* 🛡️ Migration 076 — sezonluk ay kısıtı. commission_rate ile
+       BİREBİR AYNI desen: yalnız create modunda initial değer var
+       (önerilen varsayılan: Ocak-Mayıs + Eylül-Aralık aktif, Haziran/
+       Temmuz/Ağustos pasif). Edit modunda key YOK — fetchVilla setForm
+       spread DB'nin gerçek değerini atar (mevcut villalarda NULL =
+       "ay kısıtlaması yok", BU VARSAYILANA OTOMATİK ÇEVRİLMEZ). */
+    ...(mode === "create"
+      ? { pool_heating_months: [1, 2, 3, 4, 5, 9, 10, 11, 12] }
+      : {}),
 
     badge: "",
 

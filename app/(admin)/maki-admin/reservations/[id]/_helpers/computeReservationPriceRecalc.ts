@@ -231,6 +231,17 @@ export function computeReservationPriceRecalc(
       data?.villa?.pool_heating_currency ||
       "TRY",
     pool_heating_selected: !!data?.pool_heating_selected,
+
+    /* 🛡️ Migration 076 — sezonluk ay kısıtı. Cleaning/pool_heating_fee
+       fallback zinciriyle BİREBİR desen: selectedVilla (yeni async
+       fetch edilen villa) → data?.villa (embed fallback) → null
+       (kısıtlama yok). Tarih/villa değiştiğinde bu kural da YENİDEN
+       uygulanır — örn. tarihi Temmuz'a çekmek pasif aydaysa
+       result.poolHeating otomatik 0'a düşer. */
+    pool_heating_months:
+      selectedVilla?.pool_heating_months ??
+      data?.villa?.pool_heating_months ??
+      null,
   });
 
   const stayCurrency = result.original_currency || "TRY";

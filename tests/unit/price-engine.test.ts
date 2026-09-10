@@ -20,6 +20,7 @@ import {
   calculatePoolHeatingFee,
   accommodationBase,
   normalizeDate,
+  isPoolHeatingActiveForRange,
 } from "@/lib/price.engine";
 import type { PriceRange } from "@/lib/villa-row.types";
 
@@ -363,5 +364,228 @@ describe("accommodationBase", () => {
 
   it("negatife düşmez (Math.max ile 0'da clamp)", () => {
     expect(accommodationBase(100, 60, 60)).toBe(0);
+  });
+});
+
+
+/* ===============================================================
+   🛡️ Migration 076 — SEZONLUK AY KISITI (isPoolHeatingActiveForRange)
+   ===============================================================
+   Aktif ay kümesi örneklerde kullanıcı spesifikasyonuyla birebir:
+     Ocak-Mayıs + Eylül-Aralık aktif (Haziran/Temmuz/Ağustos pasif) →
+     [1, 2, 3, 4, 5, 9, 10, 11, 12]
+   Kural: rezervasyonun kapsadığı TÜM geceler (check-in dahil,
+   check-out hariç) aktif ay kümesinde olmalı; tek bir gece bile
+   dışarıdaysa false.
+=============================================================== */
+describe("isPoolHeatingActiveForRange", () => {
+  const JAN_MAY_SEP_DEC = [1, 2, 3, 4, 5, 9, 10, 11, 12];
+
+  it("NULL activeMonths → true (kısıtlama yok, geriye dönük uyumluluk)", () => {
+    expect(
+      isPoolHeatingActiveForRange("2026-07-10", "2026-07-15", null)
+    ).toBe(true);
+  });
+
+  it("undefined activeMonths → true (kısıtlama yok)", () => {
+    expect(
+      isPoolHeatingActiveForRange("2026-07-10", "2026-07-15", undefined)
+    ).toBe(true);
+  });
+
+  it("tüm 12 ay explicit aktifse → true", () => {
+    const allMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    expect(
+      isPoolHeatingActiveForRange("2026-07-10", "2026-07-15", allMonths)
+    ).toBe(true);
+  });
+
+  it("boş dizi [] → false (hiçbir ay aktif değil)", () => {
+    expect(
+      isPoolHeatingActiveForRange("2026-10-10", "2026-10-15", [])
+    ).toBe(false);
+  });
+
+  it("10 Temmuz → 15 Temmuz: yalnız Temmuz (pasif) → false", () => {
+    expect(
+      isPoolHeatingActiveForRange(
+        "2026-07-10",
+        "2026-07-15",
+        JAN_MAY_SEP_DEC
+      )
+    ).toBe(false);
+  });
+
+  it("10 Ekim → 15 Ekim: yalnız Ekim (aktif) → true", () => {
+    expect(
+      isPoolHeatingActiveForRange(
+        "2026-10-10",
+        "2026-10-15",
+        JAN_MAY_SEP_DEC
+      )
+    ).toBe(true);
+  });
+
+  it("28 Mayıs → 3 Haziran: Mayıs (aktif) + Haziran (pasif) → false", () => {
+    expect(
+      isPoolHeatingActiveForRange(
+        "2026-05-28",
+        "2026-06-03",
+        JAN_MAY_SEP_DEC
+      )
+    ).toBe(false);
+  });
+
+  it("30 Haziran → 5 Temmuz: Haziran (pasif) + Temmuz (pasif) → false", () => {
+    expect(
+      isPoolHeatingActiveForRange(
+        "2026-06-30",
+        "2026-07-05",
+        JAN_MAY_SEP_DEC
+      )
+    ).toBe(false);
+  });
+
+  it("28 Ağustos → 3 Eylül: Ağustos (pasif) + Eylül (aktif) → false", () => {
+    expect(
+      isPoolHeatingActiveForRange(
+        "2026-08-28",
+        "2026-09-03",
+        JAN_MAY_SEP_DEC
+      )
+    ).toBe(false);
+  });
+
+  it("30 Aralık → 3 Ocak: Aralık (aktif) + Ocak (aktif) → true (yıl sınırı doğru geçiliyor)", () => {
+    expect(
+      isPoolHeatingActiveForRange(
+        "2026-12-30",
+        "2027-01-03",
+        JAN_MAY_SEP_DEC
+      )
+    ).toBe(true);
+  });
+
+  it("tek gecelik rezervasyon, aktif ayda → true", () => {
+    expect(
+      isPoolHeatingActiveForRange(
+        "2026-10-10",
+        "2026-10-11",
+        JAN_MAY_SEP_DEC
+      )
+    ).toBe(true);
+  });
+
+  it("tek gecelik rezervasyon, pasif ayda → false", () => {
+    expect(
+      isPoolHeatingActiveForRange(
+        "2026-07-10",
+        "2026-07-11",
+        JAN_MAY_SEP_DEC
+      )
+    ).toBe(false);
+  });
+
+  it("start === end (0 gece) → true (calculatePoolHeatingFee zaten nights<=0 için 0 döner, sonuç etkilenmez)", () => {
+    expect(
+      isPoolHeatingActiveForRange(
+        "2026-07-10",
+        "2026-07-10",
+        JAN_MAY_SEP_DEC
+      )
+    ).toBe(true);
+  });
+
+  it("boş start/end → true (calculateNights ile aynı 'geçersiz input' güvenli varsayılanı)", () => {
+    expect(
+      isPoolHeatingActiveForRange("", "2026-07-15", JAN_MAY_SEP_DEC)
+    ).toBe(true);
+    expect(
+      isPoolHeatingActiveForRange("2026-07-10", "", JAN_MAY_SEP_DEC)
+    ).toBe(true);
+  });
+});
+
+/* ===============================================================
+   🛡️ Migration 076 — calculateGrandTotal ENTEGRASYONU
+   ===============================================================
+   pool_heating_months parametresi calculatePoolHeatingFee'ye
+   giden "selected" değerini AND'ler — imza/hesap formülü DEĞİŞMEDİ.
+=============================================================== */
+describe("calculateGrandTotal — sezonluk ay kısıtı (Migration 076)", () => {
+  const stayPrices: PriceRange[] = [
+    {
+      start_date: "2026-10-01",
+      end_date: "2026-10-31",
+      price: 4000,
+      currency: "TRY",
+    },
+    {
+      start_date: "2026-07-01",
+      end_date: "2026-07-31",
+      price: 4000,
+      currency: "TRY",
+    },
+  ];
+
+  it("pool_heating_months verilmezse (undefined) davranış BYTE-IDENTICAL (eski çağrılar bozulmaz)", () => {
+    const result = calculateGrandTotal({
+      start: "2026-10-05",
+      end: "2026-10-10",
+      prices: stayPrices,
+      currency: "TRY",
+      rates: {},
+      pool_heating_fee: 1000,
+      pool_heating_currency: "TRY",
+      pool_heating_selected: true,
+    });
+    expect(result.poolHeating).toBe(5000);
+  });
+
+  it("aktif ayda (Ekim) selected=true, months=[1..5,9..12] → tutar hesaplanır", () => {
+    const result = calculateGrandTotal({
+      start: "2026-10-05",
+      end: "2026-10-10",
+      prices: stayPrices,
+      currency: "TRY",
+      rates: {},
+      pool_heating_fee: 1000,
+      pool_heating_currency: "TRY",
+      pool_heating_selected: true,
+      pool_heating_months: [1, 2, 3, 4, 5, 9, 10, 11, 12],
+    });
+    expect(result.poolHeating).toBe(5000);
+  });
+
+  it("pasif ayda (Temmuz) selected=true olsa bile tutar 0 (server/UI ortak kural)", () => {
+    const result = calculateGrandTotal({
+      start: "2026-07-05",
+      end: "2026-07-10",
+      prices: stayPrices,
+      currency: "TRY",
+      rates: {},
+      pool_heating_fee: 1000,
+      pool_heating_currency: "TRY",
+      pool_heating_selected: true,
+      pool_heating_months: [1, 2, 3, 4, 5, 9, 10, 11, 12],
+    });
+    expect(result.poolHeating).toBe(0);
+    // stay hâlâ hesaplanır — yalnız pool heating etkilenir.
+    expect(result.total).toBe(result.stay);
+  });
+
+  it("NULL pool_heating_months → her ayda aktif (geriye dönük uyumluluk)", () => {
+    const result = calculateGrandTotal({
+      start: "2026-07-05",
+      end: "2026-07-10",
+      prices: stayPrices,
+      currency: "TRY",
+      rates: {},
+      pool_heating_fee: 1000,
+      pool_heating_currency: "TRY",
+      pool_heating_selected: true,
+      pool_heating_months: null,
+    });
+    expect(result.poolHeating).toBe(5000);
   });
 });

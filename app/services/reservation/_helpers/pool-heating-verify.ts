@@ -1,4 +1,7 @@
-import { calculatePoolHeatingFee } from "@/lib/price.engine";
+import {
+  calculatePoolHeatingFee,
+  isPoolHeatingActiveForRange,
+} from "@/lib/price.engine";
 import { convertPrice } from "@/lib/currency";
 
 /* ===============================================================
@@ -35,6 +38,14 @@ export type PoolHeatingSnapshotInput = {
   villaPoolHeatingFee: number | null | undefined;
   villaPoolHeatingCurrency: string | null | undefined;
   rates: Record<string, number>;
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. startDate/endDate,
+     isPoolHeatingActiveForRange'e geçirilmek üzere OPSİYONEL
+     eklendi; ikisi de verilmezse (eski çağrılar/testler) sezon
+     kontrolü ATLANIR (isPoolHeatingActiveForRange kendi içinde
+     start/end boşsa true döner) — davranış BYTE-IDENTICAL kalır. */
+  startDate?: string;
+  endDate?: string;
+  villaPoolHeatingMonths?: number[] | null;
 };
 
 export type PoolHeatingSnapshot = {
@@ -53,16 +64,34 @@ export function computeAuthoritativePoolHeatingSnapshot(
     villaPoolHeatingFee,
     villaPoolHeatingCurrency,
     rates,
+    startDate,
+    endDate,
+    villaPoolHeatingMonths,
   } = input;
 
   const currency = villaPoolHeatingCurrency || "TRY";
+
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. SERVER-AUTHORITATIVE:
+     client'ın gönderdiği pool_heating_selected bir TERCİH olarak
+     kabul edilir (mevcut tasarım — bkz. dosya üstü doc-comment),
+     ama villanın gerçek pool_heating_months'una göre rezervasyon
+     tarih aralığı sezon dışındaysa bu tercih GÖZ ARDI EDİLİR —
+     manuel bir payload ile poolHeatingSelected=true gönderilse
+     bile aktif olmayan ayda ücret uygulanmaz. startDate/endDate
+     verilmezse (eski/test çağrıları) isPoolHeatingActiveForRange
+     true döner — davranış DEĞİŞMEZ. */
+  const isActiveForRange = isPoolHeatingActiveForRange(
+    startDate || "",
+    endDate || "",
+    villaPoolHeatingMonths
+  );
 
   // 🔥 calculatePoolHeatingFee zaten SERVER KURALI'nı uyguluyor:
   // !selected → 0, !fee → 0, nights<=0 → 0, aksi halde nights×fee.
   const rawTotal = calculatePoolHeatingFee(
     nights,
     villaPoolHeatingFee,
-    !!poolHeatingSelected
+    !!poolHeatingSelected && isActiveForRange
   );
 
   const totalTRY = convertPrice(rawTotal, currency, "TRY", rates);

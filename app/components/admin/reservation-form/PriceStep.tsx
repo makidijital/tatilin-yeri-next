@@ -45,6 +45,7 @@ export default function PriceStep({
   selectedVilla,
   onCustomToggle,
   onPoolHeatingToggle,
+  poolHeatingActiveForRange = true,
 }: {
   data: ReservationFormShape;
   setData: ReservationFormSetter;
@@ -66,6 +67,11 @@ export default function PriceStep({
    *  render edilmez (geriye dönük uyum, caller güncellenmemişse UI
    *  sessizce eskisi gibi kalır). */
   onPoolHeatingToggle?: () => void;
+  /** 🛡️ Migration 076 — sezonluk ay kısıtı. Villanın gerçek
+   *  pool_heating_months'una göre seçilen tarih aralığı sezon
+   *  dışındaysa toggle HİÇ GÖSTERİLMEZ. Default true — page bu
+   *  prop'u geçmezse eski davranış (yalnız fee>0 kontrolü) korunur. */
+  poolHeatingActiveForRange?: boolean;
 }) {
   return (
     <Section
@@ -204,7 +210,8 @@ export default function PriceStep({
               hesap YAPILMAZ. */}
           {onPoolHeatingToggle &&
             typeof selectedVilla?.pool_heating_fee === "number" &&
-            selectedVilla.pool_heating_fee > 0 && (
+            selectedVilla.pool_heating_fee > 0 &&
+            poolHeatingActiveForRange && (
               <div className="flex items-center justify-between bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl px-4 py-3 mb-4">
                 <div>
                   {/* 🛡️ Metin standardizasyonu turu: "Havuz Isıtma" →

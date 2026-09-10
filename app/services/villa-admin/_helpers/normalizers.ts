@@ -69,6 +69,41 @@ export function normalizePoolHeatingFee(
 }
 
 /* ---------------------------------------------------------------
+   🛡️ HAVUZ ISITMA — SEZONLUK AY KISITI (Migration 076, İLK KULLANIM)
+   ---------------------------------------------------------------
+   NULL/undefined → null ("ay kısıtlaması yok", 12 ay aktif — mevcut
+   ~1595 villa için geriye dönük uyumlu varsayılan; bu villalarda
+   admin formu bu alana hiç dokunmadığı sürece NULL kalır).
+   Dizi değilse (ör. yanlışlıkla obje/string gelirse) → null
+   (defansif — normalizePoolHeatingFee'nin "" → null davranışıyla
+   aynı temkinli yaklaşım).
+   Dizi ise: 1-12 aralığı dışındaki değerler ELENIR, tekrarlar
+   ELENIR, sonuç sayısal olarak SIRALANIR — admin formunun
+   checkbox sırası ile DB'deki temsil arasında stabil/deterministik
+   bir eşleme sağlar (ör. [9,1,1,3] → [1,3,9]).
+   Boş dizi [] → [] olarak KORUNUR (silinmez/null'a düşürülmez) —
+   "hiçbir ay aktif değil" admin'in BİLİNÇLİ olarak üretebileceği
+   bir durum; isPoolHeatingActiveForRange (price.engine.ts) bunu
+   "asla aktif değil" olarak yorumlar. Hesaplama BU ADIMDA YAPILMAZ.
+*/
+export function normalizePoolHeatingMonths(
+  raw: VillaForm["pool_heating_months"]
+): number[] | null {
+  if (raw === null || raw === undefined) return null;
+  if (!Array.isArray(raw)) return null;
+
+  const unique = new Set<number>();
+  for (const item of raw) {
+    const n = Number(item);
+    if (Number.isInteger(n) && n >= 1 && n <= 12) {
+      unique.add(n);
+    }
+  }
+
+  return Array.from(unique).sort((a, b) => a - b);
+}
+
+/* ---------------------------------------------------------------
    🛡️ TOURISM DOCUMENT NUMBER (db/migrations/017 — Faz 22)
    ---------------------------------------------------------------
    T.C. Kültür ve Turizm Bakanlığı belge no — ham text passthrough.

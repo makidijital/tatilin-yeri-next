@@ -88,6 +88,13 @@ export function computeCustomPriceToggle(
           prev?.villa?.pool_heating_currency ||
           "TRY",
         pool_heating_selected: !!prev?.pool_heating_selected,
+
+        /* 🛡️ Migration 076 — sezonluk ay kısıtı. computeReservationPriceRecalc
+           CASE 2 ile BİREBİR AYNI fallback zinciri. */
+        pool_heating_months:
+          selectedVilla?.pool_heating_months ??
+          prev?.villa?.pool_heating_months ??
+          null,
       });
 
       const stayCurrency = result.original_currency || "TRY";

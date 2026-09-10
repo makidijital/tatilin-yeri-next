@@ -1,10 +1,31 @@
-import type { ReactNode } from "react";
-import { CalendarDays } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { CalendarDays, ChevronDown } from "lucide-react";
 
 import Section from "./shared/Section";
 import Label from "./shared/Label";
 
 import type { VillaFormShape, VillaFormSetter } from "./types";
+
+/* 🛡️ Migration 076 — sezonluk ay kısıtı. 12 ayın sabit listesi
+   (1=Ocak...12=Aralık) — admin'in "yeni ay ekle" diye bir CRUD
+   ihtiyacı yok, bu yüzden module-level sabit yeterli (relation
+   tablosu/master-liste deseni İLE KARIŞTIRILMASIN). */
+const POOL_HEATING_MONTHS = [
+  { value: 1, label: "Ocak" },
+  { value: 2, label: "Şubat" },
+  { value: 3, label: "Mart" },
+  { value: 4, label: "Nisan" },
+  { value: 5, label: "Mayıs" },
+  { value: 6, label: "Haziran" },
+  { value: 7, label: "Temmuz" },
+  { value: 8, label: "Ağustos" },
+  { value: 9, label: "Eylül" },
+  { value: 10, label: "Ekim" },
+  { value: 11, label: "Kasım" },
+  { value: 12, label: "Aralık" },
+] as const;
+
+const ALL_POOL_HEATING_MONTHS = POOL_HEATING_MONTHS.map((m) => m.value);
 
 /* ===============================================================
    🔥 PricingStep — Wizard Adım 4 (Step 4).
@@ -31,6 +52,36 @@ export default function PricingStep({
   setForm: VillaFormSetter;
   showCleaningCurrency?: boolean;
 }) {
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. Panel açık/kapalı state'i
+     yalnız UI'da yaşar (form/DB'ye YAZILMAZ) — kapalı durumda formun
+     yüksekliğini büyütmemesi için conditional render burada kontrol
+     edilir. `activeMonths`: form.pool_heating_months NULL/undefined
+     ise TÜM 12 ay "aktif" gösterilir (migration 076'nın NULL =
+     "kısıtlama yok" semantiği; DB'ye bu görüntüleme YÜZÜNDEN NULL
+     dışında bir değer YAZILMAZ — admin panele hiç dokunmazsa form
+     state DEĞİŞMEZ). */
+  const [poolHeatingMonthsOpen, setPoolHeatingMonthsOpen] = useState(false);
+
+  const activeMonths =
+    form.pool_heating_months == null
+      ? ALL_POOL_HEATING_MONTHS
+      : form.pool_heating_months;
+
+  const togglePoolHeatingMonth = (month: number) => {
+    const next = activeMonths.includes(month)
+      ? activeMonths.filter((m) => m !== month)
+      : [...activeMonths, month].sort((a, b) => a - b);
+    setForm({ ...form, pool_heating_months: next });
+  };
+
+  const selectAllPoolHeatingMonths = () => {
+    setForm({ ...form, pool_heating_months: null });
+  };
+
+  const clearAllPoolHeatingMonths = () => {
+    setForm({ ...form, pool_heating_months: [] });
+  };
+
   return (
     <>
       {/* PRICING CANVAS (slot) */}
@@ -209,6 +260,78 @@ export default function PricingStep({
               Gece başına ücret. Boş bırakılırsa havuz ısıtma hizmeti
               sunulmuyor kabul edilir.
             </p>
+
+            {/* 🛡️ Migration 076 — SEZONLUK AY KISITI (İLK KULLANIM).
+                Kapalıyken yalnız TEK SATIR (buton) — form yüksekliği
+                büyümez. "Havuz Isıtma Ücreti" hücresinin İÇİNDE,
+                mevcut 5 kolonlu grid'i (md:grid-cols-5) BOZMADAN.
+                DB'ye YAZMA yalnız admin bu paneli AÇIP bir aya
+                dokunduğunda gerçekleşir (bkz. togglePoolHeatingMonth) —
+                panel hiç açılmazsa form.pool_heating_months state'i
+                (dolayısıyla payload) DEĞİŞMEZ. */}
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setPoolHeatingMonthsOpen((prev) => !prev)
+                }
+                className="w-full flex items-center justify-between gap-2 text-left"
+              >
+                <span className="text-[10.5px] tracking-[0.1em] uppercase font-semibold text-[var(--color-stone-500)]">
+                  Isıtma Uygulanan Aylar
+                </span>
+                <span className="flex items-center gap-1 text-[11px] font-medium text-[#0973BA] shrink-0">
+                  {poolHeatingMonthsOpen ? "Gizle" : "Ayları Göster"}
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 transition-transform ${
+                      poolHeatingMonthsOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </span>
+              </button>
+
+              {poolHeatingMonthsOpen && (
+                <div className="mt-2 rounded-lg border border-[var(--color-stone-200)] bg-[var(--color-stone-50)] p-2.5 space-y-2">
+                  <div className="grid grid-cols-3 gap-x-2 gap-y-1.5">
+                    {POOL_HEATING_MONTHS.map((month) => (
+                      <label
+                        key={month.value}
+                        className="flex items-center gap-1.5 text-[11px] text-[var(--color-stone-700)] cursor-pointer select-none"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={activeMonths.includes(month.value)}
+                          onChange={() =>
+                            togglePoolHeatingMonth(month.value)
+                          }
+                          className="h-3.5 w-3.5 rounded border-[var(--color-stone-300)] accent-[#ED7926]"
+                        />
+                        {month.label}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 pt-1.5 border-t border-[var(--color-stone-200)]">
+                    <button
+                      type="button"
+                      onClick={selectAllPoolHeatingMonths}
+                      className="text-[10px] font-semibold uppercase tracking-wide text-[#0973BA]"
+                    >
+                      Tümünü Seç
+                    </button>
+                    <span className="text-[var(--color-stone-300)]">
+                      ·
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearAllPoolHeatingMonths}
+                      className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-stone-500)]"
+                    >
+                      Tümünü Kaldır
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

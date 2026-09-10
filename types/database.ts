@@ -76,6 +76,10 @@ export interface VillaRow {
    *  Hesaplama mantığı bu adımda uygulanmadı — sadece veri modeli. */
   pool_heating_fee: number | null;
   pool_heating_currency: string | null;
+  /* 🛡️ Migration 076 — Havuz Isıtma sezonluk ay kısıtı.
+   *  NULL → ay kısıtlaması YOK, 12 ay aktif (geriye dönük uyumlu).
+   *  [1..12] → yalnız listelenen aylarda aktif. Ay numarası: 1=Ocak. */
+  pool_heating_months: number[] | null;
   /* Map */
   map_type: string | null;
   latitude: number | null;

@@ -63,6 +63,9 @@ export type ReservationVillaEmbed = {
    *  için villa'nın gerçek havuz ısıtma ücretini taşır. */
   pool_heating_fee: number | null;
   pool_heating_currency: string | null;
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. select-shapes.ts'in
+   *  SELECT_RESERVATION_DETAIL villa embed'ine eklendi. */
+  pool_heating_months: number[] | null;
 } | null;
 
 /* ---------------- PAYMENT METHOD EMBED ----------------
@@ -150,6 +153,9 @@ export type SelectedVilla = {
    *  findContextById). */
   pool_heating_fee?: number | null;
   pool_heating_currency?: string | null;
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. AYNI kaynak (findContextById
+   *  genişletildi). */
+  pool_heating_months?: number[] | null;
 } | null;
 
 /* ---------------- SETTER ALIAS ----------------

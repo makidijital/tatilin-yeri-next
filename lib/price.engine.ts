@@ -274,6 +274,71 @@ export const calculatePoolHeatingFee = (
   return nights * poolHeatingFee;
 };
 
+/* 🔥 HAVUZ ISITMA — SEZONLUK AY KISITI (Migration 076, İLK KULLANIM)
+   ===============================================================
+   TEK MERKEZİ KURAL: Rezervasyonun kapsadığı TÜM GECELER
+   `activeMonths` içindeki bir takvim ayına denk gelmeli; tek bir
+   gece bile dışarıdaysa false döner (kullanıcı tercihi — bir gece
+   pasif ayda ise TÜM rezervasyon için ısıtma sunulmaz; kısmi/gece
+   bazlı kısmi hesap YOK — bu, calculatePoolHeatingFee'nin
+   "nights × fee tek çarpım" tasarımıyla ve migration 075'in "ek
+   gece-snapshot kolonu yok" felsefesiyle tutarlı tek seçenek).
+
+   GECE TANIMI: calculateNights ile BİREBİR AYNI — check-in DAHİL,
+   check-out HARİÇ (check-out günü "gece" sayılmaz). parseLocalDate
+   kullanılır — normalizeDate ile aynı LOCAL midnight semantiği,
+   UTC drift YOK.
+
+   activeMonths NULL/undefined → true (ay kısıtlaması YOK, 12 ay
+   aktif — migration 076'nın NULL semantiği; mevcut ~1595 villa
+   için BYTE-IDENTICAL geriye dönük davranış).
+   activeMonths boş dizi [] → false (hiçbir ay aktif değil; admin
+   formu normalde bu durumu üretmez, olası edge-case için güvenli
+   varsayılan).
+   start/end geçersiz veya start >= end → true (calculateNights'ın
+   0/negatif gece durumuna denk gelir; calculatePoolHeatingFee zaten
+   nights<=0 için 0 döndürdüğünden sonuç etkilenmez — burada erken
+   "true" dönmek yalnız bu fonksiyonun kendi sözleşmesini basit
+   tutar). */
+export const isPoolHeatingActiveForRange = (
+  start: string,
+  end: string,
+  activeMonths?: number[] | null
+): boolean => {
+  if (activeMonths === null || activeMonths === undefined) {
+    return true;
+  }
+
+  if (!start || !end) {
+    return true;
+  }
+
+  const s = parseLocalDate(start);
+  const e = parseLocalDate(end);
+
+  if (!(s.getTime() < e.getTime())) {
+    return true;
+  }
+
+  const activeSet = new Set(activeMonths);
+
+  const cursor = new Date(
+    s.getFullYear(),
+    s.getMonth(),
+    s.getDate()
+  );
+
+  while (cursor.getTime() < e.getTime()) {
+    const month = cursor.getMonth() + 1; // 1 = Ocak ... 12 = Aralık
+    if (!activeSet.has(month)) {
+      return false;
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return true;
+};
+
 // 🔥 GENEL TOPLAM
 export const calculateGrandTotal = ({
   start,
@@ -287,6 +352,7 @@ export const calculateGrandTotal = ({
   pool_heating_fee = 0,
   pool_heating_currency = "TRY",
   pool_heating_selected = false,
+  pool_heating_months = null,
 }: {
   start: string;
 
@@ -312,6 +378,11 @@ export const calculateGrandTotal = ({
   pool_heating_currency?: string;
 
   pool_heating_selected?: boolean;
+
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. OPSİYONEL, default null
+     ("ay kısıtlaması yok" — eskiden bu parametreyi vermeyen TÜM
+     çağrılarda davranış BYTE-IDENTICAL kalır). */
+  pool_heating_months?: number[] | null;
 }) => {
 
   const nights = calculateNights(
@@ -362,11 +433,23 @@ export const calculateGrandTotal = ({
   // 🔥 HAVUZ ISITMA — cleaning ile birebir aynı desen (raw → convert).
   // pool_heating_selected=false (default) → rawPoolHeating=0 →
   // poolHeating=0 → total mevcut davranışla BYTE-IDENTICAL kalır.
+  // 🛡️ Migration 076 — sezonluk ay kısıtı: pool_heating_months
+  // NULL/undefined ise isPoolHeatingActiveForRange her zaman true
+  // döner (geriye dönük uyumlu, davranış DEĞİŞMEZ). Yalnız villa
+  // için ay kısıtlaması TANIMLIYSA VE rezervasyon aralığı bu
+  // kısıtlamanın DIŞINDAYSA "selected" false'a düşürülür — TUTAR
+  // hesaplanmaz (calculatePoolHeatingFee'nin imzası DEĞİŞMEDİ).
+  const isPoolHeatingActive = isPoolHeatingActiveForRange(
+    start,
+    end,
+    pool_heating_months
+  );
+
   const rawPoolHeating =
     calculatePoolHeatingFee(
       nights,
       pool_heating_fee,
-      pool_heating_selected
+      pool_heating_selected && isPoolHeatingActive
     );
 
   // kullanıcı currency'sine çevrilen

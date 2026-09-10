@@ -77,6 +77,10 @@ export type SelectedVillaCreate = {
    *  server değişikliği gerekmedi. */
   pool_heating_fee?: number | null;
   pool_heating_currency?: string | null;
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. AYNI kaynak (findContextById
+   *  genişletildi) — ek server değişikliği gerekmedi. NULL = kısıtlama
+   *  yok. */
+  pool_heating_months?: number[] | null;
 } | null;
 
 /* ---------------- VILLA LIST ITEM ----------------

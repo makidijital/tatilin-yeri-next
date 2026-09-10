@@ -126,6 +126,8 @@ export type SelectedVillaMeta = {
   deposit?: number | null;
   pool_heating_fee?: number | null;
   pool_heating_currency?: string | null;
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. NULL = kısıtlama yok. */
+  pool_heating_months?: number[] | null;
 } & Record<string, unknown>;
 
 /* ---------------- PAYMENT DISPLAY (helper output mirror) ---------------- */

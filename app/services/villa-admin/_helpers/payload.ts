@@ -7,6 +7,7 @@ import {
   normalizeBedroomLayoutForVilla,
   normalizeBathroomLayoutForVilla,
   normalizePoolHeatingFee,
+  normalizePoolHeatingMonths,
 } from "./normalizers";
 
 /* 🛡️ Rich text description — KAYIT anında XSS-güvenli sanitize
@@ -86,6 +87,8 @@ export type VillaCorePayload = {
      NULL = hizmet sunulmuyor. Hesaplama YOK. */
   pool_heating_fee: number | null;
   pool_heating_currency: string;
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. NULL = kısıtlama yok. */
+  pool_heating_months: number[] | null;
   badge: string;
   slug: string;
   map_type: VillaMapData["map_type"];
@@ -177,6 +180,14 @@ export function buildVillaCorePayload(
 
     pool_heating_currency:
       form.pool_heating_currency || "TRY",
+
+    /* 🛡️ Migration 076 — sezonluk ay kısıtı. normalizePoolHeatingMonths:
+       null/undefined/dizi-değil → null ("kısıtlama yok"); aksi halde
+       1-12 aralığına filtrelenmiş, tekilleştirilmiş, sıralı dizi.
+       Hesaplama BU ADIMDA YAPILMAZ. */
+    pool_heating_months: normalizePoolHeatingMonths(
+      form.pool_heating_months
+    ),
 
     badge:
       form.badge || "",

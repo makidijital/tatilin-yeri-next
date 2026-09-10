@@ -102,6 +102,8 @@ type VillaConfig = {
   /* 🛡️ HAVUZ ISITMA — VillaCardBookingModal fix turu. */
   pool_heating_fee: number | null;
   pool_heating_currency: string | null;
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. NULL = kısıtlama yok. */
+  pool_heating_months: number[] | null;
 };
 
 type ResponseShape = {
@@ -119,6 +121,7 @@ const EMPTY_CONFIG: VillaConfig = {
   minimum_stay_nights: null,
   pool_heating_fee: null,
   pool_heating_currency: null,
+  pool_heating_months: null,
 };
 
 export async function GET(
@@ -200,6 +203,13 @@ export async function GET(
             typeof raw.pool_heating_currency === "string"
               ? raw.pool_heating_currency
               : null,
+          /* 🛡️ Migration 076 — sezonluk ay kısıtı. Defansif parse:
+             yalnız gerçek bir dizi ise geçirilir, aksi halde null
+             ("ay kısıtlaması yok" — mevcut pool_heating_fee/currency
+             ile AYNI defansif desen). */
+          pool_heating_months: Array.isArray(raw.pool_heating_months)
+            ? (raw.pool_heating_months as number[])
+            : null,
         }
       : EMPTY_CONFIG;
 

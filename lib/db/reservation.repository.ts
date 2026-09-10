@@ -204,12 +204,17 @@ export const reservationRepository = {
 
      🛡️ HAVUZ ISITMA — 6. adım: `pool_heating_fee, pool_heating_currency`
         EKLENDİ (6-field projeksiyon). Metod adı DEĞİŞTİRİLMEDİ (tek
-        call site — price-verify.ts); diff yüzeyi minimize edildi. */
+        call site — price-verify.ts); diff yüzeyi minimize edildi.
+
+     🛡️ Migration 076 — sezonluk ay kısıtı: `pool_heating_months`
+        EKLENDİ (7-field projeksiyon). Server-authoritative sezon
+        kontrolü (isPoolHeatingActiveForRange) bu alana ihtiyaç
+        duyuyor — bkz. pool-heating-verify.ts/price-verify.ts. */
   async findVillaCleaningConfig(villaId: string) {
     return await db
       .from("villa")
       .select(
-        "cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate, pool_heating_fee, pool_heating_currency"
+        "cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate, pool_heating_fee, pool_heating_currency, pool_heating_months"
       )
       .eq("id", villaId)
       .maybeSingle();

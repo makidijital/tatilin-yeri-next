@@ -235,6 +235,12 @@ export default function ReservationForm({
 
         pool_heating_selected:
           !!poolHeatingSelected,
+
+        // 🛡️ Migration 076 — sezonluk ay kısıtı. villa'da kısıtlama
+        // tanımlı değilse (NULL) calculateGrandTotal içinde her zaman
+        // aktif kabul edilir — davranış BYTE-IDENTICAL kalır.
+        pool_heating_months:
+          villa.pool_heating_months,
       })
       : null;
 
@@ -274,6 +280,11 @@ export default function ReservationForm({
 
         pool_heating_selected:
           !!poolHeatingSelected,
+
+        // 🛡️ Migration 076 — sezonluk ay kısıtı. Display result ile
+        // AYNI parametre.
+        pool_heating_months:
+          villa.pool_heating_months,
       })
       : null;
 

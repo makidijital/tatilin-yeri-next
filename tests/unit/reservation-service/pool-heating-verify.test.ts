@@ -143,3 +143,103 @@ describe("computeAuthoritativePoolHeatingSnapshot — server kuralı", () => {
     expect(snap.pool_heating_total_try).toBe(5000);
   });
 });
+
+
+/* ===============================================================
+   🛡️ Migration 076 — SEZONLUK AY KISITI (server-authoritative)
+   ===============================================================
+   Kullanıcının açık endişesi: "manuel payload ile poolHeating=1
+   gönderilse bile aktif olmayan ayda ücret uygulanmamalı." Bu
+   testler tam olarak bunu doğrular — startDate/endDate/
+   villaPoolHeatingMonths ile server, client'ın "seçtim" tercihini
+   villanın GERÇEK sezon kuralına göre geçersiz kılıyor.
+=============================================================== */
+describe("computeAuthoritativePoolHeatingSnapshot — sezonluk ay kısıtı (Migration 076)", () => {
+  const JAN_MAY_SEP_DEC = [1, 2, 3, 4, 5, 9, 10, 11, 12];
+
+  it("manuel payload poolHeatingSelected=true gönderse bile pasif ayda (Temmuz) total=0", () => {
+    const snap = computeAuthoritativePoolHeatingSnapshot({
+      nights: 5,
+      poolHeatingSelected: true,
+      villaPoolHeatingFee: 1000,
+      villaPoolHeatingCurrency: "TRY",
+      rates: RATES,
+      startDate: "2026-07-10",
+      endDate: "2026-07-15",
+      villaPoolHeatingMonths: JAN_MAY_SEP_DEC,
+    });
+    expect(snap.pool_heating_selected).toBe(true);
+    expect(snap.original_pool_heating_total).toBe(0);
+    expect(snap.pool_heating_total_try).toBe(0);
+  });
+
+  it("aktif ayda (Ekim) selected=true → tutar normal hesaplanır", () => {
+    const snap = computeAuthoritativePoolHeatingSnapshot({
+      nights: 5,
+      poolHeatingSelected: true,
+      villaPoolHeatingFee: 1000,
+      villaPoolHeatingCurrency: "TRY",
+      rates: RATES,
+      startDate: "2026-10-10",
+      endDate: "2026-10-15",
+      villaPoolHeatingMonths: JAN_MAY_SEP_DEC,
+    });
+    expect(snap.original_pool_heating_total).toBe(5000);
+    expect(snap.pool_heating_total_try).toBe(5000);
+  });
+
+  it("çapraz-ay rezervasyon (28 Mayıs→3 Haziran) — Haziran pasif olduğu için total=0", () => {
+    const snap = computeAuthoritativePoolHeatingSnapshot({
+      nights: 6,
+      poolHeatingSelected: true,
+      villaPoolHeatingFee: 1000,
+      villaPoolHeatingCurrency: "TRY",
+      rates: RATES,
+      startDate: "2026-05-28",
+      endDate: "2026-06-03",
+      villaPoolHeatingMonths: JAN_MAY_SEP_DEC,
+    });
+    expect(snap.pool_heating_total_try).toBe(0);
+  });
+
+  it("startDate/endDate verilmezse (eski çağrılar/testler) davranış BYTE-IDENTICAL — sezon kontrolü atlanır", () => {
+    const snap = computeAuthoritativePoolHeatingSnapshot({
+      nights: 5,
+      poolHeatingSelected: true,
+      villaPoolHeatingFee: 1000,
+      villaPoolHeatingCurrency: "TRY",
+      rates: RATES,
+      villaPoolHeatingMonths: JAN_MAY_SEP_DEC,
+    });
+    expect(snap.pool_heating_total_try).toBe(5000);
+  });
+
+  it("villaPoolHeatingMonths NULL → her ayda aktif (geriye dönük uyumluluk, mevcut ~1595 villa)", () => {
+    const snap = computeAuthoritativePoolHeatingSnapshot({
+      nights: 5,
+      poolHeatingSelected: true,
+      villaPoolHeatingFee: 1000,
+      villaPoolHeatingCurrency: "TRY",
+      rates: RATES,
+      startDate: "2026-07-10",
+      endDate: "2026-07-15",
+      villaPoolHeatingMonths: null,
+    });
+    expect(snap.pool_heating_total_try).toBe(5000);
+  });
+
+  it("pasif ayda selected=false zaten total=0 (sezon kuralı ile çakışma yok, çift-güvenli)", () => {
+    const snap = computeAuthoritativePoolHeatingSnapshot({
+      nights: 5,
+      poolHeatingSelected: false,
+      villaPoolHeatingFee: 1000,
+      villaPoolHeatingCurrency: "TRY",
+      rates: RATES,
+      startDate: "2026-07-10",
+      endDate: "2026-07-15",
+      villaPoolHeatingMonths: JAN_MAY_SEP_DEC,
+    });
+    expect(snap.pool_heating_selected).toBe(false);
+    expect(snap.pool_heating_total_try).toBe(0);
+  });
+});

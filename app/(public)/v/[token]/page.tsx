@@ -750,6 +750,10 @@ export default async function PrivateVillaDetail({
                 cleaning_limit={villa.cleaning_limit}
                 pool_heating_fee={villa.pool_heating_fee}
                 pool_heating_currency={villa.pool_heating_currency}
+                /* 🛡️ Migration 076 — sezonluk ay kısıtı. NULL → kısıtlama
+                   yok (villa.service.ts mapVilla zaten NULL passthrough
+                   uyguluyor, pool_heating_fee ile AYNI desen). */
+                pool_heating_months={villa.pool_heating_months}
                 custom_prepayment_rate={villa.custom_prepayment_rate ?? null}
                 minimum_stay_nights={villa.minimum_stay_nights ?? null}
                 initialStart={hasInitialRange ? initialStart : undefined}

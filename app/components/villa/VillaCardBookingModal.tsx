@@ -122,6 +122,8 @@ type VillaConfig = {
      villa'nın gerçek değerleriyle döndürüyor (bkz. route.ts). */
   pool_heating_fee: number | null;
   pool_heating_currency: string | null;
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. NULL = kısıtlama yok. */
+  pool_heating_months: number[] | null;
 };
 
 const EMPTY_CONFIG: VillaConfig = {
@@ -133,6 +135,7 @@ const EMPTY_CONFIG: VillaConfig = {
   minimum_stay_nights: null,
   pool_heating_fee: null,
   pool_heating_currency: null,
+  pool_heating_months: null,
 };
 
 type AvailabilityApiResponse = {
@@ -237,6 +240,13 @@ export default function VillaCardBookingModal({
             typeof data?.config?.pool_heating_currency === "string"
               ? data.config.pool_heating_currency
               : null,
+          /* 🛡️ Migration 076 — sezonluk ay kısıtı. Defansif parse:
+             yalnız gerçek bir dizi ise geçirilir, aksi halde null. */
+          pool_heating_months: Array.isArray(
+            data?.config?.pool_heating_months
+          )
+            ? (data.config.pool_heating_months as number[])
+            : null,
         };
 
         setApiData({
@@ -402,6 +412,7 @@ function ModalContent({
     cleaning_limit: apiData.config.cleaning_limit ?? 0,
     pool_heating_fee: apiData.config.pool_heating_fee,
     pool_heating_currency: apiData.config.pool_heating_currency,
+    pool_heating_months: apiData.config.pool_heating_months,
     custom_prepayment_rate: apiData.config.custom_prepayment_rate,
     minimum_stay_nights: apiData.config.minimum_stay_nights,
     externalBlocks: apiData.externalBlocks,
@@ -429,6 +440,8 @@ function ModalContent({
     poolHeatingSelected,
     setPoolHeatingSelected,
     poolHeatingTotal,
+    /* 🛡️ Migration 076 — sezonluk ay kısıtı (checkbox görünürlüğü). */
+    poolHeatingActiveForRange,
   } = engine;
 
   /* Calendar always-visible (modal'da popup pattern yok).
@@ -631,6 +644,7 @@ function ModalContent({
             poolHeatingSelected={poolHeatingSelected}
             onPoolHeatingChange={setPoolHeatingSelected}
             poolHeatingTotal={poolHeatingTotal}
+            poolHeatingActiveForRange={poolHeatingActiveForRange}
           />
         )}
 

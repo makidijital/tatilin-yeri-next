@@ -144,6 +144,17 @@ export async function recomputePublicReservationPrice(input: {
       | null
       | undefined,
     rates,
+    // 🛡️ Migration 076 — sezonluk ay kısıtı. Server bu tarih aralığını
+    // KENDİSİ hesaplıyor (start_date/end_date — client'tan gelen
+    // GÜVENİLİR tarih alanları, zaten availability kontrolünde de
+    // kullanılıyor) ve villanın gerçek pool_heating_months'unu
+    // (findVillaCleaningConfig'in genişletilmiş projeksiyonundan) geçirir.
+    startDate: start_date,
+    endDate: end_date,
+    villaPoolHeatingMonths: villaRow?.pool_heating_months as
+      | number[]
+      | null
+      | undefined,
   });
 
   const cleaningFeeTry = snapshot.cleaning || 0;

@@ -85,6 +85,12 @@ type Props = {
   poolHeatingSelected?: boolean;
   onPoolHeatingChange?: (checked: boolean) => void;
   poolHeatingTotal?: number;
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. Villanın gerçek
+     pool_heating_months'una göre rezervasyon tarih aralığı sezon
+     dışındaysa checkbox HİÇ GÖSTERİLMEZ. Default true — eski
+     caller'lar (varsa) bu prop'u geçmeden BYTE-IDENTICAL davranır
+     (checkbox eskisi gibi yalnız fee>0'a bakarak görünür). */
+  poolHeatingActiveForRange?: boolean;
 };
 
 export default function BookingSummary({
@@ -98,6 +104,7 @@ export default function BookingSummary({
   poolHeatingSelected = false,
   onPoolHeatingChange,
   poolHeatingTotal = 0,
+  poolHeatingActiveForRange = true,
 }: Props) {
   const { currency } = useCurrency();
 
@@ -126,7 +133,9 @@ export default function BookingSummary({
           ayrı bordered kart YOK. Checkbox solda label ile birlikte;
           sağda yalnız SEÇİLİYSE toplam görünür. Görünürlük: fee sayı
           ve >0 (result mevcut olduğu için nights>0 zaten garanti). */}
-      {typeof poolHeatingFee === "number" && poolHeatingFee > 0 && (
+      {typeof poolHeatingFee === "number" &&
+        poolHeatingFee > 0 &&
+        poolHeatingActiveForRange && (
         <div>
           <label className="flex items-center justify-between gap-3 cursor-pointer group">
             <span className="flex items-center gap-2.5 min-w-0">

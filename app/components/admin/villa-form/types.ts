@@ -40,6 +40,11 @@ export type VillaFormShape = {
   pool_heating_fee?: number | string | null;
   pool_heating_currency?: string | null;
 
+  /* 🛡️ Migration 076 — sezonluk ay kısıtı. NULL/undefined = "ay
+   *  kısıtlaması yok" (12 ay aktif). [1..12] = yalnız listelenen
+   *  aylarda aktif. Ay numarası: 1=Ocak. */
+  pool_heating_months?: number[] | null;
+
   badge?: string;
 
   pool_type?: string;
