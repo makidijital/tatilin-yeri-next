@@ -80,8 +80,20 @@ export const nativeAuthProvider: AuthProvider = {
         email: input.email,
         password: input.password,
       });
+      const body = json as { ok?: boolean; error?: string; code?: string };
+      /* 🛡️ TOTP 2FA — ADDITIVE. Şifre doğru ama 2FA kodu gerekli; henüz
+         HİÇBİR session yok (yalnız dar-amaçlı pending cookie server'da
+         set edildi). `code` alanı caller'a (login/page.tsx) geçirilir;
+         status 200 olsa da bu bir "başarı" DEĞİL — `ok:false` kalır. */
+      if (body?.code === "totp_required") {
+        return {
+          ok: false,
+          error: body.error || "Doğrulama kodu gerekli",
+          code: "totp_required",
+        };
+      }
       if (status !== 200) {
-        const err = (json as { error?: string })?.error || "Oturum açılamadı";
+        const err = body?.error || "Oturum açılamadı";
         return { ok: false, error: err };
       }
       const user = readMeUser(json);

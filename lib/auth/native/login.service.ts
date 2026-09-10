@@ -7,7 +7,8 @@ import {
   timingSafeDummyVerify,
 } from "./password";
 import { issueSession } from "./session.service";
-import { setMarkerCookie } from "./cookies";
+import { setMarkerCookie, setPendingTotpCookie } from "./cookies";
+import { signTotpPendingToken } from "./jwt";
 
 /* ===============================================================
    🛡️ FAZ 2 (NATIVE AUTH) — LOGIN SERVICE (server-only)
@@ -19,7 +20,12 @@ import { setMarkerCookie } from "./cookies";
      3) verifyPassword (bcrypt legacy | argon2 native)
      4) fail → failed_attempts++ (+ locked_until) → generic hata
      5) success → upgrade-on-login (bcrypt → argon2id) + login state reset
-     6) issueSession (native cookie) + marker cookie
+     6) 🛡️ TOTP GATE (2FA) — totp_enabled=false → issueSession (native
+        cookie) + marker cookie (MEVCUT DAVRANIŞ, AYNEN). totp_enabled=true
+        → issueSession ÇAĞRILMAZ; onun yerine kısa ömürlü pending-auth
+        token (__Host-admin_2fa_pending) set edilir, code:"totp_required"
+        döner. Gerçek session yalnız /api/auth/2fa/verify başarılı
+        TOTP/recovery-code sonrası issueSession'ı ÇAĞIRDIĞINDA kurulur.
    Audit çağrısı route'ta (context req'den derlenir).
    =============================================================== */
 
@@ -42,7 +48,12 @@ export type LoginAdmin = {
 export type LoginResult =
   | { ok: true; admin: LoginAdmin }
   // "invalid" → generic (kullanıcı varlığı/şifre sızdırılmaz)
-  | { ok: false; code: "invalid" | "inactive" | "locked"; error: string };
+  // "totp_required" → şifre DOĞRU ama 2FA kodu gerekli (henüz session YOK)
+  | {
+      ok: false;
+      code: "invalid" | "inactive" | "locked" | "totp_required";
+      error: string;
+    };
 
 function normalizePerms(raw: unknown): string[] {
   return Array.isArray(raw)
@@ -124,6 +135,27 @@ export async function loginNative(
   }
 
   await adminUserServerRepository.recordLoginSuccess(creds.id, nowIso);
+
+  /* ---------------------------------------------------------------
+     🛡️ TOTP GATE — EN KRİTİK KISIM
+     ---------------------------------------------------------------
+     Şifre doğrulandı. `totp_enabled=false` → AŞAĞIDAKİ issueSession
+     yolu MEVCUT DAVRANIŞLA BİREBİR (2FA'sız adminler için sıfır fark).
+     `totp_enabled=true` → issueSession HİÇ ÇAĞRILMAZ; gerçek admin
+     session (admin_sessions satırı + __Host-admin_at/__Host-admin_rt)
+     yalnız /api/auth/2fa/verify'de doğru TOTP/recovery kod sonrası
+     kurulur. Burada yalnız kısa ömürlü, dar-amaçlı bir pending-auth
+     cookie set edilir (bkz. jwt.ts TotpPendingClaims doc).
+  --------------------------------------------------------------- */
+  if (creds.totp_enabled) {
+    const pendingToken = await signTotpPendingToken(creds.id);
+    await setPendingTotpCookie(pendingToken);
+    return {
+      ok: false,
+      code: "totp_required",
+      error: "Doğrulama kodu gerekli",
+    };
+  }
 
   const perms = normalizePerms(creds.sidebar_permissions);
   const session = await issueSession(

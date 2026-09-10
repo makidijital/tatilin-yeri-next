@@ -18,3 +18,12 @@ export const REFRESH_COOKIE = COOKIE_SECURE ? "__Host-admin_rt" : "admin_rt";
 /** Middleware redirect-hint marker (supabase modunda kullanılır; native
  *  middleware buna bağlı DEĞİL — native cookie'leri doğrular). */
 export const MARKER_COOKIE = "admin-session";
+
+/** 🛡️ TOTP 2FA — pending-auth cookie (şifre doğrulandı, TOTP kodu
+ *  bekleniyor). GERÇEK SESSION COOKIE'Sİ DEĞİL — middleware/
+ *  authorizeAdminCaller bu ismi TANIMAZ (yalnız ACCESS_COOKIE/
+ *  REFRESH_COOKIE bilirler) → hiçbir korumalı route'ta gerçek
+ *  session yerine geçemez. */
+export const PENDING_2FA_COOKIE = COOKIE_SECURE
+  ? "__Host-admin_2fa_pending"
+  : "admin_2fa_pending";

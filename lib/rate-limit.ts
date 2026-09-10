@@ -57,6 +57,8 @@ import { Redis } from "@upstash/redis";
      reservation_check → 10 req/10dk/IP     (public durum sorgulama — brute-force)
      contact           → 5  req/10dk/IP     (public iletişim formu — spam)
      offer             → 5  req/10dk/IP     (public teklif formu — spam)
+     totp-disable                → 5  req/10dk/IP  (2FA disable re-auth brute-force)
+     totp-recovery-regenerate    → 5  req/10dk/IP  (kurtarma kodu yenileme re-auth brute-force)
 
    GERIYE UYUMLULUK:
      - Limit altındaysa: `null` döner → route handler eski davranış aynen
@@ -77,7 +79,10 @@ export type RateLimitGroup =
   | "reservation"
   | "reservation_check"
   | "contact"
-  | "offer";
+  | "offer"
+  | "totp"
+  | "totp-disable"
+  | "totp-recovery-regenerate";
 
 const GROUP_CONFIG: Record<
   RateLimitGroup,
@@ -104,6 +109,25 @@ const GROUP_CONFIG: Record<
   /* 🛡️ PUBLIC TEKLİF FORMU — anon insert artık server route'ta;
      spam/flood koruması. */
   offer: { requests: 5, window: "10 m" },
+  /* 🛡️ TOTP 2FA — /api/auth/2fa/verify brute-force koruması (IP-bazlı;
+     hesap-bazlı totp_failed_attempts/totp_locked_until AYRI katman,
+     bkz. totp-verify.service.ts). Login'deki 5 deneme/15dk desenine
+     yakın ama ayrı IP-bucket — bir IP'den TÜM adminlere karşı deneme
+     de sınırlanır. */
+  totp: { requests: 10, window: "10 m" },
+  /* 🛡️ M-1 SECURITY FIX — `/api/admin/2fa/disable` ve
+     `/api/admin/2fa/recovery-codes/regenerate` re-auth kontrolü
+     (password/TOTP kodu) ÖNCEDEN hiçbir rate-limit'e tabi değildi.
+     Bu iki endpoint yalnız GEÇERLİ bir admin session ile
+     ulaşılabilir (authorizeAdminSession()) — ama ele geçirilmiş bir
+     session (ör. XSS ile ambient httpOnly cookie taşıyan fetch)
+     üzerinden şifre/TOTP kodu sınırsız denenip login endpoint'inin
+     kilit mekanizması bypass edilerek 2FA kalıcı olarak kapatılabilir/
+     kurtarma kodları yenilenebiliyordu. IP-bazlı, "totp" grubuyla
+     aynı ölçekte ama AYRI bucket — normal TOTP-verify trafiğiyle
+     paylaşılmaz. */
+  "totp-disable": { requests: 5, window: "10 m" },
+  "totp-recovery-regenerate": { requests: 5, window: "10 m" },
 };
 
 /* ---------------------------------------------------------------

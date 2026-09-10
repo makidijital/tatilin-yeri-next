@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
+import { Loader2, Mail, Lock, ArrowRight, ArrowLeft, ShieldCheck } from "lucide-react";
 
 import { authProvider } from "@/lib/auth";
 import {
@@ -35,6 +35,14 @@ export default function AdminLoginPage() {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
 
+  /* 🛡️ TOTP 2FA — ADDITIVE state. "password" adımı mevcut davranışla
+     BİREBİR; "totp" adımına yalnız signIn.code==="totp_required" ile
+     geçilir (bkz. handleSubmit). */
+  const [step, setStep] = useState<"password" | "totp">("password");
+  const [totpCode, setTotpCode] = useState<string>("");
+  const [recoveryCode, setRecoveryCode] = useState<string>("");
+  const [useRecovery, setUseRecovery] = useState<boolean>(false);
+
   const handleSubmit = async (
     e: React.FormEvent<HTMLFormElement>
   ): Promise<void> => {
@@ -65,6 +73,15 @@ export default function AdminLoginPage() {
       });
 
       if (!signIn.ok) {
+        /* 🛡️ TOTP 2FA — ADDITIVE. Şifre doğru ama 2FA kodu gerekli;
+           HENÜZ session yok (yalnız dar-amaçlı pending cookie
+           server'da set edildi). Diğer TÜM hata durumları (yanlış
+           şifre, pasif hesap vb.) mevcut generic mesajla AYNEN devam
+           eder — router.replace bu adımda ASLA çağrılmaz. */
+        if (signIn.code === "totp_required") {
+          setStep("totp");
+          return;
+        }
         setError("Giriş bilgileri hatalı");
         return;
       }
@@ -93,6 +110,77 @@ export default function AdminLoginPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  /* 🛡️ TOTP 2FA — ADDITIVE. Adım 2 submit: pending cookie server'da
+     doğrulanır (bu fonksiyon cookie'yi görmez/okumaz — httpOnly).
+     Başarılı response mevcut şifre-akışıyla AYNI kuyruğa girer:
+     lookupCurrentAdmin() + guard yönlendirmesi. */
+  const handleTotpSubmit = async (
+    e: React.FormEvent<HTMLFormElement>
+  ): Promise<void> => {
+    e.preventDefault();
+    if (submitting) return;
+
+    setError("");
+
+    const trimmedCode = totpCode.trim();
+    const trimmedRecovery = recoveryCode.trim();
+    if (useRecovery ? !trimmedRecovery : !/^\d{6}$/.test(trimmedCode)) {
+      setError(
+        useRecovery ? "Kurtarma kodu gerekli." : "6 haneli kodu eksiksiz gir."
+      );
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/2fa/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(
+          useRecovery
+            ? { recoveryCode: trimmedRecovery }
+            : { code: trimmedCode }
+        ),
+      });
+      const json = (await res.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+
+      if (!res.ok || !json?.ok) {
+        setError(json?.error || "Geçersiz doğrulama kodu");
+        return;
+      }
+
+      const result = await lookupCurrentAdmin();
+      if (!result.ok) {
+        await signOutAdmin();
+        if (result.reason === "inactive") {
+          setError("Hesabınız pasif durumda");
+        } else {
+          setError("Giriş bilgileri hatalı");
+        }
+        return;
+      }
+
+      router.replace("/maki-admin");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
+      console.error("[admin.login.totp] EXCEPTION", { error: msg });
+      setError("Doğrulama başarısız");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleBackToPassword = (): void => {
+    setStep("password");
+    setTotpCode("");
+    setRecoveryCode("");
+    setUseRecovery(false);
+    setError("");
   };
 
   return (
@@ -232,112 +320,267 @@ export default function AdminLoginPage() {
                 "0 24px 64px -24px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.04)",
             }}
           >
-            <p
-              className="text-[11px] tracking-[0.18em] uppercase font-bold"
-              style={{ color: "var(--admin-accent-strong)" }}
-            >
-              Giriş
-            </p>
-            <h2 className="font-display text-3xl md:text-[32px] text-[var(--color-stone-900)] mt-2 tracking-[-0.02em] leading-[1.1]">
-              Admin Girişi
-            </h2>
-            <p className="text-sm text-[var(--color-stone-500)] mt-2.5 mb-7 leading-relaxed">
-              Devam etmek için hesabınla oturum aç.
-            </p>
+            {step === "password" ? (
+              <>
+                <p
+                  className="text-[11px] tracking-[0.18em] uppercase font-bold"
+                  style={{ color: "var(--admin-accent-strong)" }}
+                >
+                  Giriş
+                </p>
+                <h2 className="font-display text-3xl md:text-[32px] text-[var(--color-stone-900)] mt-2 tracking-[-0.02em] leading-[1.1]">
+                  Admin Girişi
+                </h2>
+                <p className="text-sm text-[var(--color-stone-500)] mt-2.5 mb-7 leading-relaxed">
+                  Devam etmek için hesabınla oturum aç.
+                </p>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Error banner */}
-              {error && (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Error banner */}
+                  {error && (
+                    <div
+                      role="alert"
+                      className="rounded-xl px-3.5 py-2.5 text-[12.5px] leading-relaxed"
+                      style={{
+                        background: "rgba(254, 242, 242, 0.85)",
+                        border: "1px solid rgb(254, 205, 211)",
+                        color: "rgb(159, 18, 57)",
+                      }}
+                    >
+                      {error}
+                    </div>
+                  )}
+
+                  {/* E-posta */}
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="admin-login-email"
+                      className="text-[11px] tracking-[0.12em] uppercase font-semibold text-[var(--color-stone-500)] block"
+                    >
+                      E-posta
+                    </label>
+                    <div className="relative">
+                      <Mail
+                        size={15}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-stone-400)] pointer-events-none"
+                      />
+                      <input
+                        id="admin-login-email"
+                        type="email"
+                        autoComplete="username"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (error) setError("");
+                        }}
+                        disabled={submitting}
+                        className="input !h-12 !pl-11"
+                        placeholder="ornek@maki.com"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Şifre */}
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="admin-login-password"
+                      className="text-[11px] tracking-[0.12em] uppercase font-semibold text-[var(--color-stone-500)] block"
+                    >
+                      Şifre
+                    </label>
+                    <div className="relative">
+                      <Lock
+                        size={15}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-stone-400)] pointer-events-none"
+                      />
+                      <input
+                        id="admin-login-password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (error) setError("");
+                        }}
+                        disabled={submitting}
+                        className="input !h-12 !pl-11"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Submit */}
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="btn-primary w-full justify-center !h-12 !text-[14px] !rounded-xl mt-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Giriş yapılıyor…
+                      </>
+                    ) : (
+                      <>
+                        Giriş Yap
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                {/* ===============================================
+                    🛡️ TOTP 2FA — DOĞRULAMA ADIMI (ADDITIVE)
+                    ===============================================
+                    Şifre zaten doğrulandı (server-side pending cookie
+                    kuruldu). Gerçek admin session YALNIZ bu adımdaki
+                    doğru kod/kurtarma kodu sonrası /api/auth/2fa/verify
+                    tarafından oluşturulur — router.replace buraya kadar
+                    HİÇ çağrılmaz.
+                   =============================================== */}
                 <div
-                  role="alert"
-                  className="rounded-xl px-3.5 py-2.5 text-[12.5px] leading-relaxed"
+                  className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
                   style={{
-                    background: "rgba(254, 242, 242, 0.85)",
-                    border: "1px solid rgb(254, 205, 211)",
-                    color: "rgb(159, 18, 57)",
+                    background: "rgba(14, 165, 233, 0.1)",
+                    color: "var(--admin-accent-strong)",
                   }}
                 >
-                  {error}
+                  <ShieldCheck size={20} />
                 </div>
-              )}
-
-              {/* E-posta */}
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="admin-login-email"
-                  className="text-[11px] tracking-[0.12em] uppercase font-semibold text-[var(--color-stone-500)] block"
+                <p
+                  className="text-[11px] tracking-[0.18em] uppercase font-bold"
+                  style={{ color: "var(--admin-accent-strong)" }}
                 >
-                  E-posta
-                </label>
-                <div className="relative">
-                  <Mail
-                    size={15}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-stone-400)] pointer-events-none"
-                  />
-                  <input
-                    id="admin-login-email"
-                    type="email"
-                    autoComplete="username"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (error) setError("");
-                    }}
-                    disabled={submitting}
-                    className="input !h-12 !pl-11"
-                    placeholder="ornek@maki.com"
-                  />
-                </div>
-              </div>
+                  Adım 2 / 2
+                </p>
+                <h2 className="font-display text-3xl md:text-[32px] text-[var(--color-stone-900)] mt-2 tracking-[-0.02em] leading-[1.1]">
+                  İki Adımlı Doğrulama
+                </h2>
+                <p className="text-sm text-[var(--color-stone-500)] mt-2.5 mb-7 leading-relaxed">
+                  {useRecovery
+                    ? "Kurtarma kodlarınızdan birini girin."
+                    : "Authenticator uygulamanızdaki 6 haneli kodu girin."}
+                </p>
 
-              {/* Şifre */}
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="admin-login-password"
-                  className="text-[11px] tracking-[0.12em] uppercase font-semibold text-[var(--color-stone-500)] block"
-                >
-                  Şifre
-                </label>
-                <div className="relative">
-                  <Lock
-                    size={15}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-stone-400)] pointer-events-none"
-                  />
-                  <input
-                    id="admin-login-password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      if (error) setError("");
-                    }}
-                    disabled={submitting}
-                    className="input !h-12 !pl-11"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
+                <form onSubmit={handleTotpSubmit} className="space-y-4">
+                  {/* Error banner */}
+                  {error && (
+                    <div
+                      role="alert"
+                      className="rounded-xl px-3.5 py-2.5 text-[12.5px] leading-relaxed"
+                      style={{
+                        background: "rgba(254, 242, 242, 0.85)",
+                        border: "1px solid rgb(254, 205, 211)",
+                        color: "rgb(159, 18, 57)",
+                      }}
+                    >
+                      {error}
+                    </div>
+                  )}
 
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={submitting}
-                className="btn-primary w-full justify-center !h-12 !text-[14px] !rounded-xl mt-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Giriş yapılıyor…
-                  </>
-                ) : (
-                  <>
-                    Giriş Yap
-                    <ArrowRight size={16} />
-                  </>
-                )}
-              </button>
-            </form>
+                  {useRecovery ? (
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="admin-login-recovery"
+                        className="text-[11px] tracking-[0.12em] uppercase font-semibold text-[var(--color-stone-500)] block"
+                      >
+                        Kurtarma Kodu
+                      </label>
+                      <input
+                        id="admin-login-recovery"
+                        type="text"
+                        autoComplete="one-time-code"
+                        value={recoveryCode}
+                        onChange={(e) => {
+                          setRecoveryCode(e.target.value);
+                          if (error) setError("");
+                        }}
+                        disabled={submitting}
+                        className="input !h-12 text-center tracking-[0.15em] uppercase"
+                        placeholder="XXXXX-XXXXX"
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="admin-login-totp"
+                        className="text-[11px] tracking-[0.12em] uppercase font-semibold text-[var(--color-stone-500)] block"
+                      >
+                        Doğrulama Kodu
+                      </label>
+                      <input
+                        id="admin-login-totp"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        value={totpCode}
+                        onChange={(e) => {
+                          setTotpCode(
+                            e.target.value.replace(/\D/g, "").slice(0, 6)
+                          );
+                          if (error) setError("");
+                        }}
+                        disabled={submitting}
+                        className="input !h-14 text-center text-2xl tracking-[0.4em] font-semibold"
+                        placeholder="000000"
+                        autoFocus
+                      />
+                    </div>
+                  )}
+
+                  {/* Submit */}
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="btn-primary w-full justify-center !h-12 !text-[14px] !rounded-xl mt-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Doğrulanıyor…
+                      </>
+                    ) : (
+                      <>
+                        Doğrula
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </button>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={handleBackToPassword}
+                      disabled={submitting}
+                      className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[var(--color-stone-500)] hover:text-[var(--color-stone-700)] transition-colors disabled:opacity-60"
+                    >
+                      <ArrowLeft size={13} />
+                      Geri
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseRecovery((v) => !v);
+                        setError("");
+                        setTotpCode("");
+                        setRecoveryCode("");
+                      }}
+                      disabled={submitting}
+                      className="text-[12.5px] font-medium underline decoration-dotted underline-offset-4 disabled:opacity-60"
+                      style={{ color: "var(--admin-accent-strong)" }}
+                    >
+                      {useRecovery
+                        ? "Authenticator kodu kullan"
+                        : "Kurtarma kodu kullan"}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
 
           {/* Mobile footer */}

@@ -2,11 +2,16 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
-import { getAccessTtlSeconds, getRefreshTtlSeconds } from "./jwt";
+import {
+  getAccessTtlSeconds,
+  getRefreshTtlSeconds,
+  getTotpPendingTtlSeconds,
+} from "./jwt";
 import {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
   MARKER_COOKIE,
+  PENDING_2FA_COOKIE,
   COOKIE_SECURE as SECURE,
 } from "./cookie-names";
 
@@ -144,6 +149,43 @@ export async function clearMarkerCookie(): Promise<void> {
   const jar = await cookies();
   jar.set(MARKER_COOKIE, "", {
     httpOnly: false,
+    secure: SECURE,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+}
+
+/* ---------------------------------------------------------------
+   🛡️ TOTP 2FA — PENDING COOKIE
+   ---------------------------------------------------------------
+   Şifre doğrulandı, TOTP kodu bekleniyor durumunda kullanılan ayrı,
+   dar-amaçlı cookie. HttpOnly (client JS okuyamaz) ama `__Host-admin_at`
+   İLE ASLA KARIŞTIRILMAZ — ayrı isim, ayrı kısa TTL, ayrı claim tipi
+   (`TotpPendingClaims`, bkz. `jwt.ts`). Middleware ve
+   `authorizeAdminCaller`/`authorizeAdminSession` bu cookie'yi
+   TANIMAZ — yalnız `/api/auth/2fa/verify` okur.
+--------------------------------------------------------------- */
+export async function setPendingTotpCookie(token: string): Promise<void> {
+  const jar = await cookies();
+  jar.set(PENDING_2FA_COOKIE, token, {
+    httpOnly: true,
+    secure: SECURE,
+    sameSite: "lax",
+    path: "/",
+    maxAge: getTotpPendingTtlSeconds(),
+  });
+}
+
+export async function readPendingTotpCookie(): Promise<string | null> {
+  const jar = await cookies();
+  return jar.get(PENDING_2FA_COOKIE)?.value ?? null;
+}
+
+export async function clearPendingTotpCookie(): Promise<void> {
+  const jar = await cookies();
+  jar.set(PENDING_2FA_COOKIE, "", {
+    httpOnly: true,
     secure: SECURE,
     sameSite: "lax",
     path: "/",

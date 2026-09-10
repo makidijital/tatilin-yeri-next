@@ -56,6 +56,10 @@ export async function GET() {
       email: (admin.email || "").toLowerCase().trim(),
       full_name: (admin.full_name || "").trim(),
       sidebar_permissions: perms,
+      // 🛡️ TOTP 2FA — ADDITIVE. Yalnız boolean durum — secret/encrypted
+      // secret/recovery-code hash'i ASLA bu veya başka bir response'a
+      // eklenmez (bkz. lib/auth/native/totp.ts, admin-totp.repository).
+      totp_enabled: !!admin.totp_enabled,
     },
   });
 }

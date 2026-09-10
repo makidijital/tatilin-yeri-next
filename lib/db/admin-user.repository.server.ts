@@ -124,9 +124,16 @@ export const adminUserServerRepository = {
         sidebar_permissions: unknown;
         failed_attempts: number | null;
         locked_until: string | null;
+        /* 🛡️ TOTP 2FA — ADDITIVE. login.service.ts'in şifre-doğru
+           sonrası tek ek dallanması (issueSession mi, yoksa
+           totp_required mı) için buradan okunur; ayrı round-trip
+           gerekmez (hot path). Diğer TOTP state'i (secret, failed
+           attempts, lock) yalnız totp_enabled=true iken, TOTP verify
+           akışında admin-totp.repository.server.ts'ten ayrı çekilir. */
+        totp_enabled: boolean | null;
       }>("admin_users")
       .select(
-        "id, email, full_name, is_active, password_hash, sidebar_permissions, failed_attempts, locked_until"
+        "id, email, full_name, is_active, password_hash, sidebar_permissions, failed_attempts, locked_until, totp_enabled"
       )
       .eq("email", email)
       .maybeSingle();
@@ -160,8 +167,15 @@ export const adminUserServerRepository = {
         full_name: string | null;
         is_active: boolean | null;
         sidebar_permissions: unknown;
+        /* 🛡️ TOTP 2FA — ADDITIVE. /api/auth/me ve "Hesabım" ekranının
+           mevcut 2FA durumunu göstermesi için (yalnız boolean — secret
+           YOK). Mevcut caller'lar (refreshSession, totp-verify.service)
+           bu alanı yok sayabilir. */
+        totp_enabled: boolean | null;
       }>("admin_users")
-      .select("id, email, full_name, is_active, sidebar_permissions")
+      .select(
+        "id, email, full_name, is_active, sidebar_permissions, totp_enabled"
+      )
       .eq("id", id)
       .maybeSingle();
   },

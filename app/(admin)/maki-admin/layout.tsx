@@ -1053,6 +1053,16 @@ function AdminShell({
               </p>
             </div>
           )}
+          <Link
+            href="/maki-admin/hesabim"
+            onClick={() => setOpen(false)}
+            className={`admin-nav-item w-full ${
+              activeHref === "/maki-admin/hesabim" ? "is-active" : ""
+            }`}
+          >
+            <ShieldCheck size={15} className="admin-icon shrink-0" />
+            <span>Hesabım</span>
+          </Link>
           <button
             onClick={handleLogout}
             className="admin-nav-item w-full text-left hover:!text-rose-300"

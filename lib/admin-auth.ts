@@ -26,6 +26,9 @@ export type AdminAuthRecord = {
   email: string;
   is_active: boolean;
   sidebar_permissions: string[];
+  /* 🛡️ TOTP 2FA — ADDITIVE. Yalnız boolean durum ("Hesabım" ekranı +
+     ileride sidebar rozet vb. için) — secret İÇERMEZ. */
+  totp_enabled: boolean;
 };
 
 export type AdminLookupResult =
@@ -67,6 +70,7 @@ async function fetchMeOnce(): Promise<AdminLookupResult> {
         email?: string;
         full_name?: string;
         sidebar_permissions?: unknown;
+        totp_enabled?: boolean;
       };
     };
     if (!json?.ok || !json.admin?.id) {
@@ -84,6 +88,7 @@ async function fetchMeOnce(): Promise<AdminLookupResult> {
               (p): p is string => typeof p === "string"
             )
           : [],
+        totp_enabled: json.admin.totp_enabled === true,
       },
     };
   } catch {

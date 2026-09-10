@@ -32,10 +32,15 @@ export type SignInWithPasswordInput = {
   password: string;
 };
 
-/** Result envelope — caller throw etmez; result.ok ile branch'ler. */
+/** Result envelope — caller throw etmez; result.ok ile branch'ler.
+ *  `code` — OPTIONAL, ADDITIVE (🛡️ TOTP 2FA). Yalnız native
+ *  `signInWithPassword`'un "şifre doğru ama 2FA kodu gerekli" durumu
+ *  için (`code:"totp_required"`) kullanılır; mevcut caller'lar bu
+ *  alanı YOK SAYAR (backward-compatible — hiçbir mevcut branch
+ *  bozulmaz), yalnız login/page.tsx bunu explicit kontrol eder. */
 export type AuthResult<T> =
   | { ok: true; value: T }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code?: string };
 
 /** onAuthStateChange event — minimum şart: SIGNED_IN / SIGNED_OUT
  *  / TOKEN_REFRESHED. Supabase native ek event'ler (USER_UPDATED,

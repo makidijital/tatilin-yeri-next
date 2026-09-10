@@ -54,6 +54,33 @@ export async function POST(req: Request) {
   });
 
   if (!result.ok) {
+    /* 🛡️ TOTP GATE — şifre DOĞRU, 2FA kodu gerekli. Bu "başarısız giriş"
+       DEĞİL (audit'te login_failed olarak sayılmaz — ayrı action) ve
+       generic 401/403 hata DEĞİL: status 200 + code:"totp_required" ile
+       client (nativeAuthProvider.signInWithPassword) bu durumu diğer
+       hatalardan ayırt eder. Henüz HİÇBİR session/cookie oluşmadı (yalnız
+       dar-amaçlı pending cookie — loginNative içinde set edildi). */
+    if (result.code === "totp_required") {
+      try {
+        await insertAdminActivityLog(
+          {
+            admin_user_id: "",
+            admin_email: email.toLowerCase().trim(),
+            route: "/api/auth/login",
+            ip_address: ipUa.ip_address ?? null,
+            user_agent: ipUa.user_agent ?? null,
+          },
+          { action: "admin.login_totp_required", entity_type: "admin_user" }
+        );
+      } catch {
+        /* audit hatası login akışını bozmaz. */
+      }
+      return NextResponse.json(
+        { ok: false, code: "totp_required", error: result.error },
+        { status: 200 }
+      );
+    }
+
     // Audit — başarısız giriş (best-effort; caller kimliği yok → email hint).
     try {
       await insertAdminActivityLog(

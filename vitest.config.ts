@@ -22,6 +22,17 @@ export default defineConfig({
       /* tsconfig.json paths: { "@/*": ["./*"] } — projenin kökü.
          Tek alias yeterli; subpath'ler relative çözülür. */
       "@": resolve(__dirname, "./"),
+      /* 🛡️ TOTP 2FA — ADDITIVE. `server-only` gerçek bir npm paketi
+         DEĞİL; Next.js'in kendi webpack konfigürasyonu bu ismi özel
+         tanır (client bundle'a sızarsa build hatası). Vite/vitest bu
+         mekanizmayı bilmediğinden `import "server-only"` içeren
+         dosyaları test ortamında ÇÖZEMEZ. Bu alias yalnız test
+         ortamında no-op bir stub'a yönlendirir — Next.js'in gerçek
+         build/runtime davranışını ETKİLEMEZ, yalnız login.service.ts
+         gibi server-only dosyaların DOĞRUDAN test edilebilmesini sağlar
+         (mevcut testlerin hiçbiri server-only dosya import etmiyordu —
+         bu yalnız YENİ TOTP gate testleri için gerekli oldu). */
+      "server-only": resolve(__dirname, "./tests/stubs/server-only.ts"),
     },
   },
   test: {
