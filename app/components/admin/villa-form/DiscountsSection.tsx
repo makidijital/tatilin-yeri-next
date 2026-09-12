@@ -68,7 +68,11 @@ function formatDiscountValue(row: VillaDiscountRow): string {
   if (row.discount_type === "percent") {
     return `%${value}`;
   }
-  return `${value} ${row.currency || ""}`.trim();
+  /* 🛡️ Gecelik netlik — bu tutar HER GECEYE ayrı ayrı uygulanır (toplam
+     konaklama tutarından tek seferlik düşülmez). "/gece" eki olmadan
+     admin bunu "aralığın tamamı için tek seferlik indirim" sanabiliyordu.
+     Yalnız gösterim metni — hesaplama/DB/parametre DEĞİŞMEDİ. */
+  return `${value} ${row.currency || ""} / gece`.trim();
 }
 
 /** Kapalı interval gece sayısı: [start, end] ikisi de dahil. */
@@ -255,8 +259,8 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
                     </p>
                     <p className="text-xs text-[var(--color-stone-500)] mt-0.5">
                       {d.discount_type === "percent"
-                        ? "Yüzde indirim"
-                        : "Sabit tutar indirimi"}
+                        ? "İndirim oranı"
+                        : "Gecelik sabit indirim"}
                       {" — "}
                       {formatDiscountValue(d)}
                     </p>
