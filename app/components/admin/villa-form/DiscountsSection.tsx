@@ -5,6 +5,7 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 
 import Section from "./shared/Section";
 import Label from "./shared/Label";
+import DiscountCalendarCanvas from "./DiscountCalendarCanvas";
 
 import {
   loadDiscountData,
@@ -276,29 +277,38 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
 
           {formOpen ? (
             <div className="rounded-2xl border border-[var(--color-stone-200)] bg-[var(--color-sand-50)] p-4 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Başlangıç tarihi</Label>
-                  <input
-                    type="date"
-                    className="input"
-                    value={draft.start_date}
-                    onChange={(e) =>
-                      setDraft({ ...draft, start_date: e.target.value })
-                    }
+              <div className="space-y-2">
+                <Label>Tarih aralığı</Label>
+                {/* 🛡️ Native <input type="date"> KALDIRILDI — Fiyatlar
+                    bölümündeki PricingCalendarCanvas'ın ay-grid + mouse
+                    drag + mobil tap-to-range deneyimiyle AYNI HİSSİ veren
+                    ayrı, izole bir takvim (DiscountCalendarCanvas). Kendi
+                    state'i var; PricingCalendarCanvas'ın kendisi burada
+                    İKİNCİ KEZ MOUNT EDİLMEDİ, yalnız onun saf/sunum
+                    parçaları (PricingCalendarNav/MonthBlock/DayCell,
+                    date-math.ts) değiştirilmeden reuse edildi. */}
+                <DiscountCalendarCanvas
+                  value={
+                    draft.start_date && draft.end_date
+                      ? { start_date: draft.start_date, end_date: draft.end_date }
+                      : null
+                  }
+                  onChange={(range) =>
+                    setDraft({
+                      ...draft,
+                      start_date: range.start_date,
+                      end_date: range.end_date,
+                    })
+                  }
                 />
-                </div>
-                <div className="space-y-2">
-                  <Label>Bitiş tarihi</Label>
-                  <input
-                    type="date"
-                    className="input"
-                    value={draft.end_date}
-                    onChange={(e) =>
-                      setDraft({ ...draft, end_date: e.target.value })
-                    }
-                />
-                </div>
+                {draft.start_date && draft.end_date && (
+                  <p className="text-xs text-[var(--color-stone-500)]">
+                    Seçili aralık:{" "}
+                    {formatLocalDate(parseLocalDate(draft.start_date))} →{" "}
+                    {formatLocalDate(parseLocalDate(draft.end_date))} (
+                    {nightsInclusive(draft.start_date, draft.end_date)} gece)
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
