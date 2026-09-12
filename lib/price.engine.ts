@@ -144,13 +144,143 @@ export const getDailyPrice = (
   };
 };
 
+/* ===============================================================
+   🛡️ ADIM 2 — VILLA_DISCOUNTS KATMANI (villa_prices'ın ÜZERİNE)
+   ===============================================================
+   Bu blok villa_prices/getDailyPrice'a HİÇBİR ŞEKİLDE dokunmaz —
+   AYRI, İZOLE bir katmandır. calculateStayTotal içinde getDailyPrice
+   çağrısından SONRA, normal (indirimsiz) fiyatın ÜZERİNE uygulanır.
+
+   TARİH SEMANTİĞİ: villa_prices/getDailyPrice ile BİREBİR AYNI —
+   kapalı interval, start_date/end_date İKİSİ DE DAHİL (`d >= s && d
+   <= e`, migration 079'daki villa_discounts tarih mantığıyla tutarlı).
+
+   ÇOKLU KAYIT GÜVENLİĞİ: aynı gece için birden fazla aktif discount
+   DB'de EXCLUDE constraint (villa_discounts_no_overlap, migration 079)
+   ile zaten engelleniyor. Uygulama katmanında da `.find()` kullanılır
+   (getDailyPrice ile AYNI desen) — beklenmedik şekilde birden fazla
+   kayıt gelse bile yalnız İLKİ kullanılır, ASLA toplanmaz/üst üste
+   uygulanmaz. */
+export type DiscountRange = {
+  start_date: string;
+  end_date: string;
+  discount_type: "percent" | "fixed";
+  discount_value: number;
+  currency?: string | null;
+};
+
+// 🔥 O GECE İÇİN AKTİF İNDİRİMİ BUL — getDailyPrice ile BİREBİR AYNI
+// tarih karşılaştırması (kapalı interval). discounts boş/undefined/null
+// → null (indirim yok, mevcut davranış korunur).
+export const getActiveDiscount = (
+  date: Date,
+  discounts: DiscountRange[] | null | undefined
+): DiscountRange | null => {
+  if (!Array.isArray(discounts) || discounts.length === 0) {
+    return null;
+  }
+
+  const d = normalizeDate(date);
+
+  const found = discounts.find((disc) => {
+    const s = parseLocalDate(disc.start_date);
+    const e = parseLocalDate(disc.end_date);
+
+    return d >= s && d <= e;
+  });
+
+  return found ?? null;
+};
+
+/* 🔥 GÜNLÜK FİYATA İNDİRİM UYGULA — AYRI KATMAN (getDailyPrice'a GÖMÜLMEDİ)
+   ===============================================================
+   `daily` — getDailyPrice'ın ÇIKTISI (normal/indirimsiz fiyat).
+   `discount` — null ise `daily` AYNEN döner (davranış BYTE-IDENTICAL).
+
+   FORMÜL (kullanıcı spesifikasyonu ile birebir):
+     percent → normal × (1 - discount_value / 100)
+     fixed   → normal - discount_value
+     Sonuç DAİMA Math.max(0, ...) ile clamp edilir (negatif İMKANSIZ).
+
+   CURRENCY:
+     - percent: currency bağımsız - doğrudan orana uygulanır
+     - fixed: `discount.currency` villa'nın gecelik ORİJİNAL
+       currency'siyle (`daily.original_currency`) FARKLIYSA, mevcut
+       `convertPrice` (TRY pivot — cleaning/pool heating'in "raw
+       hesapla, convertPrice ile çevir" deseniyle AYNI yaklaşım) ile
+       önce `daily.original_currency`'e çevrilir, SONRA çıkarılır.
+       `discount.currency` eksikse (NULL) — migration 079'daki
+       `villa_discounts_currency_consistency` CHECK'i zaten 'fixed'
+       tipte NULL currency'e izin vermiyor, ama savunma amaçlı burada
+       da `daily.original_currency` varsayılır (conversion atlanır).
+
+   `converted` alanı, indirimli `original` üzerinden getDailyPrice'ın
+   KENDİ deseniyle (convertPrice(original, original_currency, currency,
+   rates)) SIFIRDAN hesaplanır — zaten çevrilmiş `daily.converted`
+   üzerinde ORANSAL bir işlem YAPILMAZ (yuvarlama tutarsızlığı riski
+   olmadan). */
+export const applyDiscountToDailyPrice = (
+  daily: { converted: number; original: number; original_currency: string },
+  discount: DiscountRange | null | undefined,
+  currency: string,
+  rates: Record<string, number>
+): { converted: number; original: number; original_currency: string } => {
+  if (!discount) {
+    return daily;
+  }
+
+  if (!Number.isFinite(daily.original) || daily.original <= 0) {
+    return daily;
+  }
+
+  const value = Number(discount.discount_value) || 0;
+
+  let discountedOriginal: number;
+
+  if (discount.discount_type === "percent") {
+    discountedOriginal = daily.original * (1 - value / 100);
+  } else {
+    const discountCurrency = discount.currency || daily.original_currency;
+
+    const valueInOriginalCurrency =
+      discountCurrency === daily.original_currency
+        ? value
+        : convertPrice(
+            value,
+            discountCurrency,
+            daily.original_currency,
+            rates
+          );
+
+    discountedOriginal = daily.original - valueInOriginalCurrency;
+  }
+
+  discountedOriginal = Math.max(0, discountedOriginal);
+
+  return {
+    converted: convertPrice(
+      discountedOriginal,
+      daily.original_currency,
+      currency,
+      rates
+    ),
+    original: discountedOriginal,
+    original_currency: daily.original_currency,
+  };
+};
+
 // 🔥 KONAKLAMA TOPLAMI
 export const calculateStayTotal = (
   start: string,
   end: string,
   prices: PriceRange[],
   currency: string,
-  rates: Record<string, number>
+  rates: Record<string, number>,
+  // 🛡️ ADIM 2 — villa_discounts katmanı. OPSİYONEL, default undefined
+  // → discounts hiç verilmeyen TÜM mevcut çağrılarda (calculateGrandTotal
+  // dahil) davranış BYTE-IDENTICAL kalır (getActiveDiscount boş/undefined
+  // için null döner → applyDiscountToDailyPrice `daily`'i aynen döner).
+  discounts?: DiscountRange[] | null
 ) => {
   if (!start || !end) {
     return {
@@ -165,6 +295,18 @@ export const calculateStayTotal = (
   let original_stay = 0;
 
   let original_currency = "TRY";
+
+  // 🛡️ ADIM 2 — aşağıdaki "fallback" bloğu villa_prices'ın ÖNCEDEN beri
+  // var olan davranışı (bkz. yorum): stay===0 olduğunda prices[0]'a
+  // düşer — bu, "bu tarih aralığında HİÇBİR villa_prices satırı
+  // eşleşmedi" (sezon dışı sorgu) durumunu varsayar. Discount katmanı
+  // eklenince stay===0 artık BAŞKA, MEŞRU bir sebeple de oluşabilir:
+  // fiyat BULUNDU ama indirim onu 0'a düşürdü (Math.max(0, ...) clamp).
+  // Bu iki durumu ayırt etmek için `hadMatchingPrice` — İNDİRİMDEN ÖNCEKİ
+  // `daily` üzerinden — izlenir; fallback SADECE hiçbir gece bir
+  // villa_prices satırına denk gelmediğinde tetiklenir (eski davranış
+  // BYTE-IDENTICAL), meşru "indirimle 0'a düşme" durumunda tetiklenmez.
+  let hadMatchingPrice = false;
 
   // parseLocalDate → "YYYY-MM-DD" LOCAL midnight; while-loop ve
   // setDate(+1) LOCAL zincirde ilerler. UTC parse (önceki davranış)
@@ -182,20 +324,41 @@ export const calculateStayTotal = (
       rates
     );
 
-    stay += daily.converted;
+    if (daily.original > 0) {
+      hadMatchingPrice = true;
+    }
 
-    original_stay += daily.original;
+    // 🛡️ ADIM 2 — İNDİRİM KATMANI: getDailyPrice'ın normal (indirimsiz)
+    // fiyatının ÜZERİNE uygulanır; getDailyPrice'ın KENDİSİ hiçbir
+    // şekilde değiştirilmedi/yeniden çağrılmadı — yalnız çıktısı
+    // post-process edilir (ayrı, izole katman — gömme YOK). Discount
+    // yoksa (activeDiscount null) applyDiscountToDailyPrice `daily`'i
+    // AYNEN döner (BYTE-IDENTICAL).
+    const activeDiscount = getActiveDiscount(current, discounts);
+
+    const finalDaily = applyDiscountToDailyPrice(
+      daily,
+      activeDiscount,
+      currency,
+      rates
+    );
+
+    stay += finalDaily.converted;
+
+    original_stay += finalDaily.original;
 
     original_currency =
-      daily.original_currency;
+      finalDaily.original_currency;
 
     current.setDate(
       current.getDate() + 1
     );
   }
 
-  // fallback
-  if (stay === 0 && prices?.length) {
+  // fallback — YALNIZ hiçbir gece bir villa_prices satırına denk
+  // gelmediyse (mevcut/eski davranış). İndirimle MEŞRU şekilde 0'a
+  // düşen bir gece (hadMatchingPrice=true) burada ARTIK ELE ALINMAZ.
+  if (stay === 0 && !hadMatchingPrice && prices?.length) {
 
     const original =
       Number(prices[0].price || 0);
@@ -353,6 +516,7 @@ export const calculateGrandTotal = ({
   pool_heating_currency = "TRY",
   pool_heating_selected = false,
   pool_heating_months = null,
+  discounts = null,
 }: {
   start: string;
 
@@ -383,6 +547,12 @@ export const calculateGrandTotal = ({
      ("ay kısıtlaması yok" — eskiden bu parametreyi vermeyen TÜM
      çağrılarda davranış BYTE-IDENTICAL kalır). */
   pool_heating_months?: number[] | null;
+
+  /* 🛡️ ADIM 2 — villa_discounts katmanı. OPSİYONEL, default null
+     ("indirim yok" — eskiden bu parametreyi vermeyen TÜM çağrılarda
+     davranış BYTE-IDENTICAL kalır). calculateStayTotal'a olduğu gibi
+     iletilir; cleaning/pool heating hesaplarını HİÇ etkilemez. */
+  discounts?: DiscountRange[] | null;
 }) => {
 
   const nights = calculateNights(
@@ -396,7 +566,8 @@ export const calculateGrandTotal = ({
       end,
       prices,
       currency,
-      rates
+      rates,
+      discounts
     );
 
   const stay =

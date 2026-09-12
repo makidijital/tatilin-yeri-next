@@ -21,8 +21,12 @@ import {
   accommodationBase,
   normalizeDate,
   isPoolHeatingActiveForRange,
+  calculateStayTotal,
+  getActiveDiscount,
+  applyDiscountToDailyPrice,
 } from "@/lib/price.engine";
 import type { PriceRange } from "@/lib/villa-row.types";
+import type { DiscountRange } from "@/lib/price.engine";
 
 describe("calculateNights", () => {
   it("returns 1 night for consecutive days", () => {
@@ -587,5 +591,337 @@ describe("calculateGrandTotal — sezonluk ay kısıtı (Migration 076)", () => 
       pool_heating_months: null,
     });
     expect(result.poolHeating).toBe(5000);
+  });
+});
+
+
+/* ===============================================================
+   🛡️ ADIM 2 — VILLA_DISCOUNTS KATMANI (price.engine entegrasyonu)
+   ===============================================================
+   Kapsam: getActiveDiscount (tarih eşleşmesi, villa_prices ile birebir
+   aynı kapalı interval) + applyDiscountToDailyPrice (percent/fixed
+   formül + currency + negative-clamp) + calculateStayTotal/
+   calculateGrandTotal'a opsiyonel `discounts` parametresi entegrasyonu.
+   villa_prices/getDailyPrice HİÇ değişmedi — bu testler yalnız YENİ,
+   AYRI katmanı doğrular.
+=============================================================== */
+describe("getActiveDiscount", () => {
+  const discount: DiscountRange = {
+    start_date: "2026-06-10",
+    end_date: "2026-06-20",
+    discount_type: "percent",
+    discount_value: 20,
+  };
+
+  it("kapalı interval — start_date DAHİL", () => {
+    expect(getActiveDiscount(new Date(2026, 5, 10), [discount])).toEqual(discount);
+  });
+
+  it("kapalı interval — end_date DAHİL (villa_prices ile birebir aynı semantik)", () => {
+    expect(getActiveDiscount(new Date(2026, 5, 20), [discount])).toEqual(discount);
+  });
+
+  it("start_date'den 1 gün önce → null (aralık dışı)", () => {
+    expect(getActiveDiscount(new Date(2026, 5, 9), [discount])).toBeNull();
+  });
+
+  it("end_date'den 1 gün sonra → null (aralık dışı)", () => {
+    expect(getActiveDiscount(new Date(2026, 5, 21), [discount])).toBeNull();
+  });
+
+  it("discounts boş/undefined/null → null", () => {
+    expect(getActiveDiscount(new Date(2026, 5, 15), [])).toBeNull();
+    expect(getActiveDiscount(new Date(2026, 5, 15), undefined)).toBeNull();
+    expect(getActiveDiscount(new Date(2026, 5, 15), null)).toBeNull();
+  });
+
+  it("birden fazla (beklenmedik) kayıt gelse bile yalnız İLKİ kullanılır — toplanmaz/üst üste uygulanmaz", () => {
+    const first: DiscountRange = {
+      start_date: "2026-06-01",
+      end_date: "2026-06-30",
+      discount_type: "percent",
+      discount_value: 10,
+    };
+    const second: DiscountRange = {
+      start_date: "2026-06-01",
+      end_date: "2026-06-30",
+      discount_type: "percent",
+      discount_value: 50,
+    };
+    // DB'de bu durum EXCLUDE constraint (villa_discounts_no_overlap,
+    // migration 079) ile zaten engelleniyor; burada uygulama
+    // katmanının GÜVENLİ davrandığını (yalnız ilkini alıp
+    // toplamadığını) doğruluyoruz.
+    expect(getActiveDiscount(new Date(2026, 5, 15), [first, second])).toEqual(first);
+  });
+});
+
+describe("applyDiscountToDailyPrice", () => {
+  const daily = (original: number, original_currency = "TRY") => ({
+    converted: original,
+    original,
+    original_currency,
+  });
+
+  it("discount null → daily AYNEN döner (BYTE-IDENTICAL)", () => {
+    const d = daily(10000);
+    expect(applyDiscountToDailyPrice(d, null, "TRY", {})).toEqual(d);
+  });
+
+  it("%20 percent discount → 10.000 → 8.000", () => {
+    const res = applyDiscountToDailyPrice(
+      daily(10000),
+      { start_date: "2026-06-10", end_date: "2026-06-20", discount_type: "percent", discount_value: 20 },
+      "TRY",
+      {}
+    );
+    expect(res.original).toBe(8000);
+    expect(res.converted).toBe(8000);
+  });
+
+  it("%20 percent discount → 12.000 → 9.600", () => {
+    const res = applyDiscountToDailyPrice(
+      daily(12000),
+      { start_date: "2026-06-10", end_date: "2026-06-20", discount_type: "percent", discount_value: 20 },
+      "TRY",
+      {}
+    );
+    expect(res.original).toBe(9600);
+  });
+
+  it("fixed 1.000 → 10.000 → 9.000 (aynı currency)", () => {
+    const res = applyDiscountToDailyPrice(
+      daily(10000, "TRY"),
+      { start_date: "2026-06-10", end_date: "2026-06-20", discount_type: "fixed", discount_value: 1000, currency: "TRY" },
+      "TRY",
+      {}
+    );
+    expect(res.original).toBe(9000);
+  });
+
+  it("indirim sonrası negatif olacaksa 0'da clamp edilir (Math.max(0, ...))", () => {
+    const res = applyDiscountToDailyPrice(
+      daily(500, "TRY"),
+      { start_date: "2026-06-10", end_date: "2026-06-20", discount_type: "fixed", discount_value: 1000, currency: "TRY" },
+      "TRY",
+      {}
+    );
+    expect(res.original).toBe(0);
+    expect(res.converted).toBe(0);
+  });
+
+  it("percent discount currency bağımsızdır (discount.currency olmasa da uygulanır)", () => {
+    const res = applyDiscountToDailyPrice(
+      daily(10000, "USD"),
+      { start_date: "2026-06-10", end_date: "2026-06-20", discount_type: "percent", discount_value: 10 },
+      "USD",
+      {}
+    );
+    expect(res.original).toBe(9000);
+  });
+
+  it("fixed discount farklı currency'de ise convertPrice ile villa'nın orijinal currency'sine çevrilir", () => {
+    // Villa gecelik fiyatı TRY, discount 10 USD sabit. rates: 1 USD = 30 TRY
+    // → 10 USD = 300 TRY düşülür → 10000 - 300 = 9700 TRY.
+    const res = applyDiscountToDailyPrice(
+      daily(10000, "TRY"),
+      { start_date: "2026-06-10", end_date: "2026-06-20", discount_type: "fixed", discount_value: 10, currency: "USD" },
+      "TRY",
+      { USD: 30 }
+    );
+    expect(res.original).toBe(9700);
+  });
+
+  it("0 (veya negatif) normal fiyat üzerinde indirim uygulanmaz — daily aynen döner", () => {
+    const d = daily(0);
+    const res = applyDiscountToDailyPrice(
+      d,
+      { start_date: "2026-06-10", end_date: "2026-06-20", discount_type: "percent", discount_value: 50 },
+      "TRY",
+      {}
+    );
+    expect(res).toEqual(d);
+  });
+});
+
+/* ===============================================================
+   🛡️ ADIM 2 — calculateStayTotal ENTEGRASYONU
+   ===============================================================
+   Kullanıcı örneği ile birebir:
+     10 Haziran normal fiyat: 10.000 TL, 11 Haziran: 12.000 TL, %20 discount
+     → 10 Haziran 8.000 + 11 Haziran 9.600 = 17.600 TL
+=============================================================== */
+describe("calculateStayTotal — villa_discounts entegrasyonu (Adım 2)", () => {
+  const rates = { USD: 30, EUR: 33, GBP: 38 };
+
+  it("1) discount yok (discounts hiç verilmez / boş dizi) → mevcut fiyat DEĞİŞMEZ", () => {
+    const prices: PriceRange[] = [
+      { start_date: "2026-06-01", end_date: "2026-06-30", price: 1000, currency: "TRY" },
+    ];
+    const withoutParam = calculateStayTotal("2026-06-10", "2026-06-12", prices, "TRY", rates);
+    const withEmptyArray = calculateStayTotal("2026-06-10", "2026-06-12", prices, "TRY", rates, []);
+    expect(withoutParam.original_stay).toBe(2000);
+    expect(withEmptyArray.original_stay).toBe(2000);
+    expect(withoutParam).toEqual(withEmptyArray);
+  });
+
+  it("6) farklı gecelerde farklı normal fiyat + aynı %20 discount → her gece AYRI hesaplanır (kullanıcı örneği)", () => {
+    const prices: PriceRange[] = [
+      { start_date: "2026-06-10", end_date: "2026-06-10", price: 10000, currency: "TRY" },
+      { start_date: "2026-06-11", end_date: "2026-06-11", price: 12000, currency: "TRY" },
+    ];
+    const discounts: DiscountRange[] = [
+      { start_date: "2026-06-10", end_date: "2026-06-11", discount_type: "percent", discount_value: 20 },
+    ];
+    const res = calculateStayTotal("2026-06-10", "2026-06-12", prices, "TRY", rates, discounts);
+    // 10 Haziran: 10.000 × 0.8 = 8.000 · 11 Haziran: 12.000 × 0.8 = 9.600 · toplam 17.600
+    expect(res.original_stay).toBe(17600);
+  });
+
+  it("5) discount tarih aralığı DIŞINDA → o gece normal fiyat aynen kullanılır", () => {
+    const prices: PriceRange[] = [
+      { start_date: "2026-06-01", end_date: "2026-06-30", price: 10000, currency: "TRY" },
+    ];
+    const discounts: DiscountRange[] = [
+      { start_date: "2026-07-01", end_date: "2026-07-31", discount_type: "percent", discount_value: 50 },
+    ];
+    const res = calculateStayTotal("2026-06-10", "2026-06-12", prices, "TRY", rates, discounts);
+    expect(res.original_stay).toBe(20000); // 2 gece × 10.000, indirim hiç etkilemedi
+  });
+
+  it("4) fixed 1.000 discount, 2 gece × 10.000 → her gece 9.000, toplam 18.000", () => {
+    const prices: PriceRange[] = [
+      { start_date: "2026-06-01", end_date: "2026-06-30", price: 10000, currency: "TRY" },
+    ];
+    const discounts: DiscountRange[] = [
+      { start_date: "2026-06-10", end_date: "2026-06-11", discount_type: "fixed", discount_value: 1000, currency: "TRY" },
+    ];
+    const res = calculateStayTotal("2026-06-10", "2026-06-12", prices, "TRY", rates, discounts);
+    expect(res.original_stay).toBe(18000);
+  });
+
+  it("7) indirim sonrası negatif olacaksa gece başına 0'da clamp edilir (toplam negatif OLMAZ)", () => {
+    const prices: PriceRange[] = [
+      { start_date: "2026-06-01", end_date: "2026-06-30", price: 500, currency: "TRY" },
+    ];
+    const discounts: DiscountRange[] = [
+      { start_date: "2026-06-10", end_date: "2026-06-11", discount_type: "fixed", discount_value: 1000, currency: "TRY" },
+    ];
+    const res = calculateStayTotal("2026-06-10", "2026-06-12", prices, "TRY", rates, discounts);
+    expect(res.original_stay).toBe(0);
+  });
+
+  it("10) villa_prices ile aynı kapalı interval — discount end_date'in TAM SON GECESİNDE de uygulanır, sonraki gece uygulanmaz", () => {
+    const prices: PriceRange[] = [
+      { start_date: "2026-06-01", end_date: "2026-06-30", price: 10000, currency: "TRY" },
+    ];
+    // checkin 10, checkout 13 → geceler: 10, 11, 12 (check-out hariç).
+    // discount end_date=11 (kapalı) → yalnız 10 ve 11 indirimli, 12 indirimsiz.
+    const discounts: DiscountRange[] = [
+      { start_date: "2026-06-10", end_date: "2026-06-11", discount_type: "percent", discount_value: 20 },
+    ];
+    const res = calculateStayTotal("2026-06-10", "2026-06-13", prices, "TRY", rates, discounts);
+    // 10: 8000, 11: 8000, 12: 10000 (indirimsiz) → toplam 26.000
+    expect(res.original_stay).toBe(26000);
+  });
+
+  it("11) %100 percent discount (discount_type: \"percent\", discount_value: 100) → normal fiyat 0 TL olur, fallback normal fiyatı GERİ GETİRMEZ", () => {
+    const prices: PriceRange[] = [
+      { start_date: "2026-06-01", end_date: "2026-06-30", price: 10000, currency: "TRY" },
+    ];
+    const discounts: DiscountRange[] = [
+      { start_date: "2026-06-10", end_date: "2026-06-11", discount_type: "percent", discount_value: 100 },
+    ];
+    // 2 gece (10, 11), ikisi de %100 indirimli → her gece 10.000 × (1 - 100/100) = 0.
+    // Önceki bir turda tespit edilip düzeltilen bug: stay===0 olunca devreye giren
+    // "fallback" bloğu bunu yanlışlıkla prices[0]'ın normal fiyatına (10.000×2=20.000)
+    // geri döndürüyordu. hadMatchingPrice guard'ı bunu artık engelliyor.
+    const res = calculateStayTotal("2026-06-10", "2026-06-12", prices, "TRY", rates, discounts);
+    expect(res.original_stay).toBe(0);
+    expect(res.stay).toBe(0);
+  });
+});
+
+/* ===============================================================
+   🛡️ ADIM 2 — calculateGrandTotal: cleaning/pool heating izolasyonu
+   =============================================================== */
+describe("calculateGrandTotal — villa_discounts (Adım 2) cleaning/pool heating izolasyonu", () => {
+  const rates = { USD: 30, EUR: 33, GBP: 38 };
+  const prices: PriceRange[] = [
+    { start_date: "2026-06-01", end_date: "2026-06-30", price: 10000, currency: "TRY" },
+  ];
+  const discounts: DiscountRange[] = [
+    { start_date: "2026-06-10", end_date: "2026-06-11", discount_type: "percent", discount_value: 20 },
+  ];
+
+  it("8) cleaning/short-stay fee discount'tan ETKİLENMEZ — yalnız stay değişir", () => {
+    const withoutDiscount = calculateGrandTotal({
+      start: "2026-06-10",
+      end: "2026-06-12",
+      prices,
+      currency: "TRY",
+      rates,
+      cleaning_fee: 500,
+      cleaning_currency: "TRY",
+      cleaning_limit: 7,
+    });
+    const withDiscount = calculateGrandTotal({
+      start: "2026-06-10",
+      end: "2026-06-12",
+      prices,
+      currency: "TRY",
+      rates,
+      cleaning_fee: 500,
+      cleaning_currency: "TRY",
+      cleaning_limit: 7,
+      discounts,
+    });
+    expect(withDiscount.cleaning).toBe(withoutDiscount.cleaning);
+    expect(withDiscount.cleaning).toBe(500);
+    expect(withDiscount.stay).toBeLessThan(withoutDiscount.stay); // yalnız stay etkilendi
+    expect(withDiscount.stay).toBe(16000); // 2 gece × 10.000 × 0.8
+  });
+
+  it("9) pool heating discount'tan ETKİLENMEZ — yalnız stay değişir", () => {
+    const withoutDiscount = calculateGrandTotal({
+      start: "2026-06-10",
+      end: "2026-06-12",
+      prices,
+      currency: "TRY",
+      rates,
+      pool_heating_fee: 1000,
+      pool_heating_currency: "TRY",
+      pool_heating_selected: true,
+    });
+    const withDiscount = calculateGrandTotal({
+      start: "2026-06-10",
+      end: "2026-06-12",
+      prices,
+      currency: "TRY",
+      rates,
+      pool_heating_fee: 1000,
+      pool_heating_currency: "TRY",
+      pool_heating_selected: true,
+      discounts,
+    });
+    expect(withDiscount.poolHeating).toBe(withoutDiscount.poolHeating);
+    expect(withDiscount.poolHeating).toBe(2000); // 2 gece × 1.000, indirimden bağımsız
+    expect(withDiscount.stay).toBe(16000);
+    expect(withDiscount.total).toBe(withDiscount.stay + withDiscount.poolHeating);
+  });
+
+  it("discounts hiç verilmeyen eski çağrılar BYTE-IDENTICAL kalır (geriye dönük uyumluluk)", () => {
+    const res = calculateGrandTotal({
+      start: "2026-06-10",
+      end: "2026-06-12",
+      prices,
+      currency: "TRY",
+      rates,
+      cleaning_fee: 500,
+      cleaning_currency: "TRY",
+      cleaning_limit: 7,
+    });
+    expect(res.stay).toBe(20000); // indirim yok, mevcut davranış
+    expect(res.total).toBe(20500);
   });
 });
