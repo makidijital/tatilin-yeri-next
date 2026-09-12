@@ -156,6 +156,7 @@ export default function BookingSidebar({
     minimumStayValid,
     isGapOverride,
     result,
+    activeStayDiscount,
     prepayment,
     convertedDeposit,
     parseLocalDate,
@@ -386,6 +387,7 @@ export default function BookingSidebar({
           <div aria-hidden="true" className="h-px bg-[var(--color-stone-100)] mb-6" />
           <BookingSummary
             result={result}
+            activeStayDiscount={activeStayDiscount}
             prepayment={prepayment}
             prepaymentRate={prepaymentRate}
             convertedDeposit={convertedDeposit}

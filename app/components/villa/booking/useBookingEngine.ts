@@ -71,10 +71,12 @@ import { getPublicSettingsAction as getPublicSettings } from "@/app/services/set
 
 import {
   calculateGrandTotal,
+  calculateStayTotal,
   calculateNights,
   calculatePrepayment,
   accommodationBase,
   isPoolHeatingActiveForRange,
+  getActiveDiscount,
   type DiscountRange,
 } from "@/lib/price.engine";
 
@@ -146,6 +148,30 @@ export type UseBookingEngineInput = {
    Engine'in kendi return tipini referans alıyoruz → drift yok. */
 export type BookingResult = ReturnType<typeof calculateGrandTotal>;
 
+/* ===============================================================
+   🛡️ VILLA_DISCOUNTS — GÖRSEL GÖSTERİM İÇİN (Adım 3, UI-only)
+   ===============================================================
+   SADECE display amaçlı; `result.stay`/`result.total` (gerçek
+   rezervasyon/ödeme tutarı) BU DEĞERDEN ETKİLENMEZ, tersi de geçerli
+   değil — `activeStayDiscount` yalnız "normal fiyat" karşılaştırması
+   için AYRICA hesaplanır, mevcut `result` hesaplamasına hiçbir
+   şekilde karışmaz.
+
+   `originalStay`/`discountedStay` — İKİSİ DE price.engine'in ZATEN
+   var olan `calculateStayTotal`/`getActiveDiscount` export'ları ile
+   üretilir (YENİ bir indirim formülü YAZILMADI): `discountedStay`
+   mevcut `result.stay` ile AYNI kaynak/parametrelerden gelir;
+   `originalStay` AYNI fonksiyonun `discounts: null` ile ikinci
+   (salt-okunur, side-effect'siz) çağrısıdır — "indirim yokmuş gibi"
+   normal fiyatı verir. `discount` — seçili aralıkta aktif olan ham
+   villa_discounts kaydı (tarih aralığı + tür + değer), yalnız bilgi
+   amaçlı gösterim için. */
+export type ActiveStayDiscount = {
+  originalStay: number;
+  discountedStay: number;
+  discount: DiscountRange;
+};
+
 export type UseBookingEngineReturn = {
   /* Selection state — React.Dispatch sığasıyla aynı (functional update
      desteği dahil). Narrowing yok → BookingSidebar'ın setStartDate
@@ -185,6 +211,10 @@ export type UseBookingEngineReturn = {
      kullanarak min-stay uyarısını bastırır + bilgi metni gösterir. */
   isGapOverride: boolean;
   result: BookingResult | null;
+  /* 🛡️ VILLA_DISCOUNTS — UI-only karşılaştırma (bkz. type doc-comment).
+     null → seçili aralıkta aktif indirim yok (mevcut davranış, badge
+     render edilmez). */
+  activeStayDiscount: ActiveStayDiscount | null;
   prepayment: number;
   convertedDeposit: number;
   startingPrice: string;
@@ -725,6 +755,61 @@ export function useBookingEngine(
         })
       : null;
 
+  /* ===============================================================
+     🛡️ VILLA_DISCOUNTS — GÖRSEL GÖSTERİM (Adım 3, UI-only)
+     ===============================================================
+     `result` (yukarıda) DEĞİŞTİRİLMEDİ — rezervasyon/ödeme tutarı
+     AYNEN o hesaptan gelir. Burada YALNIZ "normal fiyat neydi"
+     karşılaştırması için AYRI, salt-okunur bir ikinci çağrı yapılır:
+     AYNI `calculateStayTotal` (price.engine'in zaten export ettiği
+     pure fonksiyon), AYNI start/end/prices/currency/rates — TEK fark
+     `discounts: null` (indirim yokmuş gibi normal toplam). Yeni bir
+     indirim FORMÜLÜ YAZILMADI; iki mevcut price.engine çıktısı
+     birbirinden ÇIKARILARAK (display amaçlı) karşılaştırılıyor. */
+  const undiscountedStay =
+    startDate && endDate && minimumStayValid && orphanGapValid
+      ? calculateStayTotal(
+          formatDate(startDate),
+          formatDate(endDate),
+          normalizedPrices,
+          currency,
+          rates,
+          null
+        )
+      : null;
+
+  /* Seçili aralıkta aktif olan (ilk denk gelen) villa_discounts kaydı —
+     yalnız BİLGİ/badge metni için (tarih aralığı + tür + değer).
+     `getActiveDiscount` price.engine'in zaten export ettiği pure
+     lookup — YENİ bir eşleştirme mantığı YAZILMADI. */
+  const representativeDiscount =
+    startDate && endDate
+      ? (() => {
+          const cursor = new Date(startDate);
+          while (cursor < endDate) {
+            const active = getActiveDiscount(cursor, discounts);
+            if (active) return active;
+            cursor.setDate(cursor.getDate() + 1);
+          }
+          return null;
+        })()
+      : null;
+
+  /* Yalnız gerçekten bir fark varsa (indirim seçili gecelerin en az
+     birinde uygulandıysa) UI'a expose edilir — 0.01 epsilon, currency
+     rounding farkını "sahte indirim" olarak göstermemek için. */
+  const activeStayDiscount: ActiveStayDiscount | null =
+    result &&
+    undiscountedStay &&
+    representativeDiscount &&
+    undiscountedStay.stay - result.stay > 0.01
+      ? {
+          originalStay: undiscountedStay.stay,
+          discountedStay: result.stay,
+          discount: representativeDiscount,
+        }
+      : null;
+
   /* 🛡️ Migration 076 — sezonluk ay kısıtı. Checkbox GÖRÜNÜRLÜĞÜ için
      AYRI bir boolean — calculateGrandTotal'ın kendisi yalnız TUTARI
      sıfırlar (rawPoolHeating), checkbox'ın kendisini GİZLEMEZ. Tarih
@@ -855,6 +940,7 @@ export function useBookingEngine(
     orphanGapValid,
     isGapOverride: isExactGapFill,
     result,
+    activeStayDiscount,
     prepayment,
     convertedDeposit,
     startingPrice,

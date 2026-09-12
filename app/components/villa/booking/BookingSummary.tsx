@@ -62,15 +62,20 @@
        ve responsive davranış etkilenmedi (dış container aynı).
    =============================================================== */
 
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Tag } from "lucide-react";
 
 import { formatCurrency } from "@/lib/currency";
 import { useCurrency } from "@/app/context/CurrencyContext";
+import { formatDateTr } from "@/lib/date-format";
 
-import type { BookingResult } from "./useBookingEngine";
+import type { BookingResult, ActiveStayDiscount } from "./useBookingEngine";
 
 type Props = {
   result: BookingResult;
+  /* 🛡️ villa_discounts — GÖRSEL GÖSTERİM (UI-only, bkz. useBookingEngine.ts
+     doc-comment). null/undefined → seçili aralıkta aktif indirim yok,
+     satır AYNEN eskisi gibi (BYTE-IDENTICAL) render edilir. */
+  activeStayDiscount?: ActiveStayDiscount | null;
   prepayment: number;
   prepaymentRate: number;
   convertedDeposit: number;
@@ -95,6 +100,7 @@ type Props = {
 
 export default function BookingSummary({
   result,
+  activeStayDiscount = null,
   prepayment,
   prepaymentRate,
   convertedDeposit,
@@ -117,11 +123,56 @@ export default function BookingSummary({
         className="absolute inset-x-4 top-0 h-[2.5px] rounded-full bg-gradient-to-r from-[#ED7926] via-[#ED7926]/50 to-[#0973BA]"
       />
 
-      {/* Konaklama Tutarı — gece sayısı dinamik (Gece satırı kaldırıldı) */}
-      <Row
-        label={`Konaklama Tutarı (${result.nights} Gece)`}
-        value={formatCurrency(result.stay, currency)}
-      />
+      {/* Konaklama Tutarı — gece sayısı dinamik (Gece satırı kaldırıldı).
+          🛡️ villa_discounts — GÖRSEL GÖSTERİM (UI-only). activeStayDiscount
+          null ise (indirim yok / veri geçilmedi) satır AYNEN eskisi
+          (BYTE-IDENTICAL) — `result.stay` DEĞİŞMEDİ, yalnız render dalı
+          değişti. Değerler (originalStay/discountedStay) YENİDEN
+          hesaplanmıyor — activeStayDiscount zaten price.engine çıktısı
+          (bkz. useBookingEngine.ts). */}
+      {activeStayDiscount ? (
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-[var(--color-stone-600)]">
+            {`Konaklama Tutarı (${result.nights} Gece)`}
+          </span>
+          <div className="text-right">
+            <div className="flex items-center justify-end gap-2">
+              <span className="text-[11px] text-[var(--color-stone-400)] line-through tabular-nums">
+                {formatCurrency(activeStayDiscount.originalStay, currency)}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#ED7926]/10 px-2 py-0.5 text-[10px] font-semibold text-[#ED7926] tracking-wide whitespace-nowrap">
+                <Tag size={9} strokeWidth={2.2} aria-hidden />
+                {activeStayDiscount.discount.discount_type === "percent"
+                  ? `%${activeStayDiscount.discount.discount_value} İNDİRİM`
+                  : "İNDİRİM"}
+              </span>
+            </div>
+            <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
+              {formatCurrency(activeStayDiscount.discountedStay, currency)}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <Row
+          label={`Konaklama Tutarı (${result.nights} Gece)`}
+          value={formatCurrency(result.stay, currency)}
+        />
+      )}
+
+      {/* İndirim tarih kapsamı — kullanıcı indirimin GERÇEKTEN hangi
+          tarih aralığında geçerli olduğunu görsün (yalnız bilgi metni;
+          hesaplamaya dahil DEĞİL). */}
+      {activeStayDiscount && (
+        <p className="-mt-1.5 text-[11px] text-[#0973BA]">
+          {formatDateTr(activeStayDiscount.discount.start_date)} –{" "}
+          {formatDateTr(activeStayDiscount.discount.end_date)} arası geçerli
+          indirim · {formatCurrency(
+            activeStayDiscount.originalStay - activeStayDiscount.discountedStay,
+            currency
+          )}{" "}
+          tasarruf
+        </p>
+      )}
       {result.cleaning > 0 && (
         <Row
           label="Kısa Süreli Konaklama Ücreti"
