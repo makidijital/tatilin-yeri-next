@@ -18,11 +18,14 @@
        - Yeni, tamamen bağımsız `villa_discounts` tablosu.
        - `villa_prices` ile BİREBİR AYNI atomic-replace deseni:
          `replace_villa_discounts(p_villa_id, p_discounts jsonb)`.
-       - `villa_prices` ile BİREBİR AYNI RLS governance modeli
-         (migration 037 canonical pattern: `<tablo>_public_read` +
-         `<tablo>_admin_write`, `public.is_active_admin()` guard'ı
-         — fonksiyon migration 037'de zaten tanımlı, burada SADECE
-         kullanılıyor, yeniden tanımlanmıyor).
+       - NATIVE POSTGRESQL YETKİ MODELİ (migration 068/070/071 CANON):
+         RLS/POLICY/GRANT YOK — hedef Hetzner PostgreSQL'de anon/
+         authenticated/service_role rolleri YOK, bunlara referans
+         vanilla PG'de "role does not exist" hatası üretir (bu,
+         production'da gerçekten yaşanan hataydı — bkz. aşağıdaki
+         "RLS / GRANT" bölümü). Yetki UYGULAMA KATMANINDA: tablo
+         yalnız server-only native repository'den (villa-discount.
+         repository.server.ts) okunur/yazılır.
 
    TARİH MANTIĞI — `villa_prices` İLE BİREBİR AYNI (yeni bir kural
    İCAT EDİLMEDİ):
@@ -83,16 +86,34 @@
        rolüyle çalışır; native runtime'da tek app rolü zaten RLS'i
        bypass ediyor, bkz. `lib/db/native.ts` doc-comment'i).
 
-   RLS / GRANT:
-     `villa_prices` ile BİREBİR AYNI canonical model (migration 037):
-       `villa_discounts_public_read` — SELECT, anon+authenticated, true.
-       `villa_discounts_admin_write` — ALL, authenticated,
-         USING/CHECK `public.is_active_admin()`.
-     Native runtime'da (bkz. `lib/db/native.ts`) uygulama tek bir DB
-     rolüyle bağlanıyor ve RLS bypass ediliyor ("yetki uygulama
-     katmanında") — bu policy'ler öncelikle ŞEMA TUTARLILIĞI ve
-     ileride olası bir Supabase-client erişimi için savunma amaçlı;
-     davranışı DEĞİŞTİRMEZ.
+   RLS / GRANT — YOK (BİLİNÇLİ; native production hatasının düzeltmesi):
+     İlk sürüm `villa_prices`'ın migration 037'deki (Supabase-era) RLS/
+     POLICY desenini birebir kopyalamıştı: `TO anon, authenticated` +
+     `public.is_active_admin()` guard'lı policy'ler. Bu, production'da
+     ("Hetzner native PostgreSQL", migration 068 native-auth cutover
+     sonrası) `ERROR: role "anon" does not exist` ile REDDEDİLDİ;
+     migration transaction'ı (BEGIN...COMMIT) bu yüzden ROLLBACK oldu
+     ve production'da KALICI hiçbir değişiklik OLMADI.
+     Düzeltme: migration 068/070/071'in kanonik native deseni izlendi
+       (bkz. `db/migrations/071_settings_orphan_gap_rule.sql`: "Bu
+       projede anon/authenticated/service_role rolleri YOK; RLS/GRANT/
+       REVOKE YOK") — bu migration'da artık ENABLE ROW LEVEL SECURITY,
+       CREATE POLICY veya GRANT/REVOKE hiçbiri YOK. `is_active_admin()`
+       de referans edilmiyor (RLS policy'si olmadığı için guard'a
+       gerek yok; fonksiyonun kendisi migration 037'de tanımlı kalmaya
+       devam ediyor, bu migration onu DEĞİŞTİRMİYOR/silmiyor).
+     Native runtime tek bir ayrıcalıklı DB rolüyle bağlanıyor (bkz.
+       `lib/db/native.ts`); yetki tamamen UYGULAMA KATMANINDA: tablo
+       yalnız server-only native repository'den (`import "server-only"`
+       guard'lı `lib/db/villa-discount.repository.server.ts`) okunur/
+       yazılır; bu repository'yi ileride çağıracak admin servis/route
+       kendi admin-auth kontrolünü yapacaktır (henüz hiçbir çağıran YOK
+       — Adım 1 kapsamı yalnız veri modeli).
+     GÜVENLİK GEVŞETİLMEDİ: "herkese açık" hiçbir YENİ erişim yolu
+       AÇILMADI — kaldırılan şey, production'da zaten VAR OLMAYAN
+       rollere referans veren ve native runtime'da zaten davranışsal
+       etkisi olmayan (RLS runtime'da baştan beri bypass ediliyordu)
+       ölü/çalışmayan koddu.
 
    IDEMPOTENT: `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT
      EXISTS`, `DROP POLICY IF EXISTS` + recreate, `CREATE OR REPLACE
@@ -100,8 +121,8 @@
 
    ROLLBACK:
      DROP FUNCTION IF EXISTS public.replace_villa_discounts(uuid, jsonb);
-     DROP POLICY IF EXISTS villa_discounts_admin_write ON public.villa_discounts;
-     DROP POLICY IF EXISTS villa_discounts_public_read ON public.villa_discounts;
+     ALTER TABLE IF EXISTS public.villa_discounts
+       DROP CONSTRAINT IF EXISTS villa_discounts_no_overlap;
      DROP TABLE IF EXISTS public.villa_discounts;
    =============================================================== */
 
@@ -200,28 +221,18 @@ ALTER TABLE public.villa_discounts
 
 
 -- ----------------------------------------------------------------------------
--- 3) RLS — villa_prices (migration 037) ile BİREBİR AYNI canonical model.
---    `public.is_active_admin()` migration 037'de zaten tanımlı; burada
---    yeniden tanımlanmıyor, yalnız referans ediliyor.
+-- 3) RLS / GRANT — BİLİNÇLİ OLARAK YOK (production hatasının düzeltmesi).
+--    ÖNCEKİ SÜRÜM burada `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` +
+--    `TO anon, authenticated` / `public.is_active_admin()` guard'lı iki
+--    CREATE POLICY içeriyordu (migration 037 Supabase-era deseni). Hedef
+--    Hetzner PostgreSQL'de (migration 068 native-auth cutover sonrası)
+--    anon/authenticated/service_role rolleri YOK → bu ifadeler
+--    `ERROR: role "anon" does not exist` üretti ve migration transaction'ı
+--    ROLLBACK oldu (production'da kalıcı değişiklik olmadı).
+--    Düzeltme: migration 068/070/071 kanonik native deseni — RLS/POLICY/
+--    GRANT/REVOKE hiçbiri YOK, `is_active_admin()` referans edilmiyor.
+--    Yetki UYGULAMA KATMANINDA (bkz. yukarıdaki "RLS / GRANT" doc bölümü).
 -- ----------------------------------------------------------------------------
-ALTER TABLE public.villa_discounts ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS villa_discounts_public_read ON public.villa_discounts;
-CREATE POLICY villa_discounts_public_read
-  ON public.villa_discounts
-  AS PERMISSIVE
-  FOR SELECT
-  TO anon, authenticated
-  USING (true);
-
-DROP POLICY IF EXISTS villa_discounts_admin_write ON public.villa_discounts;
-CREATE POLICY villa_discounts_admin_write
-  ON public.villa_discounts
-  AS PERMISSIVE
-  FOR ALL
-  TO authenticated
-  USING (public.is_active_admin())
-  WITH CHECK (public.is_active_admin());
 
 
 -- ----------------------------------------------------------------------------
@@ -286,9 +297,12 @@ COMMIT;
        FROM information_schema.columns
       WHERE table_name = 'villa_discounts' ORDER BY ordinal_position;
 
-     -- RLS policy'leri (villa_prices ile aynı 2 canonical policy bekleniyor):
+     -- RLS policy'leri — HİÇBİRİ beklenmiyor (bilinçli olarak yok, bkz. yukarı):
      SELECT policyname, cmd, roles FROM pg_policies
       WHERE tablename = 'villa_discounts';
+     -- Beklenen: 0 satır. `relrowsecurity` de false olmalı:
+     SELECT relrowsecurity FROM pg_class WHERE relname = 'villa_discounts';
+     -- Beklenen: false
 
      -- RPC round-trip (örnek — gerçek bir villa_id ile):
      SELECT public.replace_villa_discounts(
