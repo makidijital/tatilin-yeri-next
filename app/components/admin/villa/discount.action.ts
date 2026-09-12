@@ -54,7 +54,7 @@ function mapDiscountError(
     return "Yüzde indirim değeri 100'ü geçemez.";
   }
   if (msg.includes("villa_discounts_currency_consistency")) {
-    return "Sabit tutar indiriminde para birimi seçilmelidir.";
+    return "Gecelik özel fiyatta para birimi seçilmelidir.";
   }
   if (msg.includes("villa_discounts_value_positive")) {
     return "İndirim değeri 0'dan büyük olmalıdır.";

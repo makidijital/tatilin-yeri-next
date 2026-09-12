@@ -161,6 +161,14 @@ export const getDailyPrice = (
    (getDailyPrice ile AYNI desen) — beklenmedik şekilde birden fazla
    kayıt gelse bile yalnız İLKİ kullanılır, ASLA toplanmaz/üst üste
    uygulanmaz. */
+/* 🛡️ SEMANTİK DÜZELTME (bu tur) — `discount_type: "fixed"` alan adı DB'de
+   ("villa_discounts.discount_type") geriye dönük uyumluluk için AYNEN
+   korundu, ANCAK anlamı: "normal fiyattan düşülecek bir indirim tutarı"
+   DEĞİL, "o gecenin NİHAİ/GECELİK ÖZEL FİYATI"dır. `discount_value` bu
+   tipte doğrudan o gecenin son fiyatıdır — normal villa_prices fiyatının
+   üzerine bir çıkarma işlemi YAPILMAZ, normal fiyatın YERİNE geçer (bkz.
+   applyDiscountToDailyPrice). `discount_type: "percent"` davranışı
+   DEĞİŞMEDİ — normal fiyatın yüzdesi kadar indirim uygulanmaya devam eder. */
 export type DiscountRange = {
   start_date: string;
   end_date: string;
@@ -192,15 +200,27 @@ export const getActiveDiscount = (
   return found ?? null;
 };
 
-/* 🔥 GÜNLÜK FİYATA İNDİRİM UYGULA — AYRI KATMAN (getDailyPrice'a GÖMÜLMEDİ)
+/* 🔥 GÜNLÜK FİYATA İNDİRİM/ÖZEL FİYAT UYGULA — AYRI KATMAN
+   (getDailyPrice'a GÖMÜLMEDİ)
    ===============================================================
    `daily` — getDailyPrice'ın ÇIKTISI (normal/indirimsiz fiyat).
    `discount` — null ise `daily` AYNEN döner (davranış BYTE-IDENTICAL).
 
-   FORMÜL (kullanıcı spesifikasyonu ile birebir):
-     percent → normal × (1 - discount_value / 100)
-     fixed   → normal - discount_value
-     Sonuç DAİMA Math.max(0, ...) ile clamp edilir (negatif İMKANSIZ).
+   🛡️ SEMANTİK DÜZELTME (bu tur — ÖNEMLİ):
+   FORMÜL:
+     percent → normal × (1 - discount_value / 100)   [DEĞİŞMEDİ]
+     fixed   → discount_value (o gecenin NİHAİ ÖZEL FİYATI — normal
+               fiyattan bir miktar DÜŞÜLMEZ, doğrudan bu değere EŞİTLENİR)
+   Önceki davranış `fixed` için "normal - discount_value" idi (bir
+   indirim TUTARI gibi). Bu YANLIŞ yorumdu — admin fiyat giriş sistemiyle
+   (villa_prices: bir tarih aralığına girilen fiyat o aralıktaki HER
+   GÜNÜN nihai fiyatı olur) TUTARLI olması için `fixed` artık AYNI
+   mantıkla çalışıyor: girilen değer, o tarih aralığındaki HER GECENİN
+   doğrudan son fiyatı. Normal fiyattan YÜKSEK bir özel fiyat girilmesi
+   de mümkün ve GEÇERLİDİR (bu bir "indirim" değil, "özel fiyat" —
+   sistem bunu engellemez). Sonuç yine DAİMA Math.max(0, ...) ile clamp
+   edilir (savunma amaçlı; CHECK constraint zaten discount_value>0
+   zorunlu kılıyor, negatif pratikte oluşmaz).
 
    CURRENCY:
      - percent: currency bağımsız - doğrudan orana uygulanır
@@ -208,13 +228,14 @@ export const getActiveDiscount = (
        currency'siyle (`daily.original_currency`) FARKLIYSA, mevcut
        `convertPrice` (TRY pivot — cleaning/pool heating'in "raw
        hesapla, convertPrice ile çevir" deseniyle AYNI yaklaşım) ile
-       önce `daily.original_currency`'e çevrilir, SONRA çıkarılır.
+       önce `daily.original_currency`'e çevrilir — bu çevrilmiş değer
+       DOĞRUDAN o gecenin özel fiyatı olur (ÇIKARMA YOK).
        `discount.currency` eksikse (NULL) — migration 079'daki
        `villa_discounts_currency_consistency` CHECK'i zaten 'fixed'
        tipte NULL currency'e izin vermiyor, ama savunma amaçlı burada
        da `daily.original_currency` varsayılır (conversion atlanır).
 
-   `converted` alanı, indirimli `original` üzerinden getDailyPrice'ın
+   `converted` alanı, nihai `original` üzerinden getDailyPrice'ın
    KENDİ deseniyle (convertPrice(original, original_currency, currency,
    rates)) SIFIRDAN hesaplanır — zaten çevrilmiş `daily.converted`
    üzerinde ORANSAL bir işlem YAPILMAZ (yuvarlama tutarsızlığı riski
@@ -240,6 +261,9 @@ export const applyDiscountToDailyPrice = (
   if (discount.discount_type === "percent") {
     discountedOriginal = daily.original * (1 - value / 100);
   } else {
+    // 🛡️ "fixed" = GECELİK ÖZEL FİYAT — normal fiyattan ÇIKARILMAZ,
+    // o gecenin nihai fiyatı DOĞRUDAN bu değere eşitlenir (villa_prices'ın
+    // "girilen fiyat o aralıktaki her günün fiyatıdır" mantığıyla AYNI).
     const discountCurrency = discount.currency || daily.original_currency;
 
     const valueInOriginalCurrency =
@@ -252,7 +276,7 @@ export const applyDiscountToDailyPrice = (
             rates
           );
 
-    discountedOriginal = daily.original - valueInOriginalCurrency;
+    discountedOriginal = valueInOriginalCurrency;
   }
 
   discountedOriginal = Math.max(0, discountedOriginal);

@@ -689,20 +689,31 @@ describe("applyDiscountToDailyPrice", () => {
     expect(res.original).toBe(9600);
   });
 
-  it("fixed 1.000 → 10.000 → 9.000 (aynı currency)", () => {
+  it("🛡️ SEMANTİK DÜZELTME: fixed = gecelik ÖZEL FİYAT — normal 10.000 olsa da sonuç DOĞRUDAN 1.000 olur (10.000-1.000 DEĞİL)", () => {
     const res = applyDiscountToDailyPrice(
       daily(10000, "TRY"),
       { start_date: "2026-06-10", end_date: "2026-06-20", discount_type: "fixed", discount_value: 1000, currency: "TRY" },
       "TRY",
       {}
     );
-    expect(res.original).toBe(9000);
+    expect(res.original).toBe(1000);
+    expect(res.original).not.toBe(9000); // eski (yanlış) "çıkarma" davranışı DEĞİL
   });
 
-  it("indirim sonrası negatif olacaksa 0'da clamp edilir (Math.max(0, ...))", () => {
+  it("özel fiyat normal fiyattan YÜKSEK de olabilir — sistem bunu engellemez (kullanıcı örneği: 4.000 normal, 5.000 özel fiyat → 5.000)", () => {
     const res = applyDiscountToDailyPrice(
-      daily(500, "TRY"),
-      { start_date: "2026-06-10", end_date: "2026-06-20", discount_type: "fixed", discount_value: 1000, currency: "TRY" },
+      daily(4000, "TRY"),
+      { start_date: "2026-06-10", end_date: "2026-06-20", discount_type: "fixed", discount_value: 5000, currency: "TRY" },
+      "TRY",
+      {}
+    );
+    expect(res.original).toBe(5000);
+  });
+
+  it("(savunma amaçlı) teorik olarak negatif bir değer gelse bile 0'da clamp edilir (Math.max(0, ...))", () => {
+    const res = applyDiscountToDailyPrice(
+      daily(10000, "TRY"),
+      { start_date: "2026-06-10", end_date: "2026-06-20", discount_type: "fixed", discount_value: -50, currency: "TRY" },
       "TRY",
       {}
     );
@@ -720,16 +731,17 @@ describe("applyDiscountToDailyPrice", () => {
     expect(res.original).toBe(9000);
   });
 
-  it("fixed discount farklı currency'de ise convertPrice ile villa'nın orijinal currency'sine çevrilir", () => {
-    // Villa gecelik fiyatı TRY, discount 10 USD sabit. rates: 1 USD = 30 TRY
-    // → 10 USD = 300 TRY düşülür → 10000 - 300 = 9700 TRY.
+  it("fixed özel fiyat farklı currency'de girilmişse convertPrice ile villa'nın orijinal currency'sine çevrilir", () => {
+    // Villa gecelik fiyatı TRY, özel fiyat 10 USD olarak girilmiş. rates: 1 USD = 30 TRY
+    // → gecelik nihai fiyat 10 USD × 30 = 300 TRY olur (villa'nın normal fiyatından
+    // BAĞIMSIZ, doğrudan bu değer kullanılır — 10.000'den ÇIKARILMAZ).
     const res = applyDiscountToDailyPrice(
       daily(10000, "TRY"),
       { start_date: "2026-06-10", end_date: "2026-06-20", discount_type: "fixed", discount_value: 10, currency: "USD" },
       "TRY",
       { USD: 30 }
     );
-    expect(res.original).toBe(9700);
+    expect(res.original).toBe(300);
   });
 
   it("0 (veya negatif) normal fiyat üzerinde indirim uygulanmaz — daily aynen döner", () => {
@@ -789,7 +801,7 @@ describe("calculateStayTotal — villa_discounts entegrasyonu (Adım 2)", () => 
     expect(res.original_stay).toBe(20000); // 2 gece × 10.000, indirim hiç etkilemedi
   });
 
-  it("4) fixed 1.000 discount, 2 gece × 10.000 → her gece 9.000, toplam 18.000", () => {
+  it("4) fixed = gecelik özel fiyat 1.000, 2 gece × normal 10.000 → HER GECE 1.000, toplam 2.000 (18.000 DEĞİL)", () => {
     const prices: PriceRange[] = [
       { start_date: "2026-06-01", end_date: "2026-06-30", price: 10000, currency: "TRY" },
     ];
@@ -797,18 +809,19 @@ describe("calculateStayTotal — villa_discounts entegrasyonu (Adım 2)", () => 
       { start_date: "2026-06-10", end_date: "2026-06-11", discount_type: "fixed", discount_value: 1000, currency: "TRY" },
     ];
     const res = calculateStayTotal("2026-06-10", "2026-06-12", prices, "TRY", rates, discounts);
-    expect(res.original_stay).toBe(18000);
+    expect(res.original_stay).toBe(2000);
   });
 
-  it("7) indirim sonrası negatif olacaksa gece başına 0'da clamp edilir (toplam negatif OLMAZ)", () => {
+  it("7) gecelik özel fiyat normal fiyattan YÜKSEK olabilir (calculateStayTotal seviyesinde) — sistem engellemez", () => {
     const prices: PriceRange[] = [
       { start_date: "2026-06-01", end_date: "2026-06-30", price: 500, currency: "TRY" },
     ];
     const discounts: DiscountRange[] = [
       { start_date: "2026-06-10", end_date: "2026-06-11", discount_type: "fixed", discount_value: 1000, currency: "TRY" },
     ];
+    // Normal gecelik 500 olsa da özel fiyat 1.000 → HER GECE 1.000 (2 gece × 1.000 = 2.000).
     const res = calculateStayTotal("2026-06-10", "2026-06-12", prices, "TRY", rates, discounts);
-    expect(res.original_stay).toBe(0);
+    expect(res.original_stay).toBe(2000);
   });
 
   it("10) villa_prices ile aynı kapalı interval — discount end_date'in TAM SON GECESİNDE de uygulanır, sonraki gece uygulanmaz", () => {
@@ -927,21 +940,25 @@ describe("calculateGrandTotal — villa_discounts (Adım 2) cleaning/pool heatin
 });
 
 /* ===============================================================
-   🛡️ İNDİRİM MANTIĞI RE-AUDIT — kullanıcı doğrulama senaryoları
+   🛡️ İNDİRİM/ÖZEL FİYAT MANTIĞI — kullanıcı doğrulama senaryoları
    ===============================================================
    Admin'de "villa fiyat girişi" ile AYNI mantık: bir villa_discounts
    kaydı, kapsadığı TARİH ARALIĞINDAKİ HER GECEYE AYRI AYRI uygulanır
-   ("gecelik indirim" — kayıt boyunca TEK SEFERLİK bir toplam tutar
-   DEĞİL). Bu blok, kullanıcının verdiği 6 senaryoyu BİREBİR bu isim/
-   sayılarla doğrular — calculateStayTotal/calculateGrandTotal'daki
-   asıl mekanizma (getActiveDiscount + applyDiscountToDailyPrice,
-   HER GECE için while-loop içinde ayrı ayrı çağrılıyor, bkz. yukarıdaki
-   "ADIM 2" blokları) DEĞİŞMEDİ — bu testler YENİ bir hesaplama sistemi
-   DEĞİL, mevcut davranışı kullanıcının kendi örnekleriyle belgeliyor. */
-describe("İndirim mantığı re-audit — kullanıcı senaryoları (gece başına uygulama)", () => {
+   (kayıt boyunca TEK SEFERLİK bir toplam tutar DEĞİL). İKİ AYRI DAVRANIŞ:
+     - percent → normal gecelik fiyatın YÜZDESİ kadar indirim (DEĞİŞMEDİ).
+     - fixed   → o gecenin NİHAİ ÖZEL FİYATI (normal fiyattan bir miktar
+       DÜŞÜLMEZ, doğrudan bu değere EŞİTLENİR — villa_prices'ın "girilen
+       fiyat o aralıktaki her günün fiyatıdır" mantığıyla AYNI; bkz.
+       applyDiscountToDailyPrice'taki SEMANTİK DÜZELTME). Bu blok
+       kullanıcının verdiği senaryoları BİREBİR bu isim/sayılarla
+       doğrular — mekanizmanın kendisi (getActiveDiscount +
+       applyDiscountToDailyPrice, HER GECE için while-loop içinde ayrı
+       ayrı çağrılıyor) YENİ bir hesaplama sistemi DEĞİL, mevcut
+       price.engine akışının aynısı. */
+describe("İndirim/özel fiyat mantığı — kullanıcı senaryoları (gece başına uygulama)", () => {
   const rates = { USD: 30, EUR: 33, GBP: 38 };
 
-  it("Senaryo 1: 10.000 TL × 4 gece + %20 → 8.000 × 4 = 32.000 TL", () => {
+  it("Senaryo 1: 10.000 TL × 4 gece + %20 indirim → 8.000 × 4 = 32.000 TL", () => {
     const prices: PriceRange[] = [
       { start_date: "2026-10-01", end_date: "2026-10-31", price: 10000, currency: "TRY" },
     ];
@@ -953,7 +970,7 @@ describe("İndirim mantığı re-audit — kullanıcı senaryoları (gece başı
     expect(res.original_stay).toBe(32000);
   });
 
-  it("Senaryo 2: farklı gecelik fiyatlar (10.000/12.000/15.000/10.000) + %20 → 8.000+9.600+12.000+8.000 = 37.600 TL", () => {
+  it("Senaryo 2: farklı gecelik fiyatlar (10.000/12.000/15.000/10.000) + %20 indirim → 8.000+9.600+12.000+8.000 = 37.600 TL", () => {
     const prices: PriceRange[] = [
       { start_date: "2026-10-03", end_date: "2026-10-03", price: 10000, currency: "TRY" },
       { start_date: "2026-10-04", end_date: "2026-10-04", price: 12000, currency: "TRY" },
@@ -969,26 +986,46 @@ describe("İndirim mantığı re-audit — kullanıcı senaryoları (gece başı
     expect(res.original_stay).toBe(37600);
   });
 
-  it("Senaryo 3: 10.000 TL/gece + 5.000 TL/gece sabit indirim → 5.000 TL/gece (toplam üzerinden DEĞİL, her gece ayrı)", () => {
+  it("Senaryo 3: normal 10.000 TL/gece, gecelik ÖZEL FİYAT 5.000 → HER GECE 5.000 (4 gece × 5.000 = 20.000)", () => {
     const prices: PriceRange[] = [
       { start_date: "2026-10-01", end_date: "2026-10-31", price: 10000, currency: "TRY" },
     ];
     const discounts: DiscountRange[] = [
       { start_date: "2026-10-01", end_date: "2026-10-10", discount_type: "fixed", discount_value: 5000, currency: "TRY" },
     ];
-    // Tek gece (1 Ekim) → 10.000 - 5.000 = 5.000.
-    const singleNight = calculateStayTotal("2026-10-01", "2026-10-02", prices, "TRY", rates, discounts);
-    expect(singleNight.original_stay).toBe(5000);
-
-    // 10 gece (1-10 Ekim, check-out 11) → HER GECE ayrı ayrı 5.000 düşülür,
-    // TOPLAM 10×5.000=50.000 İNDİRİM olur (10.000 TOPLAM ÜZERİNDEN tek seferlik
-    // 5.000 İNDİRİM DEĞİL — kullanıcının vurguladığı ayrım tam olarak bu).
-    const tenNights = calculateStayTotal("2026-10-01", "2026-10-11", prices, "TRY", rates, discounts);
-    expect(tenNights.original_stay).toBe(10 * 5000); // 50.000
-    expect(tenNights.original_stay).not.toBe(10 * 10000 - 5000); // 95.000 OLMAMALI (yanlış "toplamdan tek seferlik" yorum)
+    // check-in 1 Ekim, check-out 5 Ekim → 4 gece, hepsi özel fiyat aralığında.
+    const res = calculateStayTotal("2026-10-01", "2026-10-05", prices, "TRY", rates, discounts);
+    expect(res.original_stay).toBe(4 * 5000);
+    expect(res.original_stay).toBe(20000);
   });
 
-  it("Senaryo 4: indirim 01-10 Ekim, konaklama 08-12 Ekim → yalnız 08,09,10 indirimli; 11 normal (12 checkout, gece değil)", () => {
+  it("Senaryo 3b: farklı normal gecelik fiyatlar (10.000/12.000/15.000/10.000) + gecelik özel fiyat 5.000 → HEPSİ 5.000 (toplam 20.000)", () => {
+    const prices: PriceRange[] = [
+      { start_date: "2026-10-03", end_date: "2026-10-03", price: 10000, currency: "TRY" },
+      { start_date: "2026-10-04", end_date: "2026-10-04", price: 12000, currency: "TRY" },
+      { start_date: "2026-10-05", end_date: "2026-10-05", price: 15000, currency: "TRY" },
+      { start_date: "2026-10-06", end_date: "2026-10-06", price: 10000, currency: "TRY" },
+    ];
+    const discounts: DiscountRange[] = [
+      { start_date: "2026-10-01", end_date: "2026-10-10", discount_type: "fixed", discount_value: 5000, currency: "TRY" },
+    ];
+    const res = calculateStayTotal("2026-10-03", "2026-10-07", prices, "TRY", rates, discounts);
+    expect(res.original_stay).toBe(4 * 5000);
+    expect(res.original_stay).toBe(20000);
+  });
+
+  it("Senaryo 3c: özel fiyat normal fiyattan YÜKSEK olabilir (kullanıcı örneği: normal 4.000, özel fiyat 5.000 → 5.000)", () => {
+    const prices: PriceRange[] = [
+      { start_date: "2026-10-01", end_date: "2026-10-31", price: 4000, currency: "TRY" },
+    ];
+    const discounts: DiscountRange[] = [
+      { start_date: "2026-10-01", end_date: "2026-10-10", discount_type: "fixed", discount_value: 5000, currency: "TRY" },
+    ];
+    const res = calculateStayTotal("2026-10-01", "2026-10-02", prices, "TRY", rates, discounts);
+    expect(res.original_stay).toBe(5000); // sistem bunu ENGELLEMEZ — bu bir "indirim" değil, özel fiyat
+  });
+
+  it("Senaryo 4 (%): indirim 01-10 Ekim, konaklama 08-12 Ekim → yalnız 08,09,10 indirimli; 11 normal (12 checkout, gece değil)", () => {
     const prices: PriceRange[] = [
       { start_date: "2026-10-01", end_date: "2026-10-31", price: 10000, currency: "TRY" },
     ];
@@ -1002,12 +1039,23 @@ describe("İndirim mantığı re-audit — kullanıcı senaryoları (gece başı
     expect(res.original_stay).toBe(34000);
   });
 
-  it("Senaryo 5: indirim 01-10 Ekim, konaklama 11-15 Ekim → hiç indirim yok, tüm geceler normal fiyat", () => {
+  it("Senaryo 5 (özel fiyat): 01-10 Ekim özel fiyat 5.000, konaklama 03-07 Ekim → geceler 3,4,5,6 özel fiyatlı (4×5.000=20.000)", () => {
     const prices: PriceRange[] = [
       { start_date: "2026-10-01", end_date: "2026-10-31", price: 10000, currency: "TRY" },
     ];
     const discounts: DiscountRange[] = [
-      { start_date: "2026-10-01", end_date: "2026-10-10", discount_type: "percent", discount_value: 20 },
+      { start_date: "2026-10-01", end_date: "2026-10-10", discount_type: "fixed", discount_value: 5000, currency: "TRY" },
+    ];
+    const res = calculateStayTotal("2026-10-03", "2026-10-07", prices, "TRY", rates, discounts);
+    expect(res.original_stay).toBe(4 * 5000);
+  });
+
+  it("Senaryo 6 (özel fiyat): 01-10 Ekim özel fiyat 5.000, konaklama 11-15 Ekim → hiç özel fiyat uygulanmaz, tüm geceler normal", () => {
+    const prices: PriceRange[] = [
+      { start_date: "2026-10-01", end_date: "2026-10-31", price: 10000, currency: "TRY" },
+    ];
+    const discounts: DiscountRange[] = [
+      { start_date: "2026-10-01", end_date: "2026-10-10", discount_type: "fixed", discount_value: 5000, currency: "TRY" },
     ];
     // check-in 11, check-out 15 → geceler: 11,12,13,14 (4 gece), hepsi aralık dışı.
     const res = calculateStayTotal("2026-10-11", "2026-10-15", prices, "TRY", rates, discounts);
@@ -1015,21 +1063,32 @@ describe("İndirim mantığı re-audit — kullanıcı senaryoları (gece başı
     expect(res.original_stay).toBe(40000);
   });
 
-  it("Senaryo 6: indirim sonucu hiçbir gecenin fiyatı 0'ın altına düşmez (aşırı sabit indirim clamp)", () => {
+  it("Senaryo 6b (%): 01-10 Ekim %20 indirim, konaklama 11-15 Ekim → hiç indirim yok, tüm geceler normal fiyat", () => {
+    const prices: PriceRange[] = [
+      { start_date: "2026-10-01", end_date: "2026-10-31", price: 10000, currency: "TRY" },
+    ];
+    const discounts: DiscountRange[] = [
+      { start_date: "2026-10-01", end_date: "2026-10-10", discount_type: "percent", discount_value: 20 },
+    ];
+    const res = calculateStayTotal("2026-10-11", "2026-10-15", prices, "TRY", rates, discounts);
+    expect(res.original_stay).toBe(4 * 10000);
+    expect(res.original_stay).toBe(40000);
+  });
+
+  it("(savunma amaçlı) özel fiyat hiçbir zaman 0'ın altına düşmez — teorik negatif değer 0'da clamp edilir", () => {
     const prices: PriceRange[] = [
       { start_date: "2026-10-01", end_date: "2026-10-31", price: 3000, currency: "TRY" },
     ];
     const discounts: DiscountRange[] = [
-      { start_date: "2026-10-01", end_date: "2026-10-10", discount_type: "fixed", discount_value: 5000, currency: "TRY" },
+      { start_date: "2026-10-01", end_date: "2026-10-10", discount_type: "fixed", discount_value: -50, currency: "TRY" },
     ];
-    // 3 gece, gecelik normal 3.000 - 5.000 sabit indirim → negatif olurdu, 0'da clamp.
     const res = calculateStayTotal("2026-10-01", "2026-10-04", prices, "TRY", rates, discounts);
     expect(res.original_stay).toBe(0);
     expect(res.stay).toBe(0);
     expect(res.original_stay).toBeGreaterThanOrEqual(0);
   });
 
-  it("Senaryo 2 (kullanıcı örneği) — calculateGrandTotal üzerinden UÇTAN UCA doğrulama (cleaning/pool heating izole kalır)", () => {
+  it("Senaryo 2 (kullanıcı örneği) — calculateGrandTotal üzerinden UÇTAN UCA doğrulama (%20, cleaning/pool heating izole kalır)", () => {
     const prices: PriceRange[] = [
       { start_date: "2026-10-03", end_date: "2026-10-03", price: 10000, currency: "TRY" },
       { start_date: "2026-10-04", end_date: "2026-10-04", price: 12000, currency: "TRY" },
@@ -1049,5 +1108,49 @@ describe("İndirim mantığı re-audit — kullanıcı senaryoları (gece başı
     });
     expect(res.stay).toBe(37600);
     expect(res.total).toBe(37600); // cleaning/pool heating verilmedi → total===stay
+  });
+
+  it("Senaryo 3 (kullanıcı örneği) — calculateGrandTotal üzerinden UÇTAN UCA doğrulama (gecelik özel fiyat, cleaning/pool heating izole kalır)", () => {
+    const prices: PriceRange[] = [
+      { start_date: "2026-10-01", end_date: "2026-10-31", price: 10000, currency: "TRY" },
+    ];
+    const discounts: DiscountRange[] = [
+      { start_date: "2026-10-01", end_date: "2026-10-10", discount_type: "fixed", discount_value: 5000, currency: "TRY" },
+    ];
+    const res = calculateGrandTotal({
+      start: "2026-10-03",
+      end: "2026-10-07",
+      prices,
+      currency: "TRY",
+      rates,
+      cleaning_fee: 500,
+      cleaning_currency: "TRY",
+      cleaning_limit: 7,
+      discounts,
+    });
+    expect(res.stay).toBe(4 * 5000); // 20.000 — normal fiyattan bağımsız
+    expect(res.cleaning).toBe(500); // özel fiyat katmanından TAMAMEN izole
+    expect(res.total).toBe(20500);
+  });
+
+  it("Public taraf senaryosu (kullanıcı örneği): normal toplam 22.000 iken 01-10 Ekim özel fiyat 5.000, konaklama 03-07 (4 gece) → özel fiyat toplamı 20.000", () => {
+    const prices: PriceRange[] = [
+      { start_date: "2026-10-03", end_date: "2026-10-03", price: 6000, currency: "TRY" },
+      { start_date: "2026-10-04", end_date: "2026-10-04", price: 5000, currency: "TRY" },
+      { start_date: "2026-10-05", end_date: "2026-10-05", price: 6000, currency: "TRY" },
+      { start_date: "2026-10-06", end_date: "2026-10-06", price: 5000, currency: "TRY" },
+    ];
+    // normal toplam: 6000+5000+6000+5000 = 22.000
+    const withoutDiscount = calculateStayTotal("2026-10-03", "2026-10-07", prices, "TRY", rates, null);
+    expect(withoutDiscount.original_stay).toBe(22000);
+
+    const discounts: DiscountRange[] = [
+      { start_date: "2026-10-01", end_date: "2026-10-10", discount_type: "fixed", discount_value: 5000, currency: "TRY" },
+    ];
+    const withDiscount = calculateStayTotal("2026-10-03", "2026-10-07", prices, "TRY", rates, discounts);
+    // özel fiyat ikinci kez indirim gibi UYGULANMADI — price.engine'in TEK
+    // katmanı (applyDiscountToDailyPrice) doğrudan 4 gece × 5.000 = 20.000 üretti.
+    expect(withDiscount.original_stay).toBe(4 * 5000);
+    expect(withDiscount.original_stay).toBe(20000);
   });
 });

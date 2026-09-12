@@ -144,7 +144,7 @@ export default function BookingSummary({
                 <Tag size={9} strokeWidth={2.2} aria-hidden />
                 {activeStayDiscount.discount.discount_type === "percent"
                   ? `%${activeStayDiscount.discount.discount_value} İNDİRİM`
-                  : "İNDİRİM"}
+                  : "ÖZEL FİYAT"}
               </span>
             </div>
             <span className="text-[var(--color-stone-900)] font-medium tabular-nums">

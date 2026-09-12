@@ -68,10 +68,12 @@ function formatDiscountValue(row: VillaDiscountRow): string {
   if (row.discount_type === "percent") {
     return `%${value}`;
   }
-  /* 🛡️ Gecelik netlik — bu tutar HER GECEYE ayrı ayrı uygulanır (toplam
-     konaklama tutarından tek seferlik düşülmez). "/gece" eki olmadan
-     admin bunu "aralığın tamamı için tek seferlik indirim" sanabiliyordu.
-     Yalnız gösterim metni — hesaplama/DB/parametre DEĞİŞMEDİ. */
+  /* 🛡️ SEMANTİK DÜZELTME — bu değer bir "indirim tutarı" DEĞİL, o tarih
+     aralığındaki HER GECENİN doğrudan NİHAİ ÖZEL FİYATIdır (normal
+     fiyattan düşülmez, onun YERİNE geçer). "/gece" eki HER GECEYE ayrı
+     ayrı uygulandığını netleştirir — admin bunu "aralığın tamamı için
+     tek seferlik bir tutar" sanmasın. Yalnız gösterim metni —
+     hesaplama/DB/parametre DEĞİŞMEDİ. */
   return `${value} ${row.currency || ""} / gece`.trim();
 }
 
@@ -152,7 +154,11 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
     }
     const value = Number(draft.discount_value);
     if (!Number.isFinite(value) || value <= 0) {
-      setFormError("Geçerli bir indirim değeri gir.");
+      setFormError(
+        draft.discount_type === "percent"
+          ? "Geçerli bir indirim oranı gir."
+          : "Geçerli bir gecelik özel fiyat gir."
+      );
       return;
     }
     if (draft.discount_type === "percent" && value > 100) {
@@ -160,7 +166,7 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
       return;
     }
     if (draft.discount_type === "fixed" && !draft.currency) {
-      setFormError("Sabit tutar indiriminde para birimi seçmelisin.");
+      setFormError("Gecelik özel fiyat için para birimi seçmelisin.");
       return;
     }
 
@@ -225,7 +231,7 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
     <Section
       eyebrow="Bağımsız Katman"
       title="İndirimler"
-      subtitle="Belirli tarih aralıkları için gecelik fiyatın üzerine indirim tanımla. Normal fiyat sistemini etkilemez."
+      subtitle="Belirli tarih aralıkları için gecelik fiyata yüzde indirim uygula veya doğrudan bir gecelik özel fiyat belirle. Normal fiyat sistemini etkilemez."
     >
       {loading ? (
         <div className="py-8 text-center text-[var(--color-stone-500)]">
@@ -259,8 +265,8 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
                     </p>
                     <p className="text-xs text-[var(--color-stone-500)] mt-0.5">
                       {d.discount_type === "percent"
-                        ? "İndirim oranı"
-                        : "Gecelik sabit indirim"}
+                        ? "Yüzde indirim"
+                        : "Gecelik özel fiyat"}
                       {" — "}
                       {formatDiscountValue(d)}
                     </p>
@@ -328,16 +334,16 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
                       })
                     }
                   >
-                    <option value="percent">Yüzde (%)</option>
-                    <option value="fixed">Gecelik Sabit İndirim</option>
+                    <option value="percent">Yüzde İndirim (%)</option>
+                    <option value="fixed">Gecelik Özel Fiyat</option>
                   </select>
                 </div>
 
                 <div className="space-y-2">
                   <Label>
                     {draft.discount_type === "percent"
-                      ? "İndirim Oranı (%)"
-                      : "Gecelik İndirim Tutarı"}
+                      ? "Yüzde İndirim (%)"
+                      : "Gecelik Özel Fiyat"}
                   </Label>
                   {draft.discount_type === "fixed" ? (
                     <div className="grid grid-cols-[1fr_88px] gap-1.5">
@@ -345,7 +351,7 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
                         type="number"
                         min={0}
                         step={1}
-                        placeholder="örn: 1000"
+                        placeholder="örn: 5000"
                         className="input !px-2"
                         value={draft.discount_value}
                         onChange={(e) =>
