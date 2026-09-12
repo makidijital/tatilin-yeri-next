@@ -267,6 +267,23 @@ export interface VillaPriceRow {
   end_date: string | null;
 }
 
+/* 🛡️ Migration 079 — villa_discounts (ADIM 1: veri modeli).
+ *  villa_prices'ın ÜZERİNE hesap anında uygulanacak bağımsız indirim
+ *  katmanı. Tarih semantiği villa_prices ile BİREBİR AYNI (kapalı
+ *  interval, start_date/end_date ikisi de dahil). Bu tip HENÜZ
+ *  hiçbir hesaplama/UI kodu tarafından tüketilmiyor — yalnız veri
+ *  modeli hazır (bkz. lib/db/villa-discount.repository.server.ts). */
+export interface VillaDiscountRow {
+  id: string;
+  villa_id: string;
+  start_date: string;
+  end_date: string;
+  discount_type: "percent" | "fixed";
+  discount_value: number;
+  currency: string | null;
+  created_at: string | null;
+}
+
 /* Reservations — migration 001 EXCLUDE constraint */
 export type ReservationStatus =
   | "pending"
@@ -625,6 +642,19 @@ export type Database = {
           start_date: string;
         };
         Update: Partial<VillaPriceRow>;
+      };
+      /* 🛡️ Migration 079 — villa_discounts (ADIM 1: veri modeli).
+       *  villa_prices'ın yapısal ikizi; bkz. VillaDiscountRow yorumu. */
+      villa_discounts: {
+        Row: VillaDiscountRow;
+        Insert: Partial<VillaDiscountRow> & {
+          villa_id: string;
+          start_date: string;
+          end_date: string;
+          discount_type: "percent" | "fixed";
+          discount_value: number;
+        };
+        Update: Partial<VillaDiscountRow>;
       };
       reservations: {
         Row: ReservationRow;
