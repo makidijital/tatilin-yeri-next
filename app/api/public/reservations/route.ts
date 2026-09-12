@@ -51,12 +51,20 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  /* 🛡️ SERVER-SIDE PRICE VERIFY — COMPARE/LOG MODE (enforce edilmiyor).
-     Client'ın gönderdiği finansal alanları (total_price_try /
-     cleaning_fee_try / prepayment_amount / remaining_payment) sunucuda
-     mevcut price engine ile yeniden hesaplayıp karşılaştırır; drift'i
-     structured log'lar. Fail-open: ASLA booking'i bloklamaz/throw etmez.
-     Enforcement bir SONRAKİ fazda (strict) eklenecek.
+  /* 🛡️ SERVER-SIDE PRICE VERIFY + FAZ 3 SERVER-AUTHORITATIVE OVERRIDE.
+     Client'ın gönderdiği finansal alanları (total_price / total_price_try /
+     original_price / original_currency / exchange_rate / original_cleaning_fee /
+     original_cleaning_currency / cleaning_fee_try / prepayment_amount /
+     remaining_payment) sunucuda MEVCUT price engine + villa_prices +
+     villa_discounts ile yeniden hesaplanır. `comparison` HÂLÂ yalnız
+     COMPARE/LOG (drift'i loglar, ASLA booking'i bloklamaz/throw etmez —
+     davranış DEĞİŞMEDİ). Asıl güvenlik enforcement'ı YENİ `authoritative`
+     alanı ÜZERİNDEN: doluysa (server recompute başarılıysa) `body`'nin
+     ilgili finansal alanları server-authoritative değerlerle OVERRIDE
+     edilir — pool heating'in ZATEN VAR OLAN 4-kolon override desenini
+     BİREBİR TEKRARLAR, yalnız kapsam finansal alanlara genişletildi.
+     Recompute başarısızsa (fail-open) `body` DEĞİŞTİRİLMEZ — mevcut
+     fail-open felsefe (pool heating precedent'i) KORUNUR.
 
      🛡️ HAVUZ ISITMA — 6. adım: EXPLICIT ENFORCEMENT (kullanıcı kuralı —
      bu 4 kolon ASLA client'tan güvenilmez). `verification.poolHeating`
@@ -76,6 +84,42 @@ export async function POST(req: Request): Promise<Response> {
       verification.poolHeating.original_pool_heating_currency;
     body.pool_heating_total_try =
       verification.poolHeating.pool_heating_total_try;
+  }
+
+  /* 🛡️ FAZ 3 — SERVER-AUTHORITATIVE FİNANSAL ALANLAR (indirim-farkında).
+     `verification.authoritative` doluysa (server recompute başarılıysa,
+     villa_prices + villa_discounts + cleaning config'ten SUNUCUNUN
+     KENDİSİ hesapladığı sonuç) `body`'nin finansal alanları bu değerlerle
+     EZİLİR — client'ın gönderdiği `total_price`/`total_price_try`/
+     `original_price`/`original_currency`/`exchange_rate`/
+     `original_cleaning_fee`/`original_cleaning_currency`/`cleaning_fee_try`/
+     `prepayment_amount`/`remaining_payment` ne olursa olsun (sahte düşük
+     veya yüksek), DB'ye SUNUCUNUN hesapladığı değer yazılır. Bu atama
+     `createReservation`'dan (ve dolayısıyla commission hesabından —
+     `create.service.ts` `data.total_price_try`'ı okur, DOKUNULMADI)
+     ÖNCE yapılır; commission böylece OTOMATİK olarak düzeltilmiş
+     `total_price_try` üzerinden hesaplanır.
+     `custom_price`/`custom_price_note` — public akışta client normalde
+     bu alanları hiç göndermez (yalnız admin-edit konsepti); güvenlik
+     için server recompute başarılıysa yine de false/null'a sabitlenir
+     (defense-in-depth; fiyat hesabını ETKİLEMEZ, yalnız admin-only bir
+     flag'in public path'ten sızmasını engeller).
+     Recompute başarısızsa (fail-open, pool heating İLE AYNI davranış)
+     `body` DEĞİŞTİRİLMEZ — mevcut çalışan akış BOZULMAZ. */
+  if (verification.authoritative) {
+    body.total_price = verification.authoritative.total_price;
+    body.total_price_try = verification.authoritative.total_price_try;
+    body.original_price = verification.authoritative.original_price;
+    body.original_currency = verification.authoritative.original_currency;
+    body.exchange_rate = verification.authoritative.exchange_rate;
+    body.original_cleaning_fee = verification.authoritative.original_cleaning_fee;
+    body.original_cleaning_currency =
+      verification.authoritative.original_cleaning_currency;
+    body.cleaning_fee_try = verification.authoritative.cleaning_fee_try;
+    body.prepayment_amount = verification.authoritative.prepayment_amount;
+    body.remaining_payment = verification.authoritative.remaining_payment;
+    body.custom_price = false;
+    body.custom_price_note = null;
   }
 
   try {

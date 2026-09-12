@@ -17,38 +17,58 @@ import type { ReservationCreateInput } from "../types";
    Client'ın gönderdiği pool heating total'a GÜVENMEZ; villanın gerçek
    pool_heating_fee/currency + burada hesaplanan nights ile YENİDEN üretir. */
 import { computeAuthoritativePoolHeatingSnapshot } from "./pool-heating-verify";
+/* 🛡️ FAZ 3 — villa_discounts SERVER-SIDE OKUMA (public-safe read, zaten
+   ADIM 1/villa detay akışında kullanılan AYNI servis — İKİNCİ bir discount
+   engine/repository YOK). Fail-safe: repository hata dönerse [] döner
+   (bkz. villa-discount.service.ts doc-comment'i) — recompute bu durumda
+   "indirim yok" ile AYNI davranır, booking'i ASLA bloklamaz. */
+import { getVillaDiscounts } from "@/app/services/villa-discount.service";
 
 /* ===============================================================
-   🛡️ PUBLIC RESERVATION — SERVER-SIDE PRICE VERIFY (COMPARE/LOG)
+   🛡️ PUBLIC RESERVATION — SERVER-SIDE PRICE VERIFY
    ===============================================================
    AMAÇ:
      Public booking create'te client'ın gönderdiği finansal alanlara
-     (total_price_try / cleaning_fee_try / prepayment_amount /
-     remaining_payment) kör güvenmeyi bırakmak. Bu helper, MEVCUT
-     price engine'i (lib/price.engine) SUNUCUDA yeniden çalıştırıp
-     client değerleriyle karşılaştırır.
+     (total_price / total_price_try / original_price / original_currency /
+     exchange_rate / original_cleaning_fee / original_cleaning_currency /
+     cleaning_fee_try / prepayment_amount / remaining_payment) kör
+     güvenmeyi bırakmak. Bu helper, MEVCUT price engine'i (lib/price.engine)
+     SUNUCUDA — villa_prices + villa_discounts + villa cleaning config +
+     exchange rate'leri KENDİSİ okuyarak — yeniden çalıştırır.
 
-   ⚠️ BU FAZ = COMPARE/LOG ONLY (enforcement YOK):
-     - Hiçbir şeyi reject etmez, throw etmez, stored value değiştirmez.
-     - Drift bulursa structured console.warn loglar; booking AYNEN sürer.
-     - Production hesaplaması BİREBİR korunur (yeni engine YAZILMADI;
-       calculateGrandTotal + calculatePrepayment reuse edildi).
+   🛡️ FAZ 3 (bu tur) — SERVER-AUTHORITATIVE FİNANSAL ALANLAR:
+     - `recomputePublicReservationPrice` artık villa_discounts'ı
+       (`getVillaDiscounts`) da okur ve `calculateGrandTotal`'a `discounts`
+       parametresi olarak geçirir — indirim/özel fiyat STAY hesabına
+       (ve YALNIZ stay'e — cleaning/pool heating İZOLE kalır, bkz.
+       lib/price.engine.ts) sunucu tarafında da uygulanır.
+     - Dönen `ServerPriceResult` artık total/cleaning/prepayment/remaining
+       yanında `original_price`/`original_currency`/`exchange_rate`/
+       `original_cleaning_fee`/`original_cleaning_currency` için de
+       authoritative değerleri taşır — `buildPublicReservationPayload.ts`
+       (client) İLE BİREBİR AYNI türetme mantığı (foreign-currency ternary),
+       yalnız YENİ bir hesaplama icat EDİLMEDİ, mevcut `snapshot` (TRY
+       calculateGrandTotal çıktısı) üzerinden okunuyor.
+     - `verifyPublicReservationPrice` bu genişletilmiş sonucu
+       `authoritative` alanı olarak döner (pool heating'in `poolHeating`
+       alanıyla AYNI desen) — route.ts bunu `body` üzerine YAZAR
+       (createReservation'dan ÖNCE).
+     - Eski COMPARE/LOG (`comparison`) DAVRANIŞI KORUNDU — artık
+       discounts'ı da içerdiği için indirimli rezervasyonlarda önceden
+       var olan yanlış-pozitif "drift" uyarısı da bu adımda kendiliğinden
+       düzeliyor (ayrı bir fix GEREKMEDİ, aynı `discounts` parametresi
+       hem authoritative hem comparison'ın kullandığı `server` sonucundan
+       besleniyor).
+     - discount_applied/discount_type/discount_value/discount_currency/
+       original_stay_total_try/stay_discount_amount_try (migration 080)
+       snapshot kolonları BU FAZDA YAZILMIYOR — yalnız server'ın discount
+       bilgisine erişip DOĞRU final fiyatı hesaplayabilmesi bu fazın
+       kapsamı (kalıcı snapshot persistansı SONRAKİ bir faz).
 
-   GİRDİ EŞLEME (client snapshot ile birebir — ReservationForm):
-     snapshot = calculateGrandTotal({ start, end, prices, currency:"TRY",
-       rates, cleaning_fee, cleaning_currency, cleaning_limit })
-     prepaymentRate = villa.custom_prepayment_rate ?? settings.prepayment_rate ?? 20
-     prepayment = calculatePrepayment(total, prepaymentRate)   // Math.round
-     remaining  = max(total - prepayment, 0)
-
-   SERVER GİRDİ KAYNAKLARI (hepsi public-read, server-side anon OK):
-     - villa_prices  → getVillaPrices(villa_id)
-     - exchange rates → getExchangeRatesMap()
-     - villa cleaning_* + custom_prepayment_rate → villa row (public)
-     - settings.prepayment_rate → getPublicSettings() (RPC)
-
-   FAIL-OPEN: herhangi bir fetch/parse hatası → null döner; route
-   loglar ve booking'i ASLA bloklamaz.
+   FAIL-OPEN (DEĞİŞMEDİ): herhangi bir fetch/parse hatası → null döner;
+   route loglar ve booking'i ASLA bloklamaz — bu durumda `authoritative`
+   de `poolHeating` gibi null döner, route body'yi DEĞİŞTİRMEDEN bırakır
+   (mevcut fail-open felsefe — pool heating precedent'iyle BİREBİR aynı).
 
    server-only: client bundle'a sızmaz.
    =============================================================== */
@@ -72,6 +92,17 @@ export type ServerPriceResult = {
   originalPoolHeatingTotal: number;
   originalPoolHeatingCurrency: string;
   poolHeatingTotalTry: number;
+  // 🛡️ FAZ 3 — server-authoritative finansal alanlar (indirim-farkında).
+  // `totalPrice` ve `totalPriceTry` bu kod tabanında HER ZAMAN aynı
+  // sayıdır (bkz. buildPublicReservationPayload.ts: total_price =
+  // snapshotTotalTRY = total_price_try) — ayrı bir "display currency
+  // total" kolonu YOK; ikisi de aynı authoritative değerden türetilir.
+  totalPrice: number;
+  originalPrice: number;
+  originalCurrency: string;
+  exchangeRate: number;
+  originalCleaningFee: number;
+  originalCleaningCurrency: string;
 };
 
 export async function recomputePublicReservationPrice(input: {
@@ -86,11 +117,15 @@ export async function recomputePublicReservationPrice(input: {
   const { villa_id, start_date, end_date, pool_heating_selected } = input;
   if (!villa_id || !start_date || !end_date) return null;
 
-  const [prices, ratesMap, settings, villaRes] = await Promise.all([
+  const [prices, ratesMap, settings, villaRes, discounts] = await Promise.all([
     getVillaPrices(villa_id),
     getExchangeRatesMap(),
     getPublicSettings(),
     reservationRepository.findVillaCleaningConfig(villa_id),
+    // 🛡️ FAZ 3 — villa_discounts server-side okuma. Fail-safe: hata
+    // durumunda [] döner (getVillaDiscounts'ın kendi doc-comment'i) —
+    // calculateGrandTotal'a discounts:[] gitmesi "indirim yok" ile AYNI.
+    getVillaDiscounts(villa_id),
   ]);
 
   const villaRow =
@@ -110,6 +145,12 @@ export async function recomputePublicReservationPrice(input: {
     cleaning_currency:
       (villaRow?.cleaning_currency as string) || "TRY",
     cleaning_limit: Number(villaRow?.cleaning_limit) || 0,
+    // 🛡️ FAZ 3 — indirim/özel fiyat katmanı, YALNIZ stay'e uygulanır
+    // (cleaning/pool heating izole — bkz. lib/price.engine.ts). Client'ın
+    // gönderdiği herhangi bir discount alanı YOK/OKUNMUYOR; villa_id +
+    // tarih aralığından sunucunun kendi okuduğu villa_discounts kayıtları
+    // kullanılır.
+    discounts,
   });
 
   /* prepayment rate precedence — ReservationForm ile BİREBİR:
@@ -173,6 +214,40 @@ export async function recomputePublicReservationPrice(input: {
     0
   );
 
+  /* 🛡️ FAZ 3 — original_price/original_currency/original_cleaning_fee/
+     original_cleaning_currency/exchange_rate. `buildPublicReservationPayload.ts`
+     (client, ReservationForm) İLE BİREBİR AYNI türetme — YENİ bir kural
+     İCAT EDİLMEDİ, yalnız server'ın KENDİ hesapladığı `snapshot` üzerinden
+     aynı ternary'ler tekrarlanıyor:
+       original_price = original_currency !== "TRY" ? snapshot.original_stay : 0
+       original_currency = original_currency !== "TRY" ? snapshot.original_currency : "TRY"
+       original_cleaning_fee = original_cleaning_currency !== "TRY" ? snapshot.original_cleaning : 0
+       original_cleaning_currency = aynı ternary
+       exchange_rate = hasForeignCurrency ? rates[originalCurrency] (veya 1) : 1
+     `snapshot.original_stay` ZATEN indirim uygulanmış (discounted) değeri
+     taşır — `calculateStayTotal` > `applyDiscountToDailyPrice` NİHAİ
+     `original`'i döner (bkz. lib/price.engine.ts) — ayrı bir "pre-discount"
+     hesaplama BURADA YAPILMAZ (snapshot kolonlarının kendisi bu fazda
+     yazılmıyor zaten). */
+  const originalCurrencyRaw = snapshot.original_currency || "TRY";
+  const originalCleaningCurrencyRaw =
+    snapshot.original_cleaning_currency || "TRY";
+  const hasForeignCurrency =
+    originalCurrencyRaw !== "TRY" || originalCleaningCurrencyRaw !== "TRY";
+
+  const originalPrice =
+    originalCurrencyRaw !== "TRY" ? snapshot.original_stay || 0 : 0;
+  const originalCurrency =
+    originalCurrencyRaw !== "TRY" ? originalCurrencyRaw : "TRY";
+  const originalCleaningFee =
+    originalCleaningCurrencyRaw !== "TRY" ? snapshot.original_cleaning || 0 : 0;
+  const originalCleaningCurrency =
+    originalCleaningCurrencyRaw !== "TRY" ? originalCleaningCurrencyRaw : "TRY";
+
+  const rateForOriginal =
+    originalCurrencyRaw === "TRY" ? 1 : Number(rates[originalCurrencyRaw]) || 1;
+  const exchangeRate = hasForeignCurrency ? rateForOriginal : 1;
+
   return {
     totalPriceTry,
     cleaningFeeTry,
@@ -184,6 +259,13 @@ export async function recomputePublicReservationPrice(input: {
     originalPoolHeatingCurrency:
       poolHeatingSnapshot.original_pool_heating_currency,
     poolHeatingTotalTry: poolHeatingSnapshot.pool_heating_total_try,
+    // 🛡️ FAZ 3
+    totalPrice: totalPriceTry,
+    originalPrice,
+    originalCurrency,
+    exchangeRate,
+    originalCleaningFee,
+    originalCleaningCurrency,
   };
 }
 
@@ -259,26 +341,52 @@ export type PublicReservationPoolHeatingSnapshot = {
   pool_heating_total_try: number;
 };
 
+/* 🛡️ FAZ 3 — route'un `body`'deki finansal alanları (pool heating
+   HARİÇ — o AYRI, zaten var olan `poolHeating` alanı üzerinden) server-
+   authoritative değerlerle override edebilmesi için. Alan adları DB
+   kolon adlarıyla BİREBİR (ReservationCreateInput/payload-create.ts ile
+   aynı isimler) — route'ta doğrudan `body.<field> = authoritative.<field>`
+   ataması yapılabilsin diye. */
+export type PublicReservationAuthoritativeSnapshot = {
+  total_price: number;
+  total_price_try: number;
+  original_price: number;
+  original_currency: string;
+  exchange_rate: number;
+  original_cleaning_fee: number;
+  original_cleaning_currency: string;
+  cleaning_fee_try: number;
+  prepayment_amount: number;
+  remaining_payment: number;
+};
+
 export type PublicReservationServerVerification = {
   comparison: PriceComparison | null;
   /* null → recompute başarısız (fail-open); route bu durumda client'ın
      ORİJİNAL gönderdiği pool heating alanlarını DEĞİŞTİRMEDEN bırakır. */
   poolHeating: PublicReservationPoolHeatingSnapshot | null;
+  /* 🛡️ FAZ 3 — null → recompute başarısız (fail-open, pool heating İLE
+     AYNI davranış); route bu durumda client'ın gönderdiği finansal
+     alanları DEĞİŞTİRMEDEN bırakır (mevcut fail-open felsefe korunur —
+     bu fazın amacı client'ı güvenmemek, ama recompute'un KENDİSİ
+     patlarsa booking'i BLOKLAMAMAK — pool heating precedent'iyle
+     BİREBİR aynı trade-off). */
+  authoritative: PublicReservationAuthoritativeSnapshot | null;
 };
 
 /* ---------------------------------------------------------------
-   🔥 verifyPublicReservationPrice — orchestrator (COMPARE/LOG +
-   HAVUZ ISITMA server-authoritative snapshot)
+   🔥 verifyPublicReservationPrice — orchestrator (SERVER-AUTHORITATIVE
+   FİNANSAL ALANLAR + HAVUZ ISITMA server-authoritative snapshot +
+   COMPARE/LOG)
    ---------------------------------------------------------------
    Route'tan çağrılır. Recompute + compare + structured log yapar.
-   Fiyat karşılaştırması (total/cleaning/prepayment/remaining) HÂLÂ
-   yalnız COMPARE/LOG (enforcement YOK, fail-open, mevcut felsefe aynen).
-   Pool heating snapshot'ı AYRI: route bunu (varsa) `body` üzerine
-   YAZAR — çünkü kullanıcı KURALI (server bu 4 alanı ASLA client'tan
-   güvenmemeli) yalnız bu 4 kolon için EXPLICIT enforcement istiyor;
-   diğer finansal alanlar (total_price_try vb.) bu adımın kapsamı
-   dışında client-trusted kalmaya devam ediyor (bkz. final rapor,
-   Risk/uyarı bölümü).
+   🛡️ FAZ 3 (bu tur): `comparison` HÂLÂ yalnız COMPARE/LOG (enforcement
+   YOK, fail-open, mevcut felsefe aynen — drift'i loglar, bloklamaz).
+   Asıl enforcement YENİ `authoritative` alanı ÜZERİNDEN olur: route
+   bunu (varsa) `body` üzerine YAZAR — pool heating snapshot'ıyla AYNI
+   desen (kullanıcı kuralı: server bu alanları ASLA client'tan
+   güvenmemeli). Recompute başarısızsa (fail-open) `authoritative` de
+   `poolHeating` gibi null döner — route body'yi DEĞİŞTİRMEZ.
 =============================================================== */
 export async function verifyPublicReservationPrice(
   payload: ReservationCreateInput
@@ -290,7 +398,7 @@ export async function verifyPublicReservationPrice(
       end_date: payload.end_date,
       pool_heating_selected: payload.pool_heating_selected,
     });
-    if (!server) return { comparison: null, poolHeating: null };
+    if (!server) return { comparison: null, poolHeating: null, authoritative: null };
 
     const cmp = comparePublicReservationPrice(payload, server);
 
@@ -318,14 +426,28 @@ export async function verifyPublicReservationPrice(
         original_pool_heating_currency: server.originalPoolHeatingCurrency,
         pool_heating_total_try: server.poolHeatingTotalTry,
       },
+      // 🛡️ FAZ 3 — server-authoritative finansal alanlar (indirim-farkında).
+      authoritative: {
+        total_price: server.totalPrice,
+        total_price_try: server.totalPriceTry,
+        original_price: server.originalPrice,
+        original_currency: server.originalCurrency,
+        exchange_rate: server.exchangeRate,
+        original_cleaning_fee: server.originalCleaningFee,
+        original_cleaning_currency: server.originalCleaningCurrency,
+        cleaning_fee_try: server.cleaningFeeTry,
+        prepayment_amount: server.prepaymentAmount,
+        remaining_payment: server.remainingPayment,
+      },
     };
   } catch (err) {
     /* FAIL-OPEN: recompute patlasa bile booking sürer; pool heating
-       snapshot'ı da override EDİLMEZ (route client değerini korur). */
+       snapshot'ı ve FAZ 3 authoritative snapshot'ı da override EDİLMEZ
+       (route client değerlerini korur). */
     console.error(
       "[price-verify] recompute FAILED (fail-open, booking sürüyor):",
       err instanceof Error ? err.message : err
     );
-    return { comparison: null, poolHeating: null };
+    return { comparison: null, poolHeating: null, authoritative: null };
   }
 }
