@@ -475,6 +475,7 @@ export default function EditVilla() {
             }
             form={form}
             setForm={setFormLoose}
+            villaId={id}
           />
         )}
 

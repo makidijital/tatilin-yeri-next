@@ -47,6 +47,7 @@ export const RPC_RETURN_KIND: Readonly<Record<string, RpcReturnKind>> = {
   replace_villa_distances: "void", // returns void
   replace_villa_feature_relations: "void", // returns void
   replace_villa_prices: "void", // returns void
+  replace_villa_discounts: "void", // returns void — migration 079 (villa_discounts)
   replace_villa_rule_relations: "void", // returns void
   replace_villa_type_relations: "void", // returns void
   replace_villa_price_include_relations: "void", // returns void
@@ -78,6 +79,7 @@ export function getRpcReturnKind(fn: string): RpcReturnKind {
    =============================================================== */
 export const RPC_JSONB_ARGS: ReadonlySet<string> = new Set([
   "replace_villa_prices.p_prices",
+  "replace_villa_discounts.p_discounts",
   "replace_villa_distances.p_distances",
   "set_villa_sort_orders.p_updates",
   "set_villa_type_sort_orders.p_updates",

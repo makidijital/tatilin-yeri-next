@@ -3,6 +3,7 @@ import { CalendarDays, ChevronDown } from "lucide-react";
 
 import Section from "./shared/Section";
 import Label from "./shared/Label";
+import DiscountsSection from "./DiscountsSection";
 
 import type { VillaFormShape, VillaFormSetter } from "./types";
 
@@ -46,11 +47,19 @@ export default function PricingStep({
   form,
   setForm,
   showCleaningCurrency = true,
+  villaId,
 }: {
   pricingCanvasSlot: ReactNode;
   form: VillaFormShape;
   setForm: VillaFormSetter;
   showCleaningCurrency?: boolean;
+  /* 🛡️ İNDİRİMLER (villa_discounts) — TAMAMEN AYRI, İZOLE KATMAN.
+     villaId verilirse (EDIT mode) DiscountsSection render edilir;
+     CREATE mode'da (villaId YOK — villa henüz DB'de yok, FK zorunlu)
+     hiç render edilmez, form/prices state'ine DOKUNMAZ. Optional
+     olduğu için mevcut TÜM PricingStep çağıranları (ekle sayfası)
+     DEĞİŞMEDEN aynı davranışta kalır. */
+  villaId?: string;
 }) {
   /* 🛡️ Migration 076 — sezonluk ay kısıtı. Panel açık/kapalı state'i
      yalnız UI'da yaşar (form/DB'ye YAZILMAZ) — kapalı durumda formun
@@ -86,6 +95,12 @@ export default function PricingStep({
     <>
       {/* PRICING CANVAS (slot) */}
       {pricingCanvasSlot}
+
+      {/* 🛡️ İNDİRİMLER — villa_prices/PricingCalendarCanvas'tan TAMAMEN
+          BAĞIMSIZ, izole bir Section (kendi state'i, kendi server
+          action'ları, kendi tablosu — villa_discounts). Yalnız EDIT
+          mode'da (villaId mevcutken) gösterilir. */}
+      {villaId && <DiscountsSection villaId={villaId} />}
 
       {/* EXTRA FEES — Adım 9 */}
       <Section
