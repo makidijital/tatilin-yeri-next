@@ -62,6 +62,7 @@ import {
 /* 🛡️ Rich text — render'da XSS-güvenli HTML; SEO meta/JSON-LD'de düz metin. */
 import { sanitizeHtml, stripHtml } from "@/lib/html-sanitize";
 import { getVillaPrices } from "@/app/services/villa-price.service";
+import { getVillaDiscounts } from "@/app/services/villa-discount.service";
 import { getVillaDistances } from "@/app/services/villa-distance.service";
 import { getVillaFeaturesByVilla } from "@/app/services/villa-feature.service";
 import { getRuleItemsByVilla } from "@/app/services/rule-item.service";
@@ -279,6 +280,7 @@ export default async function VillaDetail({
   const [
     images,
     prices,
+    discounts,
     distances,
     features,
     rules,
@@ -290,6 +292,7 @@ export default async function VillaDetail({
   ] = await Promise.all([
     getVillaImages(villa.id),
     getVillaPrices(villa.id),
+    getVillaDiscounts(villa.id),
     getVillaDistances(villa.id),
     getVillaFeaturesByVilla(villa.id) as Promise<Feature[]>,
     getRuleItemsByVilla(villa.id),
@@ -845,6 +848,7 @@ export default async function VillaDetail({
             villaId={villa.id}
             externalBlocks={externalBlocks}
             prices={prices}
+            discounts={discounts}
             deposit={villa.deposit}
             cleaning_fee={villa.cleaning_fee}
             cleaning_currency={villa.cleaning_currency}

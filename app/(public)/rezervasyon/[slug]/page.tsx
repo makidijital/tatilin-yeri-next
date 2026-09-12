@@ -1,5 +1,6 @@
 import { getVillaBySlug } from "@/app/services/villa.service";
 import { getVillaPrices } from "@/app/services/villa-price.service";
+import { getVillaDiscounts } from "@/app/services/villa-discount.service";
 import { getVillaImages } from "@/app/services/villa-image/villa-image.read";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 
@@ -51,6 +52,7 @@ export default async function ReservationPage({
   }
 
   const prices = await getVillaPrices(villa.id);
+  const discounts = await getVillaDiscounts(villa.id);
   const images = await getVillaImages(villa.id);
   /* 🛡️ Bucket-fix — resolveVillaImageUrl: villa-images bucket'ından URL
      üretir. Legacy FULL URL pass-through, Phase B path → URL. */
@@ -88,6 +90,7 @@ export default async function ReservationPage({
         <ReservationForm
           villa={villa}
           prices={prices}
+          discounts={discounts}
           start={start}
           end={end}
           image={coverImage}

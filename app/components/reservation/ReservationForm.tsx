@@ -47,6 +47,7 @@ import { useRouter } from "next/navigation";
 export default function ReservationForm({
   villa,
   prices,
+  discounts,
   start,
   end,
   image,
@@ -241,6 +242,8 @@ export default function ReservationForm({
         // aktif kabul edilir — davranış BYTE-IDENTICAL kalır.
         pool_heating_months:
           villa.pool_heating_months,
+
+        discounts,
       })
       : null;
 
@@ -285,6 +288,8 @@ export default function ReservationForm({
         // AYNI parametre.
         pool_heating_months:
           villa.pool_heating_months,
+
+        discounts,
       })
       : null;
 

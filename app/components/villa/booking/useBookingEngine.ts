@@ -75,6 +75,7 @@ import {
   calculatePrepayment,
   accommodationBase,
   isPoolHeatingActiveForRange,
+  type DiscountRange,
 } from "@/lib/price.engine";
 
 /* getValidEndDate → lib/date-range (TEK source-of-truth).
@@ -108,6 +109,10 @@ export type UseBookingEngineInput = {
   villaSlug: string;
   villaId: string;
   prices: VillaPriceEmbed[];
+  /* Public-safe villa_discounts (villa-discount.service.ts). Opsiyonel;
+     mevcut caller'lar geçmeden BYTE-IDENTICAL çalışır (calculateGrandTotal
+     discounts=null → indirimsiz mevcut davranış). */
+  discounts?: DiscountRange[] | null;
   deposit?: number;
   cleaning_fee?: number;
   cleaning_currency?: string;
@@ -223,6 +228,7 @@ export function useBookingEngine(
     villaSlug,
     villaId,
     prices,
+    discounts = null,
     deposit = 0,
     cleaning_fee = 0,
     cleaning_currency = "TRY",
@@ -715,6 +721,7 @@ export function useBookingEngine(
              ise calculateGrandTotal içinde isPoolHeatingActiveForRange
              her zaman true döner (davranış BYTE-IDENTICAL). */
           pool_heating_months,
+          discounts,
         })
       : null;
 

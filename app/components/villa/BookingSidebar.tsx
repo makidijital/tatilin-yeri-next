@@ -39,6 +39,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { type VillaPriceEmbed } from "@/lib/villa-row.types";
+import type { DiscountRange } from "@/lib/price.engine";
 import {
   EMPTY_EXTERNAL_STRING_ARRAYS,
   type ExternalCalendarStringArrays,
@@ -70,6 +71,8 @@ type Props = {
   villaSlug: string;
   villaId: string;
   prices: VillaPriceEmbed[];
+  /* Public-safe villa_discounts (villa-discount.service.ts). */
+  discounts?: DiscountRange[];
   deposit?: number;
   cleaning_fee?: number;
   cleaning_currency?: string;
@@ -104,6 +107,7 @@ export default function BookingSidebar({
   villaSlug,
   villaId,
   prices,
+  discounts = [],
   deposit = 0,
   cleaning_fee = 0,
   cleaning_currency = "TRY",
@@ -123,6 +127,7 @@ export default function BookingSidebar({
     villaSlug,
     villaId,
     prices,
+    discounts,
     deposit,
     cleaning_fee,
     cleaning_currency,
