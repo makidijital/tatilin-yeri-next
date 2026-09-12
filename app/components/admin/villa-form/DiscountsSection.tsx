@@ -325,15 +325,15 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
                     }
                   >
                     <option value="percent">Yüzde (%)</option>
-                    <option value="fixed">Sabit Tutar</option>
+                    <option value="fixed">Gecelik Sabit İndirim</option>
                   </select>
                 </div>
 
                 <div className="space-y-2">
                   <Label>
                     {draft.discount_type === "percent"
-                      ? "Yüzde değeri"
-                      : "Tutar"}
+                      ? "İndirim Oranı (%)"
+                      : "Gecelik İndirim Tutarı"}
                   </Label>
                   {draft.discount_type === "fixed" ? (
                     <div className="grid grid-cols-[1fr_88px] gap-1.5">
