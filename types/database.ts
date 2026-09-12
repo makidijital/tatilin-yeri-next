@@ -312,6 +312,19 @@ export interface ReservationRow {
   original_pool_heating_total: number | null;
   original_pool_heating_currency: string | null;
   pool_heating_total_try: number | null;
+  /* 🛡️ Migration 080 — İndirim/özel fiyat SNAPSHOT alanları (FAZ 4).
+   *  Rezervasyon oluşturulduğu anda server'ın villa_discounts'tan
+   *  hesapladığı sonuç DONDURULUR (izlenebilirlik amaçlı — hesaplama/
+   *  enforcement bu kolonlara bağlı DEĞİL, zaten total_price_try vb.
+   *  içine gömülü). Discount uygulanmadıysa TÜMÜ null (discount_applied
+   *  hariç — o zaman false). Admin sonradan villa_discounts'ı değiştirse/
+   *  silse bile bu satır DEĞİŞMEZ (snapshot). */
+  discount_applied: boolean;
+  discount_type: "percent" | "fixed" | null;
+  discount_value: number | null;
+  discount_currency: string | null;
+  original_stay_total_try: number | null;
+  stay_discount_amount_try: number | null;
   name: string;
   phone: string;
   email: string | null;

@@ -89,6 +89,41 @@ export function buildCreateReservationPayload(
     pool_heating_total_try:
       Number(data.pool_heating_total_try) || 0,
 
+    // 🛡️ İNDİRİM/ÖZEL FİYAT SNAPSHOT — FAZ 4. Pool heating ile AYNI
+    // always-write deseni (conditional-spread DEĞİL) — snapshot her
+    // zaman 6 kolonu yazar. Discount uygulanmadıysa (discount_applied
+    // false) diğer 5 kolon null default'una düşer (undefined bırakılmaz).
+    // Client body'de bu alanlar varsa dahi (route.ts server-authoritative
+    // sonuçla OVERRIDE etmediği sürece) burada yalnız coerce edilir —
+    // GÜVENLİK SINIRI route.ts'te (bkz. price-verify.ts doc-comment'i),
+    // bu helper mevcut pool-heating/cleaning helper'ları gibi kendisine
+    // gelen `data`'ya güvenen SAF bir builder'dır.
+    discount_applied: !!data.discount_applied,
+
+    discount_type:
+      data.discount_type === "percent" || data.discount_type === "fixed"
+        ? data.discount_type
+        : null,
+
+    discount_value:
+      data.discount_value === undefined || data.discount_value === null
+        ? null
+        : Number(data.discount_value) || 0,
+
+    discount_currency: data.discount_currency ?? null,
+
+    original_stay_total_try:
+      data.original_stay_total_try === undefined ||
+      data.original_stay_total_try === null
+        ? null
+        : Number(data.original_stay_total_try) || 0,
+
+    stay_discount_amount_try:
+      data.stay_discount_amount_try === undefined ||
+      data.stay_discount_amount_try === null
+        ? null
+        : Number(data.stay_discount_amount_try) || 0,
+
     name: data.name,
     phone: data.phone,
     email: data.email || null,

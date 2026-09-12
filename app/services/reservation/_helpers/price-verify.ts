@@ -3,10 +3,14 @@ import "server-only";
 import { reservationRepository } from "@/lib/db/reservation.repository";
 import {
   calculateGrandTotal,
+  calculateStayTotal,
   calculateNights,
   calculatePrepayment,
   accommodationBase,
+  getActiveDiscount,
+  type DiscountRange,
 } from "@/lib/price.engine";
+import { parseLocalDate } from "@/lib/date-format";
 import { normalizePriceRanges } from "@/lib/villa-row.types";
 import { getVillaPrices } from "@/app/services/villa-price.service";
 import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
@@ -103,7 +107,59 @@ export type ServerPriceResult = {
   exchangeRate: number;
   originalCleaningFee: number;
   originalCleaningCurrency: string;
+  // 🛡️ FAZ 4 — İNDİRİM/ÖZEL FİYAT SNAPSHOT (migration 080). Discount
+  // uygulanmadıysa (discountApplied=false) diğer 5 alan null. `stay`
+  // dışındaki hiçbir bileşene (cleaning/pool heating/damage deposit)
+  // dokunmaz — yalnız konaklama (stay) bileşeninden türetilir.
+  discountApplied: boolean;
+  discountType: "percent" | "fixed" | null;
+  discountValue: number | null;
+  discountCurrency: string | null;
+  originalStayTotalTry: number | null;
+  stayDiscountAmountTry: number | null;
 };
+
+/* 🛡️ FAZ 4 — bir rezervasyon tarih aralığındaki GECELERDEN en az biri
+   için villa_discounts'ta aktif bir kayıt var mı, varsa HANGİSİ?
+   ===============================================================
+   YENİ bir discount ENGINE/hesaplama DEĞİL — `lib/price.engine.ts`'in
+   ZATEN EXPORT ettiği `getActiveDiscount` (calculateStayTotal'ın
+   kendi içinde HER GECE için çağırdığı AYNI saf fonksiyon) tekrar
+   kullanılıyor; yalnız hangi discount kaydının eşleştiğini (miktar
+   hesaplamadan) DETECT eder — computeAuthoritativePoolHeatingSnapshot'ın
+   `isPoolHeatingActiveForRange`/`calculatePoolHeatingFee`'yi reuse
+   etme deseniyle BİREBİR aynı yaklaşım.
+
+   Bir rezervasyonun farklı geceleri TEORİK olarak farklı (üst üste
+   binmeyen, DB EXCLUDE constraint'i zaten aynı gün için ikinci bir
+   kaydı engelliyor) villa_discounts kayıtlarına denk gelebilir — bu
+   durumda İLK eşleşen (en erken tarihli) gece'nin discount'u snapshot
+   metadata'sı (discount_type/value/currency) olarak kullanılır.
+   `original_stay_total_try`/`stay_discount_amount_try` HER ZAMAN
+   TÜM gecelerin TOPLAMINDAN türetildiği için bu durumda dahi doğru
+   kalır — yalnız TEK bir "discount_type/value" alanı olduğu için
+   metadata bu basitleştirmeyi taşır (pratikte: bir rezervasyon
+   aralığını kapsayan tek bir indirim/özel fiyat tanımı — mevcut admin
+   UI akışının tipik kullanımı). */
+export function detectAppliedDiscountForStay(
+  start: string,
+  end: string,
+  discounts: DiscountRange[] | null | undefined
+): DiscountRange | null {
+  if (!Array.isArray(discounts) || discounts.length === 0) return null;
+  if (!start || !end) return null;
+
+  const current = parseLocalDate(start);
+  const endD = parseLocalDate(end);
+  if (!(current < endD)) return null;
+
+  while (current < endD) {
+    const active = getActiveDiscount(current, discounts);
+    if (active) return active;
+    current.setDate(current.getDate() + 1);
+  }
+  return null;
+}
 
 export async function recomputePublicReservationPrice(input: {
   villa_id: string;
@@ -135,10 +191,12 @@ export async function recomputePublicReservationPrice(input: {
      `Partial<Record<"USD"|"EUR"|"GBP", number>>` döner — yapı uyumlu. */
   const rates = (ratesMap?.rates || {}) as Record<string, number>;
 
+  const normalizedPrices = normalizePriceRanges(prices);
+
   const snapshot = calculateGrandTotal({
     start: start_date,
     end: end_date,
-    prices: normalizePriceRanges(prices),
+    prices: normalizedPrices,
     currency: "TRY",
     rates,
     cleaning_fee: Number(villaRow?.cleaning_fee) || 0,
@@ -227,8 +285,9 @@ export async function recomputePublicReservationPrice(input: {
      `snapshot.original_stay` ZATEN indirim uygulanmış (discounted) değeri
      taşır — `calculateStayTotal` > `applyDiscountToDailyPrice` NİHAİ
      `original`'i döner (bkz. lib/price.engine.ts) — ayrı bir "pre-discount"
-     hesaplama BURADA YAPILMAZ (snapshot kolonlarının kendisi bu fazda
-     yazılmıyor zaten). */
+     hesaplama BURADA YAPILMAZ — ayrı, İZOLE bir "pre-discount" hesabı
+     (yalnız original_stay_total_try/stay_discount_amount_try snapshot
+     alanları İÇİN) aşağıda AYRICA yapılır (bkz. FAZ 4 bloğu). */
   const originalCurrencyRaw = snapshot.original_currency || "TRY";
   const originalCleaningCurrencyRaw =
     snapshot.original_cleaning_currency || "TRY";
@@ -248,6 +307,62 @@ export async function recomputePublicReservationPrice(input: {
     originalCurrencyRaw === "TRY" ? 1 : Number(rates[originalCurrencyRaw]) || 1;
   const exchangeRate = hasForeignCurrency ? rateForOriginal : 1;
 
+  /* 🛡️ FAZ 4 — İNDİRİM/ÖZEL FİYAT SNAPSHOT (migration 080 kolonları).
+     ===============================================================
+     `discounts`'ı KİMLİĞİYLE (hangi kayıt eşleşti) detect etmek için
+     `detectAppliedDiscountForStay` (YUKARIDA — `getActiveDiscount`
+     reuse, YENİ bir engine DEĞİL). Miktar için ise `calculateStayTotal`
+     (price.engine.ts'in ZATEN export ettiği aynı saf fonksiyon) İKİNCİ
+     KEZ, bu sefer discounts OLMADAN çağrılır — bu "ikinci bir discount
+     engine" DEĞİL, AYNI fonksiyonun "indirimsiz" varyantı (calculateStayTotal
+     zaten discounts'ı opsiyonel/undefined kabul edip "indirim yok" ile
+     BYTE-IDENTICAL davranıyor — bkz. lib/price.engine.ts kendi doc-comment'i).
+     `.stay` alanı SADECE konaklama bileşenidir — cleaning/pool heating/
+     damage deposit HİÇBİR ŞEKİLDE karışmaz (calculateGrandTotal'ın kendi
+     izolasyonu — bu iki ayrı alan zaten toplanmaz).
+
+     Discount UYGULANMADIYSA (hiçbir gece eşleşmediyse) TÜM detay alanları
+     null (discount_applied hariç → false) — kullanıcı KURALI. */
+  const appliedDiscount = detectAppliedDiscountForStay(
+    start_date,
+    end_date,
+    discounts
+  );
+  const discountApplied = appliedDiscount !== null;
+
+  let originalStayTotalTry: number | null = null;
+  let stayDiscountAmountTry: number | null = null;
+  let discountType: "percent" | "fixed" | null = null;
+  let discountValue: number | null = null;
+  let discountCurrency: string | null = null;
+
+  if (discountApplied && appliedDiscount) {
+    const undiscountedStay = calculateStayTotal(
+      start_date,
+      end_date,
+      normalizedPrices,
+      "TRY",
+      rates
+      // discounts parametresi BİLEREK verilmiyor → "indirim yok" hesabı
+    );
+    originalStayTotalTry = undiscountedStay.stay || 0;
+    // finalStayTotalTry: snapshot.stay ZATEN indirim uygulanmış (FAZ 3'ten
+    // beri mevcut) — burada TEKRAR hesaplanmaz, aynen okunur.
+    const finalStayTotalTry = snapshot.stay || 0;
+    // 🛡️ CLAMP YOK — fixed özel fiyat normal fiyattan yüksekse negatif
+    // olabilir (kullanıcı KURALI, verbatim).
+    stayDiscountAmountTry = originalStayTotalTry - finalStayTotalTry;
+
+    discountType = appliedDiscount.discount_type;
+    discountValue = Number(appliedDiscount.discount_value) || 0;
+    // percent → NULL; fixed → villa_discounts.currency (ham/raw — TRY'ye
+    // ÇEVRİLMEZ, snapshot "kaydın kendisi" olarak saklanır).
+    discountCurrency =
+      appliedDiscount.discount_type === "fixed"
+        ? appliedDiscount.currency || null
+        : null;
+  }
+
   return {
     totalPriceTry,
     cleaningFeeTry,
@@ -266,6 +381,13 @@ export async function recomputePublicReservationPrice(input: {
     exchangeRate,
     originalCleaningFee,
     originalCleaningCurrency,
+    // 🛡️ FAZ 4
+    discountApplied,
+    discountType,
+    discountValue,
+    discountCurrency,
+    originalStayTotalTry,
+    stayDiscountAmountTry,
   };
 }
 
@@ -358,6 +480,14 @@ export type PublicReservationAuthoritativeSnapshot = {
   cleaning_fee_try: number;
   prepayment_amount: number;
   remaining_payment: number;
+  // 🛡️ FAZ 4 — İNDİRİM/ÖZEL FİYAT SNAPSHOT (migration 080). Discount
+  // uygulanmadıysa discount_applied=false, diğer 5 alan null.
+  discount_applied: boolean;
+  discount_type: "percent" | "fixed" | null;
+  discount_value: number | null;
+  discount_currency: string | null;
+  original_stay_total_try: number | null;
+  stay_discount_amount_try: number | null;
 };
 
 export type PublicReservationServerVerification = {
@@ -438,6 +568,13 @@ export async function verifyPublicReservationPrice(
         cleaning_fee_try: server.cleaningFeeTry,
         prepayment_amount: server.prepaymentAmount,
         remaining_payment: server.remainingPayment,
+        // 🛡️ FAZ 4
+        discount_applied: server.discountApplied,
+        discount_type: server.discountType,
+        discount_value: server.discountValue,
+        discount_currency: server.discountCurrency,
+        original_stay_total_try: server.originalStayTotalTry,
+        stay_discount_amount_try: server.stayDiscountAmountTry,
       },
     };
   } catch (err) {

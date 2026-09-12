@@ -65,6 +65,21 @@ export type ReservationCreateInput = {
   original_pool_heating_currency?: string;
   pool_heating_total_try?: number;
 
+  // 🛡️ İNDİRİM/ÖZEL FİYAT SNAPSHOT — FAZ 4 (public reservation create).
+  // Migration 080 kolonlarıyla BİREBİR isim. Client'tan gelen değerler
+  // ASLA güvenilmez — route.ts (public create) bu alanları
+  // `verifyPublicReservationPrice`'ın server-authoritative sonucuyla
+  // createReservation'dan ÖNCE override eder (bkz. price-verify.ts,
+  // route.ts). payload-create.ts pool heating ile AYNI "always-write"
+  // deseniyle bu 6 alanı da her zaman INSERT payload'a yazar — discount
+  // uygulanmadıysa TÜMÜ null (discount_applied hariç, o zaman false).
+  discount_applied?: boolean;
+  discount_type?: "percent" | "fixed" | null;
+  discount_value?: number | null;
+  discount_currency?: string | null;
+  original_stay_total_try?: number | null;
+  stay_discount_amount_try?: number | null;
+
   name: string;
   phone: string;
   email?: string;

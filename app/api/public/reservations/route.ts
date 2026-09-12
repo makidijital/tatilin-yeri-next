@@ -120,6 +120,19 @@ export async function POST(req: Request): Promise<Response> {
     body.remaining_payment = verification.authoritative.remaining_payment;
     body.custom_price = false;
     body.custom_price_note = null;
+    // 🛡️ FAZ 4 — İNDİRİM/ÖZEL FİYAT SNAPSHOT (migration 080). Client
+    // body'de aynı isimli alanlar varsa (sahte discount_applied/type/
+    // value/currency vb.) burada TAMAMEN EZİLİR — server'ın villa_
+    // discounts'tan hesapladığı gerçek sonuç yazılır. Discount
+    // uygulanmadıysa (discount_applied=false) diğer 5 alan null olur.
+    body.discount_applied = verification.authoritative.discount_applied;
+    body.discount_type = verification.authoritative.discount_type;
+    body.discount_value = verification.authoritative.discount_value;
+    body.discount_currency = verification.authoritative.discount_currency;
+    body.original_stay_total_try =
+      verification.authoritative.original_stay_total_try;
+    body.stay_discount_amount_try =
+      verification.authoritative.stay_discount_amount_try;
   }
 
   try {
