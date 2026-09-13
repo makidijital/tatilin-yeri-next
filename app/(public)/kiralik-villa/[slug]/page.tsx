@@ -462,6 +462,7 @@ export default async function VillaDetail({
                     prices={prices}
                     minimumStayNights={villa.minimum_stay_nights ?? null}
                     deposit={villa.deposit ?? null}
+                    discounts={discounts}
                   />
                 )}
 
