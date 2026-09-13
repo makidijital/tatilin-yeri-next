@@ -33,6 +33,17 @@ import type { VillaDiscountRow } from "@/types/database";
    veya sorgu YOK. Client'tan (UI veya başka bir caller) gelen currency
    değerine HİÇ güvenilmez — villa.currency burada AYRICA okunur. */
 import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
+/* 🛡️ FALLBACK — villa.currency NULL/boş olan (bazı eski/eksik villalar)
+   villalarda indirim kaydını (silme dahil, replace-all deseni) engellemesin
+   diye EKLENDİ. `getVillaPrices` — pricing.action.ts'in `loadPricingData`'da
+   ZATEN kullandığı AYNI service (villaAdminRepository.findVillaPrices'ın
+   ince sarmalayıcısı); `getStartingPrice` — price.engine.ts'in mevcut,
+   DEĞİŞTİRİLMEYEN fonksiyonu, cache.helpers.ts'in villa kartlarında
+   "villa_prices içindeki MIN pozitif nightly + O SATIRIN KENDİ currency'si"
+   için ZATEN kullandığı AYNI kanonik yöntem — burada YENİ bir seçim mantığı
+   İCAT EDİLMEDİ, var olanı reuse ediyoruz. */
+import { getVillaPrices } from "@/app/services/villa-price.service";
+import { getStartingPrice } from "@/lib/price.engine";
 
 export type DiscountActionResult =
   | { ok: true }
@@ -120,17 +131,44 @@ export async function saveDiscountData(
      tekrar elde eder. */
   const { data: villaData, error: villaError } =
     await villaRepository.findIdTitleCurrencyById(villaId);
-  if (villaError || !villaData?.currency) {
+  if (villaError) {
     console.error(
       "saveDiscountData: villa currency okunamadı:",
-      villaError?.message
+      villaError.message
     );
     return {
       ok: false,
       error: "Villa fiyat para birimi okunamadı, indirim kaydedilemedi.",
     };
   }
-  const villaCurrency = villaData.currency;
+
+  /* 🛡️ ÖNCELİK: villa.currency (mevcut davranış AYNEN — dolu olan
+     villalarda hiçbir şey değişmez). villa.currency NULL/boş olan
+     (bazı mevcut villalarda veri eksikliği) villalarda FALLBACK:
+     villa_prices'tan kanonik currency belirle — getStartingPrice
+     (price.engine, DEĞİŞTİRİLMEDİ) ile "en düşük pozitif gecelik
+     fiyatın KENDİ currency'si" seçilir; villa_prices'ta rastgele
+     bir satır YOK SAYILMAZ, aynı deterministik kural her yerde
+     (cache.helpers.ts'teki public kart currency'si de AYNI yöntemle
+     belirleniyor) kullanılır. Fixed indirim currency-eşleşme
+     GÜVENLİK KONTROLÜ aşağıda AYNEN devam eder — client'a güvenilmez. */
+  let villaCurrency = villaData?.currency || null;
+
+  if (!villaCurrency) {
+    const prices = await getVillaPrices(villaId);
+    villaCurrency = getStartingPrice(prices)?.currency || null;
+  }
+
+  if (!villaCurrency) {
+    console.error(
+      "saveDiscountData: villa currency okunamadı (villa.currency VE villa_prices boş/NULL):",
+      villaId
+    );
+    return {
+      ok: false,
+      error: "Villa fiyat para birimi okunamadı, indirim kaydedilemedi.",
+    };
+  }
 
   const normalizedDiscounts: VillaDiscountInput[] = [];
   for (const d of discounts) {
