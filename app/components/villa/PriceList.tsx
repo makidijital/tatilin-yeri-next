@@ -425,7 +425,7 @@ export default function PriceList({
 
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6 pl-3">
               {/* LEFT — tarih aralığı, büyük/güçlü, ana bilgi. */}
-              <p className="min-w-0 font-display text-[15px] text-[var(--color-stone-900)] tracking-[-0.01em] leading-snug flex items-center gap-2.5">
+              <p className="min-w-0 font-display text-[13px] text-[var(--color-stone-900)] tracking-[-0.01em] leading-snug flex items-center gap-2.5">
                 <span
                   aria-hidden="true"
                   className="hidden md:inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#0973BA]/[0.09] text-[#0973BA] shrink-0"
@@ -450,7 +450,7 @@ export default function PriceList({
                       {formatCurrency(convertedPrice, currency)}
                     </p>
                     <p
-                      className="mt-1 font-display font-bold text-[19px] md:text-[20px] text-green-600 tracking-[-0.02em] leading-none"
+                      className="mt-1 font-display font-bold text-[19px] md:text-[17px] text-green-600 tracking-[-0.02em] leading-none"
                       style={{ fontVariantNumeric: "tabular-nums" }}
                     >
                       {formatCurrency(discountedResult!.converted, currency)}
@@ -465,7 +465,7 @@ export default function PriceList({
                 ) : (
                   <div className="text-left md:text-right">
                     <p
-                      className="font-display font-bold text-[19px] md:text-[20px] text-[#ED7926] tracking-[-0.02em] leading-none"
+                      className="font-display font-bold text-[19px] md:text-[17px] text-[#ED7926] tracking-[-0.02em] leading-none"
                       style={{ fontVariantNumeric: "tabular-nums" }}
                     >
                       {formatCurrency(convertedPrice, currency)}
