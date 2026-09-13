@@ -867,14 +867,20 @@ export default function VillaCard({
               ) : showDiscountPricing ? (
                 <>
                   {/* İndirim tarih aralığı — villa_discounts kaydından
-                      DİNAMİK (bkz. formatDiscountDateRangeTr). */}
+                      DİNAMİK (bkz. formatDiscountDateRangeTr). Sabit
+                      metin YOK. */}
                   <p className="text-[11px] font-medium text-[#0973BA] tracking-[0.01em]">
                     {discountDateRangeLabel}
                   </p>
+                  {/* İnce yatay ayırıcı — tam genişlik, nötr (mevcut
+                      kart divider'larıyla AYNI dil: h-px + stone-200). */}
                   <div
                     aria-hidden="true"
-                    className="mt-1 mb-1.5 h-px w-9 bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+                    className="mt-1.5 mb-1.5 h-px w-full bg-[var(--color-stone-200)]"
                   />
+                  {/* Üstü çizili normal fiyat + vurgulu indirimli fiyat —
+                      yan yana. "GECELİK" / ek indirim metni YOK (kart
+                      referans tasarımı: yalnız tarih + çizgi + 2 fiyat). */}
                   <div className="flex items-baseline gap-2">
                     <span className="text-[13px] text-[var(--color-stone-400)] line-through tabular-nums">
                       {formatCurrency(convertedPrice, currency)}
@@ -882,9 +888,6 @@ export default function VillaCard({
                     <span className="font-display font-bold text-[18px] md:text-[19px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
                       {formatCurrency(discountedPrice!.converted, currency)}
                     </span>
-                  </div>
-                  <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)]">
-                    Gecelik
                   </div>
                 </>
               ) : (
