@@ -753,21 +753,11 @@ export default function VillaCard({
             className="absolute inset-0 ring-1 ring-inset ring-white/15 pointer-events-none"
           />
 
-          {/* DISCOUNT BADGE — gerçek veri: bu kart discount koleksiyonunda küratörlü.
-              Shimmer sweep + soft pulse halo — çok yavaş, premium, ucuz neon değil.
-              prefers-reduced-motion → DiscountCollection'daki scoped style bloku
-              animasyonları kapatır/azaltır. */}
-          {isDiscount && (
-            <span className="absolute top-3.5 left-3.5 z-10 dc-badge-pulse">
-              <span className="dc-badge-shimmer relative overflow-hidden inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA] px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-white shadow-[0_8px_20px_-6px_rgba(9,115,186,0.55)] ring-1 ring-white/30">
-                <Sparkles size={12} strokeWidth={2.2} aria-hidden />
-                Özel Fırsat · İndirimli
-              </span>
-            </span>
-          )}
-
-          {/* FAV BUTTON — top-right */}
-          {id && <FavoriteButton villaId={id} variant="card" alwaysVisible />}
+          {/* 🔄 SADELEŞTİRME (bu tur): "Özel Fırsat · İndirimli" rozeti VE
+              favori kalp butonu, kullanıcı talebiyle YALNIZ bu discount
+              variant'ta kaldırıldı — normal/curation branch'lerdeki badge
+              ve FavoriteButton kullanımlarına (satır ~438, ~1005) HİÇ
+              dokunulmadı, onlar AYNEN duruyor. */}
 
           {/* TITLE + LOCATION — görsel üzerinde alt overlay, brand accent çizgisi.
               Normal public karttan (VillaCard default) ayırt etmek için altina
@@ -789,42 +779,15 @@ export default function VillaCard({
 
         {/* ── CONTENT AREA — kampanya hissi veren hafif gradient wash ── */}
         <div className="p-3.5 md:p-4 bg-gradient-to-br from-[#FFF6F0] via-white to-[#F0F8FC]">
-          {/* REVIEW META — opsiyonel, mevcut veri, format AYNEN korunur */}
-          {typeof reviewCount === "number" && reviewCount > 0 &&
-            typeof reviewAverage === "number" && reviewAverage > 0 && (
-              <div
-                className="flex items-center gap-1 text-[11.5px] text-[var(--color-stone-600)]"
-                aria-label={`Ortalama puan ${reviewAverage.toFixed(
-                  1
-                )} / 5, ${reviewCount} misafir yorumu`}
-              >
-                <Star
-                  size={11}
-                  className="text-amber-500 shrink-0"
-                  fill="currentColor"
-                  strokeWidth={1.5}
-                  aria-hidden
-                />
-                <span className="font-medium tabular-nums text-[var(--color-stone-700)]">
-                  {reviewAverage.toFixed(1)}
-                </span>
-                <span aria-hidden="true" className="text-[var(--color-stone-300)] mx-0.5">·</span>
-                <span className="tabular-nums">{reviewCount} yorum</span>
-              </div>
-            )}
-
-          {/* AMENITIES — inline icon+text satır, aynı veri (guests/bedrooms/bathrooms) */}
-          <div
-            className={
-              (typeof reviewCount === "number" &&
-              reviewCount > 0 &&
-              typeof reviewAverage === "number" &&
-              reviewAverage > 0
-                ? "mt-3 "
-                : "") +
-              "flex items-center justify-center gap-x-4 gap-y-1.5 flex-wrap text-[12.5px] font-medium text-[var(--color-stone-800)]"
-            }
-          >
+          {/* 🔄 SADELEŞTİRME (bu tur): yıldız/puan/yorum sayısı bloğu
+              kullanıcı talebiyle YALNIZ bu discount variant'ta kaldırıldı
+              — default/curation branch'lerdeki review meta AYNEN duruyor
+              (bu dosyadaki diğer <Star .../> kullanımları, satır ~487 ve
+              ~1056, dokunulmadı). AMENITIES artık content area'nın İLK
+              elemanı → üst margin'e gerek yok (review varken kullanılan
+              "mt-3" koşulu da kaldırıldı, review hiç render edilmediği
+              için AYNI sonuç zaten hep margin'siz durumdu). */}
+          <div className="flex items-center justify-center gap-x-4 gap-y-1.5 flex-wrap text-[12.5px] font-medium text-[var(--color-stone-800)]">
             <span
               className="inline-flex items-center gap-1.5"
               aria-label={`${guests} kişi kapasitesi`}
@@ -887,15 +850,22 @@ export default function VillaCard({
                     aria-hidden="true"
                     className="mt-1.5 mb-1.5 h-px w-full bg-[var(--color-stone-200)]"
                   />
-                  {/* Üstü çizili normal fiyat + vurgulu indirimli fiyat —
-                      yan yana. "GECELİK" / ek indirim metni YOK (kart
-                      referans tasarımı: yalnız tarih + çizgi + 2 fiyat). */}
+                  {/* Üstü çizili normal fiyat + vurgulu indirimli fiyat +
+                      indirimli fiyatın SAĞINDA küçük/zarif "GECELİK" etiketi
+                      — kullanıcı talebiyle bu turda eklendi. Fiyat hesabı
+                      (convertedPrice / discountedPrice) DEĞİŞMEDİ, yalnız
+                      görsel bir etiket eklendi. */}
                   <div className="flex items-baseline gap-2">
                     <span className="text-[13px] text-[var(--color-stone-400)] line-through tabular-nums">
                       {formatCurrency(convertedPrice, currency)}
                     </span>
-                    <span className="font-display font-bold text-[18px] md:text-[19px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
-                      {formatCurrency(discountedPrice!.converted, currency)}
+                    <span className="inline-flex items-baseline gap-1">
+                      <span className="font-display font-bold text-[18px] md:text-[19px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
+                        {formatCurrency(discountedPrice!.converted, currency)}
+                      </span>
+                      <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--color-stone-500)]">
+                        Gecelik
+                      </span>
                     </span>
                   </div>
                 </>
