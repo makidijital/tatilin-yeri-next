@@ -116,6 +116,18 @@ export default async function DiscountCollection() {
           .dc-badge-pulse::before { animation: none; opacity: 0.45; transform: scale(1); }
           .dc-glow-ring { animation: none; background-position: 30% 50%; }
         }
+        /* 🔄 KÖŞE DÜZLEŞTİRME (bu tur) — yalnız bu carousel'ın '<li>'
+           öğelerine eklenen '.dc-flat-card' sınıfı altındaki VillaCard
+           discount branch'inin İKİ iç içe yuvarlatılmış katmanını
+           (dış "glow ring" sarmalayıcı + iç beyaz article gövdesi)
+           köşesiz yapar. VillaCard.tsx DEĞİŞTİRİLMEDİ; bu, yalnız bu
+           section'a özel, dıştan uygulanan bir CSS override'dır — başka
+           hiçbir sayfadaki VillaCard'ı etkilemez (seçici '.dc-flat-card'
+           ile scope'lu). */
+        .dc-flat-card .rounded-\\[28px\\],
+        .dc-flat-card .rounded-\\[26\\.5px\\] {
+          border-radius: 0;
+        }
       `}</style>
 
       <div className="max-w-[1280px] mx-auto">
@@ -145,23 +157,37 @@ export default async function DiscountCollection() {
             değişmedi — yalnızca kartların DIŞINDAKİ carousel/item genişlik
             sarmalayıcısı değişti.
 
-            KART GENİŞLİĞİ: site genelinde "normal" VillaCard'ın gerçek
-            görünür boyutuna yakın kalması için (bkz. VillaList.tsx ana
-            koleksiyon grid'i: `lg:grid-cols-4 gap-x-6`, 1280px konteynerde
-            kart ≈ (1280-3×24)/4 ≈ 302px) masaüstü item genişliği 300px
-            sabitlendi — grid'deki "normal" kart boyutuyla NEREDEYSE AYNI,
-            yalnızca esnemiyor (`1fr` yok). 1280px konteynerde + `gap-5`
-            (20px) ile: 4×300 + 3×20 = 1260px ≤ 1280px → **4 kart tam
-            sığar**, ~20px'lik kenar boşluğunda 5. kartın ucu hafifçe
-            görünerek (mevcut VillaTypeCarousel'daki AYNI UX ipucu)
-            kaydırılabilir olduğunu belli eder. Mobilde genişlik
-            ÖNCEKİ (onaylanmış) `w-[82vw] max-w-[320px] sm:w-[340px]`
-            değerleriyle AYNEN korundu — yalnızca `md:` ve üzeri için
-            `md:w-[300px]` sabit değeri eklendi. Tek villa varsa (veya az
-            villa varsa) kart bu SABİT 300px'te kalır, container'ın kalanı
-            basitçe boş kalan alan olarak GÖRÜNMEZ (flex-nowrap içeriği sola
-            hizalar, kart kendi doğal genişliğinde durur — devasa/gerili
-            kart YOK). */}
+            KART GENİŞLİĞİ: masaüstü item genişliği (bu tur) 300px'ten
+            320px'e büyütüldü — hâlâ SABİT (`1fr`/`auto-fit`/`minmax(...,1fr)`
+            YOK, kart ASLA esnemez/container'ı doldurmaz). 1280px konteynerde
+            + `gap-5` (20px) ile: 4×320 + 3×20 = 1340px > 1280px → artık tam
+            4 kart yerine ~3 tam kart + 4.kartın belirgin bir kısmı görünür
+            (kalan taşma yatay kaydırma/ok butonlarıyla gezilir — bu,
+            "yaklaşık 4 kart" hedefiyle hâlâ tutarlı, sadece kartlar biraz
+            daha ferah). Mobilde genişlik ÖNCEKİ (onaylanmış) `w-[82vw]
+            max-w-[320px] sm:w-[340px]` değerleriyle AYNEN korundu — yalnızca
+            `md:` ve üzeri için `md:w-[300px]` → `md:w-[320px]` güncellendi.
+            Tek villa varsa (veya az villa varsa) kart bu SABİT 320px'te
+            kalır, container'ın kalanı basitçe boş kalan alan olarak
+            GÖRÜNMEZ (flex-nowrap içeriği sola hizalar, kart kendi doğal
+            genişliğinde durur — devasa/gerili kart YOK).
+
+            KÖŞELER (bu tur): "İndirimli Kiralık Villalar" kartlarının DIŞ
+            radius'u `rounded-none` (0) yapıldı — ANCAK VillaCard.tsx'e HİÇ
+            dokunulmadı (kullanıcı talebi). VillaCard'ın discount branch'i
+            kendi içinde iki iç içe yuvarlatılmış katman kullanıyor: dış
+            sarmalayıcı `div.rounded-[28px]` (gradient "glow ring" kenarlığı,
+            `dc-glow-ring`) ve onun içindeki `article.rounded-[26.5px]`
+            (asıl beyaz kart gövdesi + görsel `overflow-hidden` ile buraya
+            clip'leniyor). Bu component dosyasından bunları KAPATMAK için
+            `<li>`'ye eklenen `dc-flat-card` class'ı + aşağıdaki `<style>`
+            bloğuna eklenen scoped CSS kuralı kullanıldı (Tailwind'in kendi
+            ürettiği tam class adları hedeflenip `border-radius: 0` ile
+            override edildi) — YENİ bir component/kütüphane YOK, yalnız bu
+            section'a özel bir CSS override. `dc-flat-card` seçicisi
+            SADECE bu carousel'ın `<li>`'lerinde var olduğu için normal
+            sayfalardaki (arama, villa detay "benzer villalar" vb.)
+            VillaCard kullanımları bu kuraldan ETKİLENMEZ. */}
         <HorizontalCarousel
           showArrows
           ariaLabel="İndirimli kiralık villalar"
@@ -171,7 +197,7 @@ export default async function DiscountCollection() {
             {collection.map((c) => (
               <li
                 key={c.slug || c.id}
-                className="snap-start shrink-0 w-[82vw] max-w-[320px] sm:w-[340px] md:w-[300px]"
+                className="dc-flat-card snap-start shrink-0 w-[82vw] max-w-[320px] sm:w-[340px] md:w-[320px]"
               >
                 {renderCard(c)}
               </li>
