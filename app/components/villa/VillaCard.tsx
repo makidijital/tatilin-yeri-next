@@ -22,7 +22,10 @@ import { useCurrency } from "@/app/context/CurrencyContext";
 import {
   calculateNights,
   calculateGrandTotal,
+  applyDiscountToDailyPrice,
+  type DiscountRange,
 } from "@/lib/price.engine";
+import { formatDiscountDateRangeTr } from "@/lib/date-format";
 /* 🛡️ FAZ 36 — Guest favorites button. localStorage-only;
    no DB / no API / no server action / no auth. */
 import FavoriteButton from "@/app/components/favorites/FavoriteButton";
@@ -106,6 +109,21 @@ type Props = {
    *  href akışı DEĞİŞMEZ (yalnız bu kartın fiyat sunumu). Default false
    *  → mevcut kartlar birebir aynı. Yalnız default (public) variant. */
   isFlexible?: boolean;
+  /* 🛡️ AKTİF İNDİRİM (yalnız "discount" variant tüketir) — ham
+     villa_discounts kaydı (lib/cache.helpers > getCachedDiscountCollectionVillas
+     tarafından price.engine > getActiveDiscount ile ÖNCEDEN seçilmiş,
+     "bugün start_date..end_date arasında" tek kayıt). Nihai indirimli
+     fiyat (currency-aware) burada, client tarafında (useCurrency rates
+     ile) price.engine > applyDiscountToDailyPrice reuse edilerek
+     hesaplanır — yeni bir fiyat hesaplama mantığı YOK. Verilmezse
+     (undefined/null) davranış ESKİSİYLE aynı (indirim gösterimi yok). */
+  discount?: {
+    start_date: string;
+    end_date: string;
+    discount_type: "percent" | "fixed";
+    discount_value: number;
+    currency: string | null;
+  } | null;
 };
 
 export default function VillaCard({
@@ -131,6 +149,7 @@ export default function VillaCard({
   variant = "default",
   reserveInfo,
   isFlexible = false,
+  discount = null,
 }: Props) {
   const router = useRouter();
   /* Compact variant flag — curation flow için presentation density.
@@ -163,6 +182,52 @@ export default function VillaCard({
     currency,
     rates
   );
+
+  /* 🛡️ AKTİF İNDİRİM — yalnız "discount" variant'ta anlamlı; diğer
+     variant'lar `discount` prop'unu hiç almaz (undefined) → bu blok
+     no-op. Fixed tipte currency, villanın gecelik ORİJİNAL currency'siyle
+     (`villaCurrency` — bu, discount.action.ts'in server-authoritative
+     olarak eşitlediği villa.currency ile AYNI kaynak) uyuşmuyorsa
+     FAIL-SAFE: indirim gösterilmez, normal fiyat davranışı AYNEN
+     devam eder (aynı fail-safe deseni: admin pricing-calendar'daki
+     discount-day-map.ts). Percent'te currency zaten null → etkilenmez.
+     Hesaplama TAMAMEN mevcut price.engine > applyDiscountToDailyPrice
+     ile yapılır — yeni bir fiyat mantığı YAZILMADI. */
+  const isDiscountVariant = variant === "discount";
+  const activeDiscount: DiscountRange | null =
+    isDiscountVariant &&
+    discount &&
+    Number(price) > 0 &&
+    (discount.discount_type !== "fixed" ||
+      (discount.currency || "") === villaCurrency)
+      ? {
+          start_date: discount.start_date,
+          end_date: discount.end_date,
+          discount_type: discount.discount_type,
+          discount_value: discount.discount_value,
+          currency: discount.currency,
+        }
+      : null;
+
+  const discountedPrice = activeDiscount
+    ? applyDiscountToDailyPrice(
+        {
+          converted: convertedPrice,
+          original: Number(price || 0),
+          original_currency: villaCurrency,
+        },
+        activeDiscount,
+        currency,
+        rates
+      )
+    : null;
+
+  const discountDateRangeLabel = activeDiscount
+    ? formatDiscountDateRangeTr(activeDiscount.start_date, activeDiscount.end_date)
+    : "";
+
+  const showDiscountPricing =
+    !!activeDiscount && !!discountedPrice && !!discountDateRangeLabel;
 
   /* 🛡️ GRAND TOTAL — mevcut price.engine reuse (calculateGrandTotal).
      Aktif olması için: stayStart + stayEnd + prices[] üçlüsü
@@ -783,10 +848,12 @@ export default function VillaCard({
           {/* Divider */}
           <div aria-hidden="true" className="mt-3.5 h-px bg-[var(--color-stone-200)]/70" />
 
-          {/* BOTTOM ROW — price (sol) + booking CTA (sağ).
-              Fiyat hesabı (stayTotal / convertedPrice) ve booking trigger
-              handler'i birebir aynı; yalnız stil/konum değişti. */}
-          <div className="mt-3.5 flex items-end justify-between gap-3">
+          {/* BOTTOM ROW — yalnız fiyat gösterimi (CTA kaldırıldı: kart
+              artık booking modalı açmıyor, yalnız fiyat/indirim bilgisi
+              gösteriyor). Fiyat hesabı (stayTotal / convertedPrice /
+              showDiscountPricing) BİREBİR mevcut price.engine reuse'u —
+              yeni bir hesaplama mantığı YOK. */}
+          <div className="mt-3.5">
             <div className="min-w-0">
               {stayTotal !== null ? (
                 <>
@@ -797,42 +864,35 @@ export default function VillaCard({
                     {stayNights} gece{hasCleaning ? " · Temizlik dahil" : ""}
                   </div>
                 </>
-              ) : (
+              ) : showDiscountPricing ? (
                 <>
-                  <div className="font-display font-bold text-[18px] md:text-[19px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
-                    {price ? formatCurrency(convertedPrice, currency) : "Fiyat sorunuz"}
+                  {/* İndirim tarih aralığı — villa_discounts kaydından
+                      DİNAMİK (bkz. formatDiscountDateRangeTr). */}
+                  <p className="text-[11px] font-medium text-[#0973BA] tracking-[0.01em]">
+                    {discountDateRangeLabel}
+                  </p>
+                  <div
+                    aria-hidden="true"
+                    className="mt-1 mb-1.5 h-px w-9 bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+                  />
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[13px] text-[var(--color-stone-400)] line-through tabular-nums">
+                      {formatCurrency(convertedPrice, currency)}
+                    </span>
+                    <span className="font-display font-bold text-[18px] md:text-[19px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
+                      {formatCurrency(discountedPrice!.converted, currency)}
+                    </span>
                   </div>
-                  {price ? (
-                    <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)]">
-                      Başlayan Fiyatlarla
-                    </div>
-                  ) : null}
+                  <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)]">
+                    Gecelik
+                  </div>
                 </>
+              ) : (
+                <div className="font-display font-bold text-[18px] md:text-[19px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
+                  {price ? formatCurrency(convertedPrice, currency) : "Fiyat sorunuz"}
+                </div>
               )}
             </div>
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsBookingOpen(true);
-              }}
-              aria-label="Müsaitlik ve tarih seçimi modalını aç"
-              className={
-                "shrink-0 inline-flex items-center justify-center gap-1.5 whitespace-nowrap " +
-                "h-9 px-3.5 rounded-xl " +
-                "bg-gradient-to-r from-[#ED7926] to-[#0973BA] text-white " +
-                "uppercase font-medium text-[11px] tracking-[0.06em] " +
-                "shadow-[0_6px_16px_-6px_rgba(9,115,186,0.45)] " +
-                "hover:shadow-[0_10px_22px_-6px_rgba(9,115,186,0.55)] hover:-translate-y-px " +
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40 " +
-                "transition-[box-shadow,transform] duration-200 motion-reduce:transition-none"
-              }
-            >
-              <CalendarRange size={13} strokeWidth={1.75} aria-hidden />
-              Müsaitlik / Tarih Seç
-            </button>
           </div>
           {reserveBlock}
         </div>

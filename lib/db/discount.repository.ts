@@ -43,11 +43,20 @@ export const discountRepository = {
   },
 
   /** PUBLIC CARDS — yalnız aktif (is_active=true); embedded villa +
-   *  location + images + prices; sort_order ASC. cache.helpers >
-   *  getCachedDiscountCollectionVillas delege. homepage public-cards
-   *  metodunun BİREBİR klonu; tek fark tablo (`discount_collections`).
+   *  location + images + prices + discounts; sort_order ASC.
+   *  cache.helpers > getCachedDiscountCollectionVillas delege.
+   *  homepage public-cards metodunun BİREBİR klonu; tek fark tablo
+   *  (`discount_collections`) ve EK `villa_discounts` embed'i.
    *  Embedded select string + .eq + order BİREBİR cache.helpers'tan
-   *  kopyalandı; mapping caller'da KALIR. */
+   *  kopyalandı; mapping caller'da KALIR.
+   *
+   *  🛡️ `villa_discounts` embed — villa kartında "aktif indirim" tarih
+   *  aralığı + indirimli fiyat göstermek için (relation-metadata.ts'e
+   *  `villa_prices`'ın BİREBİR yapısal ikizi olarak eklendi). Tarih
+   *  filtresi YOK (tüm kayıtlar gelir) — "aktif" seçimi caller'da
+   *  `price.engine > getActiveDiscount` ile yapılır. Yeni bir sorgu
+   *  SİSTEMİ değil, mevcut embed altyapısının (villa_prices ile aynı
+   *  desen) tekrar kullanımı. */
   async findActivePublicCards() {
     return await db
       .from("discount_collections")
@@ -78,6 +87,13 @@ export const discountRepository = {
             price,
             currency,
             start_date
+          ),
+          villa_discounts (
+            start_date,
+            end_date,
+            discount_type,
+            discount_value,
+            currency
           )
         )
       `

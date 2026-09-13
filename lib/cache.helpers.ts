@@ -4,7 +4,7 @@ import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 /* 🛡️ Kart "…'den başlayan" fiyatı — TÜM public kartlarda TEK ortak
    mantık: villa_prices içindeki MIN nightly (getStartingPrice). Eskiden
    koleksiyon mapper'ları villa_prices[0] kullanıyordu → tutarsız. */
-import { getStartingPrice } from "@/lib/price.engine";
+import { getStartingPrice, getActiveDiscount, type DiscountRange } from "@/lib/price.engine";
 /* 🛡️ Villa Migration S2 + S8L — findActiveLocationIds (S2) +
    findActiveImagesByIds (S8L) native'e taşındı. cache.helpers zaten
    server-only (unstable_cache) → server-only native repo import'u güvenli.
@@ -216,6 +216,21 @@ export type HomepageCollectionVilla = {
      alanlar undefined döner; VillaCard koşullu render eder. */
   review_average?: number;
   review_count?: number;
+  /* 🛡️ AKTİF İNDİRİM (yalnız discount-collection tüketicisi doldurur —
+     getCachedHomepageCollectionVillas bu alanı HİÇ set etmez, undefined
+     kalır, homepage-collection kartları ETKİLENMEZ). Ham villa_discounts
+     satırı (price.engine > getActiveDiscount ile SEÇİLMİŞ, "aktif" =
+     bugün start_date..end_date arasında); nihai indirimli fiyat hesabı
+     (currency-aware) VillaCard'da (client, useCurrency rates ile)
+     price.engine > applyDiscountToDailyPrice reuse edilerek yapılır —
+     burada yeni bir fiyat hesabı YAPILMAZ, yalnız ham kayıt taşınır. */
+  discount?: {
+    start_date: string;
+    end_date: string;
+    discount_type: "percent" | "fixed";
+    discount_value: number;
+    currency: string | null;
+  } | null;
 };
 
 export const getCachedHomepageCollectionVillas = unstable_cache(
@@ -390,11 +405,25 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
           currency: string | null;
           start_date: string | null;
         }> | null;
+        /* 🛡️ EK embed (villa_prices'ın yapısal ikizi) — bkz.
+           discount.repository.ts > findActivePublicCards. */
+        villa_discounts: Array<{
+          start_date: string | null;
+          end_date: string | null;
+          discount_type: "percent" | "fixed" | null;
+          discount_value: number | null;
+          currency: string | null;
+        }> | null;
       } | null;
     };
 
     const rows = (data || []) as unknown as Row[];
     const statsMap = await statsPromise;
+    /* 🛡️ "Aktif" = bugün start_date..end_date arasında (price.engine >
+       getActiveDiscount'ın KENDİ tanımı — kapalı interval, .find() ile
+       ilk eşleşen, stack etmez). Tüm kartlar için TEK `Date` — sabit,
+       cache TTL'i (600sn) boyunca tutarlı. */
+    const today = new Date();
 
     const result: HomepageCollectionVilla[] = [];
     for (const r of rows) {
@@ -417,6 +446,35 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
 
       const rawPrices = Array.isArray(v.villa_prices) ? v.villa_prices : [];
       const firstPrice = getStartingPrice(rawPrices);
+
+      /* 🛡️ AKTİF İNDİRİM — mevcut price.engine > getActiveDiscount
+         reuse edilir (yeni bir "aktiflik" tanımı İCAT EDİLMEDİ). Ham
+         villa_discounts satırları normalize edilip (null-safe) DiscountRange
+         şekline getirilir; getActiveDiscount kendi .find() semantiğiyle
+         (kapalı interval, stack etmez) bugünü kapsayan İLK kaydı seçer. */
+      const rawDiscounts = Array.isArray(v.villa_discounts)
+        ? v.villa_discounts
+        : [];
+      const normalizedDiscounts: DiscountRange[] = rawDiscounts
+        .filter(
+          (d): d is typeof d & {
+            start_date: string;
+            end_date: string;
+            discount_type: "percent" | "fixed";
+          } =>
+            !!d &&
+            !!d.start_date &&
+            !!d.end_date &&
+            (d.discount_type === "percent" || d.discount_type === "fixed")
+        )
+        .map((d) => ({
+          start_date: d.start_date,
+          end_date: d.end_date,
+          discount_type: d.discount_type,
+          discount_value: Number(d.discount_value) || 0,
+          currency: d.currency,
+        }));
+      const activeDiscount = getActiveDiscount(today, normalizedDiscounts);
 
       const s = statsMap[v.id];
       const hasReviews = !!s && s.count > 0;
@@ -442,6 +500,15 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
         cover_override_path: r.custom_cover_image,
         review_average: hasReviews ? s.average : undefined,
         review_count: hasReviews ? s.count : undefined,
+        discount: activeDiscount
+          ? {
+              start_date: activeDiscount.start_date,
+              end_date: activeDiscount.end_date,
+              discount_type: activeDiscount.discount_type,
+              discount_value: activeDiscount.discount_value,
+              currency: activeDiscount.currency ?? null,
+            }
+          : null,
       });
     }
     return result;

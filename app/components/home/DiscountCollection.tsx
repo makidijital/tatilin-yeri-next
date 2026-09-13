@@ -127,6 +127,7 @@ export default async function DiscountCollection() {
                   guests={c.guests || 2}
                   reviewAverage={c.review_average}
                   reviewCount={c.review_count}
+                  discount={c.discount}
                 />
               </li>
             ))}

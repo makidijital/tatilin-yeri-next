@@ -262,6 +262,64 @@ export function formatDateTimeTr(value?: string | null): string {
 }
 
 /* ---------------------------------------------
+   🔥 formatDiscountDateRangeTr(start, end) → "1 - 10 Ekim arası geçerli"
+   ---------------------------------------------
+   AMAÇ: villa_discounts.start_date/end_date (villa_prices ile AYNI
+   semantik — date-only "YYYY-MM-DD", kapalı interval) için public
+   villa kartında (VillaCard "discount" variant) gösterilen Türkçe
+   tarih aralığı etiketi. `parseLocalDate` kullanır — price.engine'in
+   `getActiveDiscount` fonksiyonunun BU AYNI alanlar için kullandığı
+   parser ile TUTARLI (formatDateTr'nin timestamptz-odaklı UTC+3 shift
+   mantığı BİLEREK kullanılmadı — date-only kolonlar için gereksiz).
+
+   Format kuralları:
+     - Aynı ay + aynı yıl  → "D - D Ay arası geçerli"
+     - Farklı ay, aynı yıl → "D Ay - D Ay arası geçerli"
+     - Farklı yıl          → "D Ay YYYY - D Ay YYYY arası geçerli"
+     - Eksik/geçersiz input → "" (caller boş string'i falsy kontrolüyle
+       atlar, hiçbir şey render etmez)
+---------------------------------------------- */
+const MONTHS_TR_FULL = [
+  "Ocak",
+  "Şubat",
+  "Mart",
+  "Nisan",
+  "Mayıs",
+  "Haziran",
+  "Temmuz",
+  "Ağustos",
+  "Eylül",
+  "Ekim",
+  "Kasım",
+  "Aralık",
+] as const;
+
+export function formatDiscountDateRangeTr(
+  startDate?: string | null,
+  endDate?: string | null
+): string {
+  if (!startDate || !endDate) return "";
+  const s = parseLocalDate(startDate);
+  const e = parseLocalDate(endDate);
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return "";
+
+  const sDay = s.getDate();
+  const sMonth = MONTHS_TR_FULL[s.getMonth()];
+  const sYear = s.getFullYear();
+  const eDay = e.getDate();
+  const eMonth = MONTHS_TR_FULL[e.getMonth()];
+  const eYear = e.getFullYear();
+
+  if (sYear === eYear && s.getMonth() === e.getMonth()) {
+    return `${sDay} - ${eDay} ${sMonth} arası geçerli`;
+  }
+  if (sYear === eYear) {
+    return `${sDay} ${sMonth} - ${eDay} ${eMonth} arası geçerli`;
+  }
+  return `${sDay} ${sMonth} ${sYear} - ${eDay} ${eMonth} ${eYear} arası geçerli`;
+}
+
+/* ---------------------------------------------
    🔥 nightsBetween(start, end) → number
    - parseUtcDate ile naive-safe normalize, sonra ms diff / 86400000
    - Geçersiz input → 0

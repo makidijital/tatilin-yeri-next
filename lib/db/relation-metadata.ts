@@ -88,6 +88,24 @@ export const RELATION_METADATA: Readonly<Record<string, ReadonlyArray<RelationDe
       foreignKey: "villa_id",
     },
     {
+      /* 🛡️ villa → villa_discounts (migration 079). `villa_prices`
+         relation'ının BİREBİR yapısal ikizi — yalnız tablo adı farklı.
+         Public discount-collection kartında (VillaCard "discount"
+         variant) aktif indirim tarih aralığı + indirimli fiyat
+         göstermek için kullanılır (bkz. discount.repository.ts >
+         findActivePublicCards, lib/cache.helpers.ts >
+         getCachedDiscountCollectionVillas). Tarih filtresi YOK — tüm
+         kayıtlar embed edilir, "aktif" seçimi caller'da
+         `price.engine > getActiveDiscount` ile yapılır (yeni bir
+         DB filtre/sorgu mantığı İCAT EDİLMEDİ). */
+      alias: "villa_discounts",
+      table: "villa_discounts",
+      cardinality: "many",
+      localKey: "id",
+      foreignKey: "villa_id",
+      orderBy: [{ column: "start_date", direction: "asc" }],
+    },
+    {
       /* villa → property_owners (villa.owner_id FK, migration 044).
          Yalnız güvenli alanlar (first_name/last_name/phone) embed edilir;
          email/iban PII ASLA public read'e çıkmaz (caller select'i sınırlar).
