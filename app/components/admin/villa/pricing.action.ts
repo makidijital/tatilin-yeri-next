@@ -39,6 +39,28 @@ export async function loadPricingData(villaId: string) {
   return { villa: villaRes.data, prices };
 }
 
+/* ===============================================================
+   🛡️ getVillaCurrency — SADECE UI GÖSTERİMİ İÇİN (FAZ — indirim
+   currency zorunluluğu)
+   ===============================================================
+   `loadPricingData` içinde zaten kullanılan AYNI repository metodunu
+   (`villaRepository.findIdTitleCurrencyById`) reuse eder — yeni sorgu/
+   repository metodu YOK. `DiscountsSection`'ın "fixed özel fiyat için
+   villa'nın mevcut para birimini göster" ihtiyacı için (kullanıcı artık
+   manuel currency seçemiyor).
+
+   ⚠️ GÜVENLİK SINIRI: Bu yalnız UI'a bilgi vermek içindir. Gerçek
+   enforcement (fixed discount.currency === villa.currency) BURADAN
+   DEĞİL, `discount.action.ts`'teki `saveDiscountData` içinde, kendi
+   AYRI `villaRepository.findIdTitleCurrencyById` okumasıyla yapılır —
+   client'ın bu fonksiyondan aldığı değere server GÜVENMEZ. */
+export async function getVillaCurrency(
+  villaId: string
+): Promise<string | null> {
+  const { data } = await villaRepository.findIdTitleCurrencyById(villaId);
+  return data?.currency || null;
+}
+
 export async function savePricingData(
   villaId: string,
   prices: {

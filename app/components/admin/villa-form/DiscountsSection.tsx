@@ -11,6 +11,13 @@ import {
   loadDiscountData,
   saveDiscountData,
 } from "@/app/components/admin/villa/discount.action";
+/* 🛡️ SADECE UI gösterimi için — villa'nın fiyat para birimini okur
+   (yeni sorgu YOK, pricing.action.ts'in loadPricingData'da zaten
+   kullandığı repository metodunun ikinci call-site'ı). Gerçek
+   enforcement server'da (saveDiscountData) AYRICA yapılır — bu
+   değere GÜVENİLMEZ, yalnız kullanıcıya hangi currency'nin
+   uygulanacağını göstermek için kullanılır. */
+import { getVillaCurrency } from "@/app/components/admin/villa/pricing.action";
 import type { VillaDiscountInput } from "@/lib/db/villa-discount.repository.server";
 import type { VillaDiscountRow } from "@/types/database";
 
@@ -45,14 +52,11 @@ import {
    sayısı gösterimi ve tarih normalize/karşılaştırma için) reuse edilir.
 =============================================================== */
 
-const CURRENCIES = ["TRY", "USD", "EUR", "GBP"] as const;
-
 type DraftState = {
   start_date: string;
   end_date: string;
   discount_type: "percent" | "fixed";
   discount_value: string;
-  currency: string;
 };
 
 const EMPTY_DRAFT: DraftState = {
@@ -60,7 +64,6 @@ const EMPTY_DRAFT: DraftState = {
   end_date: "",
   discount_type: "percent",
   discount_value: "",
-  currency: "TRY",
 };
 
 function formatDiscountValue(row: VillaDiscountRow): string {
@@ -105,15 +108,24 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
   const [formOpen, setFormOpen] = useState(false);
   const [draft, setDraft] = useState<DraftState>(EMPTY_DRAFT);
   const [formError, setFormError] = useState("");
+  /* 🛡️ Fixed özel fiyat artık manuel currency seçtirmiyor — villa'nın
+     kendi fiyat para birimi otomatik kullanılır (bkz. dosya başı importu).
+     null = henüz yüklenmedi VEYA villa'da currency yok (fixed indirim
+     eklemeyi engelleyen guard, bkz. handleAdd). */
+  const [villaCurrency, setVillaCurrency] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const { discounts: rows, error } = await loadDiscountData(villaId);
+      const [{ discounts: rows, error }, currency] = await Promise.all([
+        loadDiscountData(villaId),
+        getVillaCurrency(villaId),
+      ]);
       if (cancelled) return;
       setDiscounts(rows);
       setListError(error || "");
+      setVillaCurrency(currency);
       setLoading(false);
     })();
     return () => {
@@ -165,8 +177,10 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
       setFormError("Yüzde indirim 100'den büyük olamaz.");
       return;
     }
-    if (draft.discount_type === "fixed" && !draft.currency) {
-      setFormError("Gecelik özel fiyat için para birimi seçmelisin.");
+    if (draft.discount_type === "fixed" && !villaCurrency) {
+      setFormError(
+        "Villa için bir fiyat para birimi belirlenmemiş; önce Fiyatlar bölümünden bir fiyat gir."
+      );
       return;
     }
 
@@ -186,7 +200,7 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
       end_date: draft.end_date,
       discount_type: draft.discount_type,
       discount_value: value,
-      currency: draft.discount_type === "fixed" ? draft.currency : null,
+      currency: draft.discount_type === "fixed" ? villaCurrency : null,
     };
 
     const payload = [...discounts.map(toInput), newInput];
@@ -346,34 +360,37 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
                       : "Gecelik Özel Fiyat"}
                   </Label>
                   {draft.discount_type === "fixed" ? (
-                    <div className="grid grid-cols-[1fr_88px] gap-1.5">
-                      <input
-                        type="number"
-                        min={0}
-                        step={1}
-                        placeholder="örn: 5000"
-                        className="input !px-2"
-                        value={draft.discount_value}
-                        onChange={(e) =>
-                          setDraft({
-                            ...draft,
-                            discount_value: e.target.value,
-                          })
-                        }
-                      />
-                      <select
-                        value={draft.currency}
-                        onChange={(e) =>
-                          setDraft({ ...draft, currency: e.target.value })
-                        }
-                        className="input !pl-2 text-xs"
-                      >
-                        {CURRENCIES.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="space-y-1">
+                      <div className="grid grid-cols-[1fr_88px] gap-1.5">
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          placeholder="örn: 5000"
+                          className="input !px-2"
+                          value={draft.discount_value}
+                          onChange={(e) =>
+                            setDraft({
+                              ...draft,
+                              discount_value: e.target.value,
+                            })
+                          }
+                        />
+                        {/* 🛡️ Para birimi artık MANUEL SEÇİLEMEZ — villa'nın
+                            kendi fiyat para birimi otomatik uygulanır (server
+                            tarafında da AYRICA zorunlu kılınır, bkz.
+                            discount.action.ts → saveDiscountData). Salt-okunur
+                            gösterim; <select> DEĞİL. */}
+                        <div
+                          className="input !pl-2 text-xs flex items-center justify-center bg-[var(--color-stone-100)] text-[var(--color-stone-500)] cursor-not-allowed select-none"
+                          title="Para birimi villanın fiyatlandırmasından otomatik alınır"
+                        >
+                          {villaCurrency || "—"}
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-[var(--color-stone-400)]">
+                        Para birimi villanın fiyat para biriminden ({villaCurrency || "—"}) otomatik alınır, değiştirilemez.
+                      </p>
                     </div>
                   ) : (
                     <input

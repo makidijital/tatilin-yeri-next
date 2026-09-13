@@ -27,6 +27,12 @@ import { villaDiscountRepository } from "@/lib/db/villa-discount.repository.serv
 import type { VillaDiscountInput } from "@/lib/db/villa-discount.repository.server";
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
 import type { VillaDiscountRow } from "@/types/database";
+/* 🛡️ SERVER-AUTHORITATIVE CURRENCY ENFORCEMENT (bkz. saveDiscountData) —
+   `pricing.action.ts`'in `loadPricingData`/`getVillaCurrency`'de zaten
+   kullandığı AYNI repository metodu reuse edilir; yeni repository metodu
+   veya sorgu YOK. Client'tan (UI veya başka bir caller) gelen currency
+   değerine HİÇ güvenilmez — villa.currency burada AYRICA okunur. */
+import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
 
 export type DiscountActionResult =
   | { ok: true }
@@ -100,9 +106,55 @@ export async function saveDiscountData(
     return { ok: false, error: auth.error || "Oturum doğrulanamadı." };
   }
 
+  /* 🛡️ SERVER-AUTHORITATIVE CURRENCY ENFORCEMENT — fixed özel fiyatın
+     para birimi villa.currency ile AYNI olmak ZORUNDA. Client (UI'ın
+     kendisi ya da başka bir caller) hangi currency'yi gönderirse
+     göndersin burada YOK SAYILMAZ, TEKRAR KONTROL EDİLİR — UI zaten
+     manuel seçim sunmuyor olsa da bu, tek güvenlik sınırı buraya
+     taşınmış olur (client'a güvenilmez). Percent tipte currency HER
+     ZAMAN null'a zorlanır (client göndermiş olsa bile).
+
+     `pricing.action.ts`'teki `getVillaCurrency` SADECE UI gösterimi
+     içindir — burada KULLANILMAZ; villa.currency bu action kendi
+     bağımsız okumasıyla (AYNI, zaten var olan repository metodu)
+     tekrar elde eder. */
+  const { data: villaData, error: villaError } =
+    await villaRepository.findIdTitleCurrencyById(villaId);
+  if (villaError || !villaData?.currency) {
+    console.error(
+      "saveDiscountData: villa currency okunamadı:",
+      villaError?.message
+    );
+    return {
+      ok: false,
+      error: "Villa fiyat para birimi okunamadı, indirim kaydedilemedi.",
+    };
+  }
+  const villaCurrency = villaData.currency;
+
+  const normalizedDiscounts: VillaDiscountInput[] = [];
+  for (const d of discounts) {
+    if (d.discount_type === "percent") {
+      // Percent'te currency kavramı YOK — client ne gönderirse göndersin null.
+      normalizedDiscounts.push({ ...d, currency: null });
+      continue;
+    }
+    // discount_type === "fixed"
+    if (!d.currency || d.currency !== villaCurrency) {
+      return {
+        ok: false,
+        error:
+          "Özel fiyat para birimi villanın fiyat para birimiyle aynı olmalıdır.",
+      };
+    }
+    // Eşleşiyor bile olsa server'ın kendi okuduğu değer yazılır (client
+    // değerine güvenilmez; defense-in-depth, sonuç aynı).
+    normalizedDiscounts.push({ ...d, currency: villaCurrency });
+  }
+
   const { error } = await villaDiscountRepository.rpcReplaceVillaDiscounts(
     villaId,
-    discounts
+    normalizedDiscounts
   );
 
   if (error) {
