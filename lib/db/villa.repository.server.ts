@@ -553,50 +553,6 @@ export const villaAdminRepository = {
   },
 
   /* ===============================================================
-     READ — discounted cards by ids (NATIVE EMBED, homepage "İndirimli
-     Kiralık Villalar")
-     ===============================================================
-     `findCardsByIds`'in BİREBİR yapısal ikizi — TEK fark: EK
-     `villa_discounts` embed'i (villa_prices'ın yapısal ikizi, migration
-     079). Anasayfa "İndirimli Kiralık Villalar" bölümü artık ELLE
-     küratörlü `discount_collections` tablosu yerine, `villa_discounts`
-     tablosunda kaydı olan villa_id'lerle (caller:
-     villaDiscountRepository.findDistinctVillaIdsWithDiscounts) doğrudan
-     `villa` tablosunu bu metotla sorgular — "aktif indirim" (bugünü
-     kapsayan) seçimi burada DEĞİL, caller'da `price.engine >
-     getActiveDiscount` ile yapılır (yeni bir DB filtre/sorgu mantığı
-     İCAT EDİLMEDİ, mevcut desen tekrar kullanıldı).
-     Tarih filtresi YOK — villa_discounts'un TÜM satırları embed edilir
-     (geçmiş/gelecek dahil); caller bugünü kapsayanı seçer. Boş `ids`
-     → `findCardsByIds` ile AYNI davranış (native `.in("id",[])` → boş
-     sonuç, SQL hatası YOK). */
-  async findDiscountedCardsByIds(ids: string[]) {
-    return await dbAdmin
-      .from("villa")
-      .select(
-        `
-      *,
-      location:villa_locations(name),
-      villa_images (image_url, is_cover, sort_order),
-      villa_prices (price, currency, start_date, end_date),
-      villa_discounts (start_date, end_date, discount_type, discount_value, currency)
-    `
-      )
-      .in("id", ids)
-      .eq("is_active", true)
-      .is("deleted_at", null)
-      .order("is_cover", {
-        referencedTable: "villa_images",
-        ascending: false,
-      })
-      .order("sort_order", {
-        referencedTable: "villa_images",
-        ascending: true,
-      })
-      .limit(1, { referencedTable: "villa_images" });
-  },
-
-  /* ===============================================================
      READ — similar villa cards (NATIVE EMBED twin, Migration S5D)
      ===============================================================
      Anon `villaRepository.findSimilarCards` karşılığı (villa detay

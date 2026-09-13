@@ -19,12 +19,7 @@ import {
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { villaLocationRepository } from "@/lib/db/villa-location.repository";
 import { homepageRepository } from "@/lib/db/homepage.repository";
-/* 🛡️ "İndirimli Kiralık Villalar" artık ELLE küratörlü discount_collections
-   yerine villa_discounts'ta kaydı olan TÜM villaları otomatik çeker (bkz.
-   getCachedDiscountCollectionVillas doc-comment'i). `findDistinctVillaIdsWithDiscounts`
-   zaten var olan, admin `hasDiscount=1` villa picker'ının kullandığı AYNI
-   read-only metod (yeni bir villa_discounts YAZMA/okuma sistemi İCAT EDİLMEDİ). */
-import { villaDiscountRepository } from "@/lib/db/villa-discount.repository.server";
+import { discountRepository } from "@/lib/db/discount.repository";
 import { getPublicSettings } from "@/app/services/settings.service";
 import { getMenu } from "@/app/services/menu.service";
 import { getVillas } from "@/app/services/villa.service";
@@ -366,51 +361,29 @@ export const getCachedHomepageCollectionVillas = unstable_cache(
 );
 
 /* ===============================================================
-   🛡️ DISCOUNT COLLECTION — "İndirimli Kiralık Villalar" (OTOMATİK)
+   🛡️ DISCOUNT COLLECTION (migration 062) — "İndirimli Koleksiyon"
    ===============================================================
-   🔄 KÖK NEDEN DÜZELTMESİ (bu tur): Önceden bu section ELLE küratörlü
-   `discount_collections` tablosundan (admin `/maki-admin/discount-collection`
-   sayfasında tek tek "Villa Ekle" ile doldurduğu ayrı bir liste) okuyordu
-   — bir villaya villa_discounts kaydı eklemek onu bu listeye OTOMATİK
-   sokmuyordu. Sonuç: villa_discounts'ta birden fazla villa aktif indirimli
-   olsa bile anasayfada yalnızca admin'in elle eklediği (genelde tek) villa
-   görünüyordu. `discount_collections`/`discountRepository`'ye (add/remove/
-   reorder/toggle) HİÇ dokunulmadı — yalnızca bu section'ın VERİ KAYNAĞI
-   değişti; admin sayfası hâlâ çalışır, sadece anasayfa artık onu OKUMUYOR.
+   getCachedHomepageCollectionVillas'ın BİREBİR klonu; tek fark
+   tablo (`discount_collections`) ve tag ("discount"). Aynı
+   HomepageCollectionVilla shape'i döner → VillaCard/section reuse.
+   Admin discount CRUD sonrası revalidateDiscount() invalidate eder.
 
-   YENİ DAVRANIŞ: villa_discounts tablosunda EN AZ 1 kaydı olan TÜM
-   villa_id'ler (villaDiscountRepository.findDistinctVillaIdsWithDiscounts
-   — zaten var olan, admin `hasDiscount=1` picker'ının da kullandığı
-   read-only metod) → bu villaların kart embed'i (villaAdminRepository.
-   findDiscountedCardsByIds — `findCardsByIds`'in villa_discounts embed'li
-   ikizi) → yalnızca BUGÜN aktif bir indirimi olanlar (price.engine >
-   getActiveDiscount, DEĞİŞTİRİLMEDİ) sonuç listesine girer. Yeni bir
-   "aktiflik"/fiyat hesaplama mantığı İCAT EDİLMEDİ — mevcut
-   getActiveDiscount/applyDiscountToDailyPrice AYNEN reuse edilir.
-=============================================================== */
+   🔄 GERİ ALMA NOTU (bu tur): Bir önceki turda bu fonksiyon, ELLE
+   küratörlü `discount_collections` yerine doğrudan `villa_discounts`'tan
+   (TÜM aktif indirimli villalar, otomatik) okuyacak şekilde değiştirilmişti.
+   Kullanıcı talebiyle bu TAMAMEN geri alındı: ana veri kaynağı YENİDEN
+   `discount_collections` (admin'in `/maki-admin/discount-collection`
+   sayfasında elle seçtiği villalar, `sort_order ASC`). `villa_discounts`
+   hâlâ villa PICKER'ının seçilebilir havuzunu filtrelemek için kullanılıyor
+   (bkz. /api/admin/villas?hasDiscount=1 → villaDiscountRepository.
+   findDistinctVillaIdsWithDiscounts) — ama bu, BU fonksiyondan tamamen
+   ayrı, dokunulmamış bir akış. "Yalnız bugün aktif indirimi olan villa
+   görünsün" davranışı (aşağıdaki `if (!activeDiscount) continue`) AYNEN
+   korunuyor — bu turda bu konuda yeni bir karar alınmadı. */
 export const getCachedDiscountCollectionVillas = unstable_cache(
   async (): Promise<HomepageCollectionVilla[]> => {
-    const { data: idRows, error: idError } =
-      await villaDiscountRepository.findDistinctVillaIdsWithDiscounts();
-
-    if (idError) {
-      console.error("[cache.discountCollection] id lookup FAILED", idError.message);
-      return [];
-    }
-
-    const villaIds = Array.from(
-      new Set(
-        (idRows || [])
-          .map((r) => r.villa_id)
-          .filter((id): id is string => typeof id === "string" && id.length > 0)
-      )
-    );
-
-    if (villaIds.length === 0) return [];
-
     const statsPromise = getVillaReviewStatsBatch();
-    const { data, error } =
-      await villaAdminRepository.findDiscountedCardsByIds(villaIds);
+    const { data, error } = await discountRepository.findActivePublicCards();
 
     if (error) {
       console.error("[cache.discountCollection] FAILED", error.message);
@@ -419,34 +392,41 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
 
     type Row = {
       id: string;
-      slug: string | null;
-      title: string | null;
-      badge: string | null;
-      bedrooms: number | null;
-      bathrooms: number | null;
-      guests: number | null;
-      is_active: boolean | null;
-      deleted_at: string | null;
-      location: { name: string } | null;
-      villa_images: Array<{
-        image_url: string | null;
-        is_cover: boolean | null;
-        sort_order: number | null;
-      }> | null;
-      villa_prices: Array<{
-        price: number | null;
-        currency: string | null;
-        start_date: string | null;
-      }> | null;
-      /* 🛡️ EK embed (villa_prices'ın yapısal ikizi) — bkz.
-         villa.repository.server.ts > findDiscountedCardsByIds. */
-      villa_discounts: Array<{
-        start_date: string | null;
-        end_date: string | null;
-        discount_type: "percent" | "fixed" | null;
-        discount_value: number | null;
-        currency: string | null;
-      }> | null;
+      sort_order: number;
+      is_active: boolean;
+      custom_title: string | null;
+      custom_cover_image: string | null;
+      villa: {
+        id: string;
+        slug: string | null;
+        title: string | null;
+        badge: string | null;
+        bedrooms: number | null;
+        bathrooms: number | null;
+        guests: number | null;
+        is_active: boolean | null;
+        deleted_at: string | null;
+        location: { name: string } | null;
+        villa_images: Array<{
+          image_url: string | null;
+          is_cover: boolean | null;
+          sort_order: number | null;
+        }> | null;
+        villa_prices: Array<{
+          price: number | null;
+          currency: string | null;
+          start_date: string | null;
+        }> | null;
+        /* 🛡️ EK embed (villa_prices'ın yapısal ikizi) — bkz.
+           discount.repository.ts > findActivePublicCards. */
+        villa_discounts: Array<{
+          start_date: string | null;
+          end_date: string | null;
+          discount_type: "percent" | "fixed" | null;
+          discount_value: number | null;
+          currency: string | null;
+        }> | null;
+      } | null;
     };
 
     const rows = (data || []) as unknown as Row[];
@@ -458,7 +438,8 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
     const today = new Date();
 
     const result: HomepageCollectionVilla[] = [];
-    for (const v of rows) {
+    for (const r of rows) {
+      const v = r.villa;
       if (!v || !v.id) continue;
       if (v.is_active === false || v.deleted_at != null) continue;
 
@@ -508,11 +489,10 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
       const activeDiscount = getActiveDiscount(today, normalizedDiscounts);
 
       /* 🔄 Bu villa "İndirimli Kiralık Villalar" bölümünde YALNIZ bugün
-         gerçekten aktif bir indirimi varsa görünür — villa_discounts'ta
-         geçmiş/gelecek bir kaydı olup bugün aktif indirimi OLMAYAN villa
-         (eskiden manuel küratörlü listede kalıp "indirimsiz" göründüğü
-         gibi) artık bu section'a hiç girmez; bölüm adının ("İndirimli")
-         anlamıyla tutarlı. */
+         gerçekten aktif bir indirimi varsa görünür — `discount_collections`
+         curasyon listesinde olup bugün aktif indirimi OLMAYAN villa artık
+         bu section'a hiç girmez; bölüm adının ("İndirimli") anlamıyla
+         tutarlı. (Bu davranış korunmuştur — bu turda değiştirilmedi.) */
       if (!activeDiscount) continue;
 
       const s = statsMap[v.id];
@@ -522,7 +502,9 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
         id: v.id,
         slug: String(v.slug || ""),
         title: String(v.title || ""),
-        display_title: String(v.title || ""),
+        display_title:
+          (r.custom_title && r.custom_title.trim()) ||
+          String(v.title || ""),
         location: v.location?.name || "",
         price:
           firstPrice && firstPrice.price !== null
@@ -534,7 +516,7 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
         bathrooms: v.bathrooms ?? 1,
         guests: v.guests ?? 2,
         images,
-        cover_override_path: null,
+        cover_override_path: r.custom_cover_image,
         review_average: hasReviews ? s.average : undefined,
         review_count: hasReviews ? s.count : undefined,
         discount: {
@@ -546,14 +528,6 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
         },
       });
     }
-
-    /* Deterministik sıralama — sort_order artık YOK (manuel küratörlü
-       tablo bypass edildi); en yakın zamanda BİTECEK indirim önce
-       (basit, yeni bir fiyat/iş kuralı İCAT EDİLMEDİ, yalnızca zaten
-       hesaplanmış discount.end_date üzerinden görüntüleme sırası). */
-    result.sort((a, b) =>
-      (a.discount?.end_date || "").localeCompare(b.discount?.end_date || "")
-    );
 
     return result;
   },
