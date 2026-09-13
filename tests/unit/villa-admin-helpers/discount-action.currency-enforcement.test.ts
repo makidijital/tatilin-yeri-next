@@ -20,6 +20,13 @@
        kaydı/silmesi (saveDiscountData replace-all deseni ikisi için de
        AYNI çağrı) BAŞARILI olur. villa.currency doluysa fallback'e HİÇ
        başvurulmaz (mevcut davranış korunur).
+     - REGRESSION (KÖK NEDEN FIX — villa satırı okuma HATASI artık
+       fallback'i ENGELLEMEZ): findIdTitleCurrencyById `error` dönerse
+       (ör. geçici DB hatası) eskiden fonksiyon ORADA dururdu, fallback'e
+       HİÇ düşülmezdi — takvimin AYNI getVillaPrices'la normal fiyatı
+       gösterdiği bir villada bile indirim reddediliyordu. Artık villa
+       satırı hata dönse BİLE villa_prices fallback'i denenir; fallback
+       geçerli bir currency bulursa kayıt BAŞARILI olur.
 
    Mock convention: proje genelinde kullanılan `vi.mock` + module-level
    spy deseni (bkz. tests/unit/reservation-service/*.test.ts).
@@ -307,5 +314,64 @@ describe("saveDiscountData — server-authoritative currency enforcement", () =>
     expect(rpcReplaceVillaDiscountsMock).toHaveBeenCalledWith(VILLA_ID, [
       expect.objectContaining({ discount_type: "fixed", currency: "USD" }),
     ]);
+  });
+
+  it("10) KÖK NEDEN FIX — villa satırı okuma HATASI (findIdTitleCurrencyById error döner) villa_prices fallback'ini ENGELLEMEZ; fallback geçerli currency bulursa kayıt BAŞARILI olur (takvimin gösterdiği fiyatla TUTARLI)", async () => {
+    // Takvimin (loadPricingData) kullandığı getVillaPrices AYNI villaId
+    // için gerçek/pozitif fiyat döndürüyor — bu villada normal fiyat VAR.
+    findIdTitleCurrencyByIdMock.mockResolvedValue({
+      data: null,
+      error: { message: "geçici bağlantı hatası" },
+    });
+    getVillaPricesMock.mockResolvedValue([
+      {
+        id: "vp-1",
+        villa_id: VILLA_ID,
+        start_date: "2026-06-01",
+        end_date: "2026-06-30",
+        price: 5000,
+        currency: "TRY",
+        created_at: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+
+    const res = await saveDiscountData(VILLA_ID, [
+      {
+        start_date: "2026-10-01",
+        end_date: "2026-10-05",
+        discount_type: "fixed",
+        discount_value: 500,
+        currency: "TRY",
+      },
+    ]);
+
+    expect(res).toEqual({ ok: true });
+    expect(getVillaPricesMock).toHaveBeenCalledTimes(1);
+    expect(getVillaPricesMock).toHaveBeenCalledWith(VILLA_ID);
+    expect(rpcReplaceVillaDiscountsMock).toHaveBeenCalledTimes(1);
+    expect(rpcReplaceVillaDiscountsMock).toHaveBeenCalledWith(VILLA_ID, [
+      expect.objectContaining({ discount_type: "fixed", currency: "TRY" }),
+    ]);
+  });
+
+  it("11) villa satırı HATA döner VE villa_prices de boş/geçersiz → hâlâ REJECT (iş kuralı: normal fiyat hiç yoksa indirim eklenemez)", async () => {
+    findIdTitleCurrencyByIdMock.mockResolvedValue({
+      data: null,
+      error: { message: "geçici bağlantı hatası" },
+    });
+    getVillaPricesMock.mockResolvedValue([]);
+
+    const res = await saveDiscountData(VILLA_ID, [
+      {
+        start_date: "2026-10-01",
+        end_date: "2026-10-05",
+        discount_type: "fixed",
+        discount_value: 500,
+        currency: "TRY",
+      },
+    ]);
+
+    expect(res.ok).toBe(false);
+    expect(rpcReplaceVillaDiscountsMock).not.toHaveBeenCalled();
   });
 });

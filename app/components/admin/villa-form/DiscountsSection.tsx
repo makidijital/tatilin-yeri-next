@@ -189,10 +189,8 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
       return;
     }
     if (draft.discount_type === "fixed" && !villaCurrency) {
-      // 🚧 GEÇİCİ TEŞHİS (kalıcı değil, revert edilecek) — getVillaCurrency()
-      // fonksiyonuna DOKUNULMADI, yalnızca sonucu ekrana basılıyor.
       setFormError(
-        `[TEŞHİS] villaCurrency=${JSON.stringify(villaCurrency)} | villaId=${JSON.stringify(villaId)} — Villa için bir fiyat para birimi belirlenmemiş; önce Fiyatlar bölümünden bir fiyat gir.`
+        "Villa için bir fiyat para birimi belirlenmemiş; önce Fiyatlar bölümünden bir fiyat gir."
       );
       return;
     }

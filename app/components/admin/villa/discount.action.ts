@@ -132,14 +132,17 @@ export async function saveDiscountData(
   const { data: villaData, error: villaError } =
     await villaRepository.findIdTitleCurrencyById(villaId);
   if (villaError) {
+    /* 🛡️ KÖK NEDEN DÜZELTMESİ: villa satırı okuma HATASI (ör. geçici
+       DB/bağlantı hatası) artık isteği DOĞRUDAN reddetmiyor — aşağıdaki
+       villa_prices fallback'i HER ZAMAN denenir (calendar'ın kullandığı
+       getVillaPrices/loadPricingData ile AYNI okuma). İstek yalnızca
+       hem villa.currency hem villa_prices fallback'i currency
+       veremediğinde (aşağıdaki ikinci `if (!villaCurrency)` bloğu)
+       reddedilir. */
     console.error(
-      "saveDiscountData: villa currency okunamadı:",
+      "saveDiscountData: villa satırı okunamadı (fallback denenecek):",
       villaError.message
     );
-    return {
-      ok: false,
-      error: "Villa fiyat para birimi okunamadı, indirim kaydedilemedi.",
-    };
   }
 
   /* 🛡️ ÖNCELİK: villa.currency (mevcut davranış AYNEN — dolu olan
@@ -153,7 +156,6 @@ export async function saveDiscountData(
      belirleniyor) kullanılır. Fixed indirim currency-eşleşme
      GÜVENLİK KONTROLÜ aşağıda AYNEN devam eder — client'a güvenilmez. */
   let villaCurrency = villaData?.currency || null;
-
   if (!villaCurrency) {
     const prices = await getVillaPrices(villaId);
     villaCurrency = getStartingPrice(prices)?.currency || null;
