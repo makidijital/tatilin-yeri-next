@@ -238,6 +238,31 @@ export default function VillaCard({
   const showDiscountPricing =
     !!activeDiscount && !!discountedPrice && !!discountDateRangeLabel;
 
+  /* 🏷️ İNDİRİM ROZETİ YÜZDESİ (bu tur) — sağ üst köşedeki "%NN İNDİRİM"
+     rozetinin göstereceği değer. SABIT bir yüzde YAZILMADI:
+     - discount_type === "percent" ise `discount_value` DOĞRUDAN kullanılır
+       (örn. 20 → %20).
+     - discount_type === "fixed" ise gerçek yüzde, normal (convertedPrice)
+       ile indirimli (discountedPrice.converted) fiyat arasındaki farktan
+       hesaplanır — yeni bir fiyat mantığı YOK, yalnızca mevcut iki
+       değerin oranı alınıyor.
+     Hesaplanamıyorsa (fiyat sıfır/negatif, indirim yoksa vb.) badge HİÇ
+     render edilmez — uydurma yüzde YOK. */
+  const discountBadgePercent: number | null = (() => {
+    if (!showDiscountPricing || !activeDiscount || !discountedPrice) return null;
+    if (activeDiscount.discount_type === "percent") {
+      const pct = Math.round(Number(activeDiscount.discount_value) || 0);
+      return pct > 0 ? pct : null;
+    }
+    if (convertedPrice > 0 && discountedPrice.converted < convertedPrice) {
+      const pct = Math.round(
+        ((convertedPrice - discountedPrice.converted) / convertedPrice) * 100
+      );
+      return pct > 0 ? pct : null;
+    }
+    return null;
+  })();
+
   /* 🛡️ GRAND TOTAL — mevcut price.engine reuse (calculateGrandTotal).
      Aktif olması için: stayStart + stayEnd + prices[] üçlüsü
      birlikte verilmeli ve nights > 0 olmalı.
@@ -759,6 +784,21 @@ export default function VillaCard({
               ve FavoriteButton kullanımlarına (satır ~438, ~1005) HİÇ
               dokunulmadı, onlar AYNEN duruyor. */}
 
+          {/* 🏷️ İNDİRİM ROZETİ (bu tur) — sağ üst köşe, kırmızı zemin +
+              beyaz yazı. Yüzde SABİT DEĞİL: discountBadgePercent (yukarıda,
+              discount_type/discount_value'den hesaplandı) null ise badge HİÇ
+              render edilmez. Kartın içine taşmaması için image bloğunun kendi
+              `relative overflow-hidden` alanına, `absolute top-3 right-3` ile
+              konumlandırıldı. */}
+          {discountBadgePercent !== null && (
+            <div
+              className="absolute top-3 right-3 z-10 inline-flex items-center rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em] text-white shadow-[0_4px_10px_-2px_rgba(220,38,38,0.5)]"
+              aria-label={`Yüzde ${discountBadgePercent} indirim`}
+            >
+              {`%${discountBadgePercent} İNDİRİM`}
+            </div>
+          )}
+
           {/* TITLE + LOCATION — görsel üzerinde alt overlay, brand accent çizgisi.
               Normal public karttan (VillaCard default) ayırt etmek için altina
               turuncu→mavi ince accent çizgisi eklendi. */}
@@ -860,7 +900,7 @@ export default function VillaCard({
                       {formatCurrency(convertedPrice, currency)}
                     </span>
                     <span className="inline-flex items-baseline gap-1">
-                      <span className="font-display font-bold text-[18px] md:text-[19px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
+                      <span className="font-display font-bold text-[18px] md:text-[19px] text-green-600 tracking-[-0.015em] tabular-nums leading-none">
                         {formatCurrency(discountedPrice!.converted, currency)}
                       </span>
                       <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--color-stone-500)]">
@@ -894,7 +934,7 @@ export default function VillaCard({
                 e.stopPropagation();
                 router.push(detailHref);
               }}
-              className="mt-3 w-full inline-flex items-center justify-center h-11 rounded-xl bg-gradient-to-r from-[#ED7926] to-[#0973BA] text-white uppercase font-semibold text-[11.5px] tracking-[0.08em] shadow-[0_10px_24px_-8px_rgba(9,115,186,0.45)] hover:shadow-[0_14px_30px_-10px_rgba(9,115,186,0.55)] hover:-translate-y-px active:translate-y-0 transition-[box-shadow,transform] duration-200 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40"
+              className="mt-3 w-full inline-flex items-center justify-center h-11 rounded-xl bg-[#ED7926] hover:bg-[#D96A1F] text-white uppercase font-semibold text-[11.5px] tracking-[0.08em] shadow-[0_10px_24px_-8px_rgba(237,121,38,0.45)] hover:shadow-[0_14px_30px_-10px_rgba(237,121,38,0.55)] hover:-translate-y-px active:translate-y-0 transition-[box-shadow,transform,background-color] duration-200 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ED7926]/40"
             >
               Hemen Rezervasyon Yap
             </button>
