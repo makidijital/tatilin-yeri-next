@@ -11,6 +11,16 @@ import {
   loadDiscountData,
   saveDiscountData,
 } from "@/app/components/admin/villa/discount.action";
+/* 🛡️ CACHE INVALIDATION — public tarafta "İndirimli Kiralık Villalar"
+   bölümünü besleyen getCachedDiscountCollectionVillas (lib/cache.helpers.ts)
+   "discount" tag'i ile unstable_cache'lidir (revalidate: 600s TTL).
+   saveDiscountData BAŞARILI olduğunda (ekleme/silme, ikisi de aynı
+   replace-all RPC) bu tag'i AYRICA invalidate etmezsek, public kartlar
+   TTL dolana kadar (en fazla 10 dk) eski veriyi göstermeye devam eder.
+   Mevcut, zaten var olan fonksiyon reuse edilir — yeni bir cache/tag
+   sistemi YOK. /maki-admin/discount-collection sayfasının kendi
+   fireRevalidate() helper'ıyla AYNI fonksiyon, farklı bir call-site. */
+import { revalidateDiscount } from "@/app/services/revalidate.actions";
 /* 🛡️ SADECE UI gösterimi için — villa'nın fiyat para birimini okur
    (yeni sorgu YOK, pricing.action.ts'in loadPricingData'da zaten
    kullandığı repository metodunun ikinci call-site'ı). Gerçek
@@ -214,6 +224,12 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
       return;
     }
 
+    // 🛡️ Save başarılı — public villa kartı cache'ini invalidate et
+    // (bkz. dosya başı importu). Save başarısız olsaydı buraya hiç
+    // gelinmezdi (üstteki early return). revalidateTag kendisi hata
+    // fırlatmaz ("use server" action), ama .catch ile savunmacı —
+    // ekranda görünen refresh()/resetForm() akışını asla bloklamaz.
+    await revalidateDiscount().catch(() => {});
     await refresh();
     resetForm();
   };
@@ -238,6 +254,8 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
       return;
     }
 
+    // 🛡️ Save (silme) başarılı — public villa kartı cache'ini invalidate et.
+    await revalidateDiscount().catch(() => {});
     await refresh();
   };
 
