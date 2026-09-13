@@ -12,6 +12,12 @@ import DayCell from "./DayCell";
 
 import type { PricingCanvasRange } from "../_types/pricing-calendar";
 
+/* 🛡️ İNDİRİM ÖNİZLEMESİ — prop verilmezse (örn. DiscountCalendarCanvas'ın
+   tarih-seçim-only kullanımı) boş sabit Map'e düşer; DayCell hiçbir günde
+   discountedPrice almaz → davranış BYTE-IDENTICAL kalır. DiscountCalendarCanvas
+   BURADAN dokunulmadı, prop'u hiç geçmiyor olsa bile kırılmaz. */
+const EMPTY_DAY_DISCOUNTED_PRICE_MAP = new Map<string, number>();
+
 /* ===============================================================
    🛡️ FAZ 3 — MonthBlock (PURE PRESENTATIONAL)
    ===============================================================
@@ -30,6 +36,7 @@ import type { PricingCanvasRange } from "../_types/pricing-calendar";
 export default function MonthBlock({
   monthStart,
   dayPriceMap,
+  dayDiscountedPriceMap = EMPTY_DAY_DISCOUNTED_PRICE_MAP,
   minPrice,
   maxPrice,
   activeFrom,
@@ -42,6 +49,11 @@ export default function MonthBlock({
 }: {
   monthStart: Date;
   dayPriceMap: Map<string, PricingCanvasRange>;
+  /** 🛡️ İNDİRİM ÖNİZLEMESİ (UI-only) — dolu olduğu günlerde DayCell
+   *  eski fiyatı üstü çizili + yeni fiyatı yeşil gösterir. Opsiyonel;
+   *  verilmezse (örn. DiscountCalendarCanvas) boş Map'e düşer →
+   *  davranış BYTE-IDENTICAL kalır. */
+  dayDiscountedPriceMap?: Map<string, number>;
   minPrice: number;
   maxPrice: number;
   activeFrom: Date | null;
@@ -86,6 +98,7 @@ export default function MonthBlock({
               date={d}
               inCurrentMonth={inCurrentMonth}
               priceRange={dayPriceMap.get(dayKey(d)) || null}
+              discountedPrice={dayDiscountedPriceMap.get(dayKey(d)) ?? null}
               isInActiveRange={isInRange(d, activeFrom, activeTo)}
               boundary={isRangeBoundary(d, activeFrom, activeTo)}
               isDraggingNow={isDraggingNow}

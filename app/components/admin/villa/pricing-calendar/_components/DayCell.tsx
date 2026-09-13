@@ -56,6 +56,7 @@ export default function DayCell({
   date,
   inCurrentMonth,
   priceRange,
+  discountedPrice = null,
   isInActiveRange,
   boundary,
   isDraggingNow,
@@ -69,6 +70,11 @@ export default function DayCell({
   date: Date;
   inCurrentMonth: boolean;
   priceRange: PricingCanvasRange | null;
+  /** 🛡️ İNDİRİM ÖNİZLEMESİ (UI-only) — dolu (non-null) VE priceRange de
+   *  doluysa: eski fiyat üstü çizili + bu değer yeşil gösterilir. null/
+   *  undefined ise (indirim yok, ya da MonthBlock'a hiç geçilmediyse)
+   *  davranış BYTE-IDENTICAL (tek satır normal fiyat) kalır. */
+  discountedPrice?: number | null;
   isInActiveRange: boolean;
   boundary: RangeBoundary;
   isDraggingNow: boolean;
@@ -180,20 +186,59 @@ export default function DayCell({
           style={{ paddingTop: compact ? 7 : 10 }}
         >
           {priceRange ? (
-            <span
-              className="font-display tabular-nums"
-              style={{
-                fontSize: compact ? 10 : 12,
-                fontWeight: 700,
-                letterSpacing: "-0.01em",
-                color: baseText,
-                whiteSpace: compact ? "nowrap" : undefined,
-              }}
-            >
-              {compact
-                ? formatCompactPrice(priceRange.price, priceRange.currency)
-                : compactPrice(priceRange.price, priceRange.currency)}
-            </span>
+            discountedPrice != null ? (
+              /* 🛡️ İNDİRİM ÖNİZLEMESİ — eski fiyat üstü çizili (soluk),
+                 yeni (indirimli) fiyat altta YEŞİL + kalın. Hücrenin
+                 height/outline/transition/background stilleri (yukarıda)
+                 HİÇ değişmedi; sadece bu iç blok iki satıra çıktı. */
+              <div className="flex flex-col items-center leading-none gap-[1px]">
+                <span
+                  className="font-display tabular-nums"
+                  style={{
+                    fontSize: compact ? 8 : 9,
+                    fontWeight: 600,
+                    letterSpacing: "-0.01em",
+                    color: baseText,
+                    opacity: 0.55,
+                    textDecoration: "line-through",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {compact
+                    ? formatCompactPrice(priceRange.price, priceRange.currency)
+                    : compactPrice(priceRange.price, priceRange.currency)}
+                </span>
+                <span
+                  className="font-display tabular-nums"
+                  style={{
+                    fontSize: compact ? 10 : 12,
+                    fontWeight: 800,
+                    letterSpacing: "-0.01em",
+                    color: "#059669",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {compact
+                    ? formatCompactPrice(discountedPrice, priceRange.currency)
+                    : compactPrice(discountedPrice, priceRange.currency)}
+                </span>
+              </div>
+            ) : (
+              <span
+                className="font-display tabular-nums"
+                style={{
+                  fontSize: compact ? 10 : 12,
+                  fontWeight: 700,
+                  letterSpacing: "-0.01em",
+                  color: baseText,
+                  whiteSpace: compact ? "nowrap" : undefined,
+                }}
+              >
+                {compact
+                  ? formatCompactPrice(priceRange.price, priceRange.currency)
+                  : compactPrice(priceRange.price, priceRange.currency)}
+              </span>
+            )
           ) : (
             <span
               className="text-[10px] tabular-nums"

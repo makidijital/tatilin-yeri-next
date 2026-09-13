@@ -13,6 +13,11 @@ import { Loader2 } from "lucide-react";
    villa-price.service / @/lib/db client bundle'a girmez). Write server
    tarafında session-aware client ile → RLS admin session aynen korunur. */
 import { loadPricingData, savePricingData } from "./pricing.action";
+/* 🛡️ İNDİRİM ÖNİZLEMESİ (UI-only) — villa_discounts okuması için
+   DiscountsSection'ın ZATEN KULLANDIĞI aynı server action reuse
+   edilir; yeni bir sorgu/action YOK. Yazma tarafına (saveDiscountData)
+   burada hiç dokunulmuyor/import edilmiyor — bu component SADECE okur. */
+import { loadDiscountData } from "./discount.action";
 
 import {
   formatLocalDate,
@@ -25,6 +30,7 @@ import {
   applyRangeUpsert,
   applyRangeDelete,
 } from "./pricing-calendar/_helpers/range-math";
+import { buildDayDiscountedPriceMap } from "./pricing-calendar/_helpers/discount-day-map";
 
 import PricingCalendarNav from "./pricing-calendar/_components/PricingCalendarNav";
 import MonthBlock from "./pricing-calendar/_components/MonthBlock";
@@ -33,8 +39,10 @@ import PricingRangeDrawer from "./pricing-calendar/_components/PricingRangeDrawe
 /* 🛡️ FAZ 27 — calculateNights reuse. BookingSidebar (Faz 26B),
    /arama, VillaCard, reservation create — hepsi bu helper ile
    gece hesaplıyor; admin price range modal'ı da aynı hesaba
-   bağlandı (eski inclusive day count `+1` bug fix). */
-import { calculateNights } from "@/lib/price.engine";
+   bağlandı (eski inclusive day count `+1` bug fix).
+   🛡️ İNDİRİM ÖNİZLEMESİ — `DiscountRange` tipi (price.engine.ts'in
+   zaten export ettiği) reuse edilir; yeni bir tip TANIMLANMADI. */
+import { calculateNights, type DiscountRange } from "@/lib/price.engine";
 
 import type {
   PricingCanvasRange,
@@ -94,6 +102,13 @@ export default function PricingCalendarCanvas({
 }: PricingCalendarCanvasProps) {
   const [villa, setVilla] = useState<VillaMeta | null>(null);
   const [prices, setPrices] = useState<PricingCanvasRange[]>([]);
+  /* 🛡️ İNDİRİM ÖNİZLEMESİ (UI-only) — SADECE EDIT mode'da (villaId
+     varken) doldurulur; CREATE mode'da villa henüz DB'de olmadığı
+     (villa_discounts FK zorunlu) için hep boş kalır — DiscountsSection
+     zaten CREATE mode'da hiç render edilmiyor, aynı kısıt burada da
+     geçerli. Bu state SADECE takvim hücrelerinde eski/yeni fiyatı
+     göstermek için kullanılır; kayıt/hesaplama akışına dahil DEĞİLDİR. */
+  const [discounts, setDiscounts] = useState<DiscountRange[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
 
@@ -152,8 +167,11 @@ export default function PricingCalendarCanvas({
     try {
       if (villaId) {
         // EDIT mode — DB load
-        const { villa: villaData, prices: pricesData } =
-          await loadPricingData(villaId);
+        const [{ villa: villaData, prices: pricesData }, discountData] =
+          await Promise.all([
+            loadPricingData(villaId),
+            loadDiscountData(villaId),
+          ]);
 
         if (villaData) {
           setVilla({
@@ -172,6 +190,19 @@ export default function PricingCalendarCanvas({
           currency: p.currency || "TRY",
         }));
         setPrices(normalized);
+
+        // 🛡️ İNDİRİM ÖNİZLEMESİ — DiscountsSection'daki VillaDiscountRow
+        // şeklinden price.engine'in beklediği DiscountRange şekline
+        // normalize (villa-discount.service.ts'in yaptığı AYNI mapping).
+        setDiscounts(
+          (discountData.discounts || []).map((d) => ({
+            start_date: (d.start_date || "").toString().split("T")[0],
+            end_date: (d.end_date || "").toString().split("T")[0],
+            discount_type: d.discount_type,
+            discount_value: Number(d.discount_value) || 0,
+            currency: d.currency,
+          }))
+        );
       } else {
         // CREATE mode — DB write/read YOK; initial snapshot'tan seed
         setVilla(null);
@@ -187,6 +218,8 @@ export default function PricingCalendarCanvas({
           // boş satırları (legacy default) at
           .filter((p) => p.start_date && p.end_date);
         setPrices(seed);
+        // CREATE mode'da villa henüz yok → villa_discounts hiç olamaz.
+        setDiscounts([]);
       }
     } finally {
       setLoading(false);
@@ -201,6 +234,13 @@ export default function PricingCalendarCanvas({
   const dayPriceMap = useMemo(
     () => buildDayPriceMap(prices),
     [prices]
+  );
+  /* 🛡️ İNDİRİM ÖNİZLEMESİ — SADECE görsel; getActiveDiscount/
+     applyDiscountToDailyPrice (price.engine.ts) reuse edilir, yeni
+     hesaplama mantığı YOK (bkz. discount-day-map.ts). */
+  const dayDiscountedPriceMap = useMemo(
+    () => buildDayDiscountedPriceMap(dayPriceMap, discounts),
+    [dayPriceMap, discounts]
   );
   const { minPrice, maxPrice } = useMemo(() => {
     const ps = prices.map((p) => p.price).filter((p) => p > 0);
@@ -456,6 +496,7 @@ export default function PricingCalendarCanvas({
                 key={dayKey(m)}
                 monthStart={m}
                 dayPriceMap={dayPriceMap}
+                dayDiscountedPriceMap={dayDiscountedPriceMap}
                 minPrice={minPrice}
                 maxPrice={maxPrice}
                 activeFrom={activeFrom}
