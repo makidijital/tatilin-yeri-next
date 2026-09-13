@@ -10,6 +10,7 @@ import DiscountCalendarCanvas from "./DiscountCalendarCanvas";
 import {
   loadDiscountData,
   saveDiscountData,
+  deleteDiscountData,
 } from "@/app/components/admin/villa/discount.action";
 /* 🛡️ CACHE INVALIDATION — public tarafta "İndirimli Kiralık Villalar"
    bölümünü besleyen getCachedDiscountCollectionVillas (lib/cache.helpers.ts)
@@ -242,11 +243,16 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
     );
     if (!ok) return;
 
-    const remaining = discounts.filter((d) => d.id !== target.id).map(toInput);
-
+    /* 🛡️ ARTIK saveDiscountData/replace-all'dan GEÇMİYOR — doğrudan
+       tek-kayıt DELETE (discount.action.ts > deleteDiscountData).
+       currency enforcement / villa.currency / villa_prices okuması HİÇ
+       devreye girmez (villanın fiyat verisi eksik olsa bile silme
+       çalışır). `remaining`/`toInput` listesi artık burada gerekmiyor —
+       `toInput` yalnız handleAdd'de (ekleme payload'ı) kullanılmaya
+       devam ediyor. */
     setSaving(true);
     setListError("");
-    const res = await saveDiscountData(villaId, remaining);
+    const res = await deleteDiscountData(villaId, target.id);
     setSaving(false);
 
     if (!res.ok) {
@@ -254,7 +260,7 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
       return;
     }
 
-    // 🛡️ Save (silme) başarılı — public villa kartı cache'ini invalidate et.
+    // 🛡️ Silme başarılı — public villa kartı cache'ini invalidate et.
     await revalidateDiscount().catch(() => {});
     await refresh();
   };

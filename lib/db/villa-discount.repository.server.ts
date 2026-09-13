@@ -94,4 +94,27 @@ export const villaDiscountRepository = {
       p_discounts: payload,
     });
   },
+
+  /* ===============================================================
+     DELETE — TEK villa_discounts kaydı (replace-all'dan AYRI yol)
+     ===============================================================
+     AMAÇ: Admin "İndirimler" listesinden tek bir kaydı silmek artık
+     `rpcReplaceVillaDiscounts` (tüm listeyi yeniden yazan replace-all)
+     üzerinden GEÇMİYOR — bu yüzden currency enforcement/villa.currency/
+     villa_prices okuması HİÇ devreye girmez (villanın fiyat verisi
+     eksik/NULL olsa bile silme çalışır).
+     WHERE `id = discountId AND villa_id = villaId` — IDOR guard: başka
+     bir villaya ait discountId gönderilirse WHERE hiç eşleşmez, hiçbir
+     satır silinmez (mevcut `deleteById` desenleriyle AYNI — bkz.
+     villa.repository.server.ts'teki tekil-koşullu delete'ler; burada
+     ikinci `.eq()` ile compound koşul EKLENDİ, chain kalıbı projede
+     zaten var — bkz. villa-zip.repository.server.ts/reservation-share.
+     repository.server.ts'teki `.delete().eq(...).or(...)` örnekleri). */
+  async deleteDiscountById(villaId: string, discountId: string) {
+    return await dbAdmin
+      .from("villa_discounts")
+      .delete()
+      .eq("id", discountId)
+      .eq("villa_id", villaId);
+  },
 };

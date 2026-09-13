@@ -202,3 +202,34 @@ export async function saveDiscountData(
 
   return { ok: true };
 }
+
+/** DELETE — TEK villa_discounts kaydı. `saveDiscountData`/replace-all
+ *  akışından TAMAMEN AYRI: currency enforcement YOK, `getVillaPrices`/
+ *  `villa.currency` HİÇ okunmaz, `rpcReplaceVillaDiscounts` KULLANILMAZ.
+ *  Doğrudan `villaDiscountRepository.deleteDiscountById` (id + villaId
+ *  WHERE koşulu — IDOR guard, bkz. repository doc-comment'i). Yetki
+ *  kontrolü `saveDiscountData` ile AYNI (`authorizeAdminSession`). */
+export async function deleteDiscountData(
+  villaId: string,
+  discountId: string
+): Promise<DiscountActionResult> {
+  const auth = await authorizeAdminSession();
+  if (!auth.ok) {
+    return { ok: false, error: auth.error || "Oturum doğrulanamadı." };
+  }
+
+  const { error } = await villaDiscountRepository.deleteDiscountById(
+    villaId,
+    discountId
+  );
+
+  if (error) {
+    console.error("deleteDiscountData:", error.message);
+    return {
+      ok: false,
+      error: `İndirim silinemedi${error.message ? `: ${error.message}` : "."}`,
+    };
+  }
+
+  return { ok: true };
+}
