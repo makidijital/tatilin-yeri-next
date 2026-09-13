@@ -55,6 +55,17 @@ import { normalizeSearchText } from "@/lib/search";
    hardcoded; görünürlük otomatik (aktif villa varsa render). Villa
    seçimi/sıralama/aktif discount_collections tablosunda; her mutation
    revalidateDiscount().
+
+   🛡️ VİLLA SEÇİM HAVUZU FİLTRESİ — "Villa Ekle" seçicisi artık YALNIZCA
+   `villa_discounts` tablosunda EN AZ 1 kaydı olan villaları listeler
+   (`/api/admin/villas?activeOnly=1&hasDiscount=1` — yeni opt-in
+   `hasDiscount` query param'ı, bkz. route.ts). Tarih filtresi YOK —
+   aktif/geçmiş/gelecek fark etmez, yalnız kaydın VARLIĞI yeterli.
+   Arama (`search`) ve sayfalama (`.slice(0, 50)`) zaten bu (artık
+   önceden filtrelenmiş) `allVillas` state'i üzerinde çalışıyor — ek
+   bir değişiklik gerekmedi. Mevcut discount_collections kayıtlarının
+   ekleme/silme/güncelleme/sıralama/görüntüleme akışına (action'lar,
+   DnD, toggle, title save) HİÇ dokunulmadı.
 =============================================================== */
 
 type VillaOption = {
@@ -84,7 +95,9 @@ export default function DiscountCollectionPage() {
       listDiscountCollection(),
       (async () => {
         try {
-          const res = await adminFetch("/api/admin/villas?activeOnly=1");
+          const res = await adminFetch(
+            "/api/admin/villas?activeOnly=1&hasDiscount=1"
+          );
           const json = (await res.json().catch(() => ({}))) as {
             ok?: boolean;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import { villaAdminRepository } from "@/lib/db/villa.repository.server";
+import { villaDiscountRepository } from "@/lib/db/villa-discount.repository.server";
 import { createVillaFull } from "@/app/services/villa-admin.service";
 import type { VillaFormPayload } from "@/app/services/villa-admin/types";
 
@@ -32,13 +33,21 @@ export async function GET(req: Request): Promise<NextResponse> {
   /* Query params:
        - activeOnly=1 → `.eq("is_active", true).is("deleted_at", null)
                          .order("title", asc)` (homepage-collection consumer)
+       - hasDiscount=1 → 🛡️ YENİ (opt-in, /maki-admin/discount-collection
+         "Villa Ekle" seçici) — yalnızca `villa_discounts` tablosunda EN
+         AZ 1 kaydı olan villaları döner (tarih filtresi YOK). Parametre
+         GEÇİLMEZSE davranış BYTE-IDENTICAL (ek sorgu hiç çalışmaz) —
+         diğer consumer'lar (homepage-collection, reservation formları,
+         villas/ekle) ETKİLENMEZ.
      Default: no filter, no order (eski reservation form consumer'ları).
      `select` her zaman `id, title, slug, is_active, deleted_at` döner;
      ek field'lar mevcut consumer'lar için harmless (type ignore). */
   let activeOnly = false;
+  let hasDiscount = false;
   try {
-    activeOnly =
-      (new URL(req.url).searchParams.get("activeOnly") || "") === "1";
+    const params = new URL(req.url).searchParams;
+    activeOnly = (params.get("activeOnly") || "") === "1";
+    hasDiscount = (params.get("hasDiscount") || "") === "1";
   } catch {
     /* URL parse hata → default */
   }
@@ -54,7 +63,33 @@ export async function GET(req: Request): Promise<NextResponse> {
     );
   }
 
-  return NextResponse.json({ ok: true, villas: data || [] });
+  let villas = data || [];
+
+  /* 🛡️ hasDiscount=1: TEK ek sorgu (villa_discounts.villa_id kolonu,
+     tüm kayıtlar) → Set'e çevrilip in-memory filtre. Villa sayısından
+     BAĞIMSIZ tek query — N+1 YOK. */
+  if (hasDiscount) {
+    const { data: discountRows, error: discountError } =
+      await villaDiscountRepository.findDistinctVillaIdsWithDiscounts();
+
+    if (discountError) {
+      console.error(
+        "[admin.villas.list] hasDiscount filter FAILED",
+        discountError.message
+      );
+      return NextResponse.json(
+        { ok: false, error: discountError.message || "Liste alınamadı" },
+        { status: 500 }
+      );
+    }
+
+    const villaIdsWithDiscount = new Set(
+      (discountRows || []).map((r) => r.villa_id)
+    );
+    villas = villas.filter((v) => villaIdsWithDiscount.has(v.id));
+  }
+
+  return NextResponse.json({ ok: true, villas });
 }
 
 /* POST — yeni villa create. createVillaFull service delege. Service

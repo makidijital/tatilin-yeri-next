@@ -60,6 +60,23 @@ export const villaDiscountRepository = {
   },
 
   /* ===============================================================
+     READ — villa_discounts tablosunda EN AZ 1 kaydı olan villa_id'ler
+     ===============================================================
+     AMAÇ: /maki-admin/discount-collection "Villa Ekle" seçicisinde
+     yalnızca en az bir villa_discounts kaydı bulunan villaları
+     göstermek (aktif/geçmiş/gelecek fark etmez — tarih filtresi YOK,
+     yalnızca "kaydı var mı" sorgusu). TEK sorgu — her villa için ayrı
+     ayrı sorgu atılmıyor (N+1 YOK); caller (route/service) `villa_id`
+     kolonunu Set'e çevirip mevcut villa listesiyle in-memory kesiştirir.
+     `findDiscountsByVillaId`'nin (tek villa, `select("*")`) yapısal
+     ikizi — yalnız filtre YOK, kolon SADECE `villa_id`. */
+  async findDistinctVillaIdsWithDiscounts() {
+    return await dbAdmin
+      .from<Pick<VillaDiscountRow, "villa_id">>("villa_discounts")
+      .select("villa_id");
+  },
+
+  /* ===============================================================
      RPC — DISCOUNTS atomic replace (`replace_villa_discounts`,
      migration 079). `rpcReplaceVillaPrices`'in BİREBİR yapısal ikizi
      — yalnız tablo/RPC adı ve payload alanları farklı.
