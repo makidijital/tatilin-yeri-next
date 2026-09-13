@@ -4,7 +4,7 @@ import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 /* 🛡️ Kart "…'den başlayan" fiyatı — TÜM public kartlarda TEK ortak
    mantık: villa_prices içindeki MIN nightly (getStartingPrice). Eskiden
    koleksiyon mapper'ları villa_prices[0] kullanıyordu → tutarsız. */
-import { getStartingPrice, getActiveDiscount, type DiscountRange } from "@/lib/price.engine";
+import { getStartingPrice, type DiscountRange } from "@/lib/price.engine";
 /* 🛡️ Villa Migration S2 + S8L — findActiveLocationIds (S2) +
    findActiveImagesByIds (S8L) native'e taşındı. cache.helpers zaten
    server-only (unstable_cache) → server-only native repo import'u güvenli.
@@ -431,11 +431,6 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
 
     const rows = (data || []) as unknown as Row[];
     const statsMap = await statsPromise;
-    /* 🛡️ "Aktif" = bugün start_date..end_date arasında (price.engine >
-       getActiveDiscount'ın KENDİ tanımı — kapalı interval, .find() ile
-       ilk eşleşen, stack etmez). Tüm kartlar için TEK `Date` — sabit,
-       cache TTL'i (600sn) boyunca tutarlı. */
-    const today = new Date();
 
     const result: HomepageCollectionVilla[] = [];
     for (const r of rows) {
@@ -459,11 +454,12 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
       const rawPrices = Array.isArray(v.villa_prices) ? v.villa_prices : [];
       const firstPrice = getStartingPrice(rawPrices);
 
-      /* 🛡️ AKTİF İNDİRİM — mevcut price.engine > getActiveDiscount
-         reuse edilir (yeni bir "aktiflik" tanımı İCAT EDİLMEDİ). Ham
-         villa_discounts satırları normalize edilip (null-safe) DiscountRange
-         şekline getirilir; getActiveDiscount kendi .find() semantiğiyle
-         (kapalı interval, stack etmez) bugünü kapsayan İLK kaydı seçer. */
+      /* 🛡️ GÖSTERİLECEK İNDİRİM — ham villa_discounts satırları
+         normalize edilip (null-safe) DiscountRange şekline getirilir.
+         Tarih doğrulaması YOK — yalnız alan bütünlüğü kontrol edilir
+         (price.engine > getActiveDiscount'ın kullandığı AYNI DiscountRange
+         şekli, o fonksiyona DOKUNULMADI — bu yalnızca bu dosyadaki
+         normalize adımı). */
       const rawDiscounts = Array.isArray(v.villa_discounts)
         ? v.villa_discounts
         : [];
@@ -486,19 +482,33 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
           discount_value: Number(d.discount_value) || 0,
           currency: d.currency,
         }));
-      /* 🔄 GERİ ALMA NOTU (bu tur): Önceden burada `if (!activeDiscount)
-         continue;` vardı — villanın villa_discounts kaydı BUGÜNÜ
-         kapsamıyorsa (geçmiş/gelecek tarihli) villa section'dan TAMAMEN
-         çıkarılıyordu. Kullanıcı talebiyle bu KALDIRILDI: İş kuralı artık
-         kesin olarak `discount_collections` neyin gösterileceğini belirler
-         — villa orada seçiliyse, villa_discounts tarihi geçmiş/gelecek/
-         aktif fark etmeksizin villa HER ZAMAN gösterilir. `activeDiscount`
-         (price.engine > getActiveDiscount, DEĞİŞTİRİLMEDİ) yalnızca kartta
-         hangi indirim bilgisinin (tarih aralığı + indirimli fiyat)
-         gösterileceğini belirlemek için kullanılır; bugün aktif değilse
-         `discount: null` olur (kart normal fiyatla, indirim rozetsiz
-         görünür) — ama villa asla listeden ÇIKARILMAZ. */
-      const activeDiscount = getActiveDiscount(today, normalizedDiscounts);
+
+      /* 🔄 KÖK NEDEN DÜZELTMESİ (bu tur): Bu bölümde ÖNCEDEN
+         `getActiveDiscount(today, normalizedDiscounts)` çağrılıyordu —
+         bu, villanın villa_discounts kaydı BUGÜNÜ kapsamıyorsa (geçmiş/
+         gelecek tarihli) `discount: null` üretiyordu (villa listede
+         kalsa bile kartında indirim bilgisi hiç gösterilmiyordu). İş
+         kuralı KESİNLEŞTİ: `discount_collections`'ta seçili bir villanın
+         villa_discounts kaydı varsa, tarihi (bugün/gelecek/geçmiş) HİÇBİR
+         ŞEKİLDE filtre kriteri OLMAYACAK — kayıt varsa kartta gösterilir.
+         Bu yüzden tarihe bakan `getActiveDiscount` BURADA ARTIK
+         ÇAĞRILMIYOR (fonksiyonun kendisi price.engine.ts'te DEĞİŞMEDİ —
+         rezervasyon/fiyat hesaplama akışlarında "bugün aktif mi" anlamıyla
+         AYNEN kullanılmaya devam ediyor; yalnızca BU dosyanın BU çağrı
+         noktası kaldırıldı). Yerine deterministik seçim: normalizedDiscounts
+         `start_date` ASC sıralanır, İLK kayıt gösterilecek indirim olarak
+         seçilir (villa_discounts admin akışında normalde tek kayıt olur;
+         birden fazlaysa en erken başlayan, ekstra bir "aktiflik/öncelik"
+         iş kuralı İCAT EDİLMEDEN, en basit deterministik seçimdir).
+         normalizedDiscounts boşsa (villanın hiç geçerli villa_discounts
+         kaydı yoksa) `discount: null` olur — bu YENİ değil, önceki
+         davranışla da AYNI. */
+      const selectedDiscount: DiscountRange | null =
+        normalizedDiscounts.length > 0
+          ? [...normalizedDiscounts].sort((a, b) =>
+              a.start_date.localeCompare(b.start_date)
+            )[0]
+          : null;
 
       const s = statsMap[v.id];
       const hasReviews = !!s && s.count > 0;
@@ -524,13 +534,13 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
         cover_override_path: r.custom_cover_image,
         review_average: hasReviews ? s.average : undefined,
         review_count: hasReviews ? s.count : undefined,
-        discount: activeDiscount
+        discount: selectedDiscount
           ? {
-              start_date: activeDiscount.start_date,
-              end_date: activeDiscount.end_date,
-              discount_type: activeDiscount.discount_type,
-              discount_value: activeDiscount.discount_value,
-              currency: activeDiscount.currency ?? null,
+              start_date: selectedDiscount.start_date,
+              end_date: selectedDiscount.end_date,
+              discount_type: selectedDiscount.discount_type,
+              discount_value: selectedDiscount.discount_value,
+              currency: selectedDiscount.currency ?? null,
             }
           : null,
       });

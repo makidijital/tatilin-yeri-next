@@ -125,21 +125,28 @@ export default async function DiscountCollection() {
           </h2>
         </div>
 
-        {/* 🔄 KÖK NEDEN DÜZELTMESİ (bu tur) — "sağında dev boş alan"
-            sorunu: sabit genişlikli kartları yan yana dizen tek satırlık
-            yatay-scroll carousel, geniş masaüstü section'ında az sayıda
-            kart varken sağda kullanılmayan boşluk bırakıyordu (kartlar
-            flex-nowrap ile sola yaslı, gerisi boş). ÇÖZÜM: mobilde
-            MEVCUT yatay kaydırmalı carousel (CategoryCollection/
-            VillaTypeCarousel ile aynı altyapı — tasarım mantığı
-            DEĞİŞMEDİ) korunur; md+ (tablet/desktop) genişlikte ise
-            responsive GRID kullanılır — kolonlar `1fr` olduğu için
-            section genişliğini HER ZAMAN tam doldurur (1 kart → tam
-            genişlik, 2-3-4+ kart → yan yana, taşarsa alt satıra sarar).
-            Aynı iki container yalnızca CSS `hidden`/`md:hidden` ile
-            görünür/gizli olur (Server Component — JS breakpoint
-            algılama YOK); kart verisi/prop'ları BİREBİR aynı
-            (`renderCard`). */}
+        {/* 🔄 GRID GENİŞLİK DÜZELTMESİ (bu tur) — ÖNCEKİ kod sabit
+            `md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4` kullanıyordu.
+            CSS Grid'de SABİT kolon sayısı, item sayısından FAZLA olduğunda
+            (örn. 4 kolon tanımlı ama yalnız 1-2 villa varsa) kalan kolon
+            track'leri BOŞ kalır — item'lar sola yaslı kalır, sağda kocaman
+            kullanılmayan boşluk oluşur (bildirilen "dar alanda kalıyor,
+            sağda dev boşluk" sorunu TAM OLARAK bu). ÇÖZÜM: `auto-fit` +
+            `minmax(270px,1fr)` — kolon sayısı SADECE gerçek item sayısı
+            kadar oluşturulur (boş track YOK), `1fr` mevcut item'ların
+            kalan alanı ARALARINDA paylaşarak genişlemesini sağlar. Sonuç:
+            1 villa → tam satırı doldurur (1/4'te sıkışıp kalmaz — mevcut
+            collection mantığına uygun responsive davranış), 2-3-4 villa →
+            eşit genişlikte, boşluksuz yan yana, 5+ villa → aynı en/boy
+            oranını koruyarak alt satıra sarar. minmax alt sınırı (270px),
+            1280px konteyner genişliğinde (bkz. `max-w-[1280px]` sarmalayıcı)
+            tam olarak 4 kolona denk gelecek şekilde hesaplandı (4×270 +
+            3×gap ≤ 1280 < 5×270 + 4×gap) → desktop'ta 4 kart yan yana;
+            ~1024px (lg padding'li) genişlikte 3'e, ~768px (md padding'li)
+            genişlikte 2'ye doğal olarak düşer — ayrı lg:/xl: sınıflarına
+            gerek kalmadan TEK responsive tanım. Kart verisi/prop'ları
+            (`renderCard`) ve mobil carousel davranışı BİREBİR aynı —
+            yalnızca masaüstü grid'in kolon tanımı değişti. */}
         <div className="md:hidden">
           {/* showArrows verilmedi — bu container yalnızca <md'de görünür
               ve HorizontalCarousel'in ok butonları zaten yalnız md+'de
@@ -164,7 +171,7 @@ export default async function DiscountCollection() {
 
         <ul
           role="list"
-          className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+          className="hidden md:grid md:grid-cols-[repeat(auto-fit,minmax(270px,1fr))] gap-6"
         >
           {collection.map((c) => (
             <li key={c.slug || c.id}>{renderCard(c)}</li>
