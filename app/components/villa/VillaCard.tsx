@@ -263,6 +263,23 @@ export default function VillaCard({
     return null;
   })();
 
+  /* 💰 GECELİK TASARRUF ETİKETİ (bu tur) — fiyat satırının hemen altında
+     gösterilen "Gecelik NNN₺ indirimli" metni. SABİT tutar YAZILMADI:
+     mevcut convertedPrice (normal, zaten hesaplanmış) ile
+     discountedPrice.converted (indirimli, zaten hesaplanmış) arasındaki
+     farktan TÜRETİLİR — yeni bir fiyat/indirim hesaplama mantığı YOK,
+     yalnızca iki mevcut değerin farkı görsel amaçla alınıyor. Fark
+     pozitif değilse (indirimli fiyat normal fiyattan düşük değilse)
+     veya showDiscountPricing/discountedPrice yoksa bu satır HİÇ
+     render edilmez. Para birimi mevcut formatCurrency() ile AYNI
+     mantıkla gösterilir — yeni bir currency formatlama YOK. */
+  const nightlySavingsLabel: string | null = (() => {
+    if (!showDiscountPricing || !discountedPrice) return null;
+    const savings = convertedPrice - discountedPrice.converted;
+    if (!(savings > 0)) return null;
+    return `Gecelik ${formatCurrency(savings, currency)} indirimli`;
+  })();
+
   /* 🛡️ GRAND TOTAL — mevcut price.engine reuse (calculateGrandTotal).
      Aktif olması için: stayStart + stayEnd + prices[] üçlüsü
      birlikte verilmeli ve nights > 0 olmalı.
@@ -802,7 +819,7 @@ export default function VillaCard({
           {/* TITLE + LOCATION — görsel üzerinde alt overlay, brand accent çizgisi.
               Normal public karttan (VillaCard default) ayırt etmek için altina
               turuncu→mavi ince accent çizgisi eklendi. */}
-          <div className="absolute inset-x-0 bottom-0 p-4 pointer-events-none">
+          <div className="absolute inset-x-0 bottom-0 p-4 pointer-events-none text-center">
             <h3 className="font-display text-[19px] md:text-[20px] font-semibold leading-[1.15] tracking-[-0.02em] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)] line-clamp-1">
               {title}
             </h3>
@@ -812,7 +829,7 @@ export default function VillaCard({
             </p>
             <div
               aria-hidden="true"
-              className="mt-2 h-[3px] w-12 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
+              className="mt-2 h-[3px] w-12 rounded-full bg-gradient-to-r from-[#ED7926] to-[#0973BA] mx-auto"
             />
           </div>
         </div>
@@ -866,7 +883,7 @@ export default function VillaCard({
               showDiscountPricing) BİREBİR mevcut price.engine reuse'u —
               yeni bir hesaplama mantığı YOK. */}
           <div className="mt-3.5">
-            <div className="min-w-0">
+            <div className="min-w-0 text-center">
               {stayTotal !== null ? (
                 <>
                   <div className="font-display font-bold text-[18px] md:text-[19px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
@@ -881,7 +898,7 @@ export default function VillaCard({
                   {/* İndirim tarih aralığı — villa_discounts kaydından
                       DİNAMİK (bkz. formatDiscountDateRangeTr). Sabit
                       metin YOK. */}
-                  <p className="text-[11px] font-medium text-[#0973BA] tracking-[0.01em]">
+                  <p className="text-[13px] font-semibold text-red-600 tracking-[0.01em] text-center">
                     {discountDateRangeLabel}
                   </p>
                   {/* İnce yatay ayırıcı — tam genişlik, nötr (mevcut
@@ -895,7 +912,7 @@ export default function VillaCard({
                       — kullanıcı talebiyle bu turda eklendi. Fiyat hesabı
                       (convertedPrice / discountedPrice) DEĞİŞMEDİ, yalnız
                       görsel bir etiket eklendi. */}
-                  <div className="flex items-baseline gap-2">
+                  <div className="flex items-baseline gap-2 justify-center">
                     <span className="text-[13px] text-[var(--color-stone-400)] line-through tabular-nums">
                       {formatCurrency(convertedPrice, currency)}
                     </span>
@@ -908,6 +925,15 @@ export default function VillaCard({
                       </span>
                     </span>
                   </div>
+                  {/* 💰 GECELİK TASARRUF SATIRI (bu tur) — fiyat satırının
+                      HEMEN ALTINDA, marka mavisi (#0973BA), fiyat satırından
+                      daha küçük punto. Tutar SABİT DEĞİL: nightlySavingsLabel
+                      (yukarıda hesaplandı) null ise satır HİÇ render edilmez. */}
+                  {nightlySavingsLabel && (
+                    <p className="mt-1 text-[11.5px] font-medium text-[#0973BA] text-center">
+                      {nightlySavingsLabel}
+                    </p>
+                  )}
                 </>
               ) : (
                 <div className="font-display font-bold text-[18px] md:text-[19px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
