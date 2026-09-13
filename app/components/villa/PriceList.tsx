@@ -156,7 +156,15 @@ export default function PriceList({
         className="absolute inset-x-6 md:inset-x-7 top-0 h-[2.5px] rounded-full bg-gradient-to-r from-[#ED7926] via-[#ED7926]/50 to-[#0973BA]"
       />
 
-      {prices.map((p, idx) => {
+      {/* 🛡️ LAYOUT-ONLY: sezon satırları artık desktop'ta 2 kolonlu grid
+          içinde (mobile: 1 kolon). Sıra korunur (1→sol, 2→sağ, 3→sol...)
+          — bu salt CSS grid akışı, prices array sırası/verisi/hesabı
+          DEĞİŞMEDİ. Satır kartlarının kendi tasarımı (border/radius/
+          padding/font/ikon/fiyat/tarih/GECELİK/Bilgi/hover) AYNEN
+          korunur; yalnız aralarındaki dikey margin (mt-3 first:mt-0)
+          grid `gap` ile değiştirildi (çift boşluk oluşmasın diye). */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-5 gap-y-3">
+        {prices.map((p, idx) => {
         /* Currency conversion — eski mantık AYNEN. */
         const convertedPrice = convertPrice(
           Number(p.price || 0),
@@ -174,7 +182,7 @@ export default function PriceList({
           <div
             key={p.id}
             className={
-              "pl-row-in group/row relative rounded-2xl border border-[var(--color-stone-100)] bg-white/60 hover:bg-white px-4 py-4 md:px-5 md:py-5 mt-3 first:mt-0 transition-[transform,box-shadow,border-color,background-color] duration-300 motion-reduce:transition-none hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 hover:border-[var(--color-stone-200)] hover:shadow-[0_18px_38px_-24px_rgba(237,121,38,0.4),0_16px_34px_-24px_rgba(9,115,186,0.32)] " +
+              "pl-row-in group/row relative rounded-2xl border border-[var(--color-stone-100)] bg-white/60 hover:bg-white px-4 py-4 md:px-5 md:py-5 transition-[transform,box-shadow,border-color,background-color] duration-300 motion-reduce:transition-none hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 hover:border-[var(--color-stone-200)] hover:shadow-[0_18px_38px_-24px_rgba(237,121,38,0.4),0_16px_34px_-24px_rgba(9,115,186,0.32)] " +
               /* 🛡️ Açık olan satır (isOpen) her zaman diğer satırların
                  üstünde kalsın diye EXPLICIT z-index — auto DEĞİL, bu
                  yüzden satır kendi stacking context'ini garanti kurar
@@ -294,6 +302,7 @@ export default function PriceList({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
