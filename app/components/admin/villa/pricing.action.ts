@@ -13,6 +13,13 @@ import {
    auth-bağımsız (DECISION A) olduğundan RLS gate uygulanmıyordu; authz
    burada. Yalnız gate; auth.caller kullanılmaz. */
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
+/* 🛡️ FALLBACK — discount.action.ts'in saveDiscountData'da KULLANDIĞI
+   AYNI kanonik yöntem (getVillaPrices + getStartingPrice). getVillaCurrency
+   villa.currency NULL/boş olduğunda artık aynı fallback'i uygular; böylece
+   "İndirim Ekle" formunun client-side ön-kontrolü, sunucudaki saveDiscountData
+   ile TUTARLI hale gelir (villa.currency NULL ama villa_prices'ta geçerli
+   fiyat olan villalarda form artık yanlış yere REJECT etmez). */
+import { getStartingPrice } from "@/lib/price.engine";
 
 /* ===============================================================
    🛡️ PRICING CALENDAR — SERVER ACTIONS
@@ -58,7 +65,16 @@ export async function getVillaCurrency(
   villaId: string
 ): Promise<string | null> {
   const { data } = await villaRepository.findIdTitleCurrencyById(villaId);
-  return data?.currency || null;
+  const villaCurrency = data?.currency || null;
+  if (villaCurrency) return villaCurrency;
+
+  /* 🛡️ ÖNCELİK: villa.currency (mevcut davranış AYNEN — dolu olan
+     villalarda hiçbir şey değişmez). villa.currency NULL/boş olan
+     villalarda FALLBACK: villa_prices'tan kanonik currency belirle —
+     saveDiscountData'daki İLE BİREBİR AYNI yöntem, yeni bir seçim
+     mantığı İCAT EDİLMEDİ. */
+  const prices = await getVillaPrices(villaId);
+  return getStartingPrice(prices)?.currency || null;
 }
 
 export async function savePricingData(
