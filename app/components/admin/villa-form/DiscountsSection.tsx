@@ -324,6 +324,7 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
                       end_date: range.end_date,
                     })
                   }
+                  villaId={villaId}
                 />
                 {draft.start_date && draft.end_date && (
                   <p className="text-xs text-[var(--color-stone-500)]">
