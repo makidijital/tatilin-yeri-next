@@ -200,7 +200,7 @@ export default function PriceList({
 
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6 pl-3">
               {/* LEFT — tarih aralığı, büyük/güçlü, ana bilgi. */}
-              <p className="min-w-0 font-display text-[19px] md:text-[22px] text-[var(--color-stone-900)] tracking-[-0.01em] leading-snug flex items-center gap-2.5">
+              <p className="min-w-0 font-display text-[15px] md:text-[17px] text-[var(--color-stone-900)] tracking-[-0.01em] leading-snug flex items-center gap-2.5">
                 <span
                   aria-hidden="true"
                   className="hidden md:inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#0973BA]/[0.09] text-[#0973BA] shrink-0"
@@ -220,13 +220,13 @@ export default function PriceList({
               <div className="flex items-center gap-4 md:gap-5 shrink-0">
                 <div className="text-left md:text-right">
                   <p
-                    className="font-display font-bold text-2xl md:text-[26px] text-[#ED7926] tracking-[-0.02em] leading-none"
+                    className="font-display font-bold text-[19px] md:text-[20px] text-[#ED7926] tracking-[-0.02em] leading-none"
                     style={{ fontVariantNumeric: "tabular-nums" }}
                   >
                     {formatCurrency(convertedPrice, currency)}
                   </p>
                   <p
-                    className="text-[9.5px] tracking-[0.18em] uppercase text-[var(--color-stone-400)] font-medium mt-1.5"
+                    className="text-[8.5px] tracking-[0.18em] uppercase text-[var(--color-stone-400)] font-medium mt-1.5"
                     aria-hidden
                   >
                     Gecelik
@@ -253,7 +253,7 @@ export default function PriceList({
                       }
                       aria-expanded={isOpen}
                       className={
-                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-wide transition-all duration-200 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40 " +
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-semibold tracking-wide transition-all duration-200 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40 " +
                         (isOpen
                           ? "border-[#0973BA]/40 bg-[#0973BA]/[0.08] text-[#0973BA] shadow-[0_4px_14px_-6px_rgba(9,115,186,0.35)]"
                           : "border-[var(--color-stone-200)] text-[var(--color-stone-500)] hover:border-[#ED7926]/40 hover:text-[#ED7926] hover:bg-[#ED7926]/[0.05]")
