@@ -125,58 +125,59 @@ export default async function DiscountCollection() {
           </h2>
         </div>
 
-        {/* 🔄 GRID GENİŞLİK DÜZELTMESİ (bu tur) — ÖNCEKİ kod sabit
-            `md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4` kullanıyordu.
-            CSS Grid'de SABİT kolon sayısı, item sayısından FAZLA olduğunda
-            (örn. 4 kolon tanımlı ama yalnız 1-2 villa varsa) kalan kolon
-            track'leri BOŞ kalır — item'lar sola yaslı kalır, sağda kocaman
-            kullanılmayan boşluk oluşur (bildirilen "dar alanda kalıyor,
-            sağda dev boşluk" sorunu TAM OLARAK bu). ÇÖZÜM: `auto-fit` +
-            `minmax(270px,1fr)` — kolon sayısı SADECE gerçek item sayısı
-            kadar oluşturulur (boş track YOK), `1fr` mevcut item'ların
-            kalan alanı ARALARINDA paylaşarak genişlemesini sağlar. Sonuç:
-            1 villa → tam satırı doldurur (1/4'te sıkışıp kalmaz — mevcut
-            collection mantığına uygun responsive davranış), 2-3-4 villa →
-            eşit genişlikte, boşluksuz yan yana, 5+ villa → aynı en/boy
-            oranını koruyarak alt satıra sarar. minmax alt sınırı (270px),
-            1280px konteyner genişliğinde (bkz. `max-w-[1280px]` sarmalayıcı)
-            tam olarak 4 kolona denk gelecek şekilde hesaplandı (4×270 +
-            3×gap ≤ 1280 < 5×270 + 4×gap) → desktop'ta 4 kart yan yana;
-            ~1024px (lg padding'li) genişlikte 3'e, ~768px (md padding'li)
-            genişlikte 2'ye doğal olarak düşer — ayrı lg:/xl: sınıflarına
-            gerek kalmadan TEK responsive tanım. Kart verisi/prop'ları
-            (`renderCard`) ve mobil carousel davranışı BİREBİR aynı —
-            yalnızca masaüstü grid'in kolon tanımı değişti. */}
-        <div className="md:hidden">
-          {/* showArrows verilmedi — bu container yalnızca <md'de görünür
-              ve HorizontalCarousel'in ok butonları zaten yalnız md+'de
-              render olur (bkz. HorizontalCarousel.tsx); burada hiçbir
-              zaman görünmeyecek bir prop'u geçmek gereksiz. */}
-          <HorizontalCarousel
-            ariaLabel="İndirimli kiralık villalar"
-            className="pb-1"
-          >
-            <ul role="list" className="flex flex-nowrap min-w-max gap-5">
-              {collection.map((c) => (
-                <li
-                  key={c.slug || c.id}
-                  className="snap-start shrink-0 w-[82vw] max-w-[320px] sm:w-[340px]"
-                >
-                  {renderCard(c)}
-                </li>
-              ))}
-            </ul>
-          </HorizontalCarousel>
-        </div>
+        {/* 🔄 GRID → CAROUSEL DÜZELTMESİ (bu tur) — ÖNCEKİ turda "sağda
+            boşluk kalmasın" derdine CSS Grid (`auto-fit`/`minmax(270px,1fr)`)
+            ile çözüm arandı, ama bu YANLIŞ yaklaşımdı: `1fr` az sayıda villa
+            varken mevcut kart(lar)ı container genişliğine kadar
+            GEREĞİNDEN FAZLA GERDİ (tek villa ~1200px'e, kart devasa
+            görünecek şekilde büyüdü). Bu section GRID DEĞİL — projede
+            zaten var olan, VillaTypeCarousel.tsx / CategoryCollection.tsx
+            ile AYNI generic `HorizontalCarousel` (native CSS scroll-snap,
+            yeni kütüphane YOK) ile TEK satırlık, SABİT genişlikli kart
+            carousel'ı olmalı — kartlar `1fr` ile ASLA esnemez, her zaman
+            kendi sabit genişliğinde kalır, taşan villa'lar yatay
+            kaydırma/ok butonlarıyla (showArrows, yalnız md+ ve gerçek
+            overflow varsa görünür — HorizontalCarousel'in kendi mantığı)
+            gezilir. Mobil davranış (touch swipe + snap) ve masaüstü
+            (showArrows) TEK container'da, TEK responsive tanımla birlikte
+            çalışır — artık ayrı mobile/desktop container'ları YOK. Kart
+            verisi/prop'ları (`renderCard`, VillaCard'ın kendisi) HİÇ
+            değişmedi — yalnızca kartların DIŞINDAKİ carousel/item genişlik
+            sarmalayıcısı değişti.
 
-        <ul
-          role="list"
-          className="hidden md:grid md:grid-cols-[repeat(auto-fit,minmax(270px,1fr))] gap-6"
+            KART GENİŞLİĞİ: site genelinde "normal" VillaCard'ın gerçek
+            görünür boyutuna yakın kalması için (bkz. VillaList.tsx ana
+            koleksiyon grid'i: `lg:grid-cols-4 gap-x-6`, 1280px konteynerde
+            kart ≈ (1280-3×24)/4 ≈ 302px) masaüstü item genişliği 300px
+            sabitlendi — grid'deki "normal" kart boyutuyla NEREDEYSE AYNI,
+            yalnızca esnemiyor (`1fr` yok). 1280px konteynerde + `gap-5`
+            (20px) ile: 4×300 + 3×20 = 1260px ≤ 1280px → **4 kart tam
+            sığar**, ~20px'lik kenar boşluğunda 5. kartın ucu hafifçe
+            görünerek (mevcut VillaTypeCarousel'daki AYNI UX ipucu)
+            kaydırılabilir olduğunu belli eder. Mobilde genişlik
+            ÖNCEKİ (onaylanmış) `w-[82vw] max-w-[320px] sm:w-[340px]`
+            değerleriyle AYNEN korundu — yalnızca `md:` ve üzeri için
+            `md:w-[300px]` sabit değeri eklendi. Tek villa varsa (veya az
+            villa varsa) kart bu SABİT 300px'te kalır, container'ın kalanı
+            basitçe boş kalan alan olarak GÖRÜNMEZ (flex-nowrap içeriği sola
+            hizalar, kart kendi doğal genişliğinde durur — devasa/gerili
+            kart YOK). */}
+        <HorizontalCarousel
+          showArrows
+          ariaLabel="İndirimli kiralık villalar"
+          className="pb-1"
         >
-          {collection.map((c) => (
-            <li key={c.slug || c.id}>{renderCard(c)}</li>
-          ))}
-        </ul>
+          <ul role="list" className="flex flex-nowrap min-w-max gap-5">
+            {collection.map((c) => (
+              <li
+                key={c.slug || c.id}
+                className="snap-start shrink-0 w-[82vw] max-w-[320px] sm:w-[340px] md:w-[300px]"
+              >
+                {renderCard(c)}
+              </li>
+            ))}
+          </ul>
+        </HorizontalCarousel>
       </div>
     </section>
   );
