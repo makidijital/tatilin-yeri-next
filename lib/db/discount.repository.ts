@@ -86,7 +86,8 @@ export const discountRepository = {
           villa_prices (
             price,
             currency,
-            start_date
+            start_date,
+            end_date
           ),
           villa_discounts (
             start_date,

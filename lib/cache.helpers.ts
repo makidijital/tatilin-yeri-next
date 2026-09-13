@@ -5,6 +5,7 @@ import { resolveVillaImageUrl } from "@/lib/storage.helpers";
    mantık: villa_prices içindeki MIN nightly (getStartingPrice). Eskiden
    koleksiyon mapper'ları villa_prices[0] kullanıyordu → tutarsız. */
 import { getStartingPrice, type DiscountRange } from "@/lib/price.engine";
+import { parseLocalDate } from "@/lib/date-format";
 /* 🛡️ Villa Migration S2 + S8L — findActiveLocationIds (S2) +
    findActiveImagesByIds (S8L) native'e taşındı. cache.helpers zaten
    server-only (unstable_cache) → server-only native repo import'u güvenli.
@@ -380,6 +381,51 @@ export const getCachedHomepageCollectionVillas = unstable_cache(
    ayrı, dokunulmamış bir akış. "Yalnız bugün aktif indirimi olan villa
    görünsün" davranışı (aşağıdaki `if (!activeDiscount) continue`) AYNEN
    korunuyor — bu turda bu konuda yeni bir karar alınmadı. */
+/* 🛡️ KÖK NEDEN DÜZELTMESİ (bu tur) — homepage indirim kartında üstü
+   çizili "normal fiyat", şimdiye kadar villanın TÜM villa_prices satırları
+   arasındaki EN DÜŞÜK gecelik fiyattı (getStartingPrice / firstPrice) — bu YANLIŞ:
+   karşılaştırma fiyatı, indirimin GERÇEKTEN uygulandığı tarih aralığının
+   (villa_discounts.start_date) içinde bulunduğu sezonun normal gecelik fiyatı
+   OLMALI (örn. 1–7 Ekim 5.000₺ / 8–31 Ekim 6.000₺ sezonları + 8–15 Ekim 3.000₺
+   indirimi → karşılaştırma fiyatı 6.000₺ olmalı, 5.000₺ YANLIŞ).
+
+   Bu fonksiyon price.engine.ts > getDailyPrice ile AYNI eşleşme mantığını
+   (`d >= start && d <= end`, kapalı interval) kullanır — ANCAK getDailyPrice
+   currency dönüşümü de yapıyor (client rate'lerine ihtiyaç duyar); bu dosya
+   SUNUCU tarafında cache'lenen HAM (dönüştürülmemiş) price/currency değerleri
+   üretiyor (firstPrice'ın zaten yaptığı gibi) — aslı dönüşüm VillaCard'da
+   client-side useCurrency() ile yapılıyor, DEĞİŞTİRİLMEDİ. Bu yüzden
+   price.engine.ts'e DOKUNULMADI — yalnız bu dosyaya özel, küçük, saf bir
+   eşleştirme yardımcısı. Sezon bulunamazsa (tarih hiçbir villa_prices
+   aralığına denk gelmiyorsa) null döner — caller firstPrice'a fallback yapar,
+   kart eskisi gibi (min fiyat) gösterilir; hiçbir villa "fiyatsız" kalmaz. */
+function getSeasonPriceForDiscountStart(
+  prices: Array<{
+    price: number | null;
+    currency: string | null;
+    start_date: string | null;
+    end_date: string | null;
+  }>,
+  discountStartDate: string
+): { price: number; currency: string } | null {
+  const target = parseLocalDate(discountStartDate);
+  if (Number.isNaN(target.getTime())) return null;
+
+  for (const p of prices) {
+    if (p.price == null || !p.start_date || !p.end_date) continue;
+    const s = parseLocalDate(p.start_date);
+    const e = parseLocalDate(p.end_date);
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) continue;
+    if (target >= s && target <= e) {
+      const v = Number(p.price);
+      if (Number.isFinite(v) && v > 0) {
+        return { price: v, currency: p.currency || "TRY" };
+      }
+    }
+  }
+  return null;
+}
+
 export const getCachedDiscountCollectionVillas = unstable_cache(
   async (): Promise<HomepageCollectionVilla[]> => {
     const statsPromise = getVillaReviewStatsBatch();
@@ -416,6 +462,7 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
           price: number | null;
           currency: string | null;
           start_date: string | null;
+          end_date: string | null;
         }> | null;
         /* 🛡️ EK embed (villa_prices'ın yapısal ikizi) — bkz.
            discount.repository.ts > findActivePublicCards. */
@@ -513,6 +560,18 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
       const s = statsMap[v.id];
       const hasReviews = !!s && s.count > 0;
 
+      /* 🛡️ Karşılaştırma/üstü çizili fiyat kaynağı (bu tur) — selectedDiscount
+         varsa, o indirimin start_date'ine denk gelen SEZON fiyatı kullanılır
+         (getSeasonPriceForDiscountStart, yukarıda). Sezon bulunamazsa (edge
+         case — tutarsız veri) firstPrice'a (mevcut min-fiyat davranışı)
+         fallback yapılır; indirim yoksa (selectedDiscount null) davranış
+         BİREBİR ESKİSİ gibi firstPrice kullanılır — bu değişiklik SADECE
+         indirimli kartın karşılaştırma fiyatını etkiler. */
+      const seasonPriceAtDiscountStart = selectedDiscount
+        ? getSeasonPriceForDiscountStart(rawPrices, selectedDiscount.start_date)
+        : null;
+      const referencePrice = seasonPriceAtDiscountStart || firstPrice;
+
       result.push({
         id: v.id,
         slug: String(v.slug || ""),
@@ -522,10 +581,10 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
           String(v.title || ""),
         location: v.location?.name || "",
         price:
-          firstPrice && firstPrice.price !== null
-            ? Number(firstPrice.price)
+          referencePrice && referencePrice.price !== null
+            ? Number(referencePrice.price)
             : null,
-        currency: firstPrice?.currency || "TRY",
+        currency: referencePrice?.currency || "TRY",
         badge: v.badge,
         bedrooms: v.bedrooms ?? 1,
         bathrooms: v.bathrooms ?? 1,
