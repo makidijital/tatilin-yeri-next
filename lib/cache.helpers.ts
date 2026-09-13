@@ -486,14 +486,19 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
           discount_value: Number(d.discount_value) || 0,
           currency: d.currency,
         }));
+      /* 🔄 GERİ ALMA NOTU (bu tur): Önceden burada `if (!activeDiscount)
+         continue;` vardı — villanın villa_discounts kaydı BUGÜNÜ
+         kapsamıyorsa (geçmiş/gelecek tarihli) villa section'dan TAMAMEN
+         çıkarılıyordu. Kullanıcı talebiyle bu KALDIRILDI: İş kuralı artık
+         kesin olarak `discount_collections` neyin gösterileceğini belirler
+         — villa orada seçiliyse, villa_discounts tarihi geçmiş/gelecek/
+         aktif fark etmeksizin villa HER ZAMAN gösterilir. `activeDiscount`
+         (price.engine > getActiveDiscount, DEĞİŞTİRİLMEDİ) yalnızca kartta
+         hangi indirim bilgisinin (tarih aralığı + indirimli fiyat)
+         gösterileceğini belirlemek için kullanılır; bugün aktif değilse
+         `discount: null` olur (kart normal fiyatla, indirim rozetsiz
+         görünür) — ama villa asla listeden ÇIKARILMAZ. */
       const activeDiscount = getActiveDiscount(today, normalizedDiscounts);
-
-      /* 🔄 Bu villa "İndirimli Kiralık Villalar" bölümünde YALNIZ bugün
-         gerçekten aktif bir indirimi varsa görünür — `discount_collections`
-         curasyon listesinde olup bugün aktif indirimi OLMAYAN villa artık
-         bu section'a hiç girmez; bölüm adının ("İndirimli") anlamıyla
-         tutarlı. (Bu davranış korunmuştur — bu turda değiştirilmedi.) */
-      if (!activeDiscount) continue;
 
       const s = statsMap[v.id];
       const hasReviews = !!s && s.count > 0;
@@ -519,13 +524,15 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
         cover_override_path: r.custom_cover_image,
         review_average: hasReviews ? s.average : undefined,
         review_count: hasReviews ? s.count : undefined,
-        discount: {
-          start_date: activeDiscount.start_date,
-          end_date: activeDiscount.end_date,
-          discount_type: activeDiscount.discount_type,
-          discount_value: activeDiscount.discount_value,
-          currency: activeDiscount.currency ?? null,
-        },
+        discount: activeDiscount
+          ? {
+              start_date: activeDiscount.start_date,
+              end_date: activeDiscount.end_date,
+              discount_type: activeDiscount.discount_type,
+              discount_value: activeDiscount.discount_value,
+              currency: activeDiscount.currency ?? null,
+            }
+          : null,
       });
     }
 
