@@ -252,6 +252,7 @@ export default function PriceList({
                         setOpenId((cur) => (cur === p.id ? null : p.id))
                       }
                       aria-expanded={isOpen}
+                      aria-label="Bilgi"
                       className={
                         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-semibold tracking-wide transition-all duration-200 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40 " +
                         (isOpen
@@ -260,7 +261,6 @@ export default function PriceList({
                       }
                     >
                       <Info size={12} strokeWidth={2} aria-hidden />
-                      Bilgi
                     </button>
 
                     {isOpen && (
