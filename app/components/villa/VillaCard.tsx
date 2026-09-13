@@ -185,21 +185,30 @@ export default function VillaCard({
 
   /* 🛡️ AKTİF İNDİRİM — yalnız "discount" variant'ta anlamlı; diğer
      variant'lar `discount` prop'unu hiç almaz (undefined) → bu blok
-     no-op. Fixed tipte currency, villanın gecelik ORİJİNAL currency'siyle
-     (`villaCurrency` — bu, discount.action.ts'in server-authoritative
-     olarak eşitlediği villa.currency ile AYNI kaynak) uyuşmuyorsa
-     FAIL-SAFE: indirim gösterilmez, normal fiyat davranışı AYNEN
-     devam eder (aynı fail-safe deseni: admin pricing-calendar'daki
-     discount-day-map.ts). Percent'te currency zaten null → etkilenmez.
-     Hesaplama TAMAMEN mevcut price.engine > applyDiscountToDailyPrice
-     ile yapılır — yeni bir fiyat mantığı YAZILMADI. */
+     no-op. Hesaplama TAMAMEN mevcut price.engine > applyDiscountToDailyPrice
+     ile yapılır — yeni bir fiyat mantığı YAZILMADI.
+
+     🔄 KÖK NEDEN DÜZELTMESİ (bu tur): Burada ÖNCEDEN, fixed tipte
+     `discount.currency !== villaCurrency` ise indirim SESSİZCE iptal
+     ediliyordu (kart yalnız düz fiyatı gösteriyordu — ekranda "₺5.000"
+     görünüp üstü çizili eski fiyat/tarih aralığı HİÇ çıkmıyordu). Bu
+     kontrol `discount-day-map.ts`'teki (admin fiyat takvimi önizlemesi)
+     AYNI deseni kopyalamıştı, ANCAK oradaki gerekçe BURADA geçerli
+     DEĞİL: discount-day-map.ts kasıtlı olarak `rates={}` (boş kur)
+     ile çağırıyor, çünkü yanlış 1:1 dönüşüm üretmesin diye uyuşmayan
+     günleri SESSİZCE atlıyor. Bu kartta ise `useCurrency()`'den GERÇEK
+     `rates` zaten mevcut — `applyDiscountToDailyPrice` (DEĞİŞTİRİLMEDİ)
+     zaten `discount.currency !== daily.original_currency` durumunda
+     `convertPrice` ile DOĞRU dönüşümü kendisi yapıyor (bkz. public
+     rezervasyon server-authoritative price-verify.ts'in AYNI senaryoyu
+     — dövizli villa + farklı currency'de fixed özel fiyat — zaten
+     doğru şekilde çözdüğü test edilmiş akış). Bu yüzden ön-kontrol
+     kaldırıldı; currency uyuşmazlığı olsa bile indirim artık DOĞRU
+     şekilde (gerekirse dönüştürülerek) gösterilir — yeni bir dönüşüm
+     mantığı YAZILMADI, yalnızca gereksiz/hatalı bir erken-iptal kaldırıldı. */
   const isDiscountVariant = variant === "discount";
   const activeDiscount: DiscountRange | null =
-    isDiscountVariant &&
-    discount &&
-    Number(price) > 0 &&
-    (discount.discount_type !== "fixed" ||
-      (discount.currency || "") === villaCurrency)
+    isDiscountVariant && discount && Number(price) > 0
       ? {
           start_date: discount.start_date,
           end_date: discount.end_date,
@@ -897,7 +906,29 @@ export default function VillaCard({
               )}
             </div>
           </div>
-          {reserveBlock}
+          {/* 🛡️ CTA — "Hemen Rezervasyon Yap" (kullanıcı referans tasarımı:
+              her indirim kartında KORUNACAK, sabit/koşulsuz CTA). Kart zaten
+              CardOuter üzerinden <Link href={detailHref}> ile sarmalı;
+              nested <button> + preventDefault/stopPropagation +
+              router.push (reserveBlock ile AYNI, mevcut, kanıtlanmış desen)
+              kartın kendi navigasyonuyla ÇAKIŞMAZ. reserveInfo verilmişse
+              (kısa-süreli tarihler sayfası) mevcut reserveBlock (gece bilgisi
+              + CTA) AYNEN kullanılır — yeni bir CTA/route mantığı YOK. */}
+          {reserveInfo ? (
+            reserveBlock
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                router.push(detailHref);
+              }}
+              className="mt-3 w-full inline-flex items-center justify-center h-11 rounded-xl bg-gradient-to-r from-[#ED7926] to-[#0973BA] text-white uppercase font-semibold text-[11.5px] tracking-[0.08em] shadow-[0_10px_24px_-8px_rgba(9,115,186,0.45)] hover:shadow-[0_14px_30px_-10px_rgba(9,115,186,0.55)] hover:-translate-y-px active:translate-y-0 transition-[box-shadow,transform] duration-200 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40"
+            >
+              Hemen Rezervasyon Yap
+            </button>
+          )}
         </div>
       </article>
       </div>

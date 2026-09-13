@@ -40,6 +40,30 @@ export default async function DiscountCollection() {
 
   const title = DISCOUNT_COLLECTION_DEFAULTS.title;
 
+  /* 🔄 KÖK NEDEN DÜZELTMESİ (bu tur) — kart JSX'i TEK yerde tanımlanır,
+     hem mobile carousel hem desktop grid AYNI render fonksiyonunu
+     kullanır (kopya/drift riski yok). VillaCard'ın kendisi/prop'ları
+     HİÇ değişmedi — yalnızca hangi container'a yerleştirildiği değişti. */
+  const renderCard = (c: (typeof collection)[number]) => (
+    <VillaCard
+      variant="discount"
+      id={c.id}
+      slug={c.slug}
+      title={c.display_title}
+      location={c.location}
+      price={c.price ?? 0}
+      currency={c.currency || "TRY"}
+      images={c.images}
+      badge={c.badge ?? undefined}
+      bedrooms={c.bedrooms || 1}
+      bathrooms={c.bathrooms || 1}
+      guests={c.guests || 2}
+      reviewAverage={c.review_average}
+      reviewCount={c.review_count}
+      discount={c.discount}
+    />
+  );
+
   return (
     <section className="px-5 md:px-10 lg:px-16 py-14 md:py-20">
       {/* 🛡️ Component-scoped premium effect styles — globals.css'e
@@ -101,38 +125,51 @@ export default async function DiscountCollection() {
           </h2>
         </div>
 
-        <HorizontalCarousel
-          showArrows
-          ariaLabel="İndirimli kiralık villalar"
-          className="pb-1"
+        {/* 🔄 KÖK NEDEN DÜZELTMESİ (bu tur) — "sağında dev boş alan"
+            sorunu: sabit genişlikli kartları yan yana dizen tek satırlık
+            yatay-scroll carousel, geniş masaüstü section'ında az sayıda
+            kart varken sağda kullanılmayan boşluk bırakıyordu (kartlar
+            flex-nowrap ile sola yaslı, gerisi boş). ÇÖZÜM: mobilde
+            MEVCUT yatay kaydırmalı carousel (CategoryCollection/
+            VillaTypeCarousel ile aynı altyapı — tasarım mantığı
+            DEĞİŞMEDİ) korunur; md+ (tablet/desktop) genişlikte ise
+            responsive GRID kullanılır — kolonlar `1fr` olduğu için
+            section genişliğini HER ZAMAN tam doldurur (1 kart → tam
+            genişlik, 2-3-4+ kart → yan yana, taşarsa alt satıra sarar).
+            Aynı iki container yalnızca CSS `hidden`/`md:hidden` ile
+            görünür/gizli olur (Server Component — JS breakpoint
+            algılama YOK); kart verisi/prop'ları BİREBİR aynı
+            (`renderCard`). */}
+        <div className="md:hidden">
+          {/* showArrows verilmedi — bu container yalnızca <md'de görünür
+              ve HorizontalCarousel'in ok butonları zaten yalnız md+'de
+              render olur (bkz. HorizontalCarousel.tsx); burada hiçbir
+              zaman görünmeyecek bir prop'u geçmek gereksiz. */}
+          <HorizontalCarousel
+            ariaLabel="İndirimli kiralık villalar"
+            className="pb-1"
+          >
+            <ul role="list" className="flex flex-nowrap min-w-max gap-5">
+              {collection.map((c) => (
+                <li
+                  key={c.slug || c.id}
+                  className="snap-start shrink-0 w-[82vw] max-w-[320px] sm:w-[340px]"
+                >
+                  {renderCard(c)}
+                </li>
+              ))}
+            </ul>
+          </HorizontalCarousel>
+        </div>
+
+        <ul
+          role="list"
+          className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
         >
-          <ul role="list" className="flex flex-nowrap min-w-max gap-5 md:gap-6">
-            {collection.map((c) => (
-              <li
-                key={c.slug || c.id}
-                className="snap-start shrink-0 w-[82vw] max-w-[320px] sm:w-[340px] md:w-[360px] lg:w-[380px]"
-              >
-                <VillaCard
-                  variant="discount"
-                  id={c.id}
-                  slug={c.slug}
-                  title={c.display_title}
-                  location={c.location}
-                  price={c.price ?? 0}
-                  currency={c.currency || "TRY"}
-                  images={c.images}
-                  badge={c.badge ?? undefined}
-                  bedrooms={c.bedrooms || 1}
-                  bathrooms={c.bathrooms || 1}
-                  guests={c.guests || 2}
-                  reviewAverage={c.review_average}
-                  reviewCount={c.review_count}
-                  discount={c.discount}
-                />
-              </li>
-            ))}
-          </ul>
-        </HorizontalCarousel>
+          {collection.map((c) => (
+            <li key={c.slug || c.id}>{renderCard(c)}</li>
+          ))}
+        </ul>
       </div>
     </section>
   );
