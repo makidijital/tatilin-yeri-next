@@ -147,7 +147,7 @@ export default function BookingSummary({
                 gerçekten aktifse (activeStayDiscount != null) render edilir;
                 indirim yoksa bu blok hiç yok, `Row` dalı BİREBİR aynı. */}
             <span className="mt-1 inline-block rounded-full bg-[#0973BA] px-2.5 py-0.5 text-[10px] font-semibold text-white text-center whitespace-nowrap">
-              İndirimli Toplam Tutar
+              İndirimli Tutar
             </span>
           </div>
         </div>

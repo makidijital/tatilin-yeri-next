@@ -327,7 +327,7 @@ export default function PriceCard({
                       })}
                     </span>
                     <span className="mt-1 inline-block rounded-full bg-[#0973BA] px-2.5 py-0.5 text-[10px] font-semibold text-white text-center whitespace-nowrap">
-                      İndirimli Toplam Tutar
+                      İndirimli Tutar
                     </span>
                   </div>
                 </div>
