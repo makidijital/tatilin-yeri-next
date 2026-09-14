@@ -247,6 +247,60 @@ export default function ReservationForm({
       })
       : null;
 
+  /* 🛡️ İNDİRİM ÖNCESİ KARŞILAŞTIRMA (bu tur) — YALNIZ DISPLAY amaçlı;
+     `result` ile BİREBİR AYNI parametreler, tek fark discounts:null.
+     calculateGrandTotal DEĞİŞTİRİLMEDİ — dosyada zaten 2 kez çağrılan
+     (result/snapshot) AYNI desende BİR KEZ DAHA çağrıldı; yeni formül/
+     hesaplama YOK. snapshot/API/server-authoritative akışı bundan HİÇ
+     ETKİLENMEZ (ayrı, dokunulmamış blok) — sonuç yalnız aşağıdaki
+     "İndirimli Toplam Tutar" karşılaştırma kutusunu göstermek için
+     kullanılır. */
+  const resultWithoutDiscount =
+    start && end
+      ? calculateGrandTotal({
+        start,
+        end,
+        prices,
+        currency,
+        rates,
+
+        cleaning_fee:
+          villa.cleaning_fee || 0,
+
+        cleaning_currency:
+          villa.cleaning_currency || "TRY",
+
+        cleaning_limit:
+          villa.cleaning_limit || 0,
+
+        pool_heating_fee:
+          villa.pool_heating_fee || 0,
+
+        pool_heating_currency:
+          villa.pool_heating_currency || "TRY",
+
+        pool_heating_selected:
+          !!poolHeatingSelected,
+
+        pool_heating_months:
+          villa.pool_heating_months,
+
+        discounts: null,
+      })
+      : null;
+
+  /* 🛡️ İndirim gerçekten toplamı DEĞİŞTİRDİYSE (epsilon toleranslı —
+     ondalık/döviz-çevrim farkları için) aktif kabul edilir. "fixed" tipte
+     indirim normal fiyattan yüksek bir özel fiyat da olabildiğinden
+     (villa_discounts kuralı, price.engine.ts) yalnız "ucuzladı mı" değil
+     "değişti mi" kontrol edilir. */
+  const hasActiveStayDiscount =
+    !!result &&
+    !!resultWithoutDiscount &&
+    Math.abs(
+      (resultWithoutDiscount.stay || 0) - (result.stay || 0)
+    ) > 0.005;
+
   /* ===============================================================
      🔥 SNAPSHOT — ASLA display currency'den etkilenmez
      ===============================================================
@@ -542,13 +596,35 @@ export default function ReservationForm({
                 className="absolute inset-x-4 top-0 h-[2.5px] rounded-full bg-gradient-to-r from-[#ED7926] via-[#ED7926]/50 to-[#0973BA]"
               />
 
-              {/* Konaklama Tutarı — gece sayısı dinamik (mevcut result.stay) */}
-              <div className="flex justify-between text-[var(--color-stone-600)]">
-                <span>Konaklama Tutarı ({getNights()} Gece)</span>
-                <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
-                  {formatCurrency(result?.stay || 0, currency)}
-                </span>
-              </div>
+              {/* Konaklama Tutarı — gece sayısı dinamik (mevcut result.stay).
+                  🛡️ İndirim karşılaştırması (bu tur) — hasActiveStayDiscount
+                  true ise üstü çizili "indirim öncesi" tutar + mavi
+                  "İndirimli Toplam Tutar" etiketi (BookingSummary.tsx ile
+                  AYNI tasarım). result.stay (indirimli DEĞER) DEĞİŞMEDİ;
+                  indirim yoksa görünüm BİREBİR ESKİSİ gibi. */}
+              {hasActiveStayDiscount ? (
+                <div className="flex items-start justify-between gap-3 text-[var(--color-stone-600)]">
+                  <span>Konaklama Tutarı ({getNights()} Gece)</span>
+                  <div className="text-right">
+                    <span className="block text-[11px] text-[var(--color-stone-400)] line-through tabular-nums">
+                      {formatCurrency(resultWithoutDiscount?.stay || 0, currency)}
+                    </span>
+                    <span className="block text-[var(--color-stone-900)] font-medium tabular-nums">
+                      {formatCurrency(result?.stay || 0, currency)}
+                    </span>
+                    <span className="mt-1 inline-block rounded-full bg-[#0973BA] px-2.5 py-0.5 text-[10px] font-semibold text-white text-center whitespace-nowrap">
+                      İndirimli Toplam Tutar
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between text-[var(--color-stone-600)]">
+                  <span>Konaklama Tutarı ({getNights()} Gece)</span>
+                  <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
+                    {formatCurrency(result?.stay || 0, currency)}
+                  </span>
+                </div>
+              )}
 
               {/* 🛡️ Metin standardizasyonu: "Temizlik Ücreti" → "Kısa Süreli
                   Konaklama Ücreti" — villa detayındaki BookingSummary.tsx ile

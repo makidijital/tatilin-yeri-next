@@ -288,17 +288,61 @@ export default function PriceCard({
                   🛡️ HAVUZ ISITMA — admin gösterim adımı. Konaklama =
                   total - cleaning - poolHeating. pool_heating_total_try
                   NULL/0 iken (data.pool_heating_total_try || 0) → 0,
-                  mevcut (havuz ısıtma öncesi) davranış AYNEN korunur. */}
-              <Row
-                label="Konaklama"
-                value={`₺${Number(
-                  (data.total_price_try || 0) -
-                    (data.cleaning_fee_try || 0) -
-                    (data.pool_heating_total_try || 0)
-                ).toLocaleString("tr-TR", {
-                  maximumFractionDigits: 0,
-                })}`}
-              />
+                  mevcut (havuz ısıtma öncesi) davranış AYNEN korunur.
+                  🛡️ İNDİRİM SNAPSHOT (bu tur) — migration 080'in
+                  reservations.discount_applied / original_stay_total_try
+                  kolonları (rezervasyon OLUŞTURULDUĞUNDA server tarafından
+                  zaten yazılmış, salt-okunur snapshot; SELECT_RESERVATION_
+                  DETAIL `*` ile zaten seçiliyor, yeni query YOK) kullanılarak
+                  indirim uygulandıysa üstü çizili "indirim öncesi" tutar +
+                  mavi "İndirimli Toplam Tutar" etiketi gösterilir
+                  (BookingSummary.tsx ile AYNI tasarım). Discounted konaklama
+                  FORMÜLÜ (total - cleaning - poolHeating) DEĞİŞMEDİ — iki
+                  dalda da AYNEN kullanılıyor; indirim yoksa (discount_applied
+                  false/NULL/original_stay_total_try yok) görünüm BİREBİR
+                  ESKİSİ (Row) gibi. */}
+              {data.discount_applied &&
+              Number(data.original_stay_total_try) > 0 ? (
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-[var(--color-stone-600)]">
+                    Konaklama
+                  </span>
+                  <div className="text-right">
+                    <span className="block text-[11px] text-[var(--color-stone-400)] line-through tabular-nums">
+                      ₺
+                      {Number(
+                        data.original_stay_total_try || 0
+                      ).toLocaleString("tr-TR", {
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
+                    <span className="block text-[var(--color-stone-900)] font-medium tabular-nums">
+                      ₺
+                      {Number(
+                        (data.total_price_try || 0) -
+                          (data.cleaning_fee_try || 0) -
+                          (data.pool_heating_total_try || 0)
+                      ).toLocaleString("tr-TR", {
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
+                    <span className="mt-1 inline-block rounded-full bg-[#0973BA] px-2.5 py-0.5 text-[10px] font-semibold text-white text-center whitespace-nowrap">
+                      İndirimli Toplam Tutar
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <Row
+                  label="Konaklama"
+                  value={`₺${Number(
+                    (data.total_price_try || 0) -
+                      (data.cleaning_fee_try || 0) -
+                      (data.pool_heating_total_try || 0)
+                  ).toLocaleString("tr-TR", {
+                    maximumFractionDigits: 0,
+                  })}`}
+                />
+              )}
 
               {/* TEMİZLİK.
                   🛡️ Metin standardizasyonu: "Temizlik" → "Kısa Süreli
