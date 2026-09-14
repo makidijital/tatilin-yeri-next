@@ -10,6 +10,16 @@ import HeaderFavoritesLink from "@/app/components/favorites/HeaderFavoritesLink"
 /* 🛡️ Canlı arama paylaşılan component (header + hero) — duplikasyon yok.
    Arama state/debounce/dropdown mantığı VillaSearchBox'a taşındı. */
 import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
+/* 🛡️ PHASE 2 — UI Translation Dictionary Core (örnek entegrasyon).
+   DEFAULT_LOCALE ("tr") sabit geçiliyor — bu fazda cookie/URL/header
+   okuma YOK, site hâlâ tamamen Türkçe. dictionary.header.offer/
+   menuOpen/menuClose değerleri aşağıda değiştirilen sabit metinlerle
+   ("Teklif Al" / "Menüyü aç" / "Menüyü kapat") BİREBİR aynı — render
+   çıktısı değişmiyor, yalnız kaynağı dictionary'ye taşındı. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
+
+const dictionary = getDictionary(DEFAULT_LOCALE);
 
 /* ===============================================================
    🛡️ FAZ 39C — HEADER CSS CLEANUP
@@ -160,7 +170,7 @@ export default function Header({
           focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0973BA]/50
         "
       >
-        Teklif Al
+        {dictionary.header.offer}
       </Link>
     </div>
   );
@@ -336,7 +346,7 @@ export default function Header({
                     focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0973BA]/50
                   "
                 >
-                  Teklif Al
+                  {dictionary.header.offer}
                 </Link>
               </div>
 
@@ -347,7 +357,7 @@ export default function Header({
                  de temizler (closeMobileMenu → openSubmenus sıfırlanır). */}
               <button
                 onClick={() => (open ? closeMobileMenu() : setOpen(true))}
-                aria-label={open ? "Menüyü kapat" : "Menüyü aç"}
+                aria-label={open ? dictionary.header.menuClose : dictionary.header.menuOpen}
                 aria-expanded={open}
                 className="
                   inline-flex items-center justify-center shrink-0

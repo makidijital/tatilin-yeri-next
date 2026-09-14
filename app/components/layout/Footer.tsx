@@ -9,6 +9,16 @@ import type { Settings } from "@/app/services/settings.types";
 import { menuRepository } from "@/lib/db/menu.repository";
 import { pagesRepository } from "@/lib/db/pages.repository";
 import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
+/* 🛡️ PHASE 2 — UI Translation Dictionary Core (örnek entegrasyon).
+   DEFAULT_LOCALE ("tr") sabit — cookie/URL/header okuma YOK, site
+   hâlâ tamamen Türkçe. Aşağıda değiştirilen metinler (Keşfet,
+   Villalar, Bölgeler, Tüm kategoriler/bölgeler, Telefon, E-posta,
+   Adres, Rezervasyon Sorgula, Web Geliştirme) dictionary değerleriyle
+   BİREBİR aynı — render çıktısı değişmiyor. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
+
+const dictionary = getDictionary(DEFAULT_LOCALE);
 
 /* ---------------- INLINE SOCIAL ICONS (stroke=currentColor) ---------------- */
 
@@ -365,14 +375,14 @@ export default async function Footer() {
                 aria-hidden="true"
                 className="inline-block w-4 h-px bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
               />
-              Keşfet
+              {dictionary.footer.explore}
             </span>
 
             <div className="mt-6 grid grid-cols-2 gap-x-10 gap-y-8">
               {/* VİLLA KATEGORİLERİ (dynamic villa_types) */}
               <nav aria-label="Villa kategorileri">
                 <p className="text-[13px] font-medium text-[var(--color-stone-800)] mb-4">
-                  Villalar
+                  {dictionary.footer.villas}
                 </p>
                 {villaTypes.length > 0 ? (
                   <ul className="space-y-3">
@@ -387,7 +397,7 @@ export default async function Footer() {
                 ) : (
                   <ul className="space-y-3">
                     <li>
-                      <FooterLink href="/arama">Tüm kategoriler</FooterLink>
+                      <FooterLink href="/arama">{dictionary.footer.allCategories}</FooterLink>
                     </li>
                   </ul>
                 )}
@@ -396,7 +406,7 @@ export default async function Footer() {
               {/* POPÜLER BÖLGELER (dynamic villa_locations) */}
               <nav aria-label="Popüler bölgeler">
                 <p className="text-[13px] font-medium text-[var(--color-stone-800)] mb-4">
-                  Bölgeler
+                  {dictionary.footer.regions}
                 </p>
                 {locations.length > 0 ? (
                   <ul className="space-y-3">
@@ -410,7 +420,7 @@ export default async function Footer() {
                     <li className="pt-1">
                       <FooterLink href="/arama">
                         <span className="text-[13px] text-[#ED7926] inline-flex items-center gap-1">
-                          Tüm bölgeler
+                          {dictionary.footer.allRegions}
                           <ArrowRight size={12} strokeWidth={1.75} aria-hidden />
                         </span>
                       </FooterLink>
@@ -419,7 +429,7 @@ export default async function Footer() {
                 ) : (
                   <ul className="space-y-3">
                     <li>
-                      <FooterLink href="/arama">Tüm bölgeleri keşfet</FooterLink>
+                      <FooterLink href="/arama">{dictionary.footer.exploreAllRegions}</FooterLink>
                     </li>
                   </ul>
                 )}
@@ -439,7 +449,7 @@ export default async function Footer() {
               {settings?.phone && (
                 <a href={`tel:${settings.phone}`} className="group">
                   <span className="block text-[11px] uppercase tracking-[0.18em] text-[var(--color-stone-400)] mb-1.5">
-                    Telefon
+                    {dictionary.footer.phone}
                   </span>
                   <span className="font-display text-[26px] md:text-[32px] tracking-[-0.01em] text-[var(--color-stone-900)] group-hover:text-[#ED7926] transition-colors duration-300 motion-reduce:transition-none">
                     {settings.phone}
@@ -449,7 +459,7 @@ export default async function Footer() {
               {settings?.email && (
                 <a href={`mailto:${settings.email}`} className="group">
                   <span className="block text-[11px] uppercase tracking-[0.18em] text-[var(--color-stone-400)] mb-1.5">
-                    E-posta
+                    {dictionary.footer.email}
                   </span>
                   <span className="text-[16px] md:text-[18px] text-[var(--color-stone-700)] group-hover:text-[#0973BA] transition-colors duration-300 motion-reduce:transition-none break-all">
                     {settings.email}
@@ -459,7 +469,7 @@ export default async function Footer() {
               {settings?.address && (
                 <div className="max-w-xs">
                   <span className="block text-[11px] uppercase tracking-[0.18em] text-[var(--color-stone-400)] mb-1.5">
-                    Adres
+                    {dictionary.footer.address}
                   </span>
                   <span className="text-[13.5px] text-[var(--color-stone-500)] leading-relaxed">
                     {settings.address}
@@ -471,7 +481,7 @@ export default async function Footer() {
             {/* MÜŞTERİ İŞLEMLERİ — rezervasyon durum sorgulama (mevcut href AYNEN) */}
             <FooterLink href="/rezervasyon-kontrol">
               <span className="inline-flex items-center gap-1.5 text-[13.5px]">
-                Rezervasyon Sorgula
+                {dictionary.footer.checkReservation}
                 <ArrowRight size={12} strokeWidth={1.75} aria-hidden />
               </span>
             </FooterLink>
@@ -545,7 +555,7 @@ export default async function Footer() {
                 focus-visible:ring-[#0973BA]/40 rounded-full px-1
               "
             >
-              <span>Web Geliştirme</span>
+              <span>{dictionary.footer.webDevelopment}</span>
               <span aria-hidden="true" className="text-[var(--color-stone-300)]">
                 :
               </span>
