@@ -62,11 +62,10 @@
        ve responsive davranış etkilenmedi (dış container aynı).
    =============================================================== */
 
-import { ShieldCheck, Tag } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
 import { formatCurrency } from "@/lib/currency";
 import { useCurrency } from "@/app/context/CurrencyContext";
-import { formatDateTr } from "@/lib/date-format";
 
 import type { BookingResult, ActiveStayDiscount } from "./useBookingEngine";
 
@@ -136,19 +135,19 @@ export default function BookingSummary({
             {`Konaklama Tutarı (${result.nights} Gece)`}
           </span>
           <div className="text-right">
-            <div className="flex items-center justify-end gap-2">
-              <span className="text-[11px] text-[var(--color-stone-400)] line-through tabular-nums">
-                {formatCurrency(activeStayDiscount.originalStay, currency)}
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#ED7926]/10 px-2 py-0.5 text-[10px] font-semibold text-[#ED7926] tracking-wide whitespace-nowrap">
-                <Tag size={9} strokeWidth={2.2} aria-hidden />
-                {activeStayDiscount.discount.discount_type === "percent"
-                  ? `%${activeStayDiscount.discount.discount_value} İNDİRİM`
-                  : "ÖZEL FİYAT"}
-              </span>
-            </div>
-            <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
+            <span className="block text-[11px] text-[var(--color-stone-400)] line-through tabular-nums">
+              {formatCurrency(activeStayDiscount.originalStay, currency)}
+            </span>
+            <span className="block text-[var(--color-stone-900)] font-medium tabular-nums">
               {formatCurrency(activeStayDiscount.discountedStay, currency)}
+            </span>
+            {/* 🛡️ Marka mavisi (#0973BA) solid etiket — eski "%NN İNDİRİM" /
+                "ÖZEL FİYAT" rozetinin YERİNE geçti (bkz. dosya-üstü kontrat
+                notu). Gradient YOK, sade dolgu renk. Yalnız indirim
+                gerçekten aktifse (activeStayDiscount != null) render edilir;
+                indirim yoksa bu blok hiç yok, `Row` dalı BİREBİR aynı. */}
+            <span className="mt-1 inline-block rounded-full bg-[#0973BA] px-2.5 py-0.5 text-[10px] font-semibold text-white text-center whitespace-nowrap">
+              İndirimli Toplam Tutar
             </span>
           </div>
         </div>
@@ -157,21 +156,6 @@ export default function BookingSummary({
           label={`Konaklama Tutarı (${result.nights} Gece)`}
           value={formatCurrency(result.stay, currency)}
         />
-      )}
-
-      {/* İndirim tarih kapsamı — kullanıcı indirimin GERÇEKTEN hangi
-          tarih aralığında geçerli olduğunu görsün (yalnız bilgi metni;
-          hesaplamaya dahil DEĞİL). */}
-      {activeStayDiscount && (
-        <p className="-mt-1.5 text-[11px] text-[#0973BA]">
-          {formatDateTr(activeStayDiscount.discount.start_date)} –{" "}
-          {formatDateTr(activeStayDiscount.discount.end_date)} arası geçerli
-          indirim · {formatCurrency(
-            activeStayDiscount.originalStay - activeStayDiscount.discountedStay,
-            currency
-          )}{" "}
-          tasarruf
-        </p>
       )}
       {result.cleaning > 0 && (
         <Row
