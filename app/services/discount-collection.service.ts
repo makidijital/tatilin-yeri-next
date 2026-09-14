@@ -1,4 +1,5 @@
 import { discountRepository } from "@/lib/db/discount.repository";
+import { parseLocalDate, formatLocalDate } from "@/lib/date-format";
 
 /* ===============================================================
    🛡️ DISCOUNT COLLECTION SERVICE (migration 062)
@@ -38,10 +39,26 @@ export type DiscountCollectionItem = {
       is_cover: boolean | null;
       sort_order: number | null;
     }> | null;
+    villa_discounts?: Array<{
+      end_date: string | null;
+    }> | null;
   } | null;
 };
 
-/* ----- LIST (admin) — aktif+pasif tümü, sort_order ASC ----- */
+/* ----- LIST (admin) — aktif+pasif tümü, sort_order ASC.
+   🛡️ TARİH-BAZLI GÖRÜNÜRLÜK FİLTRESİ (bu tur) — bir villa yalnızca
+   EN AZ 1 villa_discounts kaydı varsa VE bu kayıtlardan EN AZ BİRİNİN
+   end_date >= bugün ise sonuç listesinde kalır. Tüm kayıtlar geçmişse
+   VEYA hiç villa_discounts kaydı yoksa item sonuçtan ÇIKARILIR —
+   `discount_collections` satırı SİLİNMEZ (yalnız bu okuma sonucunda
+   görünmez kalır; villa'ya ileride yeni bir gelecek-tarihli
+   villa_discounts eklenirse otomatik geri görünür), villa_discounts
+   kayıtlarına HİÇ DOKUNULMAZ. `end_date` alanı LIST_SELECT'e
+   (discount.repository.ts) eklenen TEK yeni alan — ek sorgu/N+1 YOK,
+   aynı embed'den okunuyor. Homepage collection
+   (cache.helpers.ts > getCachedDiscountCollectionVillas), VillaCard ve
+   mevcut indirim hesaplama sistemi (price.engine.ts) bu filtreden HİÇ
+   ETKİLENMEZ — ayrı fonksiyon, ayrı sorgu yolu, dokunulmadı. ----- */
 export async function listDiscountCollection(): Promise<
   DiscountCollectionItem[]
 > {
@@ -50,7 +67,27 @@ export async function listDiscountCollection(): Promise<
     console.error("❌ listDiscountCollection error:", error.message);
     return [];
   }
-  return (data || []) as unknown as DiscountCollectionItem[];
+  const items = (data || []) as unknown as DiscountCollectionItem[];
+
+  /* Bugün — LOCAL tarih, TZ kaymasına karşı formatLocalDate → parseLocalDate
+     round-trip'i (lib/date-format.ts'in kendi standardı); villa_discounts.
+     end_date ile AYNI "YYYY-MM-DD" local semantiğiyle karşılaştırılabilir
+     bir Date üretir (price.engine.ts > getActiveDiscount'un normalizeDate
+     yaklaşımıyla AYNI local-midnight anlamına gelir). */
+  const today = parseLocalDate(formatLocalDate(new Date()));
+
+  return items.filter((item) => {
+    const discounts = item.villa?.villa_discounts ?? [];
+    return discounts.some((d) => {
+      if (!d?.end_date) return false;
+      const end = parseLocalDate(d.end_date);
+      /* Geçersiz parse (Invalid Date) → bu kayıt geçerli SAYILMAZ,
+         güvenli şekilde filtre dışı bırakılır (parseLocalDate hiçbir
+         zaman throw etmez — bkz. lib/date-format.ts doc-comment'i). */
+      if (Number.isNaN(end.getTime())) return false;
+      return end >= today;
+    });
+  });
 }
 
 /* ----- ADD villa to collection ----- */

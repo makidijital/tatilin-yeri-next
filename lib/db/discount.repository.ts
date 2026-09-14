@@ -29,7 +29,8 @@ const LIST_SELECT = `
       custom_cover_image, created_at,
       villa:villa_id (
         id, slug, title, is_active, deleted_at,
-        villa_images ( image_url, is_cover, sort_order )
+        villa_images ( image_url, is_cover, sort_order ),
+        villa_discounts ( end_date )
       )
     `;
 
