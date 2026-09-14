@@ -102,6 +102,14 @@ export default function SettingsGeneralPage() {
   // PageHero (iç sayfa) arka planı — mig 067
   const [pageHeroBg, setPageHeroBg] = useState<string | null>(null);
 
+  /* 🛡️ Migration 081 — Çoklu Dil PHASE 1A (yalnız ayar altyapısı).
+     multilingualEnabled=false + publicDefaultLocale="tr" → mevcut site
+     davranışı BİREBİR aynı kalır (DB default'larıyla birebir). */
+  const [multilingualEnabled, setMultilingualEnabled] = useState(false);
+  const [publicDefaultLocale, setPublicDefaultLocale] = useState<
+    "tr" | "en" | "de"
+  >("tr");
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -153,6 +161,10 @@ export default function SettingsGeneralPage() {
       setHeroSecondaryHref(s.hero_secondary_cta_href || "");
       setHeroBadge(s.hero_badge_text || "");
       setPageHeroBg(s.page_hero_background_image || null);
+      setMultilingualEnabled(!!s.multilingual_enabled);
+      setPublicDefaultLocale(
+        (s.public_default_locale as "tr" | "en" | "de") || "tr"
+      );
       setLoading(false);
     });
     return () => {
@@ -190,6 +202,8 @@ export default function SettingsGeneralPage() {
       hero_secondary_cta_href: heroSecondaryHref.trim() || null,
       hero_badge_text: heroBadge.trim() || null,
       page_hero_background_image: pageHeroBg,
+      multilingual_enabled: !!multilingualEnabled,
+      public_default_locale: publicDefaultLocale,
     });
     setSaving(false);
     if (!ok) {
@@ -465,6 +479,43 @@ export default function SettingsGeneralPage() {
           <p className="-mt-3 text-[11.5px] text-[var(--color-stone-400)]">
             Önerilen boyut: 1920 × 640 px
           </p>
+        </SettingsSection>
+
+        {/* 🛡️ Migration 081 — ÇOKLU DİL (PHASE 1A: yalnız ayar altyapısı).
+            Bu bölüm yalnız admin ayarını değiştirir; henüz public tarafta
+            dil seçici / routing / çeviri YOK. multilingualEnabled=false
+            iken "Varsayılan Dil" alanı devre dışıdır (anlamsız — public
+            site zaten tr davranıyor). */}
+        <SettingsSection
+          title="Çoklu Dil"
+          description="Public sitenin çoklu dil (TR/EN/DE) altyapısı için hazırlık ayarı. Bu adımda yalnız ayar kaydedilir; public site davranışı henüz değişmez."
+        >
+          <ToggleField
+            label="Çoklu Dil Sistemi"
+            description="Kapalıyken public site yalnızca aşağıdaki Varsayılan Dil ile, mevcut haliyle çalışmaya devam eder."
+            checked={multilingualEnabled}
+            onChange={setMultilingualEnabled}
+            disabled={loading}
+          />
+          <FieldShell
+            label="Varsayılan Dil"
+            hint="Çoklu Dil açıkken public sitenin ilk-ziyaretçi varsayılan dili. Kapalıyken site bu dilde (şu an yalnız Türkçe için garanti edilir) çalışır."
+          >
+            <select
+              value={publicDefaultLocale}
+              onChange={(e) =>
+                setPublicDefaultLocale(
+                  e.target.value as "tr" | "en" | "de"
+                )
+              }
+              disabled={loading || !multilingualEnabled}
+              className="input"
+            >
+              <option value="tr">Türkçe</option>
+              <option value="en">English</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </FieldShell>
         </SettingsSection>
 
         <div className="flex justify-end pt-2">

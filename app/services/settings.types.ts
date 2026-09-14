@@ -35,6 +35,16 @@ export type Settings = {
      engellenir. null → fail-safe AÇIK. Default true. */
   orphan_gap_rule_enabled?: boolean | null;
 
+  /* 🛡️ Migration 081 — Çoklu Dil (TR/EN/DE) PHASE 1A: yalnız ayar
+     altyapısı. multilingual_enabled=false iken public site davranışı
+     BİREBİR eskisi gibi (routing/UI/cache/fiyat/discount/pool-heating
+     ETKİLENMEZ — bu faz yalnız admin ayar + get_public_settings
+     whitelist'i genişletir). public_default_locale yalnız
+     multilingual_enabled=true iken anlamlıdır; DB CHECK constraint'i
+     ile tr/en/de dışına izin verilmez. Default: false / 'tr'. */
+  multilingual_enabled?: boolean | null;
+  public_default_locale?: "tr" | "en" | "de" | null;
+
   // 🔥 SITE LOGO (Storage public URL)
   site_logo?: string | null;
 
