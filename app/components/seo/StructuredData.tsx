@@ -17,6 +17,8 @@
 
 import "server-only";
 
+import type { Locale } from "@/lib/i18n/config";
+
 const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ||
   process.env.NEXT_PUBLIC_VERCEL_URL ||
@@ -28,6 +30,21 @@ function abs(path: string): string {
   if (path.startsWith("http")) return path;
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
+
+/* 🛡️ PHASE 7D — schema.org `inLanguage` için minimal locale→BCP47
+   haritası. Görev tanımının verdiği mapping AYNEN uygulanıyor (yeni
+   bir convention İCAT EDİLMEDİ): TR bölge-spesifik "tr-TR" (Google'ın
+   kendi structured-data örnekleri de böyle); EN/DE bölge-agnostik
+   "en"/"de" (proje henüz `en-US`/`de-DE` gibi bölge varyantı
+   ayırmıyor — `<html lang="tr">`, Phase 1B `Locale` tipi de aynı
+   şekilde bölgesiz). Yalnız `locale` opsiyonel parametresi GEÇİLİRSE
+   kullanılır — geçilmezse (bugünkü TÜM diğer call-site'lar) JSON-LD
+   çıktısı `inLanguage` alanı OLMADAN, ÖNCEKİ HALİYLE AYNI kalır. */
+const SCHEMA_IN_LANGUAGE: Record<Locale, string> = {
+  tr: "tr-TR",
+  en: "en",
+  de: "de",
+};
 
 /* ---------------------------------------------
    🔥 Generic JSON-LD <script> renderer
@@ -49,9 +66,12 @@ export function JsonLd({ data }: { data: unknown }) {
    🔥 BreadcrumbList
 ---------------------------------------------- */
 export function buildBreadcrumb(
-  items: { name: string; url?: string }[]
+  items: { name: string; url?: string }[],
+  /** 🛡️ PHASE 7D — opsiyonel. Verilirse `inLanguage` eklenir; verilmezse
+   *  (mevcut TÜM call-site'lar) davranış ÖNCEKİYLE AYNI kalır. */
+  locale?: Locale
 ) {
-  return {
+  const data: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: items.map((it, i) => ({
@@ -61,6 +81,10 @@ export function buildBreadcrumb(
       ...(it.url ? { item: abs(it.url) } : {}),
     })),
   };
+  if (locale) {
+    data.inLanguage = SCHEMA_IN_LANGUAGE[locale];
+  }
+  return data;
 }
 
 /* ---------------------------------------------
@@ -162,6 +186,10 @@ export type VacationRentalInput = {
     /** Gerçek count */
     reviewCount: number;
   } | null;
+  /** 🛡️ PHASE 7D — opsiyonel. Verilirse JSON-LD'ye `inLanguage`
+   *  eklenir; verilmezse (mevcut TÜM call-site'lar) davranış
+   *  ÖNCEKİYLE AYNI kalır. */
+  locale?: Locale;
 };
 
 export function buildVacationRental(v: VacationRentalInput) {
@@ -173,6 +201,10 @@ export function buildVacationRental(v: VacationRentalInput) {
     name: v.title,
     url,
   };
+
+  if (v.locale) {
+    data.inLanguage = SCHEMA_IN_LANGUAGE[v.locale];
+  }
 
   if (v.description) {
     // HTML stripped excerpt

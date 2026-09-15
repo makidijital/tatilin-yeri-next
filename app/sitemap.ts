@@ -13,6 +13,13 @@ import { villaAdminRepository as villaRepository } from "@/lib/db/villa.reposito
 import { pagesRepository } from "@/lib/db/pages.repository";
 /* 🛡️ Blog (FAZ 3) — yayında olan blog yazıları sitemap'e dahil. */
 import { blogRepository } from "@/lib/db/blog.repository";
+/* 🛡️ PHASE 7D — yalnız villa entry'lerine locale hreflang alternates
+   eklemek için. Mevcut cache/settings altyapısı REUSE edilir (yeni
+   bir cache sistemi YOK); Phase 7B'nin `buildLocaleAlternates`'i TEK
+   URL kaynağı (elle string birleştirme YOK). */
+import { getCachedSettings } from "@/lib/cache.helpers";
+import { isMultilingualEnabled } from "@/lib/i18n/config";
+import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
 
 /* ===============================================================
    🛡️ SITEMAP — Next.js App Router (production-grade, dynamic)
@@ -88,11 +95,47 @@ function toDate(value: string | null | undefined): Date | undefined {
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
 
+/* 🛡️ PHASE 7D — YALNIZ villa detay entry'leri için hreflang alternates.
+   EN/DE için AYRI bir sitemap URL entry'si BİLİNÇLİ OLARAK EKLENMİYOR
+   (bkz. dosya başındaki Phase 7D notu / Phase 7A audit §12): EN/DE
+   villa detay sayfaları bugün — `multilingual_enabled` ne olursa
+   olsun — hâlâ `robots:{index:false,follow:false}` VE ComingSoon
+   placeholder (Phase 6B/7C, robots'un flag'e bağlanması AYRI bir faz,
+   Phase 7E). Bir sitemap'e noindex sayfa URL'i EKLEMEK Google'ın
+   kendi rehberliğine göre yanlış sinyal (Search Console'da "Excluded
+   by noindex tag" + hreflang/sitemap mismatch riski). Bunun yerine
+   yalnızca TR entry'sinin `alternates.languages`'ı dolduruluyor —
+   TR'nin KENDİ `url` alanı DEĞİŞMİYOR, yalnız ek bir hreflang-ilişki
+   alanı EKLENİYOR. Path'ler Phase 7B'nin `buildLocaleAlternates`'inden
+   (tek kaynak); absolute'a bu dosyanın MEVCUT `url()` helper'ıyla
+   çözülüyor (yeni bir absolute-URL mekanizması İCAT EDİLMEDİ). */
+function villaLanguageAlternates(slug: string): Record<string, string> {
+  const { languages } = buildLocaleAlternates(`/kiralik-villa/${slug}`, "tr");
+  return {
+    tr: url(languages.tr),
+    en: url(languages.en),
+    de: url(languages.de),
+    "x-default": url(languages["x-default"]),
+  };
+}
+
 type SlugRow = { slug: string | null; created_at: string | null };
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   /* 🛡️ EXIT HARDENING — villa + pages query'leri repository'den.
      SSR client init kaldırıldı (artık kullanılmıyor). */
+
+  /* 🛡️ PHASE 7D — yalnız villa entry'lerinin `alternates.languages`
+     alanı için. `multilingual_enabled=false` iken (bugün production)
+     bu flag hiç okunmasa da davranış AYNI olurdu (villaEntries.map
+     aşağıda koşullu) — okunuyor çünkü flag açıldığında YENİ BİR
+     DEPLOY GEREKMEDEN sitemap otomatik doğru davranışa geçsin diye.
+     `getCachedSettings()` sayfa/route'larda zaten kullanılan AYNI
+     cache'lenmiş fonksiyon (Phase 4A/6B/7C ile aynı desen) — yeni bir
+     cache mekanizması KURULMADI. Sitemap'in kendi `revalidate = 3600`
+     penceresi DEĞİŞMEDİ. */
+  const seoSettings = await getCachedSettings().catch(() => null);
+  const multilingualEnabled = isMultilingualEnabled(seoSettings);
 
   /* ---------- STATIK INDEXLENEN ROUTE'LAR ---------- */
   const now = new Date();
@@ -136,6 +179,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: toDate(v.created_at),
         changeFrequency: "weekly",
         priority: 0.8,
+        /* 🛡️ PHASE 7D — yalnız flag açıkken; EN/DE'ye AYRI URL entry'si
+           YOK (yukarıdaki `villaLanguageAlternates` yorumuna bkz.). */
+        ...(multilingualEnabled
+          ? { alternates: { languages: villaLanguageAlternates(v.slug as string) } }
+          : {}),
       }));
   } catch (err) {
     /* Fail-soft: villa fetch patlarsa statik + sayfa entry'leri yine döner. */

@@ -387,13 +387,20 @@ export default async function VillaDetail({
             reviewCount: reviewStats.count,
           }
         : null,
+    /* 🛡️ PHASE 7D — yalnız inLanguage:"tr-TR" için. Diğer TÜM alanlar
+       DEĞİŞMEDİ. */
+    locale: "tr",
   });
 
-  const breadcrumbLd = buildBreadcrumb([
-    { name: "Ana sayfa", url: "/" },
-    { name: "Villalar", url: "/arama" },
-    { name: villa.title },
-  ]);
+  const breadcrumbLd = buildBreadcrumb(
+    [
+      { name: "Ana sayfa", url: "/" },
+      { name: "Villalar", url: "/arama" },
+      { name: villa.title },
+    ],
+    /* 🛡️ PHASE 7D — yalnız inLanguage:"tr-TR" için. */
+    "tr"
+  );
 
   return (
     <>
