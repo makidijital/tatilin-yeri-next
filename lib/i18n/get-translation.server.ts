@@ -59,9 +59,24 @@ import {
    PERFORMANS: `getTranslation` başına TEK sorgu (`findOne` zaten
    `.eq(parentIdColumn, parentId).eq("locale", locale).maybeSingle()`
    — tek satır, tek round-trip). Bu faz cache EKLEMEZ (kapsam dışı,
-   görev tanımı) — ileride birden çok kart için N+1 riski oluşursa
-   `findAllForParent` (Phase 3'te zaten var, DEĞİŞTİRİLMEDİ) veya
-   toplu bir varyant sonraki bir fazın konusu.
+   görev tanımı).
+
+   🛡️ PHASE 8D-1 EKLEMESİ — `getTranslationsForParents`: Phase 8D
+   audit'inin tespit ettiği "N parent, tek locale" ihtiyacı için
+   `getTranslation`'a PARALEL, ayrı bir fonksiyon —
+   `translationRepository.findManyForLocale` (Phase 8D-1, `.in()` +
+   `.eq("locale",...)` TEK sorgu) üzerine `parentId → row` bir `Map`
+   inşa eder (O(1) lookup). `getTranslation`, `resolveTranslatedField`,
+   `getVillaTranslationCached` VE bunların mevcut call-site'ları
+   (title/description/seo_description) BU FONKSİYONDAN HİÇ ETKİLENMEZ
+   — tamamen ek, izole bir yol. Locale-aware olmayan persistent bir
+   cache (`unstable_cache` vb.) EKLENMEDİ; React `cache()` da
+   EKLENMEDİ (Phase 8D audit'in `readonly string[]` referans-eşitliği
+   belirsizliği burada ÇÖZÜLMEYE ÇALIŞILMADI — bilinçli olarak dışarıda
+   bırakıldı, ileride gerçek bir çağıran ortaya çıkınca değerlendirilir).
+   Bu fonksiyonun BUGÜN HİÇBİR call-site'ı YOK — EN/DE villa detail
+   sayfalarına location/features/rules/priceIncludes/distances BU
+   FAZDA EKLENMEDİ.
    =============================================================== */
 
 /** `TRANSLATION_ENTITY_CONFIG`'te tanımlı bilinen bir entity mi?
@@ -115,6 +130,65 @@ export async function getTranslation<E extends TranslationEntity>(
   if (error) return null;
 
   return (data ?? null) as TranslationRowFor<E> | null;
+}
+
+/**
+ * 🛡️ PHASE 8D-1 — Birden fazla parent kaydın, TEK bir locale'deki
+ * çevirilerini `parentId → TranslationRowFor<E>` bir `Map`'e çözer
+ * (N+1'e karşı — `getTranslation`'ı N kez çağırmak yerine TEK sorgu).
+ *
+ * Boş `Map` dönen durumlar (asla throw etmez — `getTranslation` ile
+ * AYNI hata-güvenliği ilkesi):
+ *   1) `locale` TR'ye çözümleniyorsa (geçerli "tr" veya geçersiz/
+ *      tanınmayan bir değer) → sorgu atılmadan.
+ *   2) `entity` bilinmiyorsa → sorgu atılmadan.
+ *   3) `parentIds` boşsa → sorgu atılmadan.
+ *   4) Sorgu atılır ama repository hata dönerse → sorgu sonucu
+ *      GÖZ ARDI edilir, boş `Map` döner (public sayfa render'ı bir
+ *      çeviri okuma sorunuyla ASLA çökmemeli — `getTranslation` ile
+ *      birebir aynı prensip).
+ *
+ * Çeviri satırı OLMAYAN bir `parentId`, Map'te HİÇ YER ALMAZ (undefined
+ * dönecek şekilde) — `resolveTranslatedField` ile aynı "yok = fallback"
+ * semantiğini çağıran tarafın uygulaması için doğal bir temel (bu
+ * fonksiyon fallback'i KENDİSİ UYGULAMAZ — `getTranslation` ile aynı
+ * sorumluluk ayrımı).
+ *
+ * `parentIdColumn` her satırdan `TRANSLATION_ENTITY_CONFIG[entity]`
+ * üzerinden DİNAMİK okunur (entity'ye göre değişir — villa_id/
+ * location_id/feature_id/rule_id/include_id/distance_id/page_id/
+ * faq_id); satırda o kolon string değilse (beklenmedik/bozuk veri)
+ * o satır Map'e EKLENMEZ (sessizce atlanır, throw etmez).
+ */
+export async function getTranslationsForParents<E extends TranslationEntity>(
+  entity: E,
+  parentIds: readonly string[],
+  locale: Locale
+): Promise<Map<string, TranslationRowFor<E>>> {
+  const resolvedLocale = toLocale(locale);
+
+  if (resolvedLocale === DEFAULT_LOCALE) return new Map();
+  if (!isTranslationEntity(entity)) return new Map();
+  if (parentIds.length === 0) return new Map();
+
+  const { data, error } = await translationRepository.findManyForLocale(
+    entity,
+    parentIds,
+    resolvedLocale
+  );
+  if (error) return new Map();
+
+  const { parentIdColumn } = TRANSLATION_ENTITY_CONFIG[entity];
+  const result = new Map<string, TranslationRowFor<E>>();
+  for (const row of data ?? []) {
+    const parentId = (row as unknown as Record<string, unknown>)[
+      parentIdColumn
+    ];
+    if (typeof parentId === "string") {
+      result.set(parentId, row);
+    }
+  }
+  return result;
 }
 
 /**

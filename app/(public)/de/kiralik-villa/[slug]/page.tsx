@@ -10,11 +10,37 @@ import {
   getVillaTranslatedDescription,
   getVillaTranslatedSeoDescription,
 } from "@/lib/i18n/get-villa-translation.server";
+/* 🛡️ PHASE 8D-2 — batch translation okuma (8D-1) + generic fallback. */
+import {
+  getTranslationsForParents,
+  resolveTranslatedField,
+} from "@/lib/i18n/get-translation.server";
 import { getCachedSettings } from "@/lib/cache.helpers";
 import { isMultilingualEnabled } from "@/lib/i18n/config";
 import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
 import { sanitizeHtml, stripHtml } from "@/lib/html-sanitize";
 import CollapsibleDescription from "@/app/components/villa/CollapsibleDescription";
+/* 🛡️ PHASE 8D-2 — location/features/rules/priceIncludes/distances ham
+   veri (TR sayfasındaki AYNI servisler, DEĞİŞTİRİLMEDİ). */
+import { getVillaDistances } from "@/app/services/villa-distance.service";
+import {
+  getVillaFeaturesByVilla,
+  type Feature,
+} from "@/app/services/villa-feature.service";
+import { getRuleItemsByVilla } from "@/app/services/rule-item.service";
+import { getPriceIncludeItemsByVilla } from "@/app/services/price-include-item.service";
+import { getDistanceIconKey } from "@/lib/distance.helper";
+import VillaInfoBar from "@/app/components/villa/VillaInfoBar";
+import VillaDistancesSection, {
+  type TranslatedDistance,
+} from "@/app/components/villa/VillaDistancesSection";
+import VillaFeaturesSection, {
+  type TranslatedFeature,
+} from "@/app/components/villa/VillaFeaturesSection";
+import VillaPriceIncludesAndRulesSection, {
+  type TranslatedPriceInclude,
+  type TranslatedRule,
+} from "@/app/components/villa/VillaPriceIncludesAndRulesSection";
 import LocaleRouteComingSoon from "@/app/components/i18n/LocaleRouteComingSoon";
 
 /* ===============================================================
@@ -97,6 +123,33 @@ import LocaleRouteComingSoon from "@/app/components/i18n/LocaleRouteComingSoon";
    BİLİNÇLİ OLARAK EKLENMEDİ — bu fazın kapsamı yalnız description
    İÇERİĞİ (Phase 8A raporunun "Önerilen Phase 8B" gerekçesiyle
    tutarlı minimal karar).
+
+   🛡️ PHASE 8D-2 EKLEMESİ — location/features/rules/priceIncludes/
+   distances (yalnız page BODY'sinde, generateMetadata'ya
+   DOKUNULMADI): TR'deki AYNI 4 servis (`getVillaDistances`,
+   `getVillaFeaturesByVilla`, `getRuleItemsByVilla`,
+   `getPriceIncludeItemsByVilla`) + `villa.location`/`location_id`
+   (villa DTO'da ZATEN mevcut, ek sorgu YOK). Çeviri, Phase 8D-1'in
+   batch helper'ı `getTranslationsForParents(entity, parentIds,
+   locale)` ile KOLEKSİYON BAŞINA TEK sorguda (`.in()`) çözülüyor —
+   item başına `getTranslation()` YOK, N+1 YOK. `resolveTranslatedField`
+   ile AYNI, mevcut fallback ilkesi: çeviri yoksa/boşsa orijinal TR
+   değeri. Render, `VillaDetailTabs`'ın ("use client", `fiyatlar`/
+   `musaitlik` prop'ları ZORUNLU) EN/DE'ye taşınmasını GEREKTİRMEYECEK
+   şekilde, TR'den FARKLI olarak düz/art arda section'lar halinde —
+   3 yeni, salt-sunum SERVER component ile (`VillaDistancesSection`,
+   `VillaFeaturesSection`, `VillaPriceIncludesAndRulesSection`,
+   `app/components/villa/`) — TR page.tsx'in KENDİSİ bu component'leri
+   KULLANMIYOR, DOKUNULMADI, kendi inline JSX'i AYNEN duruyor (Phase
+   8D-2 audit'in onaylanan tasarım kararları).
+
+   🛡️ ICON KEY (kritik): `getDistanceIconKey` TÜRKÇE anahtar kelimeye
+   bağlı — icon key HER ZAMAN orijinal (TR) `distance.title`'dan
+   hesaplanır, ÇEVRİLMİŞ `displayTitle`'dan DEĞİL (bkz.
+   `VillaDistancesSection`'ın kendi yorumu).
+
+   Hardcoded TR UI metinleri (section başlıkları, boş-durum mesajları)
+   BU FAZDA ÇEVRİLMEDİ — UI dictionary AYRI bir fazın konusu.
    =============================================================== */
 
 /* ⚡ PERF — generateMetadata + page body aynı request içinde aynı
@@ -178,6 +231,100 @@ export default async function DeVillaDetailPage({
     "de"
   );
 
+  /* 🛡️ PHASE 8D-2 — TR sayfasındaki AYNI 4 servis, AYNI (villa.id)
+     argümanı, Promise.all ile paralel (TR'nin kendi Promise.all
+     desenine paralel — TR dosyasına dokunulmadı). */
+  const [distances, features, rules, priceIncludes] = await Promise.all([
+    getVillaDistances(villa.id),
+    getVillaFeaturesByVilla(villa.id) as Promise<Feature[]>,
+    getRuleItemsByVilla(villa.id),
+    getPriceIncludeItemsByVilla(villa.id),
+  ]);
+
+  /* 🛡️ PHASE 8D-2 — koleksiyon başına TAM 1 batch çeviri sorgusu
+     (Phase 8D-1 `getTranslationsForParents`, `.in()` ile) — item
+     başına sorgu YOK (N+1 önlendi). `location_id` null ise villa_location
+     sorgusu HİÇ atılmaz (audit hedefi: "location için en fazla 1 query"). */
+  const [
+    distanceTranslations,
+    featureTranslations,
+    ruleTranslations,
+    priceIncludeTranslations,
+    locationTranslations,
+  ] = await Promise.all([
+    getTranslationsForParents(
+      "villa_distance",
+      distances.map((d) => d.id),
+      "de"
+    ),
+    getTranslationsForParents(
+      "villa_feature",
+      features.map((f) => f.id),
+      "de"
+    ),
+    getTranslationsForParents("rule_item", rules.map((r) => r.id), "de"),
+    getTranslationsForParents(
+      "price_include_item",
+      priceIncludes.map((p) => p.id),
+      "de"
+    ),
+    villa.location_id
+      ? getTranslationsForParents(
+          "villa_location",
+          [villa.location_id],
+          "de"
+        )
+      : Promise.resolve(new Map()),
+  ]);
+
+  /* 🛡️ ICON KEY — ORİJİNAL (TR) d.title'dan hesaplanır, ÇEVRİLMİŞ
+     displayTitle'dan DEĞİL (bkz. dosya başı yorum + VillaDistancesSection). */
+  const translatedDistances: TranslatedDistance[] = distances.map((d) => ({
+    id: d.id,
+    displayTitle: resolveTranslatedField(
+      distanceTranslations.get(d.id)?.title,
+      d.title
+    ),
+    displayDistance: resolveTranslatedField(
+      distanceTranslations.get(d.id)?.distance,
+      d.distance
+    ),
+    iconKey: getDistanceIconKey(d.title),
+  }));
+
+  const translatedFeatures: TranslatedFeature[] = features.map((f) => ({
+    id: f.id,
+    displayName: resolveTranslatedField(
+      featureTranslations.get(f.id)?.name,
+      f.name
+    ),
+  }));
+
+  const translatedRules: TranslatedRule[] = rules.map((r) => ({
+    id: r.id,
+    displayTitle: resolveTranslatedField(
+      ruleTranslations.get(r.id)?.title,
+      r.title
+    ),
+  }));
+
+  const translatedPriceIncludes: TranslatedPriceInclude[] = priceIncludes.map(
+    (p) => ({
+      id: p.id,
+      displayTitle: resolveTranslatedField(
+        priceIncludeTranslations.get(p.id)?.title,
+        p.title
+      ),
+    })
+  );
+
+  const locationName = villa.location_id
+    ? resolveTranslatedField(
+        locationTranslations.get(villa.location_id)?.name,
+        villa.location
+      )
+    : villa.location;
+
   return (
     <>
       <div className="max-w-3xl mx-auto px-5 md:px-0 pt-16 md:pt-24 text-center">
@@ -205,6 +352,26 @@ export default async function DeVillaDetailPage({
             </span>
           </div>
         )}
+      </div>
+      {/* 🛡️ PHASE 8D-2 — location/distances/features/priceIncludes/rules.
+          TR'deki sıra korunuyor. VillaDetailTabs (use client,
+          fiyatlar/musaitlik prop'ları zorunlu) KULLANILMIYOR — audit'in
+          onaylanan kararı gereği düz/art arda section'lar. */}
+      <div className="max-w-3xl mx-auto px-5 md:px-0 mt-10 space-y-10">
+        <VillaInfoBar
+          villaTitle={title}
+          location={locationName}
+          guests={villa.guests}
+          bedrooms={villa.bedrooms}
+          bathrooms={villa.bathrooms}
+          tourismDocumentNumber={villa.tourism_document_number}
+        />
+        <VillaDistancesSection distances={translatedDistances} />
+        <VillaFeaturesSection features={translatedFeatures} />
+        <VillaPriceIncludesAndRulesSection
+          priceIncludes={translatedPriceIncludes}
+          rules={translatedRules}
+        />
       </div>
       <LocaleRouteComingSoon locale="de" />
     </>

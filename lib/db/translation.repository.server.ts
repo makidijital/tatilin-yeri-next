@@ -24,11 +24,23 @@ import {
    adı yalnız bu dosyanın kendi sabit registry'sinden gelir (kullanıcı
    girdisi asla `table`/`parentIdColumn` olarak geçilmez).
 
-   ⚠️ BU FAZDA HİÇBİR CALL-SITE BU REPOSITORY'Yİ KULLANMIYOR. Mevcut
-   villa/location/type/feature/rule/price-include/distance/page/faq
-   repository'lerinin davranışı, public render'ı ve cache'i bu dosyadan
-   HİÇ ETKİLENMEZ — yalnız gelecek fazlar (admin çeviri UI, public
-   fallback rendering) için hazır bir temel.
+   ⚠️ `findOne`/`findAllForParent` (Phase 3) için HİÇBİR CALL-SITE
+   YOK — mevcut villa/location/type/feature/rule/price-include/
+   distance/page/faq repository'lerinin davranışı, public render'ı
+   ve cache'i bu dosyadan HİÇ ETKİLENMEZ.
+
+   🛡️ PHASE 8D-1 EKLEMESİ — `findManyForLocale`: "birden fazla parent,
+   TEK locale" için batch okuma (Phase 8D audit'inin tespit ettiği N+1
+   riskine altyapı — audit: villa detail'in location/features/rules/
+   priceIncludes/distances koleksiyon alanları, EN/DE'ye eklenirse,
+   her öğe için ayrı `findOne` çağrılırsa N+1'e yol açardı). Bu method
+   da HENÜZ HİÇBİR CALL-SITE tarafından kullanılmıyor — EN/DE villa
+   detail sayfalarına location/features/rules/priceIncludes/distances
+   BU FAZDA EKLENMEDİ (Phase 8D audit'in "NEEDS AUDIT/FIX BEFORE"
+   kararının render-hedefi-yok bulgusu HÂLÂ GEÇERLİ). Yalnız `.in()` +
+   `.eq("locale", ...)` — mevcut `QueryBuilder`/`dbNative` primitive'i
+   (proje genelinde zaten kanıtlanmış, ör. villa.repository.server.ts),
+   yeni bir Supabase/PostgREST syntax veya DB katmanı YOK.
    =============================================================== */
 
 export const translationRepository = {
@@ -57,5 +69,37 @@ export const translationRepository = {
       .from<TranslationRowFor<E>>(table)
       .select("*")
       .eq(parentIdColumn, parentId);
+  },
+
+  /**
+   * 🛡️ PHASE 8D-1 — Birden fazla parent kaydın, TEK bir locale'deki
+   * çevirileri (0..N satır) — TEK sorguda (`findOne`'ı N kez çağırmanın
+   * N+1'ine karşı). `parentIds` boşsa DB'ye HİÇ gidilmez (SQL'de
+   * `IN ()` zaten geçersizdir — `query-compiler.ts` bunu `FALSE`'a
+   * düşürür, ama burada bir adım önde, gereksiz round-trip'in kendisi
+   * atlanır) — `{ data: [], error: null }`, `findOne`/`findAllForParent`
+   * ile AYNI `{ data, error }` zarfı (`DbResult<T>` — `native-db.
+   * provider.ts`), yalnız erken/senkron.
+   *
+   * `.in(parentIdColumn, parentIds)` + `.eq("locale", locale)` —
+   * `QueryBuilder`'ın mevcut, projede zaten kanıtlanmış primitive'leri
+   * (ör. villa.repository.server.ts, reservation.repository.ts).
+   * Yeni bir DB katmanı/Supabase/PostgREST syntax'ı YOK; `findOne`/
+   * `findAllForParent`'a DOKUNULMADI.
+   */
+  async findManyForLocale<E extends TranslationEntity>(
+    entity: E,
+    parentIds: readonly string[],
+    locale: Locale
+  ) {
+    if (parentIds.length === 0) {
+      return { data: [] as TranslationRowFor<E>[], error: null };
+    }
+    const { table, parentIdColumn } = TRANSLATION_ENTITY_CONFIG[entity];
+    return db
+      .from<TranslationRowFor<E>>(table)
+      .select("*")
+      .in(parentIdColumn, parentIds)
+      .eq("locale", locale);
   },
 };

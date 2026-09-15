@@ -1,14 +1,21 @@
 /* ===============================================================
-   🛡️ PHASE 3 — DATABASE TRANSLATION ARCHITECTURE: REPOSITORY TESTS
+   🛡️ PHASE 3 / 8D-1 — DATABASE TRANSLATION ARCHITECTURE: REPOSITORY TESTS
    ===============================================================
    Hedef: lib/i18n/translations.types.ts (TRANSLATION_ENTITY_CONFIG)
-          lib/db/translation.repository.server.ts (translationRepository)
+          lib/db/translation.repository.server.ts (translationRepository
+          — findOne/findAllForParent Phase 3, findManyForLocale Phase 8D-1)
 
    DB bağlantısı KULLANILMAZ — `lib/db/native`'in `dbNative.from()`
    çağrısı mock'lanır, yalnız DOĞRU tablo/kolon adlarıyla
    çağrıldığı doğrulanır (aynı desen: bu projede repository
    testleri de gerçek DB yerine repository/provider mock'lar —
    bkz. discount-collection service testleri).
+
+   🛡️ PHASE 8D-1: mock chain'e `in()` eklendi (yalnız EKLEME —
+   `findOne`/`findAllForParent` testleri `.in()` hiç çağırmadığı için
+   ETKİLENMEZ). `findManyForLocale` bu fazda hiçbir call-site
+   tarafından KULLANILMIYOR — testler yalnız repository/query-wiring
+   doğruluğunu kanıtlıyor.
 
    Mevcut price-engine / discount / pool-heating / reservation
    testlerine HİÇ dokunulmadı.
@@ -85,6 +92,8 @@ const fromMock = vi.fn();
 const eqMock = vi.fn();
 const selectMock = vi.fn();
 const maybeSingleMock = vi.fn();
+/* 🛡️ PHASE 8D-1 — yalnız findManyForLocale'ın kullandığı `.in()` için. */
+const inMock = vi.fn();
 
 vi.mock("@/lib/db/native", () => ({
   dbNative: {
@@ -97,9 +106,13 @@ beforeEach(() => {
   eqMock.mockReset();
   selectMock.mockReset();
   maybeSingleMock.mockReset();
+  inMock.mockReset();
 
   /* Chainable stub: from() → {select} → {eq} → {eq} → {maybeSingle}
-     Aynı obje her adımda kendini döner (fluent chain simülasyonu). */
+     (Phase 3) / from() → {select} → {in} → {eq} (Phase 8D-1, .then()
+     ile resolve edilir — .maybeSingle() ÇAĞRILMAZ, findAllForParent
+     ile AYNI "çok satır" deseni). Aynı obje her adımda kendini döner
+     (fluent chain simülasyonu). */
   const chain: Record<string, unknown> = {};
   chain.select = (...args: unknown[]) => {
     selectMock(...args);
@@ -107,6 +120,10 @@ beforeEach(() => {
   };
   chain.eq = (...args: unknown[]) => {
     eqMock(...args);
+    return chain;
+  };
+  chain.in = (...args: unknown[]) => {
+    inMock(...args);
     return chain;
   };
   chain.maybeSingle = (...args: unknown[]) => {
@@ -159,4 +176,122 @@ describe("translationRepository.findAllForParent", () => {
     expect(eqMock).toHaveBeenCalledWith("page_id", "page-uuid-1");
     expect(eqMock).not.toHaveBeenCalledWith("locale", expect.anything());
   });
+});
+
+/* ===============================================================
+   🛡️ PHASE 8D-1 — translationRepository.findManyForLocale
+   ===============================================================
+   "Birden fazla parent, TEK locale" batch okuma — N+1 önleme
+   altyapısı (Phase 8D audit bulgusu). BU FAZDA HİÇBİR call-site
+   KULLANMIYOR — yalnız repository/query-wiring doğruluğu test
+   ediliyor (findOne/findAllForParent ile AYNI mock seviyesi/desen).
+   =============================================================== */
+describe("translationRepository.findManyForLocale", () => {
+  /* a) doğru entity → doğru translation table
+     b) doğru parent ID column ile .in(...)
+     c) doğru locale ile .eq(...) */
+  it("doğru tablo + parentIdColumn ile .in(...) + doğru locale ile .eq(...) çağırır", async () => {
+    const { translationRepository } = await import(
+      "@/lib/db/translation.repository.server"
+    );
+
+    await translationRepository.findManyForLocale(
+      "villa_feature",
+      ["feature-uuid-1", "feature-uuid-2"],
+      "en"
+    );
+
+    expect(fromMock).toHaveBeenCalledWith("villa_feature_translations");
+    expect(selectMock).toHaveBeenCalledWith("*");
+    expect(inMock).toHaveBeenCalledWith("feature_id", [
+      "feature-uuid-1",
+      "feature-uuid-2",
+    ]);
+    expect(eqMock).toHaveBeenCalledWith("locale", "en");
+    /* .maybeSingle() ÇAĞRILMAZ — findAllForParent ile AYNI "çok satır"
+       davranışı, findOne'dan FARKLI. */
+    expect(maybeSingleMock).not.toHaveBeenCalled();
+  });
+
+  it("rule_item entity → rule_item_translations + rule_id + 'de' locale kullanır", async () => {
+    const { translationRepository } = await import(
+      "@/lib/db/translation.repository.server"
+    );
+
+    await translationRepository.findManyForLocale(
+      "rule_item",
+      ["rule-uuid-1"],
+      "de"
+    );
+
+    expect(fromMock).toHaveBeenCalledWith("rule_item_translations");
+    expect(inMock).toHaveBeenCalledWith("rule_id", ["rule-uuid-1"]);
+    expect(eqMock).toHaveBeenCalledWith("locale", "de");
+  });
+
+  /* d) birden fazla parent ID'nin TEK sorguda kullanılması */
+  it("N parent ID → TEK db.from() çağrısı (N ayrı sorgu DEĞİL)", async () => {
+    const { translationRepository } = await import(
+      "@/lib/db/translation.repository.server"
+    );
+
+    await translationRepository.findManyForLocale(
+      "villa_distance",
+      ["d1", "d2", "d3", "d4", "d5"],
+      "en"
+    );
+
+    expect(fromMock).toHaveBeenCalledTimes(1);
+    expect(inMock).toHaveBeenCalledTimes(1);
+    expect(inMock).toHaveBeenCalledWith("distance_id", [
+      "d1",
+      "d2",
+      "d3",
+      "d4",
+      "d5",
+    ]);
+  });
+
+  /* e) parentIds=[] → DB query YOK, boş sonuç */
+  it("parentIds=[] → db.from() HİÇ ÇAĞRILMAZ, { data: [], error: null } döner", async () => {
+    const { translationRepository } = await import(
+      "@/lib/db/translation.repository.server"
+    );
+
+    const result = await translationRepository.findManyForLocale(
+      "price_include_item",
+      [],
+      "en"
+    );
+
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ data: [], error: null });
+  });
+
+  /* f) mevcut 9 TranslationEntity config'inden mapping doğruluğu —
+     TRANSLATION_ENTITY_CONFIG ile AYNI kaynaktan (registry testiyle
+     tutarlı, tekrar hardcode edilmedi). */
+  it.each(
+    Object.entries(TRANSLATION_ENTITY_CONFIG) as Array<
+      [TranslationEntity, { table: string; parentIdColumn: string }]
+    >
+  )(
+    "%s entity → config'teki table + parentIdColumn ile çağrılır",
+    async (entity, cfg) => {
+      const { translationRepository } = await import(
+        "@/lib/db/translation.repository.server"
+      );
+
+      await translationRepository.findManyForLocale(
+        entity,
+        ["some-parent-id"],
+        "en"
+      );
+
+      expect(fromMock).toHaveBeenCalledWith(cfg.table);
+      expect(inMock).toHaveBeenCalledWith(cfg.parentIdColumn, [
+        "some-parent-id",
+      ]);
+    }
+  );
 });
