@@ -1,5 +1,6 @@
 /* ===============================================================
-   🛡️ PHASE 7C — EN/DE VILLA DETAIL generateMetadata: CANONICAL + HREFLANG
+   🛡️ PHASE 7C / 8C — EN/DE VILLA DETAIL generateMetadata:
+   CANONICAL + HREFLANG (7C) + SEO_DESCRIPTION (8C)
    ===============================================================
    Hedef:
      app/(public)/en/kiralik-villa/[slug]/page.tsx > generateMetadata
@@ -11,6 +12,14 @@
    mock'lanır (hiçbiri bu fazda GERÇEKTEN değiştirilmedi). `buildLocaleAlternates`
    (Phase 7B) mock'lanmıyor — gerçek implementasyonuyla çalışıyor.
 
+   🛡️ PHASE 8C EKLEMESİ: `getVillaTranslatedSeoDescription` de AYNI
+   mock factory'ye eklendi (mock'lanmazsa page.tsx'in yeni import'u
+   `undefined` alır ve generateMetadata çağrısında TypeError fırlatır
+   — Phase 8B'nin locale-routes.test.tsx'te uyguladığı AYNI zorunlu
+   düzeltme). canonical/hreflang/robots testleri DEĞİŞMEDİ — yalnız
+   eski "description metadata'da SET EDİLMEZ" testi, artık description'ın
+   set EDİLDİĞİ yeni Phase 8C davranışına göre güncellendi.
+
    GERÇEK DB'YE HİÇ DOKUNULMAZ.
    =============================================================== */
 
@@ -19,6 +28,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const requirePublicLocaleEnabledMock = vi.fn();
 const getVillaBySlugMock = vi.fn();
 const getVillaTranslatedTitleMock = vi.fn();
+const getVillaTranslatedSeoDescriptionMock = vi.fn();
 const getCachedSettingsMock = vi.fn();
 
 vi.mock("@/lib/i18n/public-locale-gate.server", () => ({
@@ -30,6 +40,10 @@ vi.mock("@/app/services/villa.service", () => ({
 vi.mock("@/lib/i18n/get-villa-translation.server", () => ({
   getVillaTranslatedTitle: (...args: unknown[]) =>
     getVillaTranslatedTitleMock(...args),
+  /* 🛡️ PHASE 8C — generateMetadata artık bunu da import ediyor;
+     mock'lanmazsa `undefined` çağrılır ve TypeError fırlatır. */
+  getVillaTranslatedSeoDescription: (...args: unknown[]) =>
+    getVillaTranslatedSeoDescriptionMock(...args),
 }));
 vi.mock("@/lib/cache.helpers", () => ({
   getCachedSettings: (...args: unknown[]) => getCachedSettingsMock(...args),
@@ -40,6 +54,13 @@ beforeEach(() => {
   requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
   getVillaBySlugMock.mockReset();
   getVillaTranslatedTitleMock.mockReset();
+  getVillaTranslatedSeoDescriptionMock.mockReset();
+  /* 🛡️ PHASE 8C — varsayılan: gerçek fallback/excerpt mantığı burada
+     test edilmiyor (bkz. get-villa-translation.test.ts); testler
+     ihtiyaç duyduğunda kendi mockResolvedValue'sini set eder. */
+  getVillaTranslatedSeoDescriptionMock.mockResolvedValue(
+    "Translated SEO description."
+  );
   getCachedSettingsMock.mockReset();
 });
 
@@ -47,6 +68,12 @@ const BASE_VILLA = {
   id: "villa-uuid-1",
   slug: "villa-in-love",
   title: "Villa Aşkım",
+  /* 🛡️ PHASE 8C — generateMetadata artık bunları
+     getVillaTranslatedSeoDescription'a geçiriyor (mock'landığı için
+     GERÇEK excerpt/fallback mantığı burada çalışmıyor — yalnız
+     doğru argümanlarla çağrıldığı doğrulanıyor). */
+  seo_description: "Orijinal TR seo açıklaması.",
+  description: "<p>Orijinal TR açıklaması.</p>",
 };
 
 const ROUTES: Array<{
@@ -179,14 +206,50 @@ describe.each(ROUTES)(
       );
     });
 
-    /* --- description bu fazda EKLENMEDİ --- */
-    it("description metadata'da SET EDİLMEZ (root layout'tan miras — Phase 7C §7 kapsam dışı)", async () => {
+    /* --- 🛡️ PHASE 8C — description artık getVillaTranslatedSeoDescription'dan
+       set ediliyor (eski "SET EDİLMEZ" beklentisi Phase 7C'ye özgüydü,
+       Phase 8C audit raporunun onayladığı tek adımla güncellendi). --- */
+    it("description metadata'da getVillaTranslatedSeoDescription'ın döndürdüğü değeri İÇERİR", async () => {
       getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: false });
       getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
       getVillaTranslatedTitleMock.mockResolvedValue(translatedTitle);
+      getVillaTranslatedSeoDescriptionMock.mockResolvedValue(
+        `Translated ${locale} SEO description.`
+      );
 
       const result = await callGenerateMetadata(modulePath);
-      expect(result.description).toBeUndefined();
+      expect(result.description).toBe(`Translated ${locale} SEO description.`);
+      expect(getVillaTranslatedSeoDescriptionMock).toHaveBeenCalledWith(
+        BASE_VILLA.id,
+        BASE_VILLA.seo_description,
+        BASE_VILLA.description,
+        locale
+      );
+    });
+
+    it("openGraph.description ve twitter.description EKLENMEZ (bu faz yalnız metadata.description'ı hedefler)", async () => {
+      getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: false });
+      getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
+      getVillaTranslatedTitleMock.mockResolvedValue(translatedTitle);
+      getVillaTranslatedSeoDescriptionMock.mockResolvedValue(
+        `Translated ${locale} SEO description.`
+      );
+
+      const result = await callGenerateMetadata(modulePath);
+      expect(
+        (result.openGraph as Record<string, unknown> | undefined)?.description
+      ).toBeUndefined();
+      expect(
+        (result as Record<string, unknown>).twitter
+      ).toBeUndefined();
+    });
+
+    it("villa bulunamazsa (null) → getVillaTranslatedSeoDescription HİÇ ÇAĞRILMAZ", async () => {
+      getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: true });
+      getVillaBySlugMock.mockResolvedValue(null);
+
+      await callGenerateMetadata(modulePath, "olmayan-slug");
+      expect(getVillaTranslatedSeoDescriptionMock).not.toHaveBeenCalled();
     });
 
     it("openGraph.url canonical ile AYNI", async () => {

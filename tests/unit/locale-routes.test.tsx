@@ -29,6 +29,7 @@ import { render, screen } from "@testing-library/react";
 const requirePublicLocaleEnabledMock = vi.fn();
 const getVillaBySlugMock = vi.fn();
 const getVillaTranslatedTitleMock = vi.fn();
+const getVillaTranslatedDescriptionMock = vi.fn();
 
 vi.mock("@/lib/i18n/public-locale-gate.server", () => ({
   requirePublicLocaleEnabled: () => requirePublicLocaleEnabledMock(),
@@ -45,22 +46,39 @@ vi.mock("@/app/services/villa.service", () => ({
 vi.mock("@/lib/i18n/get-villa-translation.server", () => ({
   getVillaTranslatedTitle: (...args: unknown[]) =>
     getVillaTranslatedTitleMock(...args),
+  /* 🛡️ PHASE 8B — description helper de aynı modülden export edilir;
+     mock'lanmazsa EN/DE villa detay page.tsx'in yeni import'u
+     `undefined` alır ve çağrıda TypeError fırlatır. */
+  getVillaTranslatedDescription: (...args: unknown[]) =>
+    getVillaTranslatedDescriptionMock(...args),
 }));
 
 beforeEach(() => {
   requirePublicLocaleEnabledMock.mockReset();
   getVillaBySlugMock.mockReset();
   getVillaTranslatedTitleMock.mockReset();
+  getVillaTranslatedDescriptionMock.mockReset();
   getVillaBySlugMock.mockResolvedValue({
     id: "test-villa-id",
     slug: "test-villa",
     title: "Test Villa Title",
+    /* 🛡️ PHASE 8B — description artık EN/DE villa detay page.tsx'te
+       okunuyor; VillaDTO.description zorunlu (non-optional) bir
+       string olduğu için mock'ta da sağlanmalı (aksi halde
+       description.trim() undefined üzerinde çağrılıp TypeError atar). */
+    description: "<p>Test villa description.</p>",
   });
   /* Echo: gerçek fallback/çeviri mantığı burada test edilmiyor
      (bkz. get-villa-translation.test.ts). */
   getVillaTranslatedTitleMock.mockImplementation(
     (_villaId: string, originalTitle: string) =>
       Promise.resolve(originalTitle)
+  );
+  /* 🛡️ PHASE 8B — description için de AYNI echo deseni (varsayılan);
+     description-spesifik testler bunu kendi ihtiyacına göre override eder. */
+  getVillaTranslatedDescriptionMock.mockImplementation(
+    (_villaId: string, originalDescription: string) =>
+      Promise.resolve(originalDescription)
   );
 });
 
@@ -109,3 +127,76 @@ describe.each(ROUTES)("%s", (modulePath, locale, pageProps) => {
     await expect(Page(pageProps)).rejects.toThrow("NEXT_NOT_FOUND");
   });
 });
+
+/* ===============================================================
+   🛡️ PHASE 8B — EN/DE villa detay: description overlay page-body testleri
+   ===============================================================
+   Yalnız `kiralik-villa/[slug]` route'larını (villa okuyan tek EN/DE
+   route grubu) hedefler. `getVillaTranslatedDescription` yukarıdaki
+   mock ile sarılı — GERÇEK çeviri/fallback mantığı burada test
+   edilmiyor (bkz. get-villa-translation.test.ts); burada yalnız
+   page.tsx'in resolve edilen description'ı doğru şekilde
+   `CollapsibleDescription`'a/fallback'e ilettiği doğrulanıyor.
+   =============================================================== */
+const VILLA_DETAIL_ROUTES: Array<[string, "en" | "de"]> = [
+  ["@/app/(public)/en/kiralik-villa/[slug]/page", "en"],
+  ["@/app/(public)/de/kiralik-villa/[slug]/page", "de"],
+];
+
+describe.each(VILLA_DETAIL_ROUTES)(
+  "%s — Phase 8B description overlay",
+  (modulePath, locale) => {
+    beforeEach(() => {
+      requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
+    });
+
+    it("8) çevrilmiş description CollapsibleDescription'a (sanitize edilmiş HTML olarak) geçer", async () => {
+      getVillaTranslatedDescriptionMock.mockResolvedValue(
+        `<p>Resolved ${locale} description.</p>`
+      );
+
+      const { default: Page } = await import(modulePath);
+      const element = await Page({
+        params: Promise.resolve({ slug: "test-villa" }),
+      });
+      render(element);
+
+      expect(
+        screen.getByText(`Resolved ${locale} description.`)
+      ).toBeInTheDocument();
+      expect(getVillaTranslatedDescriptionMock).toHaveBeenCalledWith(
+        "test-villa-id",
+        "<p>Test villa description.</p>",
+        locale
+      );
+    });
+
+    it("8b) sanitize mekanizması korunuyor — çeviri HTML'i içinde script/tehlikeli attribute varsa render'a SIZMAZ", async () => {
+      getVillaTranslatedDescriptionMock.mockResolvedValue(
+        '<p onclick="alert(1)">Safe text</p><script>alert(2)</script>'
+      );
+
+      const { default: Page } = await import(modulePath);
+      const element = await Page({
+        params: Promise.resolve({ slug: "test-villa" }),
+      });
+      const { container } = render(element);
+
+      expect(screen.getByText("Safe text")).toBeInTheDocument();
+      expect(container.querySelector("script")).toBeNull();
+      expect(container.innerHTML).not.toContain("onclick");
+    });
+
+    it("9) resolved description boş/whitespace → 'Açıklama bulunmuyor' fallback (hardcoded metin DEĞİŞMEDİ)", async () => {
+      getVillaTranslatedDescriptionMock.mockResolvedValue("   ");
+
+      const { default: Page } = await import(modulePath);
+      const element = await Page({
+        params: Promise.resolve({ slug: "test-villa" }),
+      });
+      render(element);
+
+      expect(screen.getByText("Açıklama bulunmuyor")).toBeInTheDocument();
+    });
+  }
+);

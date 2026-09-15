@@ -4,14 +4,20 @@ import { cache } from "react";
 
 import { getTranslation, resolveTranslatedField } from "@/lib/i18n/get-translation.server";
 import type { Locale } from "@/lib/i18n/config";
+import { stripHtml } from "@/lib/html-sanitize";
 
 /* ===============================================================
-   🛡️ VILLA TITLE TRANSLATION OVERLAY — PHASE 6B
+   🛡️ VILLA TITLE + DESCRIPTION + SEO_DESCRIPTION TRANSLATION OVERLAY
+   — PHASE 6B / 8B / 8C
    ===============================================================
-   AMAÇ: Phase 5'in generic `getTranslation()`'ının üzerine, YALNIZ
-   villa `title` alanı için ince, villa'ya özgü bir okuma katmanı.
-   Description/badge/seo_title/seo_description bu fazın KAPSAMI
-   DIŞINDA — bilerek eklenmedi ("SADECE TITLE").
+   AMAÇ: Phase 5'in generic `getTranslation()`'ının üzerine, villa
+   `title` (Phase 6B), `description` (Phase 8B) ve EN/DE
+   `generateMetadata` için `seo_description` (Phase 8C) alanları
+   için ince, villa'ya özgü bir okuma katmanı. Badge/seo_title HÂLÂ
+   KAPSAM DIŞI — bu dosyaya eklenmedi (Phase 8C görev tanımı:
+   "SADECE seo_description", seo_title zaten shipped title fallback
+   zincirine dokunacağı için AYRI, gelecek bir fazın konusu — bkz.
+   Phase 8C audit raporu "🔴 seo_title" riski).
 
    DOKUNULMAYANLAR (bilinçli):
      - `app/services/villa.service.ts` / `mapVilla` — HİÇ import
@@ -66,4 +72,118 @@ export async function getVillaTranslatedTitle(
 ): Promise<string> {
   const translation = await getVillaTranslationCached(villaId, locale);
   return resolveTranslatedField(translation?.title, originalTitle);
+}
+
+/**
+ * 🛡️ PHASE 8B — Bir villanın, verilen locale için GÖSTERİLECEK
+ * description'ını (ham/sanitize EDİLMEMİŞ HTML) döner.
+ *   - `locale` TR'ye çözümleniyorsa → `originalDescription` (sorgu YOK).
+ *   - Çeviri satırı yoksa / `description` kolonu boşsa/whitespace ise →
+ *     `originalDescription`.
+ *   - DB hatası olursa → `originalDescription` (getTranslation zaten
+ *     throw etmez, hatayı null'a indirger — burada da asla exception
+ *     fırlatmaz, sayfa render'ını ASLA çökertmez).
+ *   - Aksi halde → çevrilmiş description.
+ *
+ * PERF (Phase 8B'nin en önemli kısıtı): `getVillaTranslatedTitle` ile
+ * BİREBİR AYNI `getVillaTranslationCached(villaId, locale)` çağrısını
+ * reuse eder — description için AYRI bir `getTranslation`/DB sorgusu
+ * EKLENMEZ. Bir request içinde title + description ikisi de istenirse
+ * (EN/DE villa detay page.tsx'in bu fazdaki kullanımı tam olarak
+ * budur), React `cache()` aynı (villaId, locale) argümanları için TEK
+ * `getTranslation("villa", ...)` sorgusunu paylaşır (Next.js'in GERÇEK
+ * RSC request-scoped dispatcher'ı içinde — Vitest/Node'da bu memoize
+ * ETMEZ, bkz. dosya başı yorum, Phase 4B/6B ile AYNI kısıt).
+ *
+ * Sanitize/strip BURADA YAPILMAZ — bu fonksiyon saf metin/HTML döner;
+ * çağıran taraf (page.tsx) mevcut `sanitizeHtml`/`stripHtml` akışını
+ * DEĞİŞTİRMEDEN, dönen değeri oraya geçirir (TR sayfasıyla AYNI
+ * sanitize mekanizması).
+ */
+export async function getVillaTranslatedDescription(
+  villaId: string,
+  originalDescription: string,
+  locale: Locale
+): Promise<string> {
+  const translation = await getVillaTranslationCached(villaId, locale);
+  return resolveTranslatedField(translation?.description, originalDescription);
+}
+
+/**
+ * 🛡️ PHASE 8C — TR page.tsx'teki private `makeExcerpt`'in (satır ~145,
+ * export EDİLMEMİŞ — başka bir yerden import EDİLEMEZ, bu yüzden
+ * BİREBİR AYNI mantıkla burada, bu dosyaya ÖZEL bir private kopya
+ * olarak tutulur; yeni bir paylaşılan utility/dosya OLUŞTURULMADI,
+ * TR dosyasına DOKUNULMADI) BİREBİR AYNISI. Yalnız
+ * `getVillaTranslatedSeoDescription` tarafından kullanılır.
+ */
+function makeExcerpt(text: string | undefined, max = 160): string {
+  const clean = (text || "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (clean.length <= max) return clean;
+  return clean.slice(0, max - 1).trimEnd() + "…";
+}
+
+/**
+ * 🛡️ PHASE 8C — Bir villanın, verilen locale için EN/DE
+ * `generateMetadata`'da kullanılacak SEO description'ını döner.
+ *
+ *   - `locale === "tr"` → sorgu ATILMAZ (bu dalın gerçek çağıranı
+ *     bugün YOK — EN/DE generateMetadata'sı bu fonksiyonu her zaman
+ *     "en"/"de" ile çağırıyor; bu dal yalnız defensive/simetrik
+ *     tamlık için var, title/description helper'larının TR
+ *     davranışıyla aynı ilkeyle). TR'nin KENDİ
+ *     `app/(public)/kiralik-villa/[slug]/page.tsx` `generateMetadata`'sındaki
+ *     BİREBİR AYNI mantık: `originalSeoDescription` doluysa (trim
+ *     edilmiş) onu, değilse `originalDescription`'dan 160 karakterlik
+ *     excerpt'i döner. TR sayfası bu fonksiyonu HİÇ ÇAĞIRMIYOR/
+ *     İTHAL ETMİYOR — kendi inline mantığını kullanmaya devam ediyor
+ *     (bu dosya TR'ye YENİ bir bağımlılık EKLEMEZ).
+ *   - EN/DE: `getVillaTranslatedTitle`/`getVillaTranslatedDescription`
+ *     ile BİREBİR AYNI `getVillaTranslationCached(villaId, locale)`
+ *     çağrısını reuse eder — AYRI bir DB sorgusu EKLENMEZ.
+ *     `translation.seo_description` dolu/whitespace-olmayan bir
+ *     string'se AYNEN döner. Aksi halde (çeviri satırı hiç yok VEYA
+ *     `seo_description` kolonu boş/whitespace VEYA DB hatası —
+ *     `getTranslation` zaten hatayı `null`'a indirger, burada asla
+ *     throw edilmez) çevrilmiş description'dan (`resolveTranslatedField`
+ *     ile — yoksa orijinal `originalDescription`'a düşer) 160
+ *     karakterlik excerpt üretilir (`stripHtml` + yukarıdaki private
+ *     `makeExcerpt` — TR'nin `makeExcerpt(stripHtml(villa.description), 160)`
+ *     çağrısıyla BİREBİR AYNI iki adımlı pipeline).
+ *
+ * `openGraph`/`twitter` alanlarına BURADA hiçbir şey eklenmez —
+ * bu yalnız `generateMetadata`'nın `description` alanı için saf bir
+ * string üretici; hangi metadata alanlarına yazılacağına ÇAĞIRAN
+ * TARAF (page.tsx) karar verir.
+ */
+export async function getVillaTranslatedSeoDescription(
+  villaId: string,
+  originalSeoDescription: string | null | undefined,
+  originalDescription: string,
+  locale: Locale
+): Promise<string> {
+  if (locale === "tr") {
+    const trimmedOwn = originalSeoDescription?.trim();
+    if (trimmedOwn) return trimmedOwn;
+    return makeExcerpt(stripHtml(originalDescription), 160);
+  }
+
+  const translation = await getVillaTranslationCached(villaId, locale);
+
+  const translatedSeoDescription = translation?.seo_description;
+  if (
+    typeof translatedSeoDescription === "string" &&
+    translatedSeoDescription.trim() !== ""
+  ) {
+    return translatedSeoDescription;
+  }
+
+  const translatedDescription = resolveTranslatedField(
+    translation?.description,
+    originalDescription
+  );
+  return makeExcerpt(stripHtml(translatedDescription), 160);
 }

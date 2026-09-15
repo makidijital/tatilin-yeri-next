@@ -5,10 +5,16 @@ import { notFound } from "next/navigation";
 import { requirePublicLocaleEnabled } from "@/lib/i18n/public-locale-gate.server";
 import { setRequestLocale } from "@/lib/i18n/request-locale.server";
 import { getVillaBySlug } from "@/app/services/villa.service";
-import { getVillaTranslatedTitle } from "@/lib/i18n/get-villa-translation.server";
+import {
+  getVillaTranslatedTitle,
+  getVillaTranslatedDescription,
+  getVillaTranslatedSeoDescription,
+} from "@/lib/i18n/get-villa-translation.server";
 import { getCachedSettings } from "@/lib/cache.helpers";
 import { isMultilingualEnabled } from "@/lib/i18n/config";
 import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
+import { sanitizeHtml, stripHtml } from "@/lib/html-sanitize";
+import CollapsibleDescription from "@/app/components/villa/CollapsibleDescription";
 import LocaleRouteComingSoon from "@/app/components/i18n/LocaleRouteComingSoon";
 
 /* ===============================================================
@@ -34,9 +40,10 @@ import LocaleRouteComingSoon from "@/app/components/i18n/LocaleRouteComingSoon";
    ile okunuyor. Görünen title, `getVillaTranslatedTitle` (Phase 6B,
    `lib/i18n/get-villa-translation.server.ts`) ile locale'e göre
    çözülüyor: çeviri varsa çevrilmiş title, yoksa/TR ise `villa.title`
-   AYNEN. Description/badge/tam villa detay deneyimi HÂLÂ YOK —
-   `LocaleRouteComingSoon` (DEĞİŞMEDİ) hâlâ "çevrilmedi" notunu
-   gösteriyor; yalnız title'ın üstüne eklendi. Villa bulunamazsa
+   AYNEN. Badge/tam villa detay deneyimi (galeri, fiyat, harita, vb.)
+   HÂLÂ YOK — `LocaleRouteComingSoon` (DEĞİŞMEDİ) hâlâ "çevrilmedi"
+   notunu gösteriyor; yalnız title (+ Phase 8B'de description) bunun
+   üstüne eklendi. Villa bulunamazsa
    (geçersiz slug) `notFound()` (TR sayfasının kendi özel "Villa
    bulunamadı" bloğu BURAYA kopyalanmadı — kapsam dışı, standart 404
    akışı reuse edildi).
@@ -67,12 +74,30 @@ import LocaleRouteComingSoon from "@/app/components/i18n/LocaleRouteComingSoon";
    bir fazın konusu (Phase 7A audit §10, Phase 7E).
 
    TITLE: `getVillaTranslatedTitle` ile çözülüyor (Phase 6B'nin body'de
-   zaten yaptığı AYNI şey — metadata'ya da uygulandı). DESCRIPTION:
-   BU FAZDA EKLENMEDİ (görev tanımı §7 — description/badge/seo
-   alanlarının geniş çevirisi kapsam dışı) — metadata'da hiç
-   set edilmiyor, root layout'un (`app/layout.tsx`) varsayılan
-   description'ı miras alınır (Next.js metadata merge davranışı,
-   yeni bir mekanizma İCAT EDİLMEDİ).
+   zaten yaptığı AYNI şey — metadata'ya da uygulandı). METADATA
+   DESCRIPTION: BU FAZDA (7C) EKLENMEMİŞTİ, Phase 8B'de de
+   DOKUNULMADI (Phase 8B kapsamı YALNIZ page BODY'sindeki description
+   — SEO `generateMetadata` alanı ayrı, gelecek bir fazın konusu) —
+   metadata'da hâlâ hiç `description` set edilmiyor, root layout'un
+   (`app/layout.tsx`) varsayılan description'ı miras alınır (Next.js
+   metadata merge davranışı, yeni bir mekanizma İCAT EDİLMEDİ).
+
+   🛡️ PHASE 8B EKLEMESİ — YALNIZ BODY DESCRIPTION (generateMetadata'ya
+   DOKUNULMADI): `getVillaTranslatedDescription`
+   (`lib/i18n/get-villa-translation.server.ts`) ile locale'e göre
+   çözülüyor — title ile BİREBİR AYNI `getVillaTranslationCached
+   (villaId, locale)` çağrısını reuse eder (React `cache()`
+   request-scoped dedupe); description için AYRI bir DB sorgusu
+   EKLENMEZ. Render, TR sayfasının (`kiralik-villa/[slug]/page.tsx`)
+   description bloğuyla AYNI koşullu desen: boş/whitespace değilse
+   `CollapsibleDescription` (`sanitizeHtml`/`stripHtml` — mevcut
+   sanitize mekanizması DEĞİŞTİRİLMEDİ, aynen reuse edildi), boşsa TR
+   sayfasındaki AYNI "Açıklama bulunmuyor" hardcoded fallback metni
+   (bu faz hardcoded UI metnine DOKUNMUYOR/ÇEVİRMİYOR, olduğu gibi
+   reuse ediyor). Yeni bir section başlığı ("Villa hakkında" gibi)
+   BİLİNÇLİ OLARAK EKLENMEDİ — bu fazın kapsamı yalnız description
+   İÇERİĞİ (Phase 8A raporunun "Önerilen Phase 8B" gerekçesiyle
+   tutarlı minimal karar).
    =============================================================== */
 
 /* ⚡ PERF — generateMetadata + page body aynı request içinde aynı
@@ -96,6 +121,18 @@ export async function generateMetadata({
   }
 
   const title = await getVillaTranslatedTitle(villa.id, villa.title, "en");
+  /* 🛡️ PHASE 8C — title ile AYNI getVillaTranslationCached(villa.id,"en")
+     çağrısını reuse eder (React cache() request-scoped dedupe);
+     seo_description için AYRI bir DB sorgusu EKLENMEZ. Yalnız
+     `metadata.description` için kullanılır — openGraph/twitter'a
+     EKLENMEZ (Phase 7C zaten EN/DE'de bu alanları hiç eklememişti,
+     bu fazın kapsamı değil). */
+  const description = await getVillaTranslatedSeoDescription(
+    villa.id,
+    villa.seo_description,
+    villa.description,
+    "en"
+  );
   const trCanonicalPath = `/kiralik-villa/${villa.slug || slug}`;
   const settings = await getCachedSettings().catch(() => null);
   const { canonical, languages } = buildLocaleAlternates(
@@ -105,6 +142,7 @@ export async function generateMetadata({
 
   return {
     title,
+    description,
     robots: { index: false, follow: false },
     alternates: isMultilingualEnabled(settings)
       ? { canonical, languages }
@@ -132,6 +170,14 @@ export default async function EnVillaDetailPage({
   }
 
   const title = await getVillaTranslatedTitle(villa.id, villa.title, "en");
+  /* 🛡️ PHASE 8B — title ile AYNI getVillaTranslationCached(villa.id,"en")
+     çağrısını reuse eder (React cache() request-scoped dedupe);
+     description için AYRI bir DB sorgusu EKLENMEZ. */
+  const description = await getVillaTranslatedDescription(
+    villa.id,
+    villa.description,
+    "en"
+  );
 
   return (
     <>
@@ -142,6 +188,24 @@ export default async function EnVillaDetailPage({
         <h1 className="font-display text-[28px] md:text-[40px] text-[var(--color-stone-900)] mt-3 leading-tight">
           {title}
         </h1>
+      </div>
+      {/* 🛡️ PHASE 8B — description overlay. TR sayfasının (kiralik-villa/
+          [slug]/page.tsx) description bloğuyla AYNI koşullu desen + AYNI
+          sanitize mekanizması + AYNI hardcoded fallback metni
+          ("Açıklama bulunmuyor" — bu faz hardcoded UI'a dokunmuyor). */}
+      <div className="max-w-3xl mx-auto px-5 md:px-0 mt-8">
+        {description && description.trim() ? (
+          <CollapsibleDescription
+            html={sanitizeHtml(description)}
+            collapsible={stripHtml(description).trim().length > 280}
+          />
+        ) : (
+          <div className="card-premium mt-5 p-6 md:p-7 text-[var(--color-stone-600)] leading-[1.75] text-[15px]">
+            <span className="italic text-[var(--color-stone-400)]">
+              Açıklama bulunmuyor
+            </span>
+          </div>
+        )}
       </div>
       <LocaleRouteComingSoon locale="en" />
     </>
