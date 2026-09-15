@@ -76,6 +76,10 @@ import {
   getCachedVillaReviews,
   getCachedVillaReviewStats,
 } from "@/lib/cache.helpers";
+/* 🛡️ PHASE 7C — locale-aware canonical + hreflang (yalnız
+   generateMetadata içinde kullanılır; body/render akışına dokunmaz). */
+import { isMultilingualEnabled } from "@/lib/i18n/config";
+import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
 import VillaReviewsSection from "@/app/components/villa/VillaReviewsSection";
 /* 🛡️ Full-width "Beğenebileceğiniz Diğer Villalar" — additive, yorumlardan
    sonra/footer'dan önce. Kendi verisini çeker (max 2 query). */
@@ -187,21 +191,34 @@ export async function generateMetadata({
     ? { index: false, follow: false }
     : { index: true, follow: true };
 
+  /* 🛡️ PHASE 7C — CANONICAL + HREFLANG (Phase 7B helper reuse).
+     `buildLocaleAlternates` TEK kaynak — URL'ler elle string
+     birleştirilerek YENİDEN üretilmedi. `multilingual_enabled=false`
+     iken (bugün production) EN/DE route'ları zaten Phase 4A gate'i
+     (`requirePublicLocaleEnabled`) tarafından notFound() ile
+     kapatılıyor; bu yüzden flag false iken hreflang kümesine
+     var-olmayan/404 dönecek EN/DE URL'leri EKLENMEZ — yalnız
+     `canonical` (TR path, ÖNCEKİ DAVRANIŞLA BYTE-IDENTICAL) döner.
+     Flag true olduğunda tr/en/de/x-default karşılıklı üretilir. */
+  const canonicalPath = `/kiralik-villa/${villa.slug || slug}`;
+  const seoSettings = await getCachedSettings().catch(() => null);
+  const { canonical, languages } = buildLocaleAlternates(
+    canonicalPath,
+    "tr"
+  );
+
   return {
     title,
     description,
     robots,
-    /* 🛡️ CANONICAL — villanın KENDİ slug'ı (requested slug değil) →
-       query param (?utm/?ref) ve alternatif slug varyasyonları tek
-       kanonik URL'de toplanır; duplicate riski kapanır. metadataBase
-       ile absolute'a çözülür. */
-    alternates: {
-      canonical: `/kiralik-villa/${villa.slug || slug}`,
-    },
+    alternates: isMultilingualEnabled(seoSettings)
+      ? { canonical, languages }
+      : { canonical },
     openGraph: {
       title,
       description,
       type: "website",
+      url: canonical,
       ...(cover ? { images: [{ url: cover }] } : {}),
     },
     twitter: {
