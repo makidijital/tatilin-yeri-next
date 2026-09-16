@@ -5,15 +5,10 @@ import { requirePublicLocaleEnabled } from "@/lib/i18n/public-locale-gate.server
 import { setRequestLocale } from "@/lib/i18n/request-locale.server";
 import { getVillaBySlug } from "@/app/services/villa.service";
 import {
-  getVillaTranslatedTitle,
   getVillaTranslatedDescription,
   getVillaTranslatedSeoDescription,
   /* 🛡️ PHASE 10B, Section 11 — SEO title override (varsa). */
   getVillaTranslatedSeoTitle,
-  /* 🛡️ PHASE 10E — oda/banyo adı çevirileri (migration 083). AYNI
-     getVillaTranslationCached satırını reuse eder → EK DB SORGUSU YOK. */
-  getVillaTranslatedBedroomNames,
-  getVillaTranslatedBathroomNames,
 } from "@/lib/i18n/get-villa-translation.server";
 /* 🛡️ PHASE 8D-2 — batch translation okuma (8D-1) + generic fallback. */
 import {
@@ -120,10 +115,10 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
    `params` okunuyor (slug) ve villa `getVillaBySlug` (mevcut,
    DEĞİŞMEMİŞ `villa.service.ts` export'u — `mapVilla`/`VillaDTO`/
    TR sayfasının kendi private `getVillaBySlugCached`'i HİÇ dokunulmadı)
-   ile okunuyor. Görünen title, `getVillaTranslatedTitle` (Phase 6B,
-   `lib/i18n/get-villa-translation.server.ts`) ile locale'e göre
-   çözülüyor: çeviri varsa çevrilmiş title, yoksa/TR ise `villa.title`
-   AYNEN. Badge/tam villa detay deneyimi (galeri, fiyat, harita, vb.)
+   ile okunuyor. 🛡️ Görünen title ARTIK ÇEVRİLMİYOR: villa adı özel
+   isimdir, her locale'de canonical `villa.title` gösterilir
+   (villa_translations.title okuması KALDIRILDI; description/badge/
+   seo_title/seo_description çevirileri AYNEN devam eder). Badge/tam villa detay deneyimi (galeri, fiyat, harita, vb.)
    HÂLÂ YOK — `LocaleRouteComingSoon` (DEĞİŞMEDİ) hâlâ "çevrilmedi"
    notunu gösteriyor; yalnız title (+ Phase 8B'de description) bunun
    üstüne eklendi. Villa bulunamazsa
@@ -139,10 +134,10 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
    (`getVillaBySlugCached` — bu dosyaya ÖZEL, TR sayfasının private
    sabitiyle AYNI isim ama AYRI modül-scope'lu değişken, birbirine
    hiç referans vermez; proje convention'ı — bkz. TR sayfası).
-   `getVillaTranslatedTitle` zaten Phase 6B'de React `cache()` ile
-   sarmalı (`get-villa-translation.server.ts`) — metadata + body aynı
-   (villaId, locale) çifti için TEK DB sorgusu paylaşır, yeni bir
-   sorgu paterni EKLENMEDİ.
+   Çeviri okuyan getter'lar (description/badge/seo_*) React `cache()`
+   ile sarmalı (`get-villa-translation.server.ts`) — metadata + body
+   aynı (villaId, locale) çifti için TEK DB sorgusu paylaşır, yeni bir
+   sorgu paterni EKLENMEDİ. Title bu zincire HİÇ girmez (çevrilmiyor).
 
    CANONICAL: Phase 7B'nin `buildLocaleAlternates(trPath, "en")`'i
    TEK kaynak — URL'ler elle birleştirilmedi. HREFLANG (`languages`):
@@ -156,8 +151,8 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
    noindex kalır; robots'un flag'e/villa'ya bağlanması AYRI, gelecek
    bir fazın konusu (Phase 7A audit §10, Phase 7E).
 
-   TITLE: `getVillaTranslatedTitle` ile çözülüyor (Phase 6B'nin body'de
-   zaten yaptığı AYNI şey — metadata'ya da uygulandı). METADATA
+   TITLE: ÇEVRİLMEZ — canonical `villa.title` kullanılır (body ile AYNI).
+   `seo_title` çevirisi bundan BAĞIMSIZ olarak çalışmaya devam eder. METADATA
    DESCRIPTION: BU FAZDA (7C) EKLENMEMİŞTİ, Phase 8B'de de
    DOKUNULMADI (Phase 8B kapsamı YALNIZ page BODY'sindeki description
    — SEO `generateMetadata` alanı ayrı, gelecek bir fazın konusu) —
@@ -230,11 +225,10 @@ export async function generateMetadata({
     };
   }
 
-  const fallbackTitle = await getVillaTranslatedTitle(
-    villa.id,
-    villa.title,
-    "en"
-  );
+  /* 🛡️ VİLLA ADI ÇEVRİLMEZ — özel isimdir, her locale'de canonical
+     `villa.title` kullanılır. (villa_translations.title okuması
+     KALDIRILDI; seo_title çevirisi AYNEN devam eder.) */
+  const fallbackTitle = villa.title;
   /* 🛡️ PHASE 10B, Section 11 — TR'nin generateMetadata'sındaki AYNI
      öncelik: seo_title (çevirisi) varsa/doluysa O, yoksa çevrilmiş
      normal title. `getVillaTranslatedSeoTitle` de AYNI
@@ -316,7 +310,8 @@ export default async function EnVillaDetailPage({
     );
   }
 
-  const title = await getVillaTranslatedTitle(villa.id, villa.title, "en");
+  /* 🛡️ VİLLA ADI ÇEVRİLMEZ — canonical `villa.title` (bkz. generateMetadata). */
+  const title = villa.title;
   /* 🛡️ PHASE 8B — title ile AYNI getVillaTranslationCached(villa.id,"en")
      çağrısını reuse eder (React cache() request-scoped dedupe);
      description için AYRI bir DB sorgusu EKLENMEZ. */
@@ -433,20 +428,6 @@ export default async function EnVillaDetailPage({
       ),
     })
   );
-
-  /* 🛡️ PHASE 10E — KONAKLAMA DÜZENİ ADLARI.
-     TR kaynak: villa.bedroom_layout / .bathroom_layout (migration 047,
-     mapVilla içinde zaten normalize edilmiş) — DEĞİŞTİRİLMEZ, yalnız
-     okunur. Çözümleme lib/villa-layout-translation.helper.ts'in
-     index + TR-ad guard'ıyla yapılır; uyuşmazlıkta TR'ye düşülür.
-     İki getter de AYNI cache'lenmiş translation satırını kullanır →
-     yeni DB sorgusu OLUŞMAZ. */
-  const trBedroomNames = (villa.bedroom_layout ?? []).map((r) => r.name);
-  const trBathroomNames = (villa.bathroom_layout ?? []).map((b) => b.name);
-  const [bedroomNames, bathroomNames] = await Promise.all([
-    getVillaTranslatedBedroomNames(villa.id, trBedroomNames, "en"),
-    getVillaTranslatedBathroomNames(villa.id, trBathroomNames, "en"),
-  ]);
 
   const locationName = villa.location_id
     ? resolveTranslatedField(
@@ -612,8 +593,6 @@ export default async function EnVillaDetailPage({
           bedrooms={villa.bedroom_layout ?? []}
           bathrooms={villa.bathroom_layout ?? []}
           locale="en"
-          bedroomNames={bedroomNames}
-          bathroomNames={bathroomNames}
         />
 
         {/* 🛡️ PHASE 10E BATCH 5 — TR sayfasındaki AYNI sıra (konaklama

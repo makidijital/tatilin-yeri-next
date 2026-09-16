@@ -185,6 +185,16 @@ export const de: Dictionary = {
     bathroomFallback: "Badezimmer {n}",
   },
   /* 🛡️ PHASE 10E BATCH 5 — havuz tipi etiketleri + UI metinleri. */
+  /* 🛡️ PHASE 10F — oda/banyo adı sözlüğü. */
+  roomNameLabels: {
+    "Yatak Odası": "Schlafzimmer",
+    "Ana Yatak Odası": "Hauptschlafzimmer",
+    "Çocuk Odası": "Kinderzimmer",
+    "Misafir Odası": "Gästezimmer",
+    "Ebeveyn Yatak Odası": "Hauptschlafzimmer",
+    "Banyo": "Badezimmer",
+    "Ebeveyn Banyosu": "En-suite-Badezimmer",
+  },
   poolTypeLabels: {
     private: "Privatpool",
     private_sheltered: "Privater überdachter Pool",

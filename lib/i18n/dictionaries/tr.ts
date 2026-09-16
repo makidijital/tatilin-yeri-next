@@ -198,6 +198,16 @@ export const tr: Dictionary = {
   },
   /* 🛡️ PHASE 10E BATCH 5 — kiralik-villa/[slug] ve v/[token] sayfalarında
      BUGÜN kullanılan TR literal'lerle BİREBİR aynı. */
+  /* 🛡️ PHASE 10F — TR identity map (TR çıktısı DEĞİŞMEZ). */
+  roomNameLabels: {
+    "Yatak Odası": "Yatak Odası",
+    "Ana Yatak Odası": "Ana Yatak Odası",
+    "Çocuk Odası": "Çocuk Odası",
+    "Misafir Odası": "Misafir Odası",
+    "Ebeveyn Yatak Odası": "Ebeveyn Yatak Odası",
+    "Banyo": "Banyo",
+    "Ebeveyn Banyosu": "Ebeveyn Banyosu",
+  },
   poolTypeLabels: {
     private: "Özel Havuz",
     private_sheltered: "Özel Korunaklı Havuz",

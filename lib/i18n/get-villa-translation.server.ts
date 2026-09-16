@@ -5,10 +5,6 @@ import { cache } from "react";
 import { getTranslation, resolveTranslatedField } from "@/lib/i18n/get-translation.server";
 import type { Locale } from "@/lib/i18n/config";
 import { stripHtml } from "@/lib/html-sanitize";
-/* 🛡️ PHASE 10E — oda/banyo adı çözümlemesi. Drift/index/fallback
-   algoritmasının TEK doğruluk kaynağı bu helper'dır; burada YENİDEN
-   YAZILMAZ (dosya Batch 1'den beri DEĞİŞMEDİ, yalnız import edilir). */
-import { resolveLayoutTranslationNames } from "@/lib/villa-layout-translation.helper";
 
 /* ===============================================================
    🛡️ VILLA TITLE + DESCRIPTION + SEO_DESCRIPTION TRANSLATION OVERLAY
@@ -60,23 +56,10 @@ const getVillaTranslationCached = cache(
   (villaId: string, locale: Locale) => getTranslation("villa", villaId, locale)
 );
 
-/**
- * Bir villanın, verilen locale için GÖSTERİLECEK title'ını döner.
- *   - `locale` TR'ye çözümleniyorsa → `originalTitle` (sorgu YOK).
- *   - Çeviri satırı yoksa / `title` kolonu boşsa → `originalTitle`.
- *   - DB hatası olursa → `originalTitle` (getTranslation zaten
- *     throw etmez, hatayı null'a indirger — burada da asla exception
- *     fırlatmaz, sayfa render'ını ASLA çökertmez).
- *   - Aksi halde → çevrilmiş title.
- */
-export async function getVillaTranslatedTitle(
-  villaId: string,
-  originalTitle: string,
-  locale: Locale
-): Promise<string> {
-  const translation = await getVillaTranslationCached(villaId, locale);
-  return resolveTranslatedField(translation?.title, originalTitle);
-}
+/* 🛡️ VİLLA ADI (title) ÇEVİRİSİ KALDIRILDI — villa adı özel isimdir ve
+   her locale'de canonical `villa.title` olarak gösterilir. Bu dosyadaki
+   diğer getter'lar (description / seo_description / badge / seo_title)
+   DEĞİŞMEDİ ve aynı cache'lenmiş satırı paylaşmaya devam eder. */
 
 /**
  * 🛡️ PHASE 8B — Bir villanın, verilen locale için GÖSTERİLECEK
@@ -89,8 +72,7 @@ export async function getVillaTranslatedTitle(
  *     fırlatmaz, sayfa render'ını ASLA çökertmez).
  *   - Aksi halde → çevrilmiş description.
  *
- * PERF (Phase 8B'nin en önemli kısıtı): `getVillaTranslatedTitle` ile
- * BİREBİR AYNI `getVillaTranslationCached(villaId, locale)` çağrısını
+ * PERF (Phase 8B'nin en önemli kısıtı): diğer getter'larla BİREBİR AYNI `getVillaTranslationCached(villaId, locale)` çağrısını
  * reuse eder — description için AYRI bir `getTranslation`/DB sorgusu
  * EKLENMEZ. Bir request içinde title + description ikisi de istenirse
  * (EN/DE villa detay page.tsx'in bu fazdaki kullanımı tam olarak
@@ -145,7 +127,7 @@ function makeExcerpt(text: string | undefined, max = 160): string {
  *     excerpt'i döner. TR sayfası bu fonksiyonu HİÇ ÇAĞIRMIYOR/
  *     İTHAL ETMİYOR — kendi inline mantığını kullanmaya devam ediyor
  *     (bu dosya TR'ye YENİ bir bağımlılık EKLEMEZ).
- *   - EN/DE: `getVillaTranslatedTitle`/`getVillaTranslatedDescription`
+ *   - EN/DE: `getVillaTranslatedDescription`
  *     ile BİREBİR AYNI `getVillaTranslationCached(villaId, locale)`
  *     çağrısını reuse eder — AYRI bir DB sorgusu EKLENMEZ.
  *     `translation.seo_description` dolu/whitespace-olmayan bir
@@ -194,7 +176,7 @@ export async function getVillaTranslatedSeoDescription(
 
 /**
  * 🛡️ PHASE 10B — Bir villanın, verilen locale için GÖSTERİLECEK
- * badge'ini döner. `getVillaTranslatedTitle`/`getVillaTranslatedDescription`
+ * badge'ini döner. `getVillaTranslatedDescription`
  * ile BİREBİR AYNI desen — AYNI `getVillaTranslationCached(villaId, locale)`
  * çağrısını reuse eder (AYRI bir DB sorgusu EKLENMEZ).
  *   - `locale` TR'ye çözümleniyorsa → `originalBadge` (sorgu YOK).
@@ -233,54 +215,4 @@ export async function getVillaTranslatedSeoTitle(
 ): Promise<string | null | undefined> {
   const translation = await getVillaTranslationCached(villaId, locale);
   return resolveTranslatedField(translation?.seo_title, originalSeoTitle);
-}
-
-
-/* ===============================================================
-   🛡️ PHASE 10E — KONAKLAMA DÜZENİ (ODA/BANYO ADI) ÇEVİRİLERİ
-   ===============================================================
-   Migration 083'ün `villa_translations.bedroom_layout` /
-   `.bathroom_layout` kolonlarını okur.
-
-   PERF: Yukarıdaki 5 getter ile BİREBİR AYNI
-   `getVillaTranslationCached(villaId, locale)` çağrısını reuse eder —
-   AYRI bir DB sorgusu EKLENMEZ. Bir request içinde title/description/
-   bedroom/bathroom hepsi istendiğinde React `cache()` aynı (villaId,
-   locale) için TEK `getTranslation("villa", ...)` sorgusunu paylaşır.
-
-   TR: `getTranslation` TR için erken `null` döner (sorgu YOK) →
-   `resolveLayoutTranslationNames` çeviri bulamaz → TR adlar aynen döner.
-
-   GÜVENLİK: Yanlış odaya çeviri bağlanması imkânsızdır — helper
-   uzunluk + index + TR kaynak adı guard'ını uygular; uyuşmazlıkta
-   ilgili satır (veya tüm dizi) TR'ye düşer. Bu fonksiyonlar o kararı
-   DEĞİŞTİRMEZ, yalnız `.names` sonucunu geçirir.
-   =============================================================== */
-
-/**
- * Bir villanın oda ADLARINI verilen locale için çözer.
- * Dönen dizi HER ZAMAN `trNames` ile aynı uzunluktadır.
- */
-export async function getVillaTranslatedBedroomNames(
-  villaId: string,
-  trNames: readonly string[],
-  locale: Locale
-): Promise<string[]> {
-  const translation = await getVillaTranslationCached(villaId, locale);
-  return resolveLayoutTranslationNames(trNames, translation?.bedroom_layout)
-    .names;
-}
-
-/**
- * Bir villanın banyo ADLARINI verilen locale için çözer.
- * `getVillaTranslatedBedroomNames` ile AYNI desen ve AYNI cache çağrısı.
- */
-export async function getVillaTranslatedBathroomNames(
-  villaId: string,
-  trNames: readonly string[],
-  locale: Locale
-): Promise<string[]> {
-  const translation = await getVillaTranslationCached(villaId, locale);
-  return resolveLayoutTranslationNames(trNames, translation?.bathroom_layout)
-    .names;
 }

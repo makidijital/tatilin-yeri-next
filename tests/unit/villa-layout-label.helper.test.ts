@@ -16,12 +16,15 @@ import { describe, it, expect } from "vitest";
 import {
   getBedTypeLabel,
   getBathroomTypeLabel,
+  getBedroomNameLabel,
+  getBathroomNameLabel,
 } from "@/lib/villa-layout-label.helper";
 import {
   BED_TYPES,
   BATHROOM_TYPES,
   BED_TYPE_LABELS,
   BATHROOM_TYPE_LABELS,
+  BEDROOM_NAME_SUGGESTIONS,
 } from "@/lib/villa-layout.helper";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import type { Locale } from "@/lib/i18n/config";
@@ -113,5 +116,96 @@ describe("dictionary — enum kapsama (drift koruması)", () => {
     expect(dict.accommodation.bathroomFallback).toContain("{n}");
     expect(dict.accommodation.sectionTitle).toBeTruthy();
     expect(dict.accommodation.noDetail).toBeTruthy();
+  });
+});
+
+/* ===============================================================
+   🛡️ PHASE 10F — ODA/BANYO ADI SÖZLÜK ÇÖZÜMÜ
+   ===============================================================
+   Villa bazlı EN/DE ad çevirisi kaldırıldı; adlar yalnız buradan
+   çözülür. TR identity-map olduğu için TR çıktısı DEĞİŞMEZ.
+=============================================================== */
+describe("getBedroomNameLabel / getBathroomNameLabel", () => {
+  it("🛡️ TR: canonical adlar AYNEN döner (TR regresyon kilidi)", () => {
+    for (const name of BEDROOM_NAME_SUGGESTIONS) {
+      expect(getBedroomNameLabel(name, "tr")).toBe(name);
+    }
+    expect(getBathroomNameLabel("1. Banyo", "tr")).toBe("1. Banyo");
+    expect(getBathroomNameLabel("Banyo", "tr")).toBe("Banyo");
+  });
+
+  it("EN canonical oda adları", () => {
+    expect(getBedroomNameLabel("Ana Yatak Odası", "en")).toBe("Master Bedroom");
+    expect(getBedroomNameLabel("Çocuk Odası", "en")).toBe("Children's Room");
+    expect(getBedroomNameLabel("Misafir Odası", "en")).toBe("Guest Room");
+    expect(getBedroomNameLabel("Yatak Odası", "en")).toBe("Bedroom");
+  });
+
+  it("DE canonical oda adları", () => {
+    expect(getBedroomNameLabel("Ana Yatak Odası", "de")).toBe(
+      "Hauptschlafzimmer"
+    );
+    expect(getBedroomNameLabel("Çocuk Odası", "de")).toBe("Kinderzimmer");
+    expect(getBedroomNameLabel("Misafir Odası", "de")).toBe("Gästezimmer");
+  });
+
+  it("numaralı oda adı şablondan üretilir (EN/DE)", () => {
+    expect(getBedroomNameLabel("1. Yatak Odası", "en")).toBe("Bedroom 1");
+    expect(getBedroomNameLabel("3. Yatak Odası", "en")).toBe("Bedroom 3");
+    expect(getBedroomNameLabel("2. Yatak Odası", "de")).toBe("Schlafzimmer 2");
+    /* Sözlükte olmayan 12. gibi bir numara da çalışır. */
+    expect(getBedroomNameLabel("12. Yatak Odası", "en")).toBe("Bedroom 12");
+  });
+
+  it("numaralı banyo adı şablondan üretilir (EN/DE)", () => {
+    expect(getBathroomNameLabel("1. Banyo", "en")).toBe("Bathroom 1");
+    expect(getBathroomNameLabel("2. Banyo", "de")).toBe("Badezimmer 2");
+    expect(getBathroomNameLabel("Banyo", "en")).toBe("Bathroom");
+  });
+
+  it("🛡️ sözlükte OLMAYAN serbest ad her locale'de AYNEN döner", () => {
+    for (const locale of LOCALES) {
+      expect(getBedroomNameLabel("Deniz Manzaralı Süit", locale)).toBe(
+        "Deniz Manzaralı Süit"
+      );
+      expect(getBathroomNameLabel("Jakuzili Banyo", locale)).toBe(
+        "Jakuzili Banyo"
+      );
+    }
+  });
+
+  it("boş/null/undefined ad → boş string (çağıran numara fallback'i uygular)", () => {
+    for (const locale of LOCALES) {
+      expect(getBedroomNameLabel("", locale)).toBe("");
+      expect(getBedroomNameLabel("   ", locale)).toBe("");
+      expect(getBedroomNameLabel(null, locale)).toBe("");
+      expect(getBedroomNameLabel(undefined, locale)).toBe("");
+      expect(getBathroomNameLabel(null, locale)).toBe("");
+    }
+  });
+
+  it("baştaki/sondaki boşluk trim edilir", () => {
+    expect(getBedroomNameLabel("  Ana Yatak Odası  ", "en")).toBe(
+      "Master Bedroom"
+    );
+    expect(getBathroomNameLabel("  1. Banyo ", "en")).toBe("Bathroom 1");
+  });
+
+  it("geçersiz numara biçimi sözlüğe/TR'ye düşer, crash etmez", () => {
+    expect(getBedroomNameLabel("0. Yatak Odası", "en")).toBe("0. Yatak Odası");
+    expect(getBedroomNameLabel("A. Yatak Odası", "en")).toBe("A. Yatak Odası");
+    expect(() => getBedroomNameLabel("1. Bilinmeyen", "en")).not.toThrow();
+    expect(getBedroomNameLabel("1. Bilinmeyen", "en")).toBe("1. Bilinmeyen");
+  });
+
+  it("dictionary roomNameLabels üç locale'de de aynı key kümesine sahip", () => {
+    const trKeys = Object.keys(getDictionary("tr").roomNameLabels).sort();
+    expect(Object.keys(getDictionary("en").roomNameLabels).sort()).toEqual(
+      trKeys
+    );
+    expect(Object.keys(getDictionary("de").roomNameLabels).sort()).toEqual(
+      trKeys
+    );
+    expect(trKeys.length).toBeGreaterThan(0);
   });
 });

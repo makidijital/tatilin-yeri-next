@@ -195,123 +195,109 @@ describe("enum etiketleri locale-aware", () => {
 });
 
 /* ---------------------------------------------------------------
-   ÇEVRİLMİŞ ADLAR + FALLBACK
+   🛡️ PHASE 10F — ODA/BANYO ADLARI ARTIK SÖZLÜKTEN
+   ---------------------------------------------------------------
+   Villa bazlı EN/DE ad çevirisi KALDIRILDI (bedroomNames/bathroomNames
+   prop'ları yok). Adlar merkezi `roomNameLabels` sözlüğünden çözülür;
+   sözlükte olmayan serbest adlar olduğu gibi kalır.
    --------------------------------------------------------------- */
-describe("çevrilmiş oda/banyo adları", () => {
-  it("EN çevrilmiş oda adları gösterilir", () => {
+describe("oda/banyo adları — sözlük çözümü", () => {
+  it("EN: canonical oda adları sözlükten çevrilir", () => {
     render(
-      <AccommodationLayout
-        bedrooms={BEDROOMS}
-        bathrooms={[]}
-        locale="en"
-        bedroomNames={["Master Bedroom", "Children's Bedroom"]}
-      />
+      <AccommodationLayout bedrooms={BEDROOMS} bathrooms={[]} locale="en" />
     );
     expect(screen.getByText("Master Bedroom")).toBeInTheDocument();
-    expect(screen.getByText("Children's Bedroom")).toBeInTheDocument();
+    expect(screen.getByText("Children's Room")).toBeInTheDocument();
     expect(screen.queryByText("Ana Yatak Odası")).not.toBeInTheDocument();
   });
 
-  it("DE çevrilmiş oda adları gösterilir", () => {
+  it("DE: canonical oda adları sözlükten çevrilir", () => {
     render(
-      <AccommodationLayout
-        bedrooms={BEDROOMS}
-        bathrooms={[]}
-        locale="de"
-        bedroomNames={["Hauptschlafzimmer", "Kinderzimmer"]}
-      />
+      <AccommodationLayout bedrooms={BEDROOMS} bathrooms={[]} locale="de" />
     );
     expect(screen.getByText("Hauptschlafzimmer")).toBeInTheDocument();
     expect(screen.getByText("Kinderzimmer")).toBeInTheDocument();
   });
 
-  it("EN/DE çevrilmiş banyo adları gösterilir", () => {
+  it("EN/DE: numaralı oda adı şablondan üretilir", () => {
+    const numbered = [
+      { name: "1. Yatak Odası", beds: [] },
+      { name: "2. Yatak Odası", beds: [] },
+    ];
     const { unmount } = render(
-      <AccommodationLayout
-        bedrooms={[]}
-        bathrooms={BATHROOMS}
-        locale="en"
-        bathroomNames={["Bathroom 1", "Bathroom 2"]}
-      />
+      <AccommodationLayout bedrooms={numbered} bathrooms={[]} locale="en" />
     );
-    expect(screen.getByText("Bathroom 1")).toBeInTheDocument();
+    expect(screen.getByText("Bedroom 1")).toBeInTheDocument();
+    expect(screen.getByText("Bedroom 2")).toBeInTheDocument();
     unmount();
 
     render(
-      <AccommodationLayout
-        bedrooms={[]}
-        bathrooms={BATHROOMS}
-        locale="de"
-        bathroomNames={["Badezimmer 1", "Badezimmer 2"]}
-      />
+      <AccommodationLayout bedrooms={numbered} bathrooms={[]} locale="de" />
+    );
+    expect(screen.getByText("Schlafzimmer 1")).toBeInTheDocument();
+  });
+
+  it("EN/DE: numaralı banyo adı şablondan üretilir", () => {
+    const { unmount } = render(
+      <AccommodationLayout bedrooms={[]} bathrooms={BATHROOMS} locale="en" />
+    );
+    expect(screen.getByText("Bathroom 1")).toBeInTheDocument();
+    expect(screen.getByText("Bathroom 2")).toBeInTheDocument();
+    unmount();
+
+    render(
+      <AccommodationLayout bedrooms={[]} bathrooms={BATHROOMS} locale="de" />
     );
     expect(screen.getByText("Badezimmer 1")).toBeInTheDocument();
   });
 
-  it("çeviri verilmezse (undefined) TR adlara düşer", () => {
+  it("🛡️ sözlükte OLMAYAN serbest ad her locale'de olduğu gibi kalır", () => {
+    const custom = [{ name: "Deniz Manzaralı Süit", beds: [] }];
+    for (const locale of ["tr", "en", "de"] as const) {
+      const { unmount } = render(
+        <AccommodationLayout bedrooms={custom} bathrooms={[]} locale={locale} />
+      );
+      expect(screen.getByText("Deniz Manzaralı Süit")).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("🛡️ villa bazlı çeviri prop'u ARTIK YOK — component yalnız locale alır", () => {
+    /* bedroomNames/bathroomNames prop'ları kaldırıldı; TS seviyesinde de
+       kabul edilmiyor (tsc bunu doğrular). Runtime'da fazladan prop
+       gönderilse bile çıktı DEĞİŞMEZ. */
+    const extra = { bedroomNames: ["HACKED"], bathroomNames: ["HACKED"] };
     render(
       <AccommodationLayout
         bedrooms={BEDROOMS}
         bathrooms={BATHROOMS}
         locale="en"
+        {...(extra as unknown as Record<string, never>)}
       />
     );
-    expect(screen.getByText("Ana Yatak Odası")).toBeInTheDocument();
-    expect(screen.getByText("1. Banyo")).toBeInTheDocument();
-  });
-
-  it("kısmi çeviri → çevrilen çevrilir, boş satır TR'ye düşer", () => {
-    render(
-      <AccommodationLayout
-        bedrooms={BEDROOMS}
-        bathrooms={[]}
-        locale="en"
-        bedroomNames={["Master Bedroom", ""]}
-      />
-    );
+    expect(screen.queryByText("HACKED")).not.toBeInTheDocument();
     expect(screen.getByText("Master Bedroom")).toBeInTheDocument();
-    expect(screen.getByText("Çocuk Odası")).toBeInTheDocument();
   });
 
-  it("🛡️ UZUNLUK UYUŞMAZLIĞI → dizi TAMAMEN yok sayılır, TR gösterilir", () => {
+  it("adı boş satır numara fallback'ine düşer", () => {
     render(
       <AccommodationLayout
-        bedrooms={BEDROOMS}
+        bedrooms={[{ name: "", beds: [] }]}
         bathrooms={[]}
         locale="en"
-        bedroomNames={["Master Bedroom"]}
       />
     );
-    /* Yanlış odaya bağlanma OLMAMALI. */
-    expect(screen.getByText("Ana Yatak Odası")).toBeInTheDocument();
-    expect(screen.getByText("Çocuk Odası")).toBeInTheDocument();
-    expect(screen.queryByText("Master Bedroom")).not.toBeInTheDocument();
+    expect(screen.getByText("Bedroom 1")).toBeInTheDocument();
   });
 
-  it("çeviri adı boşsa numara fallback'i değil TR adı kullanılır", () => {
-    render(
-      <AccommodationLayout
-        bedrooms={[{ name: "Ana Yatak Odası", beds: [] }]}
-        bathrooms={[]}
-        locale="en"
-        bedroomNames={[""]}
-      />
-    );
-    expect(screen.getByText("Ana Yatak Odası")).toBeInTheDocument();
-    expect(screen.queryByText("Bedroom 1")).not.toBeInTheDocument();
-  });
-
-  it("ikonlar çeviriden ETKİLENMEZ (oda/banyo ikon sayısı sabit)", () => {
+  it("🛡️ ikonlar addan/locale'den ETKİLENMEZ", () => {
     const { container } = render(
       <AccommodationLayout
         bedrooms={BEDROOMS}
         bathrooms={BATHROOMS}
         locale="en"
-        bedroomNames={["Master Bedroom", "Children's Bedroom"]}
-        bathroomNames={["Bathroom 1", "Bathroom 2"]}
       />
     );
-    /* 2 oda + 2 banyo = 4 ikon; isme dayalı mapping YOK. */
     expect(container.querySelectorAll("svg")).toHaveLength(4);
   });
 });

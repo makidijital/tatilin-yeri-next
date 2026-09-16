@@ -35,17 +35,7 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 const requirePublicLocaleEnabledMock = vi.fn();
 const getVillaBySlugMock = vi.fn();
-const getVillaTranslatedTitleMock = vi.fn();
 const getVillaTranslatedDescriptionMock = vi.fn();
-/* 🛡️ PHASE 10E BATCH 4 — EN/DE villa detay artık oda/banyo ADI
-   çevirilerini de okuyor (get-villa-translation.server.ts'in yeni
-   getter'ları). Bu modül TAMAMEN mock'landığı için yeni export'lar da
-   mock'lanmalı; aksi halde page.tsx `undefined` çağırıp TypeError atar
-   (Phase 8B'de description için yaşanan AYNI durum). Gerçek drift/
-   fallback mantığı KENDİ testlerinde doğrulanıyor:
-   get-villa-translation-layout.test.ts + villa-layout-translation.helper.test.ts. */
-const getVillaTranslatedBedroomNamesMock = vi.fn();
-const getVillaTranslatedBathroomNamesMock = vi.fn();
 /* 🛡️ PHASE 8D-2 — location/features/rules/priceIncludes/distances ham veri
    + batch çeviri (8D-1) + icon-key mock'ları. Gerçek DB/gerçek Türkçe
    anahtar-kelime mantığına gidilmesin diye (bu dosyanın amacı routing/
@@ -84,18 +74,11 @@ vi.mock("@/app/services/villa.service", () => ({
   getVillaBySlug: (...args: unknown[]) => getVillaBySlugMock(...args),
 }));
 vi.mock("@/lib/i18n/get-villa-translation.server", () => ({
-  getVillaTranslatedTitle: (...args: unknown[]) =>
-    getVillaTranslatedTitleMock(...args),
   /* 🛡️ PHASE 8B — description helper de aynı modülden export edilir;
      mock'lanmazsa EN/DE villa detay page.tsx'in yeni import'u
      `undefined` alır ve çağrıda TypeError fırlatır. */
   getVillaTranslatedDescription: (...args: unknown[]) =>
     getVillaTranslatedDescriptionMock(...args),
-  /* 🛡️ PHASE 10E BATCH 4 */
-  getVillaTranslatedBedroomNames: (...args: unknown[]) =>
-    getVillaTranslatedBedroomNamesMock(...args),
-  getVillaTranslatedBathroomNames: (...args: unknown[]) =>
-    getVillaTranslatedBathroomNamesMock(...args),
 }));
 
 /* 🛡️ PHASE 8D-2 — EN/DE villa detay artık location/distances/features/
@@ -202,7 +185,6 @@ vi.mock("@/lib/cache.helpers", () => ({
 beforeEach(() => {
   requirePublicLocaleEnabledMock.mockReset();
   getVillaBySlugMock.mockReset();
-  getVillaTranslatedTitleMock.mockReset();
   getVillaTranslatedDescriptionMock.mockReset();
   /* 🛡️ PHASE 8D-2 */
   getVillaDistancesMock.mockReset();
@@ -261,28 +243,11 @@ beforeEach(() => {
   getPriceIncludeItemsByVillaMock.mockResolvedValue([]);
   getTranslationsForParentsMock.mockResolvedValue(new Map());
   getDistanceIconKeyMock.mockReturnValue("pin");
-  /* Echo: gerçek fallback/çeviri mantığı burada test edilmiyor
-     (bkz. get-villa-translation.test.ts). */
-  getVillaTranslatedTitleMock.mockImplementation(
-    (_villaId: string, originalTitle: string) =>
-      Promise.resolve(originalTitle)
-  );
   /* 🛡️ PHASE 8B — description için de AYNI echo deseni (varsayılan);
      description-spesifik testler bunu kendi ihtiyacına göre override eder. */
   getVillaTranslatedDescriptionMock.mockImplementation(
     (_villaId: string, originalDescription: string) =>
       Promise.resolve(originalDescription)
-  );
-  /* 🛡️ PHASE 10E BATCH 4 — varsayılan: çeviri YOK → TR adlar aynen
-     döner (gerçek getter'ın TR/çevirisiz davranışıyla AYNI echo deseni).
-     İlgili testler kendi ihtiyacına göre override eder. */
-  getVillaTranslatedBedroomNamesMock.mockReset();
-  getVillaTranslatedBathroomNamesMock.mockReset();
-  getVillaTranslatedBedroomNamesMock.mockImplementation(
-    (_villaId: string, trNames: string[]) => Promise.resolve([...trNames])
-  );
-  getVillaTranslatedBathroomNamesMock.mockImplementation(
-    (_villaId: string, trNames: string[]) => Promise.resolve([...trNames])
   );
 });
 
@@ -781,56 +746,46 @@ describe.each(VILLA_DETAIL_ROUTES)(
       ).toBeInTheDocument();
     });
 
-    it("20) PHASE 10E — çevrilmiş oda/banyo adları gösterilir", async () => {
+    it("20) 🛡️ PHASE 10F — oda/banyo adları SÖZLÜKTEN çevrilir (villa bazlı çeviri YOK)", async () => {
       getVillaBySlugMock.mockResolvedValueOnce(VILLA_WITH_LAYOUT);
-      getVillaTranslatedBedroomNamesMock.mockResolvedValueOnce([
-        `Master Bedroom (${locale})`,
-        `Children's Bedroom (${locale})`,
-      ]);
-      getVillaTranslatedBathroomNamesMock.mockResolvedValueOnce([
-        `Bathroom 1 (${locale})`,
-      ]);
 
       const { default: Page } = await import(modulePath);
       render(await Page({ params: Promise.resolve({ slug: "test-villa" }) }));
 
+      const dict = getDictionary(locale);
       expect(
-        screen.getByText(`Master Bedroom (${locale})`)
+        screen.getByText(dict.roomNameLabels["Ana Yatak Odası"])
       ).toBeInTheDocument();
       expect(
-        screen.getByText(`Children's Bedroom (${locale})`)
+        screen.getByText(dict.roomNameLabels["Çocuk Odası"])
       ).toBeInTheDocument();
-      expect(screen.getByText(`Bathroom 1 (${locale})`)).toBeInTheDocument();
+      /* TR adlar EN/DE'de GÖRÜNMEMELİ. */
+      expect(screen.queryByText("Ana Yatak Odası")).not.toBeInTheDocument();
     });
 
-    it("21) PHASE 10E — çeviri yoksa TR adlar gösterilir (fallback)", async () => {
-      getVillaBySlugMock.mockResolvedValueOnce(VILLA_WITH_LAYOUT);
-      /* beforeEach echo varsayılanı: TR adlar aynen döner. */
+    it("21) 🛡️ PHASE 10F — sözlükte OLMAYAN serbest ad TR olarak kalır", async () => {
+      getVillaBySlugMock.mockResolvedValueOnce({
+        ...VILLA_WITH_LAYOUT,
+        bedroom_layout: [
+          { name: "Deniz Manzaralı Süit", beds: [{ type: "double", count: 1 }] },
+        ],
+      });
 
       const { default: Page } = await import(modulePath);
       render(await Page({ params: Promise.resolve({ slug: "test-villa" }) }));
 
-      expect(screen.getByText("Ana Yatak Odası")).toBeInTheDocument();
-      expect(screen.getByText("Çocuk Odası")).toBeInTheDocument();
-      expect(screen.getByText("1. Banyo")).toBeInTheDocument();
+      expect(screen.getByText("Deniz Manzaralı Süit")).toBeInTheDocument();
     });
 
-    it("22) PHASE 10E — getter'lara ORİJİNAL TR adlar + doğru locale geçilir", async () => {
+    it("22) 🛡️ PHASE 10F — numaralı banyo adı locale şablonundan üretilir", async () => {
       getVillaBySlugMock.mockResolvedValueOnce(VILLA_WITH_LAYOUT);
 
       const { default: Page } = await import(modulePath);
       render(await Page({ params: Promise.resolve({ slug: "test-villa" }) }));
 
-      expect(getVillaTranslatedBedroomNamesMock).toHaveBeenCalledWith(
-        "test-villa-id",
-        ["Ana Yatak Odası", "Çocuk Odası"],
-        locale
-      );
-      expect(getVillaTranslatedBathroomNamesMock).toHaveBeenCalledWith(
-        "test-villa-id",
-        ["1. Banyo"],
-        locale
-      );
+      const dict = getDictionary(locale);
+      const expected = dict.accommodation.bathroomFallback.replace("{n}", "1");
+      expect(screen.getByText(expected)).toBeInTheDocument();
     });
 
     it("23) PHASE 10E — layout YOKSA section HİÇ render edilmez", async () => {
@@ -889,20 +844,18 @@ describe.each(VILLA_DETAIL_ROUTES)(
       ).not.toBeInTheDocument();
     });
 
-    it("24) PHASE 10E — mevcut title çeviri davranışı BOZULMAZ", async () => {
-      getVillaBySlugMock.mockResolvedValueOnce(VILLA_WITH_LAYOUT);
-      getVillaTranslatedTitleMock.mockResolvedValueOnce(
-        `Translated Title (${locale})`
-      );
+    it("24) 🛡️ VİLLA ADI ÇEVRİLMEZ — EN/DE'de canonical villa.title gösterilir", async () => {
+      getVillaBySlugMock.mockResolvedValueOnce({
+        ...VILLA_WITH_LAYOUT,
+        title: "Villa Aşkım",
+      });
 
       const { default: Page } = await import(modulePath);
       render(await Page({ params: Promise.resolve({ slug: "test-villa" }) }));
 
       /* Title birden fazla yerde render edilir (başlık + VillaInfoBar) —
          bu dosyadaki mevcut `getAllByText(...).length > 0` convention'ı. */
-      expect(
-        screen.getAllByText(`Translated Title (${locale})`).length
-      ).toBeGreaterThan(0);
+      expect(screen.getAllByText("Villa Aşkım").length).toBeGreaterThan(0);
     });
   }
 );

@@ -3,8 +3,10 @@
 /* ===============================================================
    🛡️ PHASE 10A — ADMIN VILLA TRANSLATION UI
    ===============================================================
-   EN / DE çeviri alanlarını (title, description, badge, seo_title,
-   seo_description) düzenlemek için self-contained kart. IcalSyncCard.tsx
+   EN / DE çeviri alanlarını (description, badge, seo_title,
+   seo_description) düzenlemek için self-contained kart.
+   🛡️ VİLLA ADI (title) BURADA DÜZENLENMEZ — özel isimdir, her locale'de
+   canonical `villa.title` gösterilir. IcalSyncCard.tsx
    deseniyle AYNI prensip: kendi state'i, kendi save mekanizması —
    ana wizard "Güncelle" akışına (handleUpdate/buildVillaUpdatePayload)
    KARIŞMAZ.
@@ -25,7 +27,6 @@ import {
 type WritableLocale = "en" | "de";
 
 type LocaleFormState = {
-  title: string;
   description: string;
   badge: string;
   seoTitle: string;
@@ -33,7 +34,6 @@ type LocaleFormState = {
 };
 
 const EMPTY_FORM: LocaleFormState = {
-  title: "",
   description: "",
   badge: "",
   seoTitle: "",
@@ -83,7 +83,6 @@ export default function VillaTranslationsCard({ villaId }: Props) {
         for (const row of result.rows) {
           if (row.locale !== "en" && row.locale !== "de") continue;
           next[row.locale] = {
-            title: row.title ?? "",
             description: row.description ?? "",
             badge: row.badge ?? "",
             seoTitle: row.seo_title ?? "",
@@ -110,17 +109,12 @@ export default function VillaTranslationsCard({ villaId }: Props) {
 
   async function handleSave() {
     const current = forms[activeLocale];
-    if (!current.title.trim()) {
-      toast.error("Başlık gerekli", { id: "villa-translations-save" });
-      return;
-    }
 
     setSaving(true);
     try {
       const result = await saveVillaTranslationAction({
         villaId,
         locale: activeLocale,
-        title: current.title,
         description: current.description,
         badge: current.badge,
         seoTitle: current.seoTitle,
@@ -188,18 +182,6 @@ export default function VillaTranslationsCard({ villaId }: Props) {
         </div>
       ) : (
         <div className="space-y-5">
-          <div>
-            <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              Başlık
-            </label>
-            <input
-              className="input"
-              maxLength={200}
-              value={form.title}
-              onChange={(e) => setField("title", e.target.value)}
-            />
-          </div>
-
           <div>
             <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
               Açıklama

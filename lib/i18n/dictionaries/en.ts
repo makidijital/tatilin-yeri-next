@@ -185,6 +185,16 @@ export const en: Dictionary = {
     bathroomFallback: "Bathroom {n}",
   },
   /* 🛡️ PHASE 10E BATCH 5 — havuz tipi etiketleri + UI metinleri. */
+  /* 🛡️ PHASE 10F — oda/banyo adı sözlüğü. */
+  roomNameLabels: {
+    "Yatak Odası": "Bedroom",
+    "Ana Yatak Odası": "Master Bedroom",
+    "Çocuk Odası": "Children's Room",
+    "Misafir Odası": "Guest Room",
+    "Ebeveyn Yatak Odası": "Master Bedroom",
+    "Banyo": "Bathroom",
+    "Ebeveyn Banyosu": "En-suite Bathroom",
+  },
   poolTypeLabels: {
     private: "Private Pool",
     private_sheltered: "Private Sheltered Pool",

@@ -34,7 +34,6 @@ const VALID_ROW = {
   id: "row-1",
   villa_id: "villa-uuid-1",
   locale: "en",
-  title: "Test Villa",
   description: null,
   badge: null,
   seo_title: null,
@@ -62,7 +61,7 @@ describe("upsertVillaTranslation", () => {
     const result = await upsertVillaTranslation({
       villaId: "villa-uuid-1",
       locale: "en",
-      title: "Test Villa",
+      description: "Test açıklama",
     });
 
     expect(result.ok).toBe(true);
@@ -70,7 +69,7 @@ describe("upsertVillaTranslation", () => {
       "villa",
       "villa-uuid-1",
       "en",
-      expect.objectContaining({ title: "Test Villa" })
+      expect.objectContaining({ description: "Test açıklama" })
     );
   });
 
@@ -82,7 +81,7 @@ describe("upsertVillaTranslation", () => {
     const result = await upsertVillaTranslation({
       villaId: "villa-uuid-1",
       locale: "de",
-      title: "Test Villa DE",
+      description: "Test Beschreibung",
     });
 
     expect(result.ok).toBe(true);
@@ -90,7 +89,7 @@ describe("upsertVillaTranslation", () => {
       "villa",
       "villa-uuid-1",
       "de",
-      expect.objectContaining({ title: "Test Villa DE" })
+      expect.objectContaining({ description: "Test Beschreibung" })
     );
   });
 
@@ -99,15 +98,15 @@ describe("upsertVillaTranslation", () => {
       "@/app/services/villa-translation.service"
     );
 
-    await upsertVillaTranslation({ villaId: "villa-uuid-1", locale: "en", title: "V1" });
-    await upsertVillaTranslation({ villaId: "villa-uuid-1", locale: "en", title: "V2 güncel" });
+    await upsertVillaTranslation({ villaId: "villa-uuid-1", locale: "en", description: "V1" });
+    await upsertVillaTranslation({ villaId: "villa-uuid-1", locale: "en", description: "V2 güncel" });
 
     expect(upsertOneMock).toHaveBeenCalledTimes(2);
     expect(upsertOneMock).toHaveBeenLastCalledWith(
       "villa",
       "villa-uuid-1",
       "en",
-      expect.objectContaining({ title: "V2 güncel" })
+      expect.objectContaining({ description: "V2 güncel" })
     );
   });
 
@@ -116,14 +115,14 @@ describe("upsertVillaTranslation", () => {
       "@/app/services/villa-translation.service"
     );
 
-    await upsertVillaTranslation({ villaId: "villa-uuid-1", locale: "de", title: "V1" });
-    await upsertVillaTranslation({ villaId: "villa-uuid-1", locale: "de", title: "V2 güncel" });
+    await upsertVillaTranslation({ villaId: "villa-uuid-1", locale: "de", description: "V1" });
+    await upsertVillaTranslation({ villaId: "villa-uuid-1", locale: "de", description: "V2 güncel" });
 
     expect(upsertOneMock).toHaveBeenLastCalledWith(
       "villa",
       "villa-uuid-1",
       "de",
-      expect.objectContaining({ title: "V2 güncel" })
+      expect.objectContaining({ description: "V2 güncel" })
     );
   });
 
@@ -135,7 +134,7 @@ describe("upsertVillaTranslation", () => {
     const result = await upsertVillaTranslation({
       villaId: "villa-uuid-1",
       locale: "fr",
-      title: "Titre",
+      description: "Description",
     });
 
     expect(result.ok).toBe(false);
@@ -150,7 +149,7 @@ describe("upsertVillaTranslation", () => {
     const result = await upsertVillaTranslation({
       villaId: "villa-uuid-1",
       locale: "tr",
-      title: "Türkçe Başlık",
+      description: "Türkçe açıklama",
     });
 
     expect(result.ok).toBe(false);
@@ -165,7 +164,7 @@ describe("upsertVillaTranslation", () => {
     const result = await upsertVillaTranslation({
       villaId: "   ",
       locale: "en",
-      title: "Test",
+      description: "Test",
     });
 
     expect(result.ok).toBe(false);
@@ -183,42 +182,16 @@ describe("upsertVillaTranslation", () => {
     const result = await upsertVillaTranslation({
       villaId: "villa-yok",
       locale: "en",
-      title: "Test",
+      description: "Test",
     });
 
     expect(result.ok).toBe(false);
     expect(upsertOneMock).not.toHaveBeenCalled();
   });
 
-  it("boş başlık reddedilir", async () => {
-    const { upsertVillaTranslation } = await import(
-      "@/app/services/villa-translation.service"
-    );
-
-    const result = await upsertVillaTranslation({
-      villaId: "villa-uuid-1",
-      locale: "en",
-      title: "   ",
-    });
-
-    expect(result.ok).toBe(false);
-    expect(upsertOneMock).not.toHaveBeenCalled();
-  });
-
-  it("200 karakteri aşan başlık reddedilir", async () => {
-    const { upsertVillaTranslation } = await import(
-      "@/app/services/villa-translation.service"
-    );
-
-    const result = await upsertVillaTranslation({
-      villaId: "villa-uuid-1",
-      locale: "en",
-      title: "x".repeat(201),
-    });
-
-    expect(result.ok).toBe(false);
-    expect(upsertOneMock).not.toHaveBeenCalled();
-  });
+  /* 🛡️ "boş başlık reddedilir" + "200 karakteri aşan başlık reddedilir"
+     testleri KALDIRILDI — `title` artık çeviri girdisi DEĞİL (villa adı
+     özel isimdir, çevrilmez). Diğer alanların doğrulaması aşağıda. */
 
   it("boş string alanlar null'a normalize edilir (description/badge/seoTitle/seoDescription)", async () => {
     const { upsertVillaTranslation } = await import(
@@ -228,7 +201,6 @@ describe("upsertVillaTranslation", () => {
     await upsertVillaTranslation({
       villaId: "villa-uuid-1",
       locale: "en",
-      title: "Test Villa",
       description: "   ",
       badge: "",
       seoTitle: undefined,
@@ -240,7 +212,6 @@ describe("upsertVillaTranslation", () => {
       "villa-uuid-1",
       "en",
       {
-        title: "Test Villa",
         description: null,
         badge: null,
         seo_title: null,
@@ -257,7 +228,6 @@ describe("upsertVillaTranslation", () => {
     const result = await upsertVillaTranslation({
       villaId: "villa-uuid-1",
       locale: "en",
-      title: "Test Villa",
       description: "Açıklama",
       badge: "Yeni",
       seoTitle: "SEO Başlık",

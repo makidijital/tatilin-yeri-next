@@ -27,7 +27,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const requirePublicLocaleEnabledMock = vi.fn();
 const getVillaBySlugMock = vi.fn();
-const getVillaTranslatedTitleMock = vi.fn();
 const getVillaTranslatedSeoDescriptionMock = vi.fn();
 /* 🛡️ PHASE 10B, Section 11 — generateMetadata artık seo_title
    çevirisini de okuyor (varsa title yerine onu kullanır). */
@@ -41,8 +40,6 @@ vi.mock("@/app/services/villa.service", () => ({
   getVillaBySlug: (...args: unknown[]) => getVillaBySlugMock(...args),
 }));
 vi.mock("@/lib/i18n/get-villa-translation.server", () => ({
-  getVillaTranslatedTitle: (...args: unknown[]) =>
-    getVillaTranslatedTitleMock(...args),
   /* 🛡️ PHASE 8C — generateMetadata artık bunu da import ediyor;
      mock'lanmazsa `undefined` çağrılır ve TypeError fırlatır. */
   getVillaTranslatedSeoDescription: (...args: unknown[]) =>
@@ -59,7 +56,6 @@ beforeEach(() => {
   requirePublicLocaleEnabledMock.mockReset();
   requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
   getVillaBySlugMock.mockReset();
-  getVillaTranslatedTitleMock.mockReset();
   getVillaTranslatedSeoDescriptionMock.mockReset();
   /* 🛡️ PHASE 8C — varsayılan: gerçek fallback/excerpt mantığı burada
      test edilmiyor (bkz. get-villa-translation.test.ts); testler
@@ -71,8 +67,8 @@ beforeEach(() => {
      geri döner). `BASE_VILLA`'da `seo_title` alanı YOK (undefined) →
      `translatedSeoTitle` undefined'a çözülür → page.tsx'in
      `(translatedSeoTitle && ...) || fallbackTitle` mantığı fallbackTitle'a
-     (getVillaTranslatedTitleMock) düşer — MEVCUT title testleri BİREBİR
-     aynı şekilde geçmeye devam eder. seo_title-spesifik testler kendi
+     düşer — fallbackTitle ARTIK canonical `villa.title`'dır (villa adı
+     çevrilmez). seo_title-spesifik testler kendi
      mockResolvedValue'sini set eder. */
   getVillaTranslatedSeoTitleMock.mockReset();
   getVillaTranslatedSeoTitleMock.mockImplementation(
@@ -97,19 +93,16 @@ const BASE_VILLA = {
 const ROUTES: Array<{
   modulePath: string;
   locale: "en" | "de";
-  translatedTitle: string;
   notFoundTitle: string;
 }> = [
   {
     modulePath: "@/app/(public)/en/kiralik-villa/[slug]/page",
     locale: "en",
-    translatedTitle: "Villa In Love",
     notFoundTitle: "Villa not found",
   },
   {
     modulePath: "@/app/(public)/de/kiralik-villa/[slug]/page",
     locale: "de",
-    translatedTitle: "Villa Verliebt",
     notFoundTitle: "Villa nicht gefunden",
   },
 ];
@@ -121,12 +114,11 @@ async function callGenerateMetadata(modulePath: string, slug = "villa-in-love") 
 
 describe.each(ROUTES)(
   "$modulePath generateMetadata — Phase 7C canonical/hreflang",
-  ({ modulePath, locale, translatedTitle, notFoundTitle }) => {
+  ({ modulePath, locale, notFoundTitle }) => {
     /* --- 2/3) EN/DE locale canonical --- */
     it(`canonical '/${locale}/kiralik-villa/{slug}' formatındadır`, async () => {
       getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: false });
       getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
-      getVillaTranslatedTitleMock.mockResolvedValue(translatedTitle);
 
       const result = await callGenerateMetadata(modulePath);
       expect(result.alternates?.canonical).toBe(
@@ -138,7 +130,6 @@ describe.each(ROUTES)(
     it("multilingual_enabled=true iken languages tr/en/de/x-default TAMAMI mevcut", async () => {
       getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: true });
       getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
-      getVillaTranslatedTitleMock.mockResolvedValue(translatedTitle);
 
       const result = await callGenerateMetadata(modulePath);
       const languages = result.alternates?.languages as
@@ -154,7 +145,6 @@ describe.each(ROUTES)(
     it("x-default HER ZAMAN TR path'tir", async () => {
       getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: true });
       getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
-      getVillaTranslatedTitleMock.mockResolvedValue(translatedTitle);
 
       const result = await callGenerateMetadata(modulePath);
       const languages = result.alternates?.languages as
@@ -168,7 +158,6 @@ describe.each(ROUTES)(
     it("multilingual_enabled=false iken `languages` key'i HİÇ YOK", async () => {
       getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: false });
       getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
-      getVillaTranslatedTitleMock.mockResolvedValue(translatedTitle);
 
       const result = await callGenerateMetadata(modulePath);
       expect(result.alternates).toEqual({
@@ -184,7 +173,6 @@ describe.each(ROUTES)(
     it("robots HER ZAMAN {index:false,follow:false} — multilingual_enabled=false iken", async () => {
       getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: false });
       getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
-      getVillaTranslatedTitleMock.mockResolvedValue(translatedTitle);
 
       const result = await callGenerateMetadata(modulePath);
       expect(result.robots).toEqual({ index: false, follow: false });
@@ -193,7 +181,6 @@ describe.each(ROUTES)(
     it("robots HER ZAMAN {index:false,follow:false} — multilingual_enabled=true İKEN DE (bu faz robots'u değiştirmiyor)", async () => {
       getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: true });
       getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
-      getVillaTranslatedTitleMock.mockResolvedValue(translatedTitle);
 
       const result = await callGenerateMetadata(modulePath);
       expect(result.robots).toEqual({ index: false, follow: false });
@@ -209,19 +196,15 @@ describe.each(ROUTES)(
       expect(result.alternates).toBeUndefined();
     });
 
-    /* --- Title: mevcut Phase 6B translation helper'ı kullanılıyor --- */
-    it("title getVillaTranslatedTitle'dan gelir (doğru villaId + locale ile çağrılır)", async () => {
+    /* --- 🛡️ VİLLA ADI ÇEVRİLMEZ: metadata title'ı canonical
+       `villa.title`'dan gelir (seo_title çevirisi varsa o önceliklidir —
+       ayrı testte doğrulanıyor). --- */
+    it("title canonical villa.title'dan gelir (çeviri helper'ı YOK)", async () => {
       getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: false });
       getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
-      getVillaTranslatedTitleMock.mockResolvedValue(translatedTitle);
 
       const result = await callGenerateMetadata(modulePath);
-      expect(result.title).toBe(translatedTitle);
-      expect(getVillaTranslatedTitleMock).toHaveBeenCalledWith(
-        BASE_VILLA.id,
-        BASE_VILLA.title,
-        locale
-      );
+      expect(result.title).toBe(BASE_VILLA.title);
     });
 
     /* --- 🛡️ PHASE 8C — description artık getVillaTranslatedSeoDescription'dan
@@ -230,7 +213,6 @@ describe.each(ROUTES)(
     it("description metadata'da getVillaTranslatedSeoDescription'ın döndürdüğü değeri İÇERİR", async () => {
       getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: false });
       getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
-      getVillaTranslatedTitleMock.mockResolvedValue(translatedTitle);
       getVillaTranslatedSeoDescriptionMock.mockResolvedValue(
         `Translated ${locale} SEO description.`
       );
@@ -248,7 +230,6 @@ describe.each(ROUTES)(
     it("openGraph.description ve twitter.description EKLENMEZ (bu faz yalnız metadata.description'ı hedefler)", async () => {
       getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: false });
       getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
-      getVillaTranslatedTitleMock.mockResolvedValue(translatedTitle);
       getVillaTranslatedSeoDescriptionMock.mockResolvedValue(
         `Translated ${locale} SEO description.`
       );
@@ -273,7 +254,6 @@ describe.each(ROUTES)(
     it("openGraph.url canonical ile AYNI", async () => {
       getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: false });
       getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
-      getVillaTranslatedTitleMock.mockResolvedValue(translatedTitle);
 
       const result = await callGenerateMetadata(modulePath);
       expect(result.openGraph?.url).toBe(result.alternates?.canonical);

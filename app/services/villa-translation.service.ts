@@ -5,7 +5,8 @@ import type { VillaTranslationRow } from "@/lib/i18n/translations.types";
 /**
  * 🛡️ PHASE 10A — Admin Villa Translation UI
  *
- * Bu servis yalnızca EN/DE villa çevirilerinin (villa_translations)
+ * Bu servis yalnızca EN/DE villa çevirilerinin (villa_translations —
+ * description/badge/seo_title/seo_description; `title` ÇEVRİLMEZ)
  * okunması/yazılması için var. TR bu UI üzerinden YAZILAMAZ (locale
  * whitelist aşağıda "en" | "de" ile kapatılmış durumda).
  *
@@ -20,7 +21,6 @@ function isWritableLocale(value: unknown): value is WritableTranslationLocale {
   return value === "en" || value === "de";
 }
 
-const MAX_TITLE_LEN = 200;
 const MAX_DESCRIPTION_LEN = 5000;
 const MAX_BADGE_LEN = 60;
 const MAX_SEO_TITLE_LEN = 120; // SeoStep.tsx ile AYNI
@@ -29,7 +29,8 @@ const MAX_SEO_DESCRIPTION_LEN = 300; // SeoStep.tsx ile AYNI
 export type VillaTranslationInput = {
   villaId: string;
   locale: string;
-  title: string;
+  /* 🛡️ `title` KALDIRILDI — villa adı özel isimdir, çevrilmez.
+     Her locale'de canonical `villa.title` gösterilir. */
   description?: string | null;
   badge?: string | null;
   seoTitle?: string | null;
@@ -73,12 +74,6 @@ export async function upsertVillaTranslation(
   }
   const locale = input.locale;
 
-  const title = normalize(input.title);
-  if (!title) return { ok: false, error: "Başlık gerekli" };
-  if (title.length > MAX_TITLE_LEN) {
-    return { ok: false, error: `Başlık ${MAX_TITLE_LEN} karakteri geçemez` };
-  }
-
   const description = normalize(input.description);
   if (description && description.length > MAX_DESCRIPTION_LEN) {
     return { ok: false, error: `Açıklama ${MAX_DESCRIPTION_LEN} karakteri geçemez` };
@@ -103,8 +98,9 @@ export async function upsertVillaTranslation(
   if (villaError) return { ok: false, error: "Villa doğrulanamadı" };
   if (!villaRow) return { ok: false, error: "Villa bulunamadı" };
 
+  /* 🛡️ `title` payload'a HİÇ girmez — villa adı çevrilmez. DB kolonu
+     (migration 082) duruyor ama bu koddan asla yazılmaz/okunmaz. */
   const { data, error } = await translationRepository.upsertOne("villa", villaId, locale, {
-    title,
     description,
     badge,
     seo_title: seoTitle,

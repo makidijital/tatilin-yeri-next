@@ -55,7 +55,7 @@ describe("saveVillaTranslationAction — authorizeAdminSession İLK kontrol", ()
     const result = await saveVillaTranslationAction({
       villaId: VILLA_ID,
       locale: "en",
-      title: "Test",
+      description: "Test",
     });
 
     expect(result).toEqual({ ok: false, error: "Yetkisiz" });
@@ -72,7 +72,7 @@ describe("saveVillaTranslationAction — authorizeAdminSession İLK kontrol", ()
     await saveVillaTranslationAction({
       villaId: VILLA_ID,
       locale: "de",
-      title: "Test DE",
+      description: "Test DE",
     });
 
     expect(upsertVillaTranslationMock).toHaveBeenCalledTimes(0);
@@ -84,7 +84,7 @@ describe("saveVillaTranslationAction — authorizeAdminSession İLK kontrol", ()
       row: { id: "row-1", villa_id: VILLA_ID, locale: "en" },
     });
 
-    const input = { villaId: VILLA_ID, locale: "en", title: "Test Villa" };
+    const input = { villaId: VILLA_ID, locale: "en", description: "Test Villa" };
     const result = await saveVillaTranslationAction(input);
 
     expect(authorizeAdminSessionMock).toHaveBeenCalledTimes(1);
@@ -104,7 +104,7 @@ describe("saveVillaTranslationAction — authorizeAdminSession İLK kontrol", ()
     const result = await saveVillaTranslationAction({
       villaId: "villa-yok",
       locale: "en",
-      title: "Test",
+      description: "Test",
     });
 
     expect(result).toEqual({ ok: false, error: "Villa bulunamadı" });

@@ -22,20 +22,14 @@ export type VillaTranslationRow = {
   id: string;
   villa_id: string;
   locale: Locale;
-  title: string | null;
+  /* 🛡️ `title` kolonu DB'de (migration 082) DURUYOR ancak koddan
+     KULLANILMIYOR — villa adı özel isimdir, çevrilmez. Tipe dahil
+     edilmemesi, yanlışlıkla yeniden okunmasını derleme zamanında
+     engeller. */
   description: string | null;
   badge: string | null;
   seo_title: string | null;
   seo_description: string | null;
-  /* 🛡️ PHASE 10E (migration 083) — oda/banyo ADI çevirileri.
-     JSONB; ham değer GÜVENİLMEZ kabul edilir (projede JSONB kolonların
-     row-tipi convention'ı `unknown` — bkz. villa.service.ts:169,
-     villa-admin/types.ts:99). Kanonik şekil:
-       [{ i: number; tr: string; name: string }]
-     Okuma/doğrulama YALNIZ lib/villa-layout-translation.helper.ts
-     üzerinden yapılır (index + TR kaynak adı drift guard'ı). */
-  bedroom_layout: unknown;
-  bathroom_layout: unknown;
   created_at: string;
   updated_at: string;
 };

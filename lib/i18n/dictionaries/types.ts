@@ -275,6 +275,17 @@ export type Dictionary = {
   /* 🛡️ PHASE 10E BATCH 5 — havuz tipi etiketleri. bedTypeLabels ile AYNI
      gerekçe: kapalı küme canonical enum (serbest DB metni DEĞİL).
      Key'ler lib/pool.helper.ts'teki PoolTypeKey ile type-safe bağlı. */
+  /* 🛡️ PHASE 10F — Konaklama düzeni ODA/BANYO ADLARI.
+     Villa bazlı admin çevirisi KALDIRILDI; adlar artık yalnız bu
+     sözlükten çözülür. Key'ler AccommodationLayoutStep'in sunduğu
+     canonical TR adlardır (lib/villa-layout.helper.ts →
+     BEDROOM_NAME_SUGGESTIONS) + numarasız temel biçimler.
+     Numaralı adlar ("3. Yatak Odası") ayrıca desteklenir: mevcut
+     `accommodation.bedroomFallback`/`bathroomFallback` şablonlarıyla
+     üretilir — yeni şablon EKLENMEDİ.
+     Sözlükte olmayan serbest adlar (örn. "Deniz Manzaralı Süit")
+     olduğu gibi döner (doğal TR fallback). */
+  roomNameLabels: Record<string, string>;
   poolTypeLabels: Record<PoolTypeKey, string>;
   /* 🛡️ PHASE 10E BATCH 5 — havuz bölümünün UI metinleri. TR değerleri
      kiralik-villa/[slug] sayfasının BUGÜNKÜ hardcoded metinleriyle

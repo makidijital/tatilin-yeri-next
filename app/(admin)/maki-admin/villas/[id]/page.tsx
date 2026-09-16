@@ -53,10 +53,6 @@ import type {
 } from "@/lib/villa-layout.helper";
 import IcalSyncCard from "./_components/IcalSyncCard";
 import VillaTranslationsCard from "./_components/VillaTranslationsCard";
-/* 🛡️ PHASE 10E — oda/banyo adı çevirileri. Kendi multilingual_enabled
-   gate'ine, kendi state/save mekanizmasına sahip; handleUpdate/
-   buildVillaUpdatePayload/audit zincirine KARIŞMAZ. */
-import AccommodationTranslationsPanel from "./_components/AccommodationTranslationsPanel";
 
 /* 🛡️ FAZ 1+2 — typed villa form pipeline + helper-driven payload/audit. */
 import {
@@ -542,19 +538,6 @@ export default function EditVilla() {
         <VillaTranslationsCard
           villaId={id as string}
           villaTitle={form.title}
-        />
-      )}
-
-      {/* 🛡️ PHASE 10E — Konaklama Düzeni Çevirileri. VillaTranslationsCard
-          ile AYNI sekmede (currentStep === 8), onun ALTINDA. TR kaynak
-          olarak 1. adımın CANLI layout state'i geçilir (yeni fetch YOK).
-          multilingual_enabled gate'i panelin KENDİ içindedir (false/null
-          → hiçbir şey render etmez). */}
-      {id && currentStep === 8 && (
-        <AccommodationTranslationsPanel
-          villaId={id as string}
-          bedrooms={bedroomLayout}
-          bathrooms={bathroomLayout}
         />
       )}
 

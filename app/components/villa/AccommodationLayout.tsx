@@ -15,6 +15,8 @@ import type { Locale } from "@/lib/i18n/config";
 import {
   getBedTypeLabel,
   getBathroomTypeLabel,
+  getBedroomNameLabel,
+  getBathroomNameLabel,
 } from "@/lib/villa-layout-label.helper";
 
 /* ===============================================================
@@ -34,21 +36,12 @@ type Props = {
   /* 🛡️ PHASE 10E — OPSİYONEL. Verilmezse "tr" → mevcut çağrı imzası
      (TR page.tsx) HİÇ DEĞİŞMEDEN çalışmaya devam eder. */
   locale?: Locale;
-  /* 🛡️ PHASE 10E — ÇAĞIRAN TARAFTA çözülmüş görünen adlar
-     (VillaDistancesSection/VillaFeaturesSection'ın "caller resolves,
-     component renders" deseniyle AYNI). Çözümleme/drift guard'ı
-     lib/villa-layout-translation.helper.ts'te; bu component ÇÖZÜMLEME
-     YAPMAZ. Verilmezse TR adlar kullanılır. */
-  bedroomNames?: string[];
-  bathroomNames?: string[];
 };
 
 export default function AccommodationLayout({
   bedrooms,
   bathrooms,
   locale = "tr",
-  bedroomNames,
-  bathroomNames,
 }: Props) {
   const hasBedrooms = bedrooms.length > 0;
   const hasBathrooms = bathrooms.length > 0;
@@ -56,23 +49,11 @@ export default function AccommodationLayout({
 
   const dict = getDictionary(locale);
 
-  /* 🛡️ SAVUNMACI UZUNLUK KONTROLÜ — çözülmüş dizi TR layout ile aynı
-     uzunlukta değilse TAMAMEN yok sayılır ve TR'ye dönülür (Batch 1
-     helper'ının "uzunluk uyuşmazlığı → tüm diziyi reddet" kuralının
-     render sınırındaki aynası). Yanlış odaya çeviri bağlanamaz. */
-  /* GÖRÜNEN AD ZİNCİRİ: çözülmüş çeviri → TR adı → numara fallback.
-     Ortadaki TR adımı savunmacıdır: çağıran taraf bir satır için boş
-     değer verirse bilgi KAYBEDİLMEZ (numara yerine TR adı gösterilir).
-     TR modunda çözülmüş ad ZATEN room.name olduğu için davranış
-     eskisiyle BİREBİR aynıdır. */
-  const bedroomDisplayNames =
-    bedroomNames && bedroomNames.length === bedrooms.length
-      ? bedroomNames
-      : bedrooms.map((r) => r.name);
-  const bathroomDisplayNames =
-    bathroomNames && bathroomNames.length === bathrooms.length
-      ? bathroomNames
-      : bathrooms.map((b) => b.name);
+  /* 🛡️ GÖRÜNEN AD ZİNCİRİ: sözlük çevirisi → numara fallback.
+     Oda/banyo adları villa bazında DEĞİL, merkezi i18n sözlüğünden
+     çözülür (lib/villa-layout-label.helper.ts → roomNameLabels).
+     TR'de sözlük identity-map olduğu için TR çıktısı DEĞİŞMEZ; adı boş
+     olan satır (TR'de de böyleydi) numara fallback'ine düşer. */
 
   return (
     <section>
@@ -95,8 +76,7 @@ export default function AccommodationLayout({
                 <BedDouble size={17} strokeWidth={1.75} />
               </span>
               <p className="font-display text-[16px] md:text-[17px] text-[var(--color-stone-900)] tracking-[-0.015em] mt-4 truncate">
-                {bedroomDisplayNames[i] ||
-                  room.name ||
+                {getBedroomNameLabel(room.name, locale) ||
                   formatDictionaryString(dict.accommodation.bedroomFallback, {
                     n: i + 1,
                   })}
@@ -118,8 +98,7 @@ export default function AccommodationLayout({
               <Bath size={17} strokeWidth={1.75} />
             </span>
             <p className="font-display text-[16px] md:text-[17px] text-[var(--color-stone-900)] tracking-[-0.015em] mt-4 truncate">
-              {bathroomDisplayNames[i] ||
-                b.name ||
+              {getBathroomNameLabel(b.name, locale) ||
                 formatDictionaryString(dict.accommodation.bathroomFallback, {
                   n: i + 1,
                 })}
