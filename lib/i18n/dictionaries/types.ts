@@ -15,6 +15,35 @@
    dolayısıyla o metinler şu an dictionary'den beslenmiyor.
    =============================================================== */
 
+/* ===============================================================
+   🛡️ PHASE 10D — BATCH 4: CANONICAL DISTANCE TITLE UNION
+   ===============================================================
+   DB'deki 12 canonical mesafe title'ının (bkz. lib/distance.helper.ts
+   → DISTANCE_OPTIONS/isCanonicalDistanceTitle) literal union'ı —
+   YALNIZ aşağıdaki `distanceLabels` alanının exhaustiveness kontrolü
+   için (tr.ts/en.ts/de.ts'te eksik/fazla key varsa derleme hatası).
+
+   Tek runtime doğruluk kaynağı `lib/distance.helper.ts`'teki
+   DISTANCE_OPTIONS'tır — bu union onunla SENKRON tutulmalı.
+   DISTANCE_OPTIONS `ReadonlyArray<string>` (as const DEĞİL) olarak
+   tanımlı olduğundan buradan otomatik türetilemiyor (literal daralması
+   olmuyor); bu yüzden senkronizasyon runtime'da
+   tests/unit/distance-label.helper.test.ts içinde doğrulanır.
+   lib/distance.helper.ts Batch 4 kapsamında DEĞİŞTİRİLMEDİ. */
+export type DistanceCanonicalTitle =
+  | "Restoran"
+  | "Market"
+  | "Plaj"
+  | "Deniz"
+  | "Şehir Merkezi"
+  | "Havaalanı (Antalya)"
+  | "Havaalanı (Dalaman)"
+  | "Otobüs Terminali"
+  | "Sağlık Merkezi"
+  | "Eczane"
+  | "Benzin İstasyonu"
+  | "Okul";
+
 export type Dictionary = {
   common: {
     search: string;
@@ -199,4 +228,15 @@ export type Dictionary = {
     notFoundCta: string;
     descriptionEmpty: string;
   };
+  /* 🛡️ PHASE 10D — BATCH 4: LocationStep canonical mesafe başlıklarının
+     (yalnız TITLE — mesafe DEĞERİ "5 km"/"500 m" ASLA buraya girmez)
+     EN/DE public karşılıkları. BİLİNÇLİ kapsam genişletmesi: bu
+     dosyanın üst yorumu "DB içeriği BURADA YOK" der — ancak bu 12
+     başlık serbest DB metni DEĞİL, sabit/canonical bir enum'dur
+     (DISTANCE_OPTIONS). Batch 4 görev tanımının AÇIK talimatı üzerine
+     eklendi. Key'ler DB'deki TR canonical title'ların KENDİSİ. Legacy/
+     custom (canonical OLMAYAN) title'lar bu haritaya HİÇ girmez —
+     getTranslatedDistanceLabel() (lib/distance-label.helper.ts) onları
+     olduğu gibi döner, dictionary'de aranmaz. */
+  distanceLabels: Record<DistanceCanonicalTitle, string>;
 };

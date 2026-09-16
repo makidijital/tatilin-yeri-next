@@ -156,4 +156,19 @@ export const tr: Dictionary = {
     notFoundCta: "Tüm villalara dön",
     descriptionEmpty: "Açıklama bulunmuyor",
   },
+  /* PHASE 10D Batch 4 — canonical mesafe title identity-map (TR kaynak = kendisi) */
+  distanceLabels: {
+    "Restoran": "Restoran",
+    "Market": "Market",
+    "Plaj": "Plaj",
+    "Deniz": "Deniz",
+    "Şehir Merkezi": "Şehir Merkezi",
+    "Havaalanı (Antalya)": "Havaalanı (Antalya)",
+    "Havaalanı (Dalaman)": "Havaalanı (Dalaman)",
+    "Otobüs Terminali": "Otobüs Terminali",
+    "Sağlık Merkezi": "Sağlık Merkezi",
+    "Eczane": "Eczane",
+    "Benzin İstasyonu": "Benzin İstasyonu",
+    "Okul": "Okul",
+  },
 };

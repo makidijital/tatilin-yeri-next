@@ -31,6 +31,7 @@ import {
 import { getRuleItemsByVilla } from "@/app/services/rule-item.service";
 import { getPriceIncludeItemsByVilla } from "@/app/services/price-include-item.service";
 import { getDistanceIconKey } from "@/lib/distance.helper";
+import { getTranslatedDistanceLabel } from "@/lib/distance-label.helper";
 import VillaInfoBar from "@/app/components/villa/VillaInfoBar";
 import VillaDistancesSection, {
   type TranslatedDistance,
@@ -358,17 +359,11 @@ export default async function DeVillaDetailPage({
      başına sorgu YOK (N+1 önlendi). `location_id` null ise villa_location
      sorgusu HİÇ atılmaz (audit hedefi: "location için en fazla 1 query"). */
   const [
-    distanceTranslations,
     featureTranslations,
     ruleTranslations,
     priceIncludeTranslations,
     locationTranslations,
   ] = await Promise.all([
-    getTranslationsForParents(
-      "villa_distance",
-      distances.map((d) => d.id),
-      "de"
-    ),
     getTranslationsForParents(
       "villa_feature",
       features.map((f) => f.id),
@@ -393,14 +388,13 @@ export default async function DeVillaDetailPage({
      displayTitle'dan DEĞİL (bkz. dosya başı yorum + VillaDistancesSection). */
   const translatedDistances: TranslatedDistance[] = distances.map((d) => ({
     id: d.id,
-    displayTitle: resolveTranslatedField(
-      distanceTranslations.get(d.id)?.title,
-      d.title
-    ),
-    displayDistance: resolveTranslatedField(
-      distanceTranslations.get(d.id)?.distance,
-      d.distance
-    ),
+    /* 🛡️ PHASE 10D BATCH 4 — title artık DB translation table DEĞİL,
+       statik i18n dictionary üzerinden (villa_distance_translations
+       KULLANILMIYOR). */
+    displayTitle: getTranslatedDistanceLabel(d.title, "de"),
+    /* 🛡️ PHASE 10D BATCH 4 — mesafe DEĞERİ hiçbir zaman çevrilmez, ham
+       TR değer aynen kullanılır. */
+    displayDistance: d.distance,
     iconKey: getDistanceIconKey(d.title),
   }));
 

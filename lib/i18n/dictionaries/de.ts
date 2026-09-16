@@ -149,4 +149,19 @@ export const de: Dictionary = {
     notFoundCta: "Zurück zu allen Villen",
     descriptionEmpty: "Keine Beschreibung verfügbar",
   },
+  /* PHASE 10D Batch 4 — canonical mesafe title DE karşılıkları */
+  distanceLabels: {
+    "Restoran": "Restaurant",
+    "Market": "Markt",
+    "Plaj": "Strand",
+    "Deniz": "Meer",
+    "Şehir Merkezi": "Stadtzentrum",
+    "Havaalanı (Antalya)": "Flughafen (Antalya)",
+    "Havaalanı (Dalaman)": "Flughafen (Dalaman)",
+    "Otobüs Terminali": "Busbahnhof",
+    "Sağlık Merkezi": "Gesundheitszentrum",
+    "Eczane": "Apotheke",
+    "Benzin İstasyonu": "Tankstelle",
+    "Okul": "Schule",
+  },
 };

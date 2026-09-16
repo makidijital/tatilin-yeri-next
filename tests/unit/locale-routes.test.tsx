@@ -127,6 +127,34 @@ vi.mock("@/lib/i18n/get-translation.server", () => ({
    displayTitle mi) doğrulamak için mock'lanıyor. */
 vi.mock("@/lib/distance.helper", () => ({
   getDistanceIconKey: (...args: unknown[]) => getDistanceIconKeyMock(...args),
+  /* 🛡️ PHASE 10D BATCH 4 — `lib/distance-label.helper.ts` bu modülden
+     `isCanonicalDistanceTitle` import ediyor; modül TAMAMEN mock'landığı
+     için gerçek fonksiyona erişemiyor (page.tsx artık villa_distance
+     title'ını bu helper üzerinden çözüyor). Mevcut "inline mock
+     implementation" convention'ı (bkz. yukarıdaki
+     getTranslationsForParents mock yorumu) izlenerek GERÇEK, saf mantık
+     burada birebir yeniden uygulandı — 12 canonical title listesi
+     lib/distance.helper.ts'teki DISTANCE_OPTIONS ile AYNI (bu dosyanın
+     kendi senkronizasyonu tests/unit/distance-label.helper.test.ts'te,
+     GERÇEK modülle, ayrıca doğrulanıyor). */
+  isCanonicalDistanceTitle: (t: string | null | undefined) => {
+    if (!t) return false;
+    const DISTANCE_OPTIONS = [
+      "Restoran",
+      "Market",
+      "Plaj",
+      "Deniz",
+      "Şehir Merkezi",
+      "Havaalanı (Antalya)",
+      "Havaalanı (Dalaman)",
+      "Otobüs Terminali",
+      "Sağlık Merkezi",
+      "Eczane",
+      "Benzin İstasyonu",
+      "Okul",
+    ];
+    return DISTANCE_OPTIONS.includes(String(t).trim());
+  },
 }));
 
 /* 🛡️ PHASE 10B, Section 9 */
@@ -594,7 +622,7 @@ describe.each(VILLA_DETAIL_ROUTES)(
       expect(screen.getByText("Havlu ve nevresim dahil")).toBeInTheDocument();
     });
 
-    it("16) distances: title VE distance ayrı ayrı çevrilir/fallback edilir", async () => {
+    it("16) 🛡️ PHASE 10D BATCH 4 — distance TITLE dictionary üzerinden locale'e göre çevrilir, distance DEĞERİ HİÇBİR ZAMAN çevrilmez", async () => {
       getVillaDistancesMock.mockResolvedValue([
         {
           id: "d1",
@@ -610,23 +638,16 @@ describe.each(VILLA_DETAIL_ROUTES)(
           distance: "150 m",
           created_at: "",
         },
+        /* d3: legacy/custom (canonical DEĞİL) title — dictionary'de
+           ARANMAZ, olduğu gibi render edilmeli. */
+        {
+          id: "d3",
+          villa_id: "test-villa-id",
+          title: "Eski Özel Mesafe",
+          distance: "2 km",
+          created_at: "",
+        },
       ]);
-      getTranslationsForParentsMock.mockImplementation((entity: string) => {
-        if (entity === "villa_distance") {
-          return Promise.resolve(
-            new Map([
-              [
-                "d1",
-                { title: `Beach (${locale})`, distance: `300 m (${locale})` },
-              ],
-              /* d2: title çevirisi var, distance çevirisi YOK (null) —
-                 iki alan BAĞIMSIZ fallback almalı. */
-              ["d2", { title: `Market (${locale})`, distance: null }],
-            ])
-          );
-        }
-        return Promise.resolve(new Map());
-      });
 
       const { default: Page } = await import(modulePath);
       const element = await Page({
@@ -634,11 +655,27 @@ describe.each(VILLA_DETAIL_ROUTES)(
       });
       render(element);
 
-      expect(screen.getByText(`Beach (${locale})`)).toBeInTheDocument();
-      expect(screen.getByText(`300 m (${locale})`)).toBeInTheDocument();
-      expect(screen.getByText(`Market (${locale})`)).toBeInTheDocument();
-      /* distance çevirisi yok → orijinal TR "150 m" fallback. */
+      const dict = getDictionary(locale);
+      expect(
+        screen.getByText(dict.distanceLabels["Plaj"])
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(dict.distanceLabels["Market"])
+      ).toBeInTheDocument();
+      /* Legacy/custom title değişmeden render edilir. */
+      expect(screen.getByText("Eski Özel Mesafe")).toBeInTheDocument();
+      /* Mesafe DEĞERİ locale'den BAĞIMSIZ — hiçbir zaman çevrilmez. */
+      expect(screen.getByText("300 m")).toBeInTheDocument();
       expect(screen.getByText("150 m")).toBeInTheDocument();
+      expect(screen.getByText("2 km")).toBeInTheDocument();
+      /* 🛡️ villa_distance için artık DB çeviri sorgusu HİÇ ATILMAZ
+         (villa_distance_translations KULLANILMIYOR — statik dictionary
+         reuse edildi). */
+      expect(getTranslationsForParentsMock).not.toHaveBeenCalledWith(
+        "villa_distance",
+        expect.anything(),
+        expect.anything()
+      );
     });
 
     it("17) 🛡️ REGRESYON: distance icon key ORİJİNAL (TR) title'dan hesaplanır, ÇEVRİLMİŞ displayTitle'dan DEĞİL", async () => {
@@ -651,22 +688,6 @@ describe.each(VILLA_DETAIL_ROUTES)(
           created_at: "",
         },
       ]);
-      getTranslationsForParentsMock.mockImplementation((entity: string) => {
-        if (entity === "villa_distance") {
-          return Promise.resolve(
-            new Map([
-              [
-                "d1",
-                {
-                  title: `Restaurant (${locale})`,
-                  distance: `500 m (${locale})`,
-                },
-              ],
-            ])
-          );
-        }
-        return Promise.resolve(new Map());
-      });
 
       const { default: Page } = await import(modulePath);
       const element = await Page({
@@ -674,11 +695,13 @@ describe.each(VILLA_DETAIL_ROUTES)(
       });
       render(element);
 
+      const dict = getDictionary(locale);
       /* ORİJİNAL TR title ile çağrılmalı ... */
       expect(getDistanceIconKeyMock).toHaveBeenCalledWith("Restoran");
-      /* ... ÇEVRİLMİŞ displayTitle ile ASLA çağrılmamalı. */
+      /* ... ÇEVRİLMİŞ (dictionary'den gelen) displayTitle ile ASLA
+         çağrılmamalı. */
       expect(getDistanceIconKeyMock).not.toHaveBeenCalledWith(
-        `Restaurant (${locale})`
+        dict.distanceLabels["Restoran"]
       );
     });
 
