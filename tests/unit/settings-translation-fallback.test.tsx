@@ -1,11 +1,16 @@
 /* ===============================================================
-   🛡️ PHASE 10L — FALLBACK ZİNCİRİ + PUBLIC RENDER TESTLERİ
+   🛡️ PHASE 10L / 10M — FALLBACK ZİNCİRİ + PUBLIC RENDER TESTLERİ
    ===============================================================
    Kapsam:
      A) `resolveSettingsText` (saf resolver, §6)
      B) Footer telif metni — locale-aware + {year}/{site_name} ikamesi (§7)
-     C) MaintenanceScreen — locale-aware bakım mesajı (§8)
-     D) TR BİT-BİRE AYNILIK REGRESYON KİLİDİ
+     C) TR BİT-BİRE AYNILIK REGRESYON KİLİDİ
+
+   🛡️ PHASE 10M — Bakım ekranı testleri KALDIRILDI: bakım mesajı artık
+   çevrilmiyor (çeviri kolonu migration 084 ile DROP edildi) ve ilgili
+   client component silinip `app/(public)/layout.tsx` içine inline geri
+   taşındı. Bakım ekranının CANONICAL davranışı (settings değeri +
+   Türkçe varsayılan fallback) DEĞİŞMEDİ.
 
    `tests/unit/footer-locale.test.tsx` (Phase 9B) ile AYNI
    `usePathname` mock deseni — yeni bir test mimarisi İCAT EDİLMEDİ.
@@ -22,7 +27,6 @@ vi.mock("next/navigation", () => ({
 import { resolveSettingsText } from "@/lib/i18n/settings-translation.helper";
 import type { SettingsTranslationsByLocale } from "@/lib/i18n/settings-translations.types";
 import Footer from "@/app/components/layout/Footer";
-import MaintenanceScreen from "@/app/components/layout/MaintenanceScreen";
 
 const TR_COPYRIGHT = "© {year} {site_name} · Tüm hakları saklıdır.";
 const EN_COPYRIGHT = "© {year} {site_name} · All rights reserved.";
@@ -31,13 +35,11 @@ const DE_COPYRIGHT = "© {year} {site_name} · Alle Rechte vorbehalten.";
 const TRANSLATIONS: SettingsTranslationsByLocale = {
   en: {
     footer_copyright: EN_COPYRIGHT,
-    maintenance_message: "We are refreshing our site. Back very soon.",
     default_meta_title: "Luxury Villa Rentals",
     default_meta_description: "Handpicked villas on the Mediterranean coast.",
   },
   de: {
     footer_copyright: DE_COPYRIGHT,
-    maintenance_message: "Wir erneuern unsere Website. Gleich zurück.",
     default_meta_title: "Luxus-Villen mieten",
     default_meta_description: "Ausgewählte Villen an der Mittelmeerküste.",
   },
@@ -107,7 +109,6 @@ describe("resolveSettingsText — §6 fallback zinciri", () => {
     const partial: SettingsTranslationsByLocale = {
       en: {
         footer_copyright: null,
-        maintenance_message: null,
         default_meta_title: null,
         default_meta_description: null,
       },
@@ -122,7 +123,6 @@ describe("resolveSettingsText — §6 fallback zinciri", () => {
       const partial: SettingsTranslationsByLocale = {
         en: {
           footer_copyright: empty,
-          maintenance_message: null,
           default_meta_title: null,
           default_meta_description: null,
         },
@@ -137,7 +137,6 @@ describe("resolveSettingsText — §6 fallback zinciri", () => {
     const partial: SettingsTranslationsByLocale = {
       en: {
         footer_copyright: EN_COPYRIGHT,
-        maintenance_message: null,
         default_meta_title: "Luxury Villa Rentals",
         default_meta_description: "",
       },
@@ -145,9 +144,6 @@ describe("resolveSettingsText — §6 fallback zinciri", () => {
     expect(
       resolveSettingsText(TR_COPYRIGHT, partial, "en", "footer_copyright")
     ).toBe(EN_COPYRIGHT);
-    expect(
-      resolveSettingsText("TR bakım", partial, "en", "maintenance_message")
-    ).toBe("TR bakım");
     expect(
       resolveSettingsText("TR başlık", partial, "en", "default_meta_title")
     ).toBe("Luxury Villa Rentals");
@@ -258,89 +254,7 @@ describe("Footer — footer_copyright locale-aware (§7)", () => {
 });
 
 /* ===============================================================
-   C) MaintenanceScreen — §8
-   =============================================================== */
-describe("MaintenanceScreen — maintenance_message locale-aware (§8)", () => {
-  beforeEach(() => usePathnameMock.mockReset());
-
-  it("18) TR — canonical mesaj", () => {
-    usePathnameMock.mockReturnValue("/");
-    render(
-      <MaintenanceScreen
-        brand="VillayaGel"
-        canonicalMessage="Kısa bir bakım yapıyoruz."
-        translations={TRANSLATIONS}
-      />
-    );
-    expect(screen.getByText("Kısa bir bakım yapıyoruz.")).toBeInTheDocument();
-  });
-
-  it("19) EN — çeviri mesajı", () => {
-    usePathnameMock.mockReturnValue("/en/kiralik-villa/x");
-    render(
-      <MaintenanceScreen
-        brand="VillayaGel"
-        canonicalMessage="Kısa bir bakım yapıyoruz."
-        translations={TRANSLATIONS}
-      />
-    );
-    expect(
-      screen.getByText("We are refreshing our site. Back very soon.")
-    ).toBeInTheDocument();
-  });
-
-  it("20) DE — çeviri mesajı", () => {
-    usePathnameMock.mockReturnValue("/de");
-    render(
-      <MaintenanceScreen
-        brand="VillayaGel"
-        canonicalMessage="Kısa bir bakım yapıyoruz."
-        translations={TRANSLATIONS}
-      />
-    );
-    expect(
-      screen.getByText("Wir erneuern unsere Website. Gleich zurück.")
-    ).toBeInTheDocument();
-  });
-
-  it("21) EN + çeviri yok → TR canonical", () => {
-    usePathnameMock.mockReturnValue("/en");
-    render(
-      <MaintenanceScreen
-        brand="VillayaGel"
-        canonicalMessage="Kısa bir bakım yapıyoruz."
-        translations={null}
-      />
-    );
-    expect(screen.getByText("Kısa bir bakım yapıyoruz.")).toBeInTheDocument();
-  });
-
-  it("22) canonical boş → ESKİ hardcoded Türkçe varsayılan (DEĞİŞMEDİ)", () => {
-    usePathnameMock.mockReturnValue("/");
-    render(
-      <MaintenanceScreen brand="VillayaGel" canonicalMessage="" translations={null} />
-    );
-    expect(
-      screen.getByText("Sitemizi yeniliyoruz. Kısa süre içinde tekrar buradayız.")
-    ).toBeInTheDocument();
-  });
-
-  it("23) 'Bakım' üst etiketi ve marka HER DİLDE aynı (§8 — bu fazda çevrilmez)", () => {
-    usePathnameMock.mockReturnValue("/en");
-    render(
-      <MaintenanceScreen
-        brand="VillayaGel"
-        canonicalMessage="Kısa bir bakım yapıyoruz."
-        translations={TRANSLATIONS}
-      />
-    );
-    expect(screen.getByText("Bakım")).toBeInTheDocument();
-    expect(screen.getByText("VillayaGel")).toBeInTheDocument();
-  });
-});
-
-/* ===============================================================
-   D) TR BİT-BİRE AYNILIK — regresyon kilidi
+   C) TR BİT-BİRE AYNILIK — regresyon kilidi
    =============================================================== */
 describe("TR bit-bire aynılık (§6) — çeviri VARKEN bile TR çıktısı değişmez", () => {
   beforeEach(() => usePathnameMock.mockReset());
@@ -364,28 +278,5 @@ describe("TR bit-bire aynılık (§6) — çeviri VARKEN bile TR çıktısı de�
       />
     );
     expect(withT.innerHTML).toBe(htmlWithout);
-  });
-
-  it("25) MaintenanceScreen TR DOM'u, translations=null ve DOLU durumlarında AYNI", () => {
-    usePathnameMock.mockReturnValue("/");
-    const { container: a, unmount } = render(
-      <MaintenanceScreen
-        brand="VillayaGel"
-        canonicalMessage="Kısa bir bakım yapıyoruz."
-        translations={null}
-      />
-    );
-    const htmlA = a.innerHTML;
-    unmount();
-
-    usePathnameMock.mockReturnValue("/");
-    const { container: b } = render(
-      <MaintenanceScreen
-        brand="VillayaGel"
-        canonicalMessage="Kısa bir bakım yapıyoruz."
-        translations={TRANSLATIONS}
-      />
-    );
-    expect(b.innerHTML).toBe(htmlA);
   });
 });

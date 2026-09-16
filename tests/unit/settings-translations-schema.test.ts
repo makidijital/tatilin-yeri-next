@@ -71,7 +71,11 @@ describe("Migration 083 — settings_translations şeması", () => {
     expect(code).toMatch(/UNIQUE \(settings_id, locale\)/);
   });
 
-  it("7) TAM OLARAK 4 çevrilebilir kolon var", () => {
+  /* 🛡️ PHASE 10M NOTU — Bu dosya migration 083'ün SQL METNİNİ doğrular
+     ve 083 DEĞİŞTİRİLMEDİ: gerçekten 4 kolon oluşturur. Bugünkü ETKİN
+     şema 3 kolondur; `maintenance_message` migration 084 ile DROP
+     edilir. 084'ün kendi testleri: settings-translations-084-schema.test.ts */
+  it("7) 083 TAM OLARAK 4 çevrilebilir kolon oluşturur (084 bunu 3'e indirir)", () => {
     for (const field of [
       "footer_copyright",
       "maintenance_message",

@@ -139,13 +139,16 @@ export type Settings = {
      cache-miss eder. get_public_settings() RPC whitelist'inde (mig 051). */
   updated_at?: string | null;
 
-  /* 🛡️ PHASE 10L — EN/DE çevirileri (migration 083, `settings_translations`).
-     DB'de `settings` tablosunun BİR KOLONU DEĞİLDİR; `getPublicSettings()`
-     bu alanı AYRI, dar bir sorgudan türetip payload'a ekler
-     (`get_public_settings` RPC whitelist'i DEĞİŞTİRİLMEDİ).
+  /* 🛡️ PHASE 10L / 10M — EN/DE çevirileri (migration 083 + 084,
+     `settings_translations`). DB'de `settings` tablosunun BİR KOLONU
+     DEĞİLDİR; `getPublicSettings()` bu alanı AYRI, dar bir sorgudan
+     türetip payload'a ekler (`get_public_settings` RPC whitelist'i
+     DEĞİŞTİRİLMEDİ).
 
-     • Yalnız 4 alan taşır: footer_copyright, maintenance_message,
-       default_meta_title, default_meta_description.
+     • Yalnız 3 alan taşır: footer_copyright, default_meta_title,
+       default_meta_description. (Bakım mesajı çevirisi Phase 10M'de
+       kapsamdan çıkarıldı; AŞAĞIDAKİ canonical `maintenance_message`
+       alanı KORUNDU ve public bakım ekranı onu kullanmaya devam eder.)
      • `multilingual_enabled` KAPALIYKEN hiç doldurulmaz (undefined) —
        ek sorgu da atılmaz, TR davranışı BİREBİR aynı kalır.
      • Secret (resend_api_key / mail_from*) bu alana ASLA giremez:

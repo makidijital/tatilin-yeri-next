@@ -13,19 +13,24 @@ import type { SettingsTranslationsByLocale } from "@/lib/i18n/settings-translati
    🛡️ ADMIN > SETTINGS > ÇEVİRİLER — server wrapper
    ===============================================================
    TR canonical değerler SERVER-SIDE okunur ve yalnız BU EKRANIN
-   ihtiyaç duyduğu 11 doğal dil alanı client island'a geçirilir.
+   ihtiyaç duyduğu 9 doğal dil alanı client island'a geçirilir.
+
+   🛡️ PHASE 10M — bakım mesajı ve adres canonical okumaları
+   KALDIRILDI (11 → 9): bakım mesajı artık çevrilmiyor, adres bölümü
+   de ekrandan çıkarıldı. HER İKİ CANONICAL SETTINGS ALANI DA YERİNDE
+   DURUYOR — yalnız BU EKRAN onları okumuyor.
 
    NEDEN `getPublicSettings()` (ve `getSettings()` değil):
      `getSettings()` FULL row döner (`resend_api_key` DAHİL —
      bkz. settings.service.ts dosya içi uyarısı). Bu ekranın
-     ihtiyaç duyduğu 11 alanın TAMAMI `get_public_settings` RPC
+     ihtiyaç duyduğu 9 alanın TAMAMI `get_public_settings` RPC
      whitelist'inde olduğundan public-safe okuma yeterlidir ve
      secret'ın render sınırına hiç yaklaşmaması sağlanır.
 
    NEDEN SERVER COMPONENT (diğer settings alt sayfaları client):
      Diğer sayfalar `getSettingsClient()` ile FULL row'u admin
      tarayıcısına indirir çünkü o satırı DÜZENLERLER. Bu ekran
-     hiçbir şey düzenlemez — yalnız 11 alanı okur. Server-side okuma
+     hiçbir şey düzenlemez — yalnız 9 alanı okur. Server-side okuma
      hem daha dar bir yüzey verir hem de mevcut save akışına
      (tek form + tek SaveButton + atomik PUT) hiç dokunmaz.
 
@@ -53,10 +58,8 @@ export default async function SettingsCevirilerPage() {
 
   const canonical: SettingsTranslationCanonical = {
     footer_copyright: text(settings?.footer_copyright),
-    maintenance_message: text(settings?.maintenance_message),
     default_meta_title: text(settings?.default_meta_title),
     default_meta_description: text(settings?.default_meta_description),
-    address: text(settings?.address),
     hero_badge_text: text(settings?.hero_badge_text),
     hero_title: text(settings?.hero_title),
     hero_subtitle: text(settings?.hero_subtitle),

@@ -105,7 +105,6 @@ const OK_ROW = {
   settings_id: "settings-1",
   locale: "en",
   footer_copyright: "© {year} {site_name} · All rights reserved",
-  maintenance_message: null,
   default_meta_title: null,
   default_meta_description: null,
   created_at: "2026-01-01T00:00:00Z",
@@ -122,10 +121,9 @@ beforeEach(() => {
 /* ================= 1) TİP/REGİSTRY ================= */
 
 describe("settings-translations.types — whitelist", () => {
-  it("1) TAM OLARAK 4 çevrilebilir alan", () => {
+  it("1) TAM OLARAK 3 çevrilebilir alan (Phase 10M: bakım mesajı çıkarıldı)", () => {
     expect([...SETTINGS_TRANSLATABLE_FIELDS]).toEqual([
       "footer_copyright",
-      "maintenance_message",
       "default_meta_title",
       "default_meta_description",
     ]);
@@ -133,6 +131,8 @@ describe("settings-translations.types — whitelist", () => {
 
   it("2) kapsam dışı alanlar whitelist'te YOK", () => {
     for (const field of [
+      /* 🛡️ PHASE 10M — bakım mesajı artık çeviri kapsamında DEĞİL. */
+      "maintenance_message",
       "hero_title",
       "hero_subtitle",
       "business_hours",
@@ -169,10 +169,9 @@ describe("settingsTranslationRepository — query wiring", () => {
     expect(fromMock).toHaveBeenCalledWith("settings_translations");
   });
 
-  it("6) upsertOne payload'ı TAM OLARAK 6 anahtar taşır (keyfi kolon İMKÂNSIZ)", async () => {
+  it("6) upsertOne payload'ı TAM OLARAK 5 anahtar taşır (keyfi kolon İMKÂNSIZ)", async () => {
     await settingsTranslationRepository.upsertOne("settings-1", "en", {
       footer_copyright: "A",
-      maintenance_message: "B",
       default_meta_title: "C",
       default_meta_description: "D",
     });
@@ -187,7 +186,6 @@ describe("settingsTranslationRepository — query wiring", () => {
         "default_meta_title",
         "footer_copyright",
         "locale",
-        "maintenance_message",
         "settings_id",
       ].sort()
     );
@@ -197,7 +195,6 @@ describe("settingsTranslationRepository — query wiring", () => {
   it("7) upsertOne fazladan alanı SQL'e TAŞIMAZ (spread YOK)", async () => {
     await settingsTranslationRepository.upsertOne("settings-1", "de", {
       footer_copyright: "A",
-      maintenance_message: null,
       default_meta_title: null,
       default_meta_description: null,
       /* @ts-expect-error — tip seviyesinde de reddedilir; runtime kanıtı: */
@@ -278,14 +275,12 @@ describe("upsertSettingsTranslation — alan whitelist ve normalizasyon", () => 
     await upsertSettingsTranslation({
       locale: "en",
       footer_copyright: "   ",
-      maintenance_message: "",
       default_meta_title: undefined,
       default_meta_description: null,
     });
 
     const [payload] = upsertMock.mock.calls[0] as [Record<string, unknown>];
     expect(payload.footer_copyright).toBeNull();
-    expect(payload.maintenance_message).toBeNull();
     expect(payload.default_meta_title).toBeNull();
     expect(payload.default_meta_description).toBeNull();
   });

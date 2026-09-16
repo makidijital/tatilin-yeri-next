@@ -12,13 +12,22 @@ import FloatingSocial from "@/app/components/layout/FloatingSocial";
 import BottomNav from "@/app/components/layout/BottomNav";
 import ScrollToTopButton from "@/app/components/layout/ScrollToTopButton";
 import { getCachedSettings } from "@/lib/cache.helpers";
-/* 🛡️ PHASE 10L — bakım ekranı, locale'i client tarafta çözebilmek için
-   ayrı bir component'e taşındı (DOM AYNEN korundu — bkz. o dosya). */
-import MaintenanceScreen from "@/app/components/layout/MaintenanceScreen";
 
 /* ===============================================================
    🛡️ PUBLIC LAYOUT — MAINTENANCE MODE GATE
    ===============================================================
+   🛡️ PHASE 10M — Bakım ekranı bu dosyaya INLINE geri taşındı.
+   Phase 10L'de yalnız bakım MESAJININ çevirisini seçebilmek için
+   ayrı bir client component'e (`MaintenanceScreen.tsx`) çıkarılmıştı;
+   o çeviri kapsamdan kaldırıldığı (migration 084) için component'in
+   varlık nedeni ortadan kalktı ve dosya SİLİNDİ. Blok, Phase 10L
+   ÖNCESİ haliyle BİREBİR geri yüklendi — DOM, className'ler, metin
+   sırası, "Bakım" etiketi ve Türkçe varsayılan mesaj DEĞİŞMEDİ;
+   `usePathname`/`localeFromPathname`/`resolveSettingsText` client
+   mantığı tamamen kalktı. Mesaj yine CANONICAL
+   `settings.maintenance_message` değerinden gelir.
+   ---------------------------------------------------------------
+
    settings.maintenance_mode === true ise public site bakım
    ekranıyla değiştirilir. /maki-admin/* bu layout altında DEĞİL
    (ayrı admin layout) → bakım sırasında admin çalışmaya devam
@@ -32,21 +41,26 @@ export default async function PublicLayout({
   const settings = await getCachedSettings().catch(() => null);
   if (settings?.maintenance_mode === true) {
     const brand = settings?.site_name?.trim() || "Villa Kiralama";
-    /* 🛡️ PHASE 10L §8 — bakım ekranı DOM'u DEĞİŞMEDİ; yalnız
-       `MaintenanceScreen` (client) dosyasına taşındı. Neden: bu layout
-       bir SERVER component ve (Phase 7E'de kanıtlandığı gibi) request
-       locale'ini GÜVENLE OKUYAMAZ — sayfanın `setRequestLocale()`
-       çağrısı bu gövde çalıştıktan SONRA yürür. Header/Footer ile AYNI
-       çözüm kullanıldı: locale, client tarafında `usePathname()` ile
-       bulunur; veri (canonical + çeviriler) locale'den BAĞIMSIZ olarak
-       buradan geçirilir. `headers()`/`cookies()` KULLANILMADI →
-       layout'un statik/ISR uygunluğu DEĞİŞMEDİ. */
+    const message =
+      settings?.maintenance_message?.trim() ||
+      "Sitemizi yeniliyoruz. Kısa süre içinde tekrar buradayız.";
     return (
-      <MaintenanceScreen
-        brand={brand}
-        canonicalMessage={settings?.maintenance_message ?? null}
-        translations={settings?.translations ?? null}
-      />
+      <div className="public-shell flex flex-col min-h-screen bg-[var(--color-ivory)]">
+        <section className="flex-1 flex items-center justify-center px-5 md:px-10 py-24">
+          <div className="max-w-xl text-center">
+            <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)]">
+              <span className="inline-block w-8 h-px bg-[var(--color-stone-300)] align-middle mr-3" />
+              Bakım
+            </p>
+            <h1 className="font-display text-[40px] md:text-[64px] text-[var(--color-stone-900)] mt-6 leading-[1.02] tracking-[-0.03em]">
+              {brand}
+            </h1>
+            <p className="text-[var(--color-stone-500)] mt-6 leading-relaxed text-[15px] md:text-[16px]">
+              {message}
+            </p>
+          </div>
+        </section>
+      </div>
     );
   }
 

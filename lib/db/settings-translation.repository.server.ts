@@ -22,9 +22,9 @@ import type {
    🛡️ GÜVENLİK SINIRLARI (Phase 10L §3 / §13):
      1) Tablo adı bu dosyada SABİT — çağırandan gelmez.
      2) `upsertOne` KEYFİ OBJE PASSTHROUGH KABUL ETMEZ: payload
-        tek tek, isimle kurulur (`SettingsTranslationValues`'ın 4
+        tek tek, isimle kurulur (`SettingsTranslationValues`'ın 3
         alanı). Çağıran fazladan bir alan geçirse bile o alan
-        SQL'e HİÇ ULAŞMAZ. (DB şeması da yalnız bu 4 kolona sahip →
+        SQL'e HİÇ ULAŞMAZ. (DB şeması da yalnız bu 3 kolona sahip →
         çift kilit.)
      3) `locale` tipi `SettingsTranslationLocale` ("en" | "de") —
         "tr" derleme zamanında reddedilir; runtime doğrulaması
@@ -61,7 +61,7 @@ export const settingsTranslationRepository = {
 
   /**
    * UPSERT — `UNIQUE (settings_id, locale)` (migration 083) onConflict
-   * hedefi. Payload 4 alanın TAMAMINI yazar: çağıran (servis) her
+   * hedefi. Payload 3 alanın TAMAMINI yazar: çağıran (servis) her
    * zaman o locale'in TAM durumunu gönderir, böylece kısmi bir kayıt
    * diğer alanları sessizce null'lamaz.
    *
@@ -80,7 +80,6 @@ export const settingsTranslationRepository = {
           settings_id: settingsId,
           locale,
           footer_copyright: values.footer_copyright,
-          maintenance_message: values.maintenance_message,
           default_meta_title: values.default_meta_title,
           default_meta_description: values.default_meta_description,
         },

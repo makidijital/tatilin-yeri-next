@@ -45,7 +45,6 @@ const EN_ROW = {
   settings_id: "settings-1",
   locale: "en",
   footer_copyright: "© {year} {site_name} · All rights reserved",
-  maintenance_message: "Back soon.",
   default_meta_title: "Luxury Villa Rentals",
   default_meta_description: "Handpicked villas.",
   created_at: "2026-01-01T00:00:00Z",
@@ -98,7 +97,7 @@ describe("getPublicSettings — §5 çeviri payload'ı", () => {
     expect(result?.translations?.de).toBeUndefined();
   });
 
-  it("4) çeviri payload'ı YALNIZ 4 alan taşır — id/settings_id/timestamp YOK", async () => {
+  it("4) çeviri payload'ı YALNIZ 3 alan taşır — id/settings_id/timestamp YOK", async () => {
     findPublicViaRpcMock.mockResolvedValue({
       data: { id: "settings-1", multilingual_enabled: true },
       error: null,
@@ -109,7 +108,6 @@ describe("getPublicSettings — §5 çeviri payload'ı", () => {
       "default_meta_description",
       "default_meta_title",
       "footer_copyright",
-      "maintenance_message",
     ]);
   });
 

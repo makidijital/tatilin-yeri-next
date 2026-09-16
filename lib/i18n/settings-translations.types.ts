@@ -37,16 +37,22 @@ export function isSettingsTranslationLocale(
 
 /* ---------------- ALAN WHITELIST'İ (TEK DOĞRULUK KAYNAĞI) ---------------- */
 
-/** 🛡️ Phase 10L kapsamındaki TAM 4 alan. Migration 083'ün kolonlarıyla
- *  BİREBİR. Buraya eklenmeyen hiçbir settings alanı çeviri yoluyla
- *  yazılamaz/okunamaz (servis katmanı bu listeyi kullanır; DB şeması da
- *  zaten yalnız bu 4 kolona sahiptir → çift kilit).
+/** 🛡️ Çeviri kapsamındaki TAM 3 alan. Migration 083 + 084 sonrası
+ *  `settings_translations` kolonlarıyla BİREBİR. Buraya eklenmeyen
+ *  hiçbir settings alanı çeviri yoluyla yazılamaz/okunamaz (servis
+ *  katmanı bu listeyi kullanır; DB şeması da zaten yalnız bu 3 kolona
+ *  sahiptir → çift kilit).
  *
- *  ⚠️ KAPSAM DIŞI (bilinçli): hero_*, business_hours, address ve
- *  TÜM canonical/teknik/secret alanlar. */
+ *  🛡️ PHASE 10M — bakım modu mesajı çeviri kapsamından ÇIKARILDI
+ *  (çeviri kolonu migration 084 ile DROP edildi). Bakım ekranı artık
+ *  her dilde CANONICAL `settings.maintenance_message` değerini
+ *  gösterir; o canonical alan KORUNDU ve hâlâ aktif kullanılıyor
+ *  (public bakım ekranı + /maki-admin/settings/gelismis).
+ *
+ *  ⚠️ KAPSAM DIŞI (bilinçli): bakım modu mesajı, hero_*,
+ *  business_hours, address ve TÜM canonical/teknik/secret alanlar. */
 export const SETTINGS_TRANSLATABLE_FIELDS = [
   "footer_copyright",
-  "maintenance_message",
   "default_meta_title",
   "default_meta_description",
 ] as const;
@@ -71,27 +77,25 @@ export const SETTINGS_TRANSLATION_MAX_LEN: Record<
   number
 > = {
   footer_copyright: 300,
-  maintenance_message: 1000,
   default_meta_title: 120,
   default_meta_description: 300,
 };
 
 /* ---------------- Satır / payload tipleri ---------------- */
 
-/** migration 083 satırı — kolonlarla BİREBİR. */
+/** migration 083 + 084 sonrası satır — kolonlarla BİREBİR. */
 export type SettingsTranslationRow = {
   id: string;
   settings_id: string;
   locale: SettingsTranslationLocale;
   footer_copyright: string | null;
-  maintenance_message: string | null;
   default_meta_title: string | null;
   default_meta_description: string | null;
   created_at: string;
   updated_at: string;
 };
 
-/** Yalnız çevrilebilir 4 alan (id/locale/timestamp YOK). Boş değer
+/** Yalnız çevrilebilir 3 alan (id/locale/timestamp YOK). Boş değer
  *  `null` ile temsil edilir → public tarafta TR canonical'e düşer. */
 export type SettingsTranslationValues = Record<
   SettingsTranslatableField,
@@ -109,20 +113,18 @@ export type SettingsTranslationsByLocale = Partial<
 export function emptySettingsTranslationValues(): SettingsTranslationValues {
   return {
     footer_copyright: null,
-    maintenance_message: null,
     default_meta_title: null,
     default_meta_description: null,
   };
 }
 
-/** Bir satırdan YALNIZ 4 çevrilebilir alanı ayıklar (id/settings_id/
+/** Bir satırdan YALNIZ 3 çevrilebilir alanı ayıklar (id/settings_id/
  *  timestamp public payload'a HİÇ girmez). */
 export function pickSettingsTranslationValues(
   row: Pick<SettingsTranslationRow, SettingsTranslatableField>
 ): SettingsTranslationValues {
   return {
     footer_copyright: row.footer_copyright ?? null,
-    maintenance_message: row.maintenance_message ?? null,
     default_meta_title: row.default_meta_title ?? null,
     default_meta_description: row.default_meta_description ?? null,
   };

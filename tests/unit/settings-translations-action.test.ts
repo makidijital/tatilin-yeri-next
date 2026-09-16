@@ -49,7 +49,6 @@ import {
 
 const OK_VALUES = {
   footer_copyright: "© {year} {site_name} · All rights reserved",
-  maintenance_message: null,
   default_meta_title: null,
   default_meta_description: null,
 };
@@ -101,7 +100,6 @@ describe("saveSettingsTranslation — auth İLK kontrol", () => {
     const input = {
       locale: "en",
       footer_copyright: "A",
-      maintenance_message: "B",
       default_meta_title: "C",
       default_meta_description: "D",
     };

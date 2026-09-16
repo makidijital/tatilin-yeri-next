@@ -23,8 +23,8 @@ import {
      • `parentId` DIŞARIDAN GELMEZ — settings satırının id'si burada,
        server tarafında çözülür (`findSingletonId`). Böylece çağıran
        keyfi bir `settings_id` enjekte EDEMEZ.
-     • Alan whitelist'i `SETTINGS_TRANSLATABLE_FIELDS` (4 alan) —
-       input'tan gelen obje HİÇBİR ZAMAN spread edilmez; 4 alan tek
+     • Alan whitelist'i `SETTINGS_TRANSLATABLE_FIELDS` (3 alan) —
+       input'tan gelen obje HİÇBİR ZAMAN spread edilmez; 3 alan tek
        tek okunur.
 
    ⚠️ BU SERVİS `public.settings` TABLOSUNA YAZMAZ. Mevcut settings
@@ -35,7 +35,6 @@ import {
 export type SettingsTranslationInput = {
   locale: string;
   footer_copyright?: string | null;
-  maintenance_message?: string | null;
   default_meta_title?: string | null;
   default_meta_description?: string | null;
 };
@@ -56,7 +55,6 @@ function normalize(value: string | null | undefined): string | null {
 
 const FIELD_LABELS: Record<(typeof SETTINGS_TRANSLATABLE_FIELDS)[number], string> = {
   footer_copyright: "Footer telif metni",
-  maintenance_message: "Bakım mesajı",
   default_meta_title: "Varsayılan meta başlık",
   default_meta_description: "Varsayılan meta açıklama",
 };
@@ -77,7 +75,7 @@ async function resolveSettingsId(): Promise<string | null> {
  * Tüm EN/DE çevirileri `{ en: {...}, de: {...} }` şeklinde döner.
  * Satır yoksa o locale HİÇ bulunmaz (→ TR canonical fallback).
  *
- * 🛡️ Yalnız 4 çevrilebilir alan payload'a girer — `id`, `settings_id`,
+ * 🛡️ Yalnız 3 çevrilebilir alan payload'a girer — `id`, `settings_id`,
  * `created_at`, `updated_at` KASITLI OLARAK DIŞARI ÇIKMAZ
  * (`pickSettingsTranslationValues`). Bu payload public tarafta
  * client'a kadar gidebilir; bu yüzden minimum yüzey.
@@ -132,7 +130,7 @@ export async function getPublicSettingsTranslations(
  *
  * DOĞRULAMA SIRASI:
  *   1) locale whitelist ("en" | "de") — "tr" REDDEDİLİR
- *   2) alan whitelist — input'tan YALNIZ 4 alan okunur (spread YOK)
+ *   2) alan whitelist — input'tan YALNIZ 3 alan okunur (spread YOK)
  *   3) trim + boş → null
  *   4) uzunluk limitleri
  *   5) settings satırı var mı
@@ -153,7 +151,6 @@ export async function upsertSettingsTranslation(
   const values: SettingsTranslationValues = {
     ...emptySettingsTranslationValues(),
     footer_copyright: normalize(input.footer_copyright),
-    maintenance_message: normalize(input.maintenance_message),
     default_meta_title: normalize(input.default_meta_title),
     default_meta_description: normalize(input.default_meta_description),
   };

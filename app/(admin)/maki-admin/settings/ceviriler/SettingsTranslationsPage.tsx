@@ -24,26 +24,31 @@ import { SaveButton } from "../_components/SettingsField";
 /* ===============================================================
    🛡️ ADMIN > SETTINGS > ÇEVİRİLER — client island
    ===============================================================
-   🛡️ PHASE 10L — KAYIT AKTİF (yalnız 4 alan):
-     footer_copyright · maintenance_message ·
-     default_meta_title · default_meta_description
+   🛡️ PHASE 10L / 10M — KAYIT AKTİF (yalnız 3 alan):
+     footer_copyright · default_meta_title · default_meta_description
+
+   🛡️ PHASE 10M — "Bakım Modu" ve "İletişim · Adres" bölümleri
+   KALDIRILDI. Bakım mesajı artık ÇEVRİLMEZ (çeviri kolonu migration
+   084 ile DROP edildi); her dilde canonical settings değeri gösterilir.
+   Adres ise HİÇBİR ZAMAN bir çeviri kolonu olmadı — yalnız salt-okunur
+   bir vitrin kartıydı. HER İKİ CANONICAL SETTINGS ALANI DA KORUNDU.
 
    TR canonical değerler server component (`page.tsx`) tarafından
    okunup prop olarak verilir ve bu ekrandan DÜZENLENMEZ. EN ve DE
-   birbirinden BAĞIMSIZ kaydedilir: aktif sekmenin 4 alanı tek bir
+   birbirinden BAĞIMSIZ kaydedilir: aktif sekmenin 3 alanı tek bir
    `saveSettingsTranslation({ locale, … })` çağrısıyla yazılır.
 
    ⚠️ NEDEN TEK SAVE BUTONU (bölüm başına DEĞİL):
      `settings_translations` bir locale için TEK SATIR tutar ve upsert
-     4 kolonun tamamını yazar. Bölüm başına ayrı kaydet olsaydı, bir
+     3 kolonun tamamını yazar. Bölüm başına ayrı kaydet olsaydı, bir
      bölümü kaydetmek diğer bölümlerin kolonlarını sessizce null'lardı.
      Bu yüzden aktif dilin TAM durumu her kayıtta birlikte gönderilir —
      mevcut settings alt sayfalarının "tek form + tek SaveButton"
      konvansiyonuyla da aynıdır.
 
-   ⚠️ KAPSAM DIŞI (değişmedi): İletişim·Adres (inceleme), Ana Sayfa·Hero
-   ve Çalışma Saatleri (yakında) grupları salt okunur kalmaya devam
-   eder — `TranslationField`'a `onChange` GEÇİLMEZ.
+   ⚠️ KAPSAM DIŞI (değişmedi): Ana Sayfa·Hero ve Çalışma Saatleri
+   (yakında) grupları salt okunur kalmaya devam eder —
+   `TranslationField`'a `onChange` GEÇİLMEZ.
 
    ⚠️ Mevcut settings save akışı (`/api/admin/settings` PUT) ve 7
    settings alt sayfası DEĞİŞTİRİLMEDİ; çeviri payload'ı o akışa
@@ -53,10 +58,8 @@ import { SaveButton } from "../_components/SettingsField";
 /** `page.tsx`'in server-side okuduğu TR canonical değerler. */
 export type SettingsTranslationCanonical = {
   footer_copyright: string;
-  maintenance_message: string;
   default_meta_title: string;
   default_meta_description: string;
-  address: string;
   hero_badge_text: string;
   hero_title: string;
   hero_subtitle: string;
@@ -71,7 +74,6 @@ type Drafts = Record<SettingsTranslationLocale, DraftValues>;
 function emptyDraft(): DraftValues {
   return {
     footer_copyright: "",
-    maintenance_message: "",
     default_meta_title: "",
     default_meta_description: "",
   };
@@ -145,7 +147,7 @@ export default function SettingsTranslationsPage({
       : {};
 
   /** Bölüm durumu (§10): çevirisi VARSA "active", yoksa "review".
-   *  Bu 4 alan için "planned" ASLA kullanılmaz — public tarafta
+   *  Bu 3 alan için "planned" ASLA kullanılmaz — public tarafta
    *  bugün gerçekten render ediliyorlar. */
   const statusOf = useMemo(
     () =>
@@ -173,7 +175,6 @@ export default function SettingsTranslationsPage({
     const result = await saveSettingsTranslation({
       locale: target,
       footer_copyright: current.footer_copyright,
-      maintenance_message: current.maintenance_message,
       default_meta_title: current.default_meta_title,
       default_meta_description: current.default_meta_description,
     }).catch(() => ({ ok: false as const, error: "Çeviri kaydedilemedi" }));
@@ -194,7 +195,6 @@ export default function SettingsTranslationsPage({
       ...prev,
       [target]: {
         footer_copyright: result.values.footer_copyright ?? "",
-        maintenance_message: result.values.maintenance_message ?? "",
         default_meta_title: result.values.default_meta_title ?? "",
         default_meta_description: result.values.default_meta_description ?? "",
       },
@@ -234,7 +234,7 @@ export default function SettingsTranslationsPage({
         </p>
       </div>
 
-      {/* ══════════ KAYDEDİLEBİLİR GRUPLAR (Phase 10L — 4 alan) ══════════ */}
+      {/* ══════════ KAYDEDİLEBİLİR GRUPLAR (3 alan) ══════════ */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* ── 1) FOOTER ── */}
         <TranslationSection
@@ -252,24 +252,7 @@ export default function SettingsTranslationsPage({
           />
         </TranslationSection>
 
-        {/* ── 2) BAKIM MODU ── */}
-        <TranslationSection
-          title="Bakım Modu"
-          description="Bakım modu açıkken ziyaretçilere gösterilen mesaj."
-          status={statusOf(["maintenance_message"])}
-          note="Bakım ekranı Header ve Footer dahil tüm sayfanın yerine geçer; bu yüzden mesajın çevirisi doğrudan ziyaretçiye görünür."
-        >
-          <TranslationField
-            label="Bakım mesajı"
-            locale={locale}
-            canonicalValue={canonical.maintenance_message}
-            multiline
-            rows={3}
-            {...editableProps("maintenance_message")}
-          />
-        </TranslationSection>
-
-        {/* ── 3) SEO ── */}
+        {/* ── 2) SEO ── */}
         <TranslationSection
           title="SEO"
           description="Sayfa kendi SEO başlığını/açıklamasını belirtmediğinde kullanılan varsayılan meta değerleri."
@@ -297,7 +280,7 @@ export default function SettingsTranslationsPage({
         {writableLocale && (
           <div className="flex items-center justify-end gap-4">
             <p className="text-[12px] text-[var(--color-stone-500)]">
-              Yukarıdaki üç grup birlikte, yalnız seçili dil için kaydedilir.
+              Yukarıdaki iki grup birlikte, yalnız seçili dil için kaydedilir.
             </p>
             <SaveButton loading={saving} saved={saved} />
           </div>
@@ -306,23 +289,7 @@ export default function SettingsTranslationsPage({
 
       {/* ══════════ KAPSAM DIŞI GRUPLAR — salt okunur ══════════ */}
 
-      {/* ── 4) İLETİŞİM · ADRES ── */}
-      <TranslationSection
-        title="İletişim · Adres"
-        description="Footer'da ve iletişim sayfasında gösterilen adres."
-        status="review"
-        note="Adresin çevrilmesi gerekip gerekmediği henüz kesinleşmedi: sokak/ilçe adları özel isimdir, ancak 'Kat 3, Ofis 12' gibi tarif bölümleri çevrilebilir. Karar verilene kadar bu alan kapsam dışıdır."
-      >
-        <TranslationField
-          label="Adres"
-          locale={locale}
-          canonicalValue={canonical.address}
-          multiline
-          rows={3}
-        />
-      </TranslationSection>
-
-      {/* ── 5) ANA SAYFA / HERO ── */}
+      {/* ── 3) ANA SAYFA / HERO ── */}
       <TranslationSection
         title="Ana Sayfa · Hero"
         description="Ana sayfanın üst bölümündeki pazarlama metinleri."
@@ -363,7 +330,7 @@ export default function SettingsTranslationsPage({
         />
       </TranslationSection>
 
-      {/* ── 6) İLETİŞİM · ÇALIŞMA SAATLERİ ── */}
+      {/* ── 4) İLETİŞİM · ÇALIŞMA SAATLERİ ── */}
       <TranslationSection
         title="İletişim · Çalışma Saatleri"
         description="İletişim sayfasında gösterilen çalışma saatleri metni."
