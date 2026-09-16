@@ -7,11 +7,25 @@ import {
   updateVillaFeatureAction as updateVillaFeature,
   deleteVillaFeatureAction as deleteVillaFeature,
 } from "./features.action";
-import { Plus, Save, Trash2, Sparkles } from "lucide-react";
+import { Plus, Save, Trash2, Sparkles, Languages } from "lucide-react";
 import {
   useNotify,
   useConfirm,
 } from "@/app/components/admin/notifications/NotificationProvider";
+/* 🛡️ PHASE 10D — Batch 2 — multilingual_enabled kontrolü.
+   Mevcut admin CRUD action'ları (features.action.ts) service-role/native
+   repo üzerinden gider ve `Settings` döndürmez; `getPublicSettingsAction`
+   (@/app/services/settings.action) ise TopBar.tsx'in ZATEN kullandığı,
+   "use client" bileşenlerden çağrılabilen, public-safe (secret İÇERMEZ)
+   tek mevcut settings-fetch kaynağı. Phase 10A'nın VillaTranslationsCard'ı
+   multilingual_enabled'a göre GİZLENMİYOR (yalnız wizard step'ine göre
+   mount ediliyor) — yani "admin panel multilingual_enabled'a göre
+   gizlensin" için birebir kopyalanacak bir admin-taraf örnek YOK. Bu
+   yüzden TopBar'ın public client-fetch deseni (useEffect + cancelled
+   guard + local state, aşağıda BİREBİR aynı mekanik) buraya taşındı —
+   yeni bir settings-fetch sistemi İCAT EDİLMEDİ. */
+import { getPublicSettingsAction } from "@/app/services/settings.action";
+import FeatureTranslationsPanel from "./FeatureTranslationsPanel";
 
 export default function FeaturesPage() {
   const toast = useNotify();
@@ -19,6 +33,8 @@ export default function FeaturesPage() {
   const [features, setFeatures] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [multilingualEnabled, setMultilingualEnabled] = useState(false);
+  const [openFeatureId, setOpenFeatureId] = useState<string | null>(null);
 
   async function load() {
     const data = await getVillaFeatures();
@@ -27,6 +43,24 @@ export default function FeaturesPage() {
 
   useEffect(() => {
     load();
+  }, []);
+
+  /* 🛡️ PHASE 10D — Batch 2 — TopBar.tsx ile BİREBİR AYNI fetch mekaniği
+     (useEffect + cancelled guard). Settings null/hata → fail-safe KAPALI
+     (mevcut `isMultilingualEnabled` helper'ının null-safe davranışıyla
+     tutarlı — bkz. lib/i18n/config.ts). */
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const settings = await getPublicSettingsAction();
+      if (cancelled) return;
+      setMultilingualEnabled(!!settings?.multilingual_enabled);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function handleAdd() {
@@ -67,8 +101,13 @@ export default function FeaturesPage() {
       toast.error("Silinemedi", { id: `feature-delete-${id}` });
       return;
     }
+    if (openFeatureId === id) setOpenFeatureId(null);
     load();
     toast.success("Olanak silindi", { id: `feature-delete-${id}` });
+  }
+
+  function toggleTranslations(id: string) {
+    setOpenFeatureId((prev) => (prev === id ? null : id));
   }
 
   return (
@@ -116,36 +155,53 @@ export default function FeaturesPage() {
       ) : (
         <div className="space-y-2.5">
           {features.map((f) => (
-            <div
-              key={f.id}
-              className="card-premium p-3 flex items-center gap-2"
-            >
-              <input
-                value={f.name}
-                onChange={(e) => {
-                  const updated = features.map((x) =>
-                    x.id === f.id ? { ...x, name: e.target.value } : x
-                  );
-                  setFeatures(updated);
-                }}
-                className="input flex-1"
-              />
+            <div key={f.id}>
+              <div className="card-premium p-3 flex items-center gap-2">
+                <input
+                  value={f.name}
+                  onChange={(e) => {
+                    const updated = features.map((x) =>
+                      x.id === f.id ? { ...x, name: e.target.value } : x
+                    );
+                    setFeatures(updated);
+                  }}
+                  className="input flex-1"
+                />
 
-              <button
-                onClick={() => handleUpdate(f.id, f.name)}
-                className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-champagne-700)] hover:text-[var(--color-champagne-600)] px-3 py-2 rounded-lg hover:bg-[var(--color-sand-50)] transition"
-              >
-                <Save size={13} />
-                Kaydet
-              </button>
+                <button
+                  onClick={() => handleUpdate(f.id, f.name)}
+                  className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-champagne-700)] hover:text-[var(--color-champagne-600)] px-3 py-2 rounded-lg hover:bg-[var(--color-sand-50)] transition"
+                >
+                  <Save size={13} />
+                  Kaydet
+                </button>
 
-              <button
-                onClick={() => handleDelete(f.id)}
-                className="inline-flex items-center gap-1.5 text-[13px] text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 transition"
-              >
-                <Trash2 size={13} />
-                Sil
-              </button>
+                {/* 🛡️ PHASE 10D — Batch 2 — yalnız multilingual_enabled=true
+                    iken render edilir; mevcut Kaydet/Sil aksiyonlarını
+                    BOZMAZ, ayrı bir buton. */}
+                {multilingualEnabled && (
+                  <button
+                    onClick={() => toggleTranslations(f.id)}
+                    aria-label={`${f.name} çevirileri`}
+                    className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-stone-600)] hover:text-[var(--color-stone-900)] px-3 py-2 rounded-lg hover:bg-[var(--color-sand-50)] transition"
+                  >
+                    <Languages size={13} />
+                    Çeviriler
+                  </button>
+                )}
+
+                <button
+                  onClick={() => handleDelete(f.id)}
+                  className="inline-flex items-center gap-1.5 text-[13px] text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 transition"
+                >
+                  <Trash2 size={13} />
+                  Sil
+                </button>
+              </div>
+
+              {multilingualEnabled && openFeatureId === f.id && (
+                <FeatureTranslationsPanel featureId={f.id} featureName={f.name} />
+              )}
             </div>
           ))}
         </div>
