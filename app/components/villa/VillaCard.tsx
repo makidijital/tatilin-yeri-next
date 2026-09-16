@@ -26,6 +26,13 @@ import {
   type DiscountRange,
 } from "@/lib/price.engine";
 import { formatDiscountDateRangeTr } from "@/lib/date-format";
+/* 🛡️ PHASE 10G — locale-aware kart metinleri + locale-prefixed detay
+   linki. `locale` OPSİYONEL, default "tr" → TR çıktısı (metin + href)
+   BİREBİR AYNI. Fiyat/indirim/availability mantığı DEĞİŞMEDİ. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
+import type { Locale } from "@/lib/i18n/config";
 /* 🛡️ FAZ 36 — Guest favorites button. localStorage-only;
    no DB / no API / no server action / no auth. */
 import FavoriteButton from "@/app/components/favorites/FavoriteButton";
@@ -124,6 +131,9 @@ type Props = {
     discount_value: number;
     currency: string | null;
   } | null;
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış).
+   *  Kart metinlerini ve detay linkinin locale prefix'ini belirler. */
+  locale?: Locale;
 };
 
 export default function VillaCard({
@@ -150,7 +160,10 @@ export default function VillaCard({
   reserveInfo,
   isFlexible = false,
   discount = null,
+  locale,
 }: Props) {
+  const dict = getDictionary(locale);
+  const effectiveLocale: Locale = locale ?? "tr";
   const router = useRouter();
   /* Compact variant flag — curation flow için presentation density.
      Logic (price/state/handlers/modal) hiç dokunulmaz. */
@@ -277,7 +290,9 @@ export default function VillaCard({
     if (!showDiscountPricing || !discountedPrice) return null;
     const savings = convertedPrice - discountedPrice.converted;
     if (!(savings > 0)) return null;
-    return `Gecelik ${formatCurrency(savings, currency)} indirimli`;
+    return formatDictionaryString(dict.card.nightlySavings, {
+      amount: formatCurrency(savings, currency),
+    });
   })();
 
   /* 🛡️ GRAND TOTAL — mevcut price.engine reuse (calculateGrandTotal).
@@ -323,7 +338,13 @@ export default function VillaCard({
      start/end paramlarını detail href'ine append et. BookingSidebar
      URL'den initial state'i hydrate eder; refresh-safe. Tarih yoksa
      href eski formatta kalır (`/kiralik-villa/<slug>`). */
-  let detailHref = `/kiralik-villa/${slug}`;
+  /* 🛡️ PHASE 10G — locale prefix'i `buildLocaleAlternates` (Phase 7B,
+     saf helper) üretir; "tr" için sonuç `/kiralik-villa/<slug>` —
+     ESKİ DEĞERLE BİREBİR AYNI. Query-string mantığı DEĞİŞMEDİ. */
+  let detailHref = buildLocaleAlternates(
+    `/kiralik-villa/${slug}`,
+    effectiveLocale
+  ).canonical;
   if (stayStart && stayEnd) {
     const qs = new URLSearchParams();
     qs.set("start", stayStart);
@@ -338,7 +359,10 @@ export default function VillaCard({
   const reserveBlock = reserveInfo ? (
     <div className="mt-2.5 flex flex-col gap-2">
       <div className="rounded-xl bg-emerald-50 px-3 py-2 text-center text-[13px] font-medium text-emerald-800">
-        {reserveInfo.label} · {reserveInfo.nights} Gece
+        {reserveInfo.label} ·{" "}
+        {formatDictionaryString(dict.card.reserveNights, {
+          n: reserveInfo.nights,
+        })}
       </div>
       <button
         type="button"
@@ -347,10 +371,10 @@ export default function VillaCard({
           e.stopPropagation();
           router.push(reserveInfo.href);
         }}
-        aria-label="Hemen rezervasyon yap"
+        aria-label={dict.card.bookNowAriaLabel}
         className="w-full inline-flex items-center justify-center gap-2 h-10 rounded-xl bg-emerald-700 text-white uppercase font-medium text-[11px] tracking-[0.08em] hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 transition-colors duration-200 motion-reduce:transition-none"
       >
-        Hemen Rezervasyon Yap
+        {dict.card.bookNow}
       </button>
     </div>
   ) : null;
@@ -404,7 +428,7 @@ export default function VillaCard({
                  + Next image optimizer (cdn-image) bunları auto. */}
               <Image
                 src={cover}
-                alt={title || "Villa"}
+                alt={title || dict.card.villaAlt}
                 fill
                 sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                 loading="lazy"
@@ -424,7 +448,7 @@ export default function VillaCard({
                 {initial}
               </div>
               <p className="mt-3 text-[10px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-400)]">
-                Görsel yakında
+                {dict.card.imageComing}
               </p>
             </div>
           )}
@@ -498,7 +522,7 @@ export default function VillaCard({
                 strokeWidth={1.75}
                 aria-hidden
               />
-              <span className="truncate">{location || "Lokasyon yok"}</span>
+              <span className="truncate">{location || dict.card.noLocation}</span>
             </p>
 
             {/* TITLE — editorial white serif */}
@@ -522,9 +546,13 @@ export default function VillaCard({
               typeof reviewAverage === "number" && reviewAverage > 0 && (
                 <div
                   className="flex items-center gap-1.5 mt-2 text-[12px] text-white/85"
-                  aria-label={`Ortalama puan ${reviewAverage.toFixed(
-                    1
-                  )} / 5, ${reviewCount} misafir yorumu`}
+                  aria-label={formatDictionaryString(
+                    dict.card.ratingAriaLabel,
+                    {
+                      value: reviewAverage.toFixed(1),
+                      count: reviewCount,
+                    }
+                  )}
                 >
                   <Star
                     size={11}
@@ -538,7 +566,9 @@ export default function VillaCard({
                   </span>
                   <span aria-hidden="true" className="text-white/40">·</span>
                   <span className="text-white/70 tabular-nums">
-                    {reviewCount} yorum
+                    {formatDictionaryString(dict.card.reviewCount, {
+                      n: reviewCount,
+                    })}
                   </span>
                 </div>
               )}
@@ -563,7 +593,7 @@ export default function VillaCard({
                     {/* Üst satır: eyebrow + büyük fiyat */}
                     <div className="flex items-baseline gap-2 min-w-0">
                       <span className="text-[10.5px] tracking-[0.14em] uppercase font-medium text-white/65">
-                        Toplam
+                        {dict.card.total}
                       </span>
                       <span
                         className={
@@ -581,7 +611,11 @@ export default function VillaCard({
                         (isCuration ? "text-[11px] mt-0.5" : "text-[12px] mt-1")
                       }
                     >
-                      <span className="tabular-nums">{stayNights} gece</span>
+                      <span className="tabular-nums">
+                        {formatDictionaryString(dict.card.nights, {
+                          n: stayNights,
+                        })}
+                      </span>
                       {hasCleaning ? (
                         <>
                           <span
@@ -591,7 +625,7 @@ export default function VillaCard({
                             ·
                           </span>
                           <span className="text-white/65">
-                            Temizlik dahil
+                            {dict.card.cleaningIncluded}
                           </span>
                         </>
                       ) : null}
@@ -607,7 +641,7 @@ export default function VillaCard({
                     >
                       {price
                         ? formatCurrency(convertedPrice, currency)
-                        : "Fiyat sorunuz"}
+                        : dict.card.priceOnRequest}
                     </span>
                     {price ? (
                       <span
@@ -616,7 +650,7 @@ export default function VillaCard({
                           (isCuration ? "text-[11px]" : "text-[12px]")
                         }
                       >
-                        Başlayan Fiyatlarla
+                        {dict.card.startingFromUpper}
                       </span>
                     ) : null}
                   </div>
@@ -665,7 +699,7 @@ export default function VillaCard({
               e.stopPropagation();
               setIsBookingOpen(true);
             }}
-            aria-label="Müsaitlik ve tarih seçimi modalını aç"
+            aria-label={dict.card.availabilityAriaLabel}
             className={
               "w-full inline-flex items-center justify-center gap-2 " +
               "bg-[var(--color-stone-900)] text-white uppercase font-medium " +
@@ -682,7 +716,7 @@ export default function VillaCard({
               strokeWidth={1.75}
               aria-hidden
             />
-            Müsaitlik / Tarih Seç
+            {dict.card.availabilityCta}
           </button>
         </div>
 
@@ -707,19 +741,19 @@ export default function VillaCard({
             tone="coral"
             icon={<BedDouble size={18} strokeWidth={1.6} aria-hidden />}
             value={bedrooms}
-            label="Yatak Odası"
+            label={dict.card.bedroom}
           />
           <AmenityMini
             tone="green"
             icon={<Bath size={18} strokeWidth={1.6} aria-hidden />}
             value={bathrooms}
-            label="Banyo"
+            label={dict.card.bathroom}
           />
           <AmenityMini
             tone="blue"
             icon={<Users size={18} strokeWidth={1.6} aria-hidden />}
             value={guests}
-            label="Kişi"
+            label={dict.card.person}
           />
         </div>
       </article>
@@ -755,7 +789,7 @@ export default function VillaCard({
           {showImage ? (
             <Image
               src={cover}
-              alt={title || "Villa"}
+              alt={title || dict.card.villaAlt}
               fill
               sizes="(max-width: 640px) 78vw, (max-width: 1024px) 340px, 380px"
               loading="lazy"
@@ -774,7 +808,7 @@ export default function VillaCard({
                 {initial}
               </div>
               <p className="mt-2 text-[10px] tracking-[0.24em] uppercase font-medium text-[var(--color-stone-400)]">
-                Görsel yakında
+                {dict.card.imageComing}
               </p>
             </div>
           )}
@@ -810,9 +844,14 @@ export default function VillaCard({
           {discountBadgePercent !== null && (
             <div
               className="absolute top-3 right-3 z-10 inline-flex items-center rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em] text-white shadow-[0_4px_10px_-2px_rgba(220,38,38,0.5)]"
-              aria-label={`Yüzde ${discountBadgePercent} indirim`}
+              aria-label={formatDictionaryString(
+                dict.card.discountBadgeAriaLabel,
+                { percent: discountBadgePercent }
+              )}
             >
-              {`%${discountBadgePercent} İNDİRİM`}
+              {formatDictionaryString(dict.card.discountBadge, {
+                percent: discountBadgePercent,
+              })}
             </div>
           )}
 
@@ -825,7 +864,7 @@ export default function VillaCard({
             </h3>
             <p className="mt-1 inline-flex items-center gap-1 text-[11.5px] text-white/85 uppercase tracking-[0.05em]">
               <MapPin size={11} className="shrink-0" strokeWidth={2} aria-hidden />
-              <span className="truncate">{location || "Lokasyon yok"}</span>
+              <span className="truncate">{location || dict.card.noLocation}</span>
             </p>
             <div
               aria-hidden="true"
@@ -847,30 +886,46 @@ export default function VillaCard({
           <div className="flex items-center justify-center gap-x-4 gap-y-1.5 flex-wrap text-[12.5px] font-medium text-[var(--color-stone-800)]">
             <span
               className="inline-flex items-center gap-1.5"
-              aria-label={`${guests} kişi kapasitesi`}
+              aria-label={formatDictionaryString(dict.card.guestsAriaLabel, {
+                n: guests,
+              })}
             >
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-[#0973BA]/10 text-[#0973BA] shrink-0" aria-hidden>
                 <Users size={17} strokeWidth={2.2} />
               </span>
-              <span className="tabular-nums">{guests} Kişi</span>
+              <span className="tabular-nums">
+                {formatDictionaryString(dict.card.guestsValue, { n: guests })}
+              </span>
             </span>
             <span
               className="inline-flex items-center gap-1.5"
-              aria-label={`${bedrooms} yatak odası`}
+              aria-label={formatDictionaryString(dict.card.bedroomsAriaLabel, {
+                n: bedrooms,
+              })}
             >
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-[#0973BA]/10 text-[#0973BA] shrink-0" aria-hidden>
                 <BedDouble size={17} strokeWidth={2.2} />
               </span>
-              <span className="tabular-nums">{bedrooms} Yatak Odası</span>
+              <span className="tabular-nums">
+                {formatDictionaryString(dict.card.bedroomsValue, {
+                  n: bedrooms,
+                })}
+              </span>
             </span>
             <span
               className="inline-flex items-center gap-1.5"
-              aria-label={`${bathrooms} banyo`}
+              aria-label={formatDictionaryString(dict.card.bathroomsAriaLabel, {
+                n: bathrooms,
+              })}
             >
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-[#0973BA]/10 text-[#0973BA] shrink-0" aria-hidden>
                 <Bath size={17} strokeWidth={2.2} />
               </span>
-              <span className="tabular-nums">{bathrooms} Banyo</span>
+              <span className="tabular-nums">
+                {formatDictionaryString(dict.card.bathroomsValue, {
+                  n: bathrooms,
+                })}
+              </span>
             </span>
           </div>
 
@@ -890,7 +945,8 @@ export default function VillaCard({
                     {formatCurrency(stayTotal, currency)}
                   </div>
                   <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)] tabular-nums">
-                    {stayNights} gece{hasCleaning ? " · Temizlik dahil" : ""}
+                    {formatDictionaryString(dict.card.nights, { n: stayNights })}
+                    {hasCleaning ? dict.card.cleaningIncludedSuffix : ""}
                   </div>
                 </>
               ) : showDiscountPricing ? (
@@ -921,7 +977,7 @@ export default function VillaCard({
                         {formatCurrency(discountedPrice!.converted, currency)}
                       </span>
                       <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--color-stone-500)]">
-                        Gecelik
+                        {dict.card.nightly}
                       </span>
                     </span>
                   </div>
@@ -937,7 +993,9 @@ export default function VillaCard({
                 </>
               ) : (
                 <div className="font-display font-bold text-[18px] md:text-[19px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
-                  {price ? formatCurrency(convertedPrice, currency) : "Fiyat sorunuz"}
+                  {price
+                    ? formatCurrency(convertedPrice, currency)
+                    : dict.card.priceOnRequest}
                 </div>
               )}
             </div>
@@ -962,7 +1020,7 @@ export default function VillaCard({
               }}
               className="mt-3 w-full inline-flex items-center justify-center h-11 rounded-xl bg-[#ED7926] hover:bg-[#D96A1F] text-white uppercase font-semibold text-[11.5px] tracking-[0.08em] shadow-[0_10px_24px_-8px_rgba(237,121,38,0.45)] hover:shadow-[0_14px_30px_-10px_rgba(237,121,38,0.55)] hover:-translate-y-px active:translate-y-0 transition-[box-shadow,transform,background-color] duration-200 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ED7926]/40"
             >
-              Hemen Rezervasyon Yap
+              {dict.card.bookNow}
             </button>
           )}
         </div>
@@ -991,7 +1049,7 @@ export default function VillaCard({
           {showImage ? (
             <Image
               src={cover}
-              alt={title || "Villa"}
+              alt={title || dict.card.villaAlt}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
               loading="lazy"
@@ -1010,7 +1068,7 @@ export default function VillaCard({
                 {initial}
               </div>
               <p className="mt-2 text-[10px] tracking-[0.24em] uppercase font-medium text-[var(--color-stone-400)]">
-                Görsel yakında
+                {dict.card.imageComing}
               </p>
             </div>
           )}
@@ -1071,7 +1129,7 @@ export default function VillaCard({
                 strokeWidth={1.9}
                 aria-hidden
               />
-              <span className="truncate">{location || "Lokasyon yok"}</span>
+              <span className="truncate">{location || dict.card.noLocation}</span>
             </p>
           </div>
 
@@ -1085,9 +1143,13 @@ export default function VillaCard({
             typeof reviewAverage === "number" && reviewAverage > 0 && (
               <div
                 className="absolute bottom-3.5 md:bottom-4 right-3.5 md:right-4 z-10 inline-flex items-center gap-1 bg-white/90 backdrop-blur-md text-[var(--color-stone-900)] text-[11px] font-medium px-2.5 py-1 rounded-full shadow-[0_4px_14px_-4px_rgba(0,0,0,0.28)] ring-1 ring-white/50"
-                aria-label={`Ortalama puan ${reviewAverage.toFixed(
-                  1
-                )} / 5, ${reviewCount} misafir yorumu`}
+                aria-label={formatDictionaryString(
+                  dict.card.ratingAriaLabel,
+                  {
+                    value: reviewAverage.toFixed(1),
+                    count: reviewCount,
+                  }
+                )}
               >
                 <Star
                   size={11}
@@ -1098,7 +1160,11 @@ export default function VillaCard({
                 />
                 <span className="tabular-nums">{reviewAverage.toFixed(1)}</span>
                 <span aria-hidden="true" className="text-[var(--color-stone-400)]">·</span>
-                <span className="tabular-nums">{reviewCount} yorum</span>
+                <span className="tabular-nums">
+                  {formatDictionaryString(dict.card.reviewCount, {
+                    n: reviewCount,
+                  })}
+                </span>
               </div>
             )}
         </div>
@@ -1122,10 +1188,10 @@ export default function VillaCard({
                   <span className="font-display text-[15px] font-semibold text-[#ED7926] tabular-nums">
                     {formatCurrency(convertedPrice, currency)}
                   </span>{" "}
-                  başlayan fiyatlarla
+                  {dict.card.startingFromLower}
                 </>
               ) : (
-                "Fiyat sorunuz"
+                dict.card.priceOnRequest
               )}
             </p>
           )}
@@ -1137,24 +1203,40 @@ export default function VillaCard({
           <div className="mt-3.5 flex items-center gap-x-4 gap-y-1.5 flex-wrap text-[12.5px] font-medium text-[var(--color-stone-800)]">
             <span
               className="inline-flex items-center gap-1.5"
-              aria-label={`${guests} kişi kapasitesi`}
+              aria-label={formatDictionaryString(dict.card.guestsAriaLabel, {
+                n: guests,
+              })}
             >
               <Users size={15} className="text-[#0973BA]" strokeWidth={1.9} aria-hidden />
-              <span className="tabular-nums">{guests} Kişi</span>
+              <span className="tabular-nums">
+                {formatDictionaryString(dict.card.guestsValue, { n: guests })}
+              </span>
             </span>
             <span
               className="inline-flex items-center gap-1.5"
-              aria-label={`${bedrooms} yatak odası`}
+              aria-label={formatDictionaryString(dict.card.bedroomsAriaLabel, {
+                n: bedrooms,
+              })}
             >
               <BedDouble size={15} className="text-[#0973BA]" strokeWidth={1.9} aria-hidden />
-              <span className="tabular-nums">{bedrooms} Yatak Odası</span>
+              <span className="tabular-nums">
+                {formatDictionaryString(dict.card.bedroomsValue, {
+                  n: bedrooms,
+                })}
+              </span>
             </span>
             <span
               className="inline-flex items-center gap-1.5"
-              aria-label={`${bathrooms} banyo`}
+              aria-label={formatDictionaryString(dict.card.bathroomsAriaLabel, {
+                n: bathrooms,
+              })}
             >
               <Bath size={15} className="text-[#0973BA]" strokeWidth={1.9} aria-hidden />
-              <span className="tabular-nums">{bathrooms} Banyo</span>
+              <span className="tabular-nums">
+                {formatDictionaryString(dict.card.bathroomsValue, {
+                  n: bathrooms,
+                })}
+              </span>
             </span>
           </div>
 
@@ -1180,10 +1262,10 @@ export default function VillaCard({
               <div className="min-w-0">
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#ED7926]/10 to-[#0973BA]/10 ring-1 ring-[#0973BA]/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#0973BA]">
                   <Sparkles size={11} strokeWidth={2} className="text-[#ED7926]" aria-hidden />
-                  Esnek Tarih Fırsatı
+                  {dict.card.flexibleTitle}
                 </div>
                 <div className="mt-1 text-[11px] font-medium text-[var(--color-stone-600)]">
-                  ±3 gün içinde müsait
+                  {dict.card.flexibleSubtitle}
                 </div>
               </div>
             ) : (
@@ -1199,7 +1281,8 @@ export default function VillaCard({
                       {formatCurrency(stayTotal, currency)}
                     </div>
                     <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)] tabular-nums">
-                      {stayNights} gece{hasCleaning ? " · Temizlik dahil" : ""}
+                      {formatDictionaryString(dict.card.nights, { n: stayNights })}
+                    {hasCleaning ? dict.card.cleaningIncludedSuffix : ""}
                     </div>
                   </>
                 ) : null}
@@ -1213,7 +1296,7 @@ export default function VillaCard({
                 e.stopPropagation();
                 setIsBookingOpen(true);
               }}
-              aria-label="Müsaitlik ve tarih seçimi modalını aç"
+              aria-label={dict.card.availabilityAriaLabel}
               className={
                 "shrink-0 mx-auto inline-flex items-center justify-center gap-1.5 whitespace-nowrap " +
                 "h-9 px-4 rounded-full " +
@@ -1226,7 +1309,7 @@ export default function VillaCard({
               }
             >
               <CalendarRange size={13} strokeWidth={1.9} aria-hidden />
-              Müsaitlik / Tarih Seç
+              {dict.card.availabilityCta}
             </button>
           </div>
           {reserveBlock}
@@ -1270,6 +1353,7 @@ export default function VillaCard({
         villaId={id}
         villaSlug={slug}
         villaTitle={title}
+        locale={locale}
       />
     )}
     </>

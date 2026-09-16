@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 
+/* 🛡️ PHASE 10G — locale-aware buton metni. `locale` OPSİYONEL,
+   default "tr" → TR çıktısı BİREBİR AYNI. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import type { Locale } from "@/lib/i18n/config";
+
 /* ===============================================================
    🛡️ COLLAPSIBLE DESCRIPTION — "Villa hakkında" aç/kapa
    ===============================================================
@@ -30,10 +35,14 @@ import { useState } from "react";
 export default function CollapsibleDescription({
   html,
   collapsible,
+  locale,
 }: {
   html: string;
   collapsible: boolean;
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
   const [expanded, setExpanded] = useState(false);
   const clamped = collapsible && !expanded;
 
@@ -63,7 +72,7 @@ export default function CollapsibleDescription({
             rounded
           "
         >
-          {expanded ? "Daha Az Göster" : "Devamını Oku"}
+          {expanded ? dict.villa.readLess : dict.villa.readMore}
         </button>
       )}
     </div>

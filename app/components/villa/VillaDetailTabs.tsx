@@ -2,6 +2,12 @@
 
 import { useState, type ReactNode } from "react";
 
+/* 🛡️ PHASE 10G — locale-aware sekme etiketleri. `locale` OPSİYONEL,
+   default "tr" → TR çıktısı BİREBİR AYNI (dictionary TR değerleri bu
+   dosyanın eski hardcoded metinleriyle byte-identical). */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import type { Locale } from "@/lib/i18n/config";
+
 /* ===============================================================
    🛡️ VillaDetailTabs — tab-content switching (scroll/anchor DEĞİL)
    ===============================================================
@@ -19,6 +25,8 @@ type Props = {
   /** Konum paneli — harita + Mesafeler (Yakındaki Noktalar) birlikte. */
   konum: ReactNode;
   ozellikler: ReactNode;
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
+  locale?: Locale;
 };
 
 export default function VillaDetailTabs({
@@ -26,12 +34,14 @@ export default function VillaDetailTabs({
   musaitlik,
   konum,
   ozellikler,
+  locale,
 }: Props) {
+  const dict = getDictionary(locale);
   const tabs: { id: string; label: string; content: ReactNode }[] = [
-    { id: "fiyatlar", label: "Fiyatlar", content: fiyatlar },
-    { id: "musaitlik", label: "Müsaitlik", content: musaitlik },
-    { id: "konum", label: "Konum & Mesafeler", content: konum },
-    { id: "ozellikler", label: "Özellikler", content: ozellikler },
+    { id: "fiyatlar", label: dict.villaTabs.prices, content: fiyatlar },
+    { id: "musaitlik", label: dict.villaTabs.availability, content: musaitlik },
+    { id: "konum", label: dict.villaTabs.location, content: konum },
+    { id: "ozellikler", label: dict.villaTabs.features, content: ozellikler },
   ];
 
   /* Default: Fiyatlar (Option A). */
@@ -48,7 +58,7 @@ export default function VillaDetailTabs({
           (sol gradient accent çizgisi kaldırıldı). Tab switching
           state/logic'i (useState `active`, onClick) AYNEN; yalnız
           renk tasarımı değişti. */}
-      <nav aria-label="Villa detay sekmeleri">
+      <nav aria-label={dict.villaTabs.navAriaLabel}>
         <div className="rounded-2xl border border-[var(--color-stone-100)] bg-white shadow-sm p-1.5 overflow-x-auto">
           <ul className="flex items-center gap-1 min-w-max md:min-w-0 md:w-full">
             {tabs.map((t) => {

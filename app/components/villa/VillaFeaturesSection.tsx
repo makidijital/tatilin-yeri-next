@@ -1,5 +1,8 @@
 import { Check } from "lucide-react";
 
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import type { Locale } from "@/lib/i18n/config";
+
 /* ===============================================================
    🛡️ VillaFeaturesSection — PHASE 8D-2
    ===============================================================
@@ -24,18 +27,22 @@ export type TranslatedFeature = {
 
 export default function VillaFeaturesSection({
   features,
+  locale,
 }: {
   features: TranslatedFeature[];
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
   return (
     <section>
       <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
-        Ne sunuyor?
+        {dict.villa.featuresTitle}
       </h2>
 
       {features.length === 0 ? (
         <div className="card-premium mt-5 p-6 text-sm text-[var(--color-stone-400)] italic">
-          Özellik bilgisi bulunmuyor
+          {dict.villa.featuresEmpty}
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-5">

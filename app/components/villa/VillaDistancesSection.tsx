@@ -1,3 +1,6 @@
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import type { Locale } from "@/lib/i18n/config";
+
 import {
   MapPin,
   UtensilsCrossed,
@@ -70,9 +73,13 @@ export type TranslatedDistance = {
 
 export default function VillaDistancesSection({
   distances,
+  locale,
 }: {
   distances: TranslatedDistance[];
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
   return (
     <section>
       <div className="max-w-xl">
@@ -82,14 +89,14 @@ export default function VillaDistancesSection({
             className="h-px w-9 bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
           />
           <span className="text-[11px] font-semibold tracking-[0.16em] text-[var(--color-stone-400)]">
-            ÇEVREYİ KEŞFEDİN
+            {dict.villa.distancesEyebrow}
           </span>
         </div>
         <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
-          Yakındaki Noktalar
+          {dict.villa.distancesTitle}
         </h2>
         <p className="mt-2.5 text-[14px] md:text-[14.5px] text-[var(--color-stone-500)] leading-relaxed">
-          Villaya yürüme ve araçla ulaşım mesafesindeki başlıca noktalar.
+          {dict.villa.distancesSubtitle}
         </p>
       </div>
 
@@ -107,7 +114,7 @@ export default function VillaDistancesSection({
 
       {distances.length === 0 ? (
         <p className="mt-6 text-[var(--color-stone-400)] text-sm italic">
-          Bilgi yok
+          {dict.villa.distancesEmpty}
         </p>
       ) : (
         <div

@@ -168,6 +168,14 @@ export type Dictionary = {
     conflictError: string;
     calendarToday: string;
     mobileCtaAriaLabel: string;
+    /* 🛡️ PHASE 10G — VillaCardBookingModal.tsx (villa detay "Benzer
+       Villalar" kartlarından açılır). */
+    perNightSuffix: string;
+    dateLabel: string;
+    modalEyebrow: string;
+    modalAriaLabel: string;
+    modalLoadingAriaLabel: string;
+    modalLoading: string;
   };
   filters: {
     filter: string;
@@ -219,6 +227,9 @@ export type Dictionary = {
     photoAltWithTotal: string;
     /** template: {index} */
     photoAriaLabel: string;
+    /* 🛡️ PHASE 10G — VillaVideoModal.tsx */
+    closeVideoAriaLabel: string;
+    otherVideosAriaLabel: string;
   };
   /* 🛡️ PHASE 10B — PriceList.tsx UI stringleri. */
   price: {
@@ -241,6 +252,30 @@ export type Dictionary = {
     notFoundBody: string;
     notFoundCta: string;
     descriptionEmpty: string;
+    /* 🛡️ PHASE 10G — TR villa detay sayfasının (kiralik-villa/[slug])
+       BUGÜNKÜ hardcoded section metinleri. TR değerleri o dosyadaki
+       literal'lerle BİREBİR aynıdır (byte-identical TR davranışı). */
+    aboutTitle: string;
+    seasonPricesTitle: string;
+    calendarTitle: string;
+    distancesEyebrow: string;
+    distancesTitle: string;
+    distancesSubtitle: string;
+    distancesEmpty: string;
+    featuresTitle: string;
+    featuresEmpty: string;
+    priceIncludesTitle: string;
+    rulesTitle: string;
+    checkInOutTitle: string;
+    checkInLabel: string;
+    checkOutLabel: string;
+    similarVillasTitle: string;
+    /* 🛡️ PHASE 10G — CollapsibleDescription.tsx */
+    readMore: string;
+    readLess: string;
+    tourismCertificate: string;
+    /** template: {n} */
+    documentNumber: string;
   };
   /* 🛡️ PHASE 10D — BATCH 4: LocationStep canonical mesafe başlıklarının
      (yalnız TITLE — mesafe DEĞERİ "5 km"/"500 m" ASLA buraya girmez)
@@ -296,5 +331,123 @@ export type Dictionary = {
     length: string;
     depth: string;
     noDimensions: string;
+  };
+  /* 🛡️ PHASE 10G — VillaDetailTabs.tsx (sekme etiketleri + nav aria). */
+  villaTabs: {
+    navAriaLabel: string;
+    prices: string;
+    availability: string;
+    location: string;
+    features: string;
+  };
+  /* 🛡️ PHASE 10G — VillaMapModal.tsx. `embedLanguage` Google Maps embed
+     URL'indeki `hl=` parametresidir (UI metni DEĞİL, dil kodu). */
+  map: {
+    openMap: string;
+    directions: string;
+    directionsUnavailableTitle: string;
+    /** template: {title} */
+    modalAriaLabel: string;
+    modalAriaLabelFallback: string;
+    closeAriaLabel: string;
+    whereTitle: string;
+    poweredByGoogle: string;
+    noLocation: string;
+    embedLanguage: string;
+  };
+  /* 🛡️ PHASE 10G — ShortStayFeeNotice.tsx. */
+  shortStay: {
+    /** template: {n} */
+    ariaLabel: string;
+    /** template: {n} */
+    body: string;
+    hint: string;
+  };
+  /* 🛡️ PHASE 10G — FavoriteButton.tsx. */
+  favorites: {
+    add: string;
+    remove: string;
+    saved: string;
+    save: string;
+  };
+  /* 🛡️ PHASE 10G — VillaReviewsSection.tsx. */
+  reviews: {
+    eyebrow: string;
+    title: string;
+    outOfFive: string;
+    /** template: {n} */
+    countLabel: string;
+    empty: string;
+    featuredAriaLabel: string;
+    featuredBadge: string;
+    formOpen: string;
+    formClose: string;
+    /** template: {value} */
+    ratingAriaLabel: string;
+    ratingPickerAriaLabel: string;
+    /** template: {n} */
+    starAriaLabel: string;
+    formTitle: string;
+    formSubtitle: string;
+    nameLabel: string;
+    namePlaceholder: string;
+    ratingLabel: string;
+    commentLabel: string;
+    commentPlaceholder: string;
+    /** template: {n} */
+    minChars: string;
+    successMessage: string;
+    submitting: string;
+    submit: string;
+  };
+  /* 🛡️ PHASE 10G — VillaCard.tsx (villa detay "Benzer Villalar" bölümü
+     bu kartı EN/DE'de de render eder). TR değerleri component'in
+     BUGÜNKÜ hardcoded metinleriyle BİREBİR aynıdır. */
+  card: {
+    villaAlt: string;
+    imageComing: string;
+    noLocation: string;
+    priceOnRequest: string;
+    startingFromUpper: string;
+    startingFromLower: string;
+    total: string;
+    nightly: string;
+    /** template: {n} */
+    nights: string;
+    cleaningIncluded: string;
+    cleaningIncludedSuffix: string;
+    /** template: {n} */
+    reviewCount: string;
+    /** template: {value}, {count} */
+    ratingAriaLabel: string;
+    availabilityCta: string;
+    availabilityAriaLabel: string;
+    bedroom: string;
+    bathroom: string;
+    person: string;
+    /** template: {n} */
+    guestsAriaLabel: string;
+    /** template: {n} */
+    bedroomsAriaLabel: string;
+    /** template: {n} */
+    bathroomsAriaLabel: string;
+    /** template: {n} */
+    guestsValue: string;
+    /** template: {n} */
+    bedroomsValue: string;
+    /** template: {n} */
+    bathroomsValue: string;
+    /** template: {percent} */
+    discountBadge: string;
+    /** template: {percent} */
+    discountBadgeAriaLabel: string;
+    /** template: {amount} */
+    nightlySavings: string;
+    bookNow: string;
+    bookNowAriaLabel: string;
+    /** template: {n} */
+    reserveNights: string;
+    flexibleTitle: string;
+    flexibleSubtitle: string;
   };
 };

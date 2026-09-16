@@ -5,6 +5,19 @@ import VillaCard from "@/app/components/villa/VillaCard";
 import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getStartingPrice } from "@/lib/price.engine";
+/* 🛡️ PHASE 10G — locale-aware bölüm başlığı + lokasyon/badge çevirisi.
+   `locale` OPSİYONEL, default "tr". TR'de `getTranslationsForParents`
+   daha ilk satırda boş Map döner (DEFAULT_LOCALE guard) → EK DB SORGUSU
+   YOK, çıktı BİREBİR AYNI. Villa ADI çevrilmez (özel isim) — canonical
+   `villa.title` her locale'de aynen gösterilir. `findSimilarCards`
+   sorgusu/repository DEĞİŞTİRİLMEDİ (`select("*")` zaten `location_id`
+   döndürüyor). */
+import {
+  getTranslationsForParents,
+  resolveTranslatedField,
+} from "@/lib/i18n/get-translation.server";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import type { Locale } from "@/lib/i18n/config";
 
 /* ===============================================================
    🛡️ BENZER VİLLALAR — full-width section (kompakt)
@@ -39,6 +52,9 @@ type SimilarRow = {
   id: string;
   slug: string | null;
   title: string | null;
+  /* 🛡️ PHASE 10G — `select("*")` zaten döndürüyor; yalnız tipe eklendi
+     (EN/DE'de villa_location çevirisini eşlemek için). */
+  location_id: string | null;
   badge: string | null;
   currency: string | null;
   bedrooms: number | null;
@@ -52,6 +68,8 @@ type SimilarRow = {
 type Props = {
   villaId: string;
   locationId: string | null;
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
+  locale?: Locale;
 };
 
 async function fetchCardVillas(
@@ -65,7 +83,10 @@ async function fetchCardVillas(
 export default async function SimilarVillasSection({
   villaId,
   locationId,
+  locale,
 }: Props) {
+  const dict = getDictionary(locale);
+  const effectiveLocale: Locale = locale ?? "tr";
   /* Query 1 — aynı bölge (location_id varsa). */
   const primary = locationId
     ? await fetchCardVillas({
@@ -90,6 +111,25 @@ export default async function SimilarVillasSection({
 
   if (rows.length === 0) return null;
 
+  /* 🛡️ PHASE 10G — koleksiyon başına TAM 1 batch çeviri sorgusu
+     (Phase 8D-1 deseni, `.in()`); item başına sorgu YOK (N+1 yok).
+     TR'de her iki çağrı da DB'ye HİÇ gitmez (DEFAULT_LOCALE guard). */
+  const locationIds = Array.from(
+    new Set(
+      rows
+        .map((r) => r.location_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0)
+    )
+  );
+  const [villaTranslations, locationTranslations] = await Promise.all([
+    getTranslationsForParents(
+      "villa",
+      rows.map((r) => r.id),
+      effectiveLocale
+    ),
+    getTranslationsForParents("villa_location", locationIds, effectiveLocale),
+  ]);
+
   const villas = rows.map((v) => {
     let images: string[] = [];
     const raw: VillaImageEmbed[] = Array.isArray(v.villa_images)
@@ -112,12 +152,22 @@ export default async function SimilarVillasSection({
     return {
       id: v.id,
       slug: v.slug ?? "",
+      /* 🛡️ Villa ADI ÇEVRİLMEZ — özel isim, canonical `villa.title`. */
       title: v.title ?? "",
-      location: v.location?.name ?? "",
+      location: v.location_id
+        ? resolveTranslatedField(
+            locationTranslations.get(v.location_id)?.name,
+            v.location?.name ?? ""
+          )
+        : v.location?.name ?? "",
       price: sp?.price,
       currency: sp?.currency || v.currency || "TRY",
       images,
-      badge: v.badge ?? undefined,
+      badge:
+        resolveTranslatedField(
+          villaTranslations.get(v.id)?.badge,
+          v.badge ?? undefined
+        ) ?? undefined,
       bedrooms: v.bedrooms || 1,
       bathrooms: v.bathrooms || 1,
       guests: v.guests || 2,
@@ -128,7 +178,7 @@ export default async function SimilarVillasSection({
     <section className="w-full -mt-10 md:-mt-14">
       <div className="max-w-[1280px] mx-auto px-5 md:px-10 lg:px-16 pt-2 md:pt-4 pb-10 md:pb-14">
         <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] tracking-[-0.02em] mb-6 md:mb-8">
-          Benzer Villalar
+          {dict.villa.similarVillasTitle}
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -146,6 +196,7 @@ export default async function SimilarVillasSection({
               bedrooms={villa.bedrooms}
               bathrooms={villa.bathrooms}
               guests={villa.guests}
+              locale={locale}
             />
           ))}
         </div>

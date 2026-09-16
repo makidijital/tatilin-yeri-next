@@ -505,6 +505,7 @@ export default function Gallery({
           onClose={() => setVideoOpen(false)}
           videos={safeVideos}
           villaTitle={villaTitle}
+          locale={locale}
         />
       )}
     </>

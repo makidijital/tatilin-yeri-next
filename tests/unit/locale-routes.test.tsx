@@ -24,7 +24,7 @@
 =============================================================== */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 /* 🛡️ PHASE 10B — GERÇEK (mock'lanmamış) dictionary. Villa detay artık
    ComingSoon yerine gerçek locale metni render ediyor; assertion'lar
    TR hardcoded string yerine BU'ndan okunan gerçek EN/DE değerleriyle
@@ -60,6 +60,11 @@ const getVillaDiscountsMock = vi.fn();
 const fetchExternalCalendarStringsForVillaMock = vi.fn();
 const getCachedSettingsMock = vi.fn();
 const getCachedVillaReviewStatsMock = vi.fn();
+/* 🛡️ PHASE 10G — EN/DE villa detay artık TR ile AYNI gövdeyi
+   (VillaDetailBody) render ediyor: yorumlar bölümü + "Benzer Villalar"
+   eklendi. İkisi de gerçek DB'ye gitmesin diye mock'lanıyor. */
+const getCachedVillaReviewsMock = vi.fn();
+const findSimilarCardsMock = vi.fn();
 
 vi.mock("@/lib/i18n/public-locale-gate.server", () => ({
   requirePublicLocaleEnabled: () => requirePublicLocaleEnabledMock(),
@@ -180,6 +185,33 @@ vi.mock("@/lib/cache.helpers", () => ({
   getCachedSettings: (...args: unknown[]) => getCachedSettingsMock(...args),
   getCachedVillaReviewStats: (...args: unknown[]) =>
     getCachedVillaReviewStatsMock(...args),
+  getCachedVillaReviews: (...args: unknown[]) =>
+    getCachedVillaReviewsMock(...args),
+}));
+/* 🛡️ PHASE 10G — `SimilarVillasSection` KENDİ verisini çeker (server-only
+   native repo). Bu dosyanın amacı routing/render testi; "benzer villa"
+   seçim mantığı bu fazda DEĞİŞMEDİ — yalnız gerçek DB'ye gidilmesin diye
+   mock'lanıyor. Boş sonuç → component null döner (mevcut davranış). */
+vi.mock("@/lib/db/villa.repository.server", () => ({
+  villaAdminRepository: {
+    findSimilarCards: (...args: unknown[]) => findSimilarCardsMock(...args),
+  },
+}));
+/* 🛡️ PHASE 10G — `SimilarVillasSection` ASYNC bir server component'tir;
+   jsdom/testing-library client render'ında async component suspend eder ve
+   TÜM ağaç boş kalır (Next.js RSC runtime'ında böyle bir sorun YOKTUR).
+   Bu dosyanın amacı sayfa gövdesinin render'ı olduğu için component senkron
+   bir stub ile mock'lanır; GERÇEK component (locale-prefixed href, çevrilmiş
+   başlık/lokasyon, canonical villa adı) kendi testinde doğrulanır:
+   tests/unit/similar-villas-section.test.tsx */
+vi.mock("@/app/components/villa/SimilarVillasSection", () => ({
+  default: (props: { villaId: string; locationId: string | null; locale?: string }) => (
+    <div
+      data-testid="similar-villas-section"
+      data-villa-id={props.villaId}
+      data-locale={props.locale ?? "tr"}
+    />
+  ),
 }));
 
 beforeEach(() => {
@@ -200,6 +232,8 @@ beforeEach(() => {
   fetchExternalCalendarStringsForVillaMock.mockReset();
   getCachedSettingsMock.mockReset();
   getCachedVillaReviewStatsMock.mockReset();
+  getCachedVillaReviewsMock.mockReset();
+  findSimilarCardsMock.mockReset();
   /* Varsayılan: boş koleksiyonlar / nötr ayarlar — TR route'larını (bu
      servisleri hiç çağırmayan) ETKİLEMEZ; yalnız EN/DE villa detay
      testlerinin sayfayı çökertmeden render etmesini sağlar. İlgili
@@ -214,6 +248,8 @@ beforeEach(() => {
   });
   getCachedSettingsMock.mockResolvedValue({});
   getCachedVillaReviewStatsMock.mockResolvedValue({ count: 0, average: 0 });
+  getCachedVillaReviewsMock.mockResolvedValue([]);
+  findSimilarCardsMock.mockResolvedValue({ data: [], error: null });
   getVillaBySlugMock.mockResolvedValue({
     id: "test-villa-id",
     slug: "test-villa",
@@ -255,6 +291,21 @@ beforeEach(() => {
    okuyor; testte sabit bir slug ile Promise geçiriyoruz. Diğer 6 route
    hâlâ hiç prop almıyor (PHASE 4A ile birebir). */
 const VILLA_PAGE_PROPS = { params: Promise.resolve({ slug: "test-villa" }) };
+
+/* 🛡️ PHASE 10G — villa detay gövdesi artık TR ile AYNI: sezon fiyatları,
+   takvim, mesafeler ve özellikler `VillaDetailTabs` içinde TEK AKTİF PANEL
+   olarak render ediliyor (varsayılan sekme "fiyatlar"). Aktif olmayan
+   sekmelerin içeriği DOM'da HİÇ YOKTUR (component'in kendi kontratı:
+   "tıklanan tab'ın content'i görünür, diğerleri DOM'dan kalkar") — bu TR
+   sayfasının BUGÜNKÜ davranışıdır, test için DEĞİŞTİRİLMEDİ. Bu yüzden
+   ilgili assertion'lardan önce sekme GERÇEKTEN tıklanır. */
+function openVillaTab(
+  locale: "en" | "de",
+  tab: "prices" | "availability" | "location" | "features"
+) {
+  const dict = getDictionary(locale);
+  fireEvent.click(screen.getByRole("button", { name: dict.villaTabs[tab] }));
+}
 
 /* [modül yolu, beklenen locale, page prop'ları] — 6 route (villa detay
    AYRI gruba taşındı, bkz. VILLA_DETAIL_GATE_ROUTES). */
@@ -555,6 +606,7 @@ describe.each(VILLA_DETAIL_ROUTES)(
         params: Promise.resolve({ slug: "test-villa" }),
       });
       render(element);
+      openVillaTab(locale, "features");
 
       expect(screen.getByText(`Sea View (${locale})`)).toBeInTheDocument();
       expect(screen.getByText("Havuz")).toBeInTheDocument();
@@ -644,6 +696,7 @@ describe.each(VILLA_DETAIL_ROUTES)(
         params: Promise.resolve({ slug: "test-villa" }),
       });
       render(element);
+      openVillaTab(locale, "location");
 
       const dict = getDictionary(locale);
       expect(
@@ -703,10 +756,14 @@ describe.each(VILLA_DETAIL_ROUTES)(
       });
       render(element);
 
-      expect(screen.getByText("Bilgi yok")).toBeInTheDocument();
-      expect(
-        screen.getByText("Özellik bilgisi bulunmuyor")
-      ).toBeInTheDocument();
+      /* 🛡️ PHASE 10G — boş-durum metinleri ARTIK dictionary'den
+         (locale-aware); TR hardcoded metin DEĞİL. Her biri kendi
+         sekmesi açıldıktan sonra DOM'a gelir. */
+      const dict = getDictionary(locale);
+      openVillaTab(locale, "location");
+      expect(screen.getByText(dict.villa.distancesEmpty)).toBeInTheDocument();
+      openVillaTab(locale, "features");
+      expect(screen.getByText(dict.villa.featuresEmpty)).toBeInTheDocument();
     });
 
     /* ===============================================================
@@ -917,6 +974,7 @@ describe.each(VILLA_DETAIL_ROUTES)(
         params: Promise.resolve({ slug: "test-villa" }),
       });
       render(element);
+      openVillaTab(locale, "availability");
 
       expect(
         screen.getByLabelText(dict.availability.prevMonth)

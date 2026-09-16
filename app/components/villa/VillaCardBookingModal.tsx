@@ -98,6 +98,22 @@ import BookingMinStayWarning from "@/app/components/villa/booking/BookingMinStay
    /api/public/villas/[id]/availability route'u üzerinden GERÇEK villa
    değerini taşır (veri zinciri değişmedi). */
 
+/* 🛡️ PHASE 10G — locale-aware modal metinleri. `locale` OPSİYONEL,
+   default "tr" → TR çıktısı (metin + tarih formatı) BİREBİR AYNI.
+   Booking engine / fetch / fiyat mantığı DEĞİŞMEDİ. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import type { Locale } from "@/lib/i18n/config";
+
+/** Tarih aralığı etiketi için BCP47 tag'i. Bu dosya ZATEN
+ *  `toLocaleDateString("tr-TR", …)` kullanıyordu; yalnız sabit "tr-TR"
+ *  locale'e bağlandı — TR çıktısı DEĞİŞMEZ. */
+const DATE_LOCALE_TAG: Record<Locale, string> = {
+  tr: "tr-TR",
+  en: "en-US",
+  de: "de-DE",
+};
+
 type Props = {
   /* Modal open/close (parent owned). false ise content render
      edilmez → mount maliyeti yok. */
@@ -108,6 +124,8 @@ type Props = {
   villaId: string;
   villaSlug: string;
   villaTitle: string;
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
+  locale?: Locale;
 };
 
 /* API response shape — /api/public/villas/[id]/availability. */
@@ -156,6 +174,7 @@ export default function VillaCardBookingModal({
   villaId,
   villaSlug,
   villaTitle,
+  locale,
 }: Props) {
   /* === Modal mount sonrası TEK API fetch ===
      Response = BookingSidebar'ın aldığı tüm engine input'ları
@@ -299,7 +318,13 @@ export default function VillaCardBookingModal({
   /* API hazır değilken minimal skeleton — backdrop + header + spinner.
      Engine ASLA mount olmaz (boş prices ile 0-fiyat flicker'ı önlenir). */
   if (!apiData) {
-    return <ModalSkeleton villaTitle={villaTitle} onClose={onClose} />;
+    return (
+      <ModalSkeleton
+        villaTitle={villaTitle}
+        onClose={onClose}
+        locale={locale}
+      />
+    );
   }
 
   return (
@@ -309,6 +334,7 @@ export default function VillaCardBookingModal({
       villaSlug={villaSlug}
       villaTitle={villaTitle}
       apiData={apiData}
+      locale={locale}
     />
   );
 }
@@ -320,15 +346,18 @@ export default function VillaCardBookingModal({
 function ModalSkeleton({
   villaTitle,
   onClose,
+  locale,
 }: {
   villaTitle: string;
   onClose: () => void;
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Müsaitlik ve rezervasyon yükleniyor"
+      aria-label={dict.booking.modalLoadingAriaLabel}
       className="fade-in fixed inset-0 z-[1000] flex items-end sm:items-center justify-center"
     >
       <div
@@ -351,7 +380,7 @@ function ModalSkeleton({
         <div className="flex items-start justify-between gap-3 pb-4 border-b border-[var(--color-stone-100)]">
           <div className="min-w-0 flex-1">
             <p className="text-[10.5px] tracking-[0.16em] uppercase font-semibold text-[var(--color-stone-400)]">
-              Müsaitlik / Rezervasyon
+              {dict.booking.modalEyebrow}
             </p>
             <h2 className="font-display text-xl text-[var(--color-stone-900)] tracking-[-0.02em] mt-1 line-clamp-2">
               {villaTitle}
@@ -360,7 +389,7 @@ function ModalSkeleton({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Kapat"
+            aria-label={dict.common.close}
             className="w-9 h-9 shrink-0 rounded-full border border-[var(--color-stone-200)] flex items-center justify-center text-[var(--color-stone-600)] hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)] transition motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
           >
             <X size={16} />
@@ -373,7 +402,7 @@ function ModalSkeleton({
             aria-hidden
           />
           <p className="text-[12px] tracking-[0.04em] text-[var(--color-stone-500)]">
-            Müsaitlik yükleniyor…
+            {dict.booking.modalLoading}
           </p>
         </div>
       </div>
@@ -391,6 +420,7 @@ type ContentProps = {
   villaSlug: string;
   villaTitle: string;
   apiData: AvailabilityApiResponse;
+  locale?: Locale;
 };
 
 function ModalContent({
@@ -399,7 +429,10 @@ function ModalContent({
   villaSlug,
   villaTitle,
   apiData,
+  locale,
 }: ContentProps) {
+  const dict = getDictionary(locale);
+  const dateLocaleTag = DATE_LOCALE_TAG[locale ?? "tr"];
   /* === DOMAIN — AYNI engine, TEK source-of-truth ===
      Input set BookingSidebar ile birebir aynı kaynaktan (API). */
   const engine = useBookingEngine({
@@ -459,7 +492,7 @@ function ModalContent({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Müsaitlik ve rezervasyon"
+      aria-label={dict.booking.modalAriaLabel}
       className="fade-in fixed inset-0 z-[1000] flex items-end sm:items-center justify-center"
     >
       {/* Backdrop */}
@@ -488,7 +521,7 @@ function ModalContent({
         <div className="flex items-start justify-between gap-3 pb-4 border-b border-[var(--color-stone-100)]">
           <div className="min-w-0 flex-1">
             <p className="text-[10.5px] tracking-[0.16em] uppercase font-semibold text-[var(--color-stone-400)]">
-              Müsaitlik / Rezervasyon
+              {dict.booking.modalEyebrow}
             </p>
             <h2 className="font-display text-xl text-[var(--color-stone-900)] tracking-[-0.02em] mt-1 line-clamp-2">
               {villaTitle}
@@ -498,7 +531,7 @@ function ModalContent({
                 {startingPrice}
               </span>
               <span className="text-[var(--color-stone-500)] text-sm">
-                / gece
+                {dict.booking.perNightSuffix}
               </span>
               {/* Premium chip kaldırıldı (UI polish — user request).
                   Spacing: gap-1.5 + mt-2 layout korunur. */}
@@ -507,7 +540,7 @@ function ModalContent({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Kapat"
+            aria-label={dict.common.close}
             className="w-9 h-9 shrink-0 rounded-full border border-[var(--color-stone-200)] flex items-center justify-center text-[var(--color-stone-600)] hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)] transition motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
           >
             <X size={16} />
@@ -526,18 +559,18 @@ function ModalContent({
           <Calendar size={16} className="text-[var(--color-champagne-500)]" />
           <div className="flex-1 min-w-0">
             <div className="text-[10.5px] tracking-[0.16em] uppercase font-semibold text-[var(--color-stone-400)]">
-              Tarih
+              {dict.booking.dateLabel}
             </div>
             <div className="text-sm font-medium text-[var(--color-stone-900)] truncate">
               {startDate && endDate
-                ? `${startDate.toLocaleDateString("tr-TR", {
+                ? `${startDate.toLocaleDateString(dateLocaleTag, {
                   day: "numeric",
                   month: "short",
-                })} – ${endDate.toLocaleDateString("tr-TR", {
+                })} – ${endDate.toLocaleDateString(dateLocaleTag, {
                   day: "numeric",
                   month: "short",
                 })}`
-                : "Tarih seç"}
+                : dict.booking.selectDatePlaceholder}
             </div>
           </div>
         </div>
@@ -571,10 +604,13 @@ function ModalContent({
             <Users size={16} className="text-[var(--color-champagne-500)]" />
             <div className="flex-1 min-w-0">
               <div className="text-[10.5px] tracking-[0.16em] uppercase font-semibold text-[var(--color-stone-400)]">
-                Misafir
+                {dict.booking.guestsLabel}
               </div>
               <div className="text-sm font-medium text-[var(--color-stone-900)]">
-                {adults} yetişkin · {children} çocuk
+                {formatDictionaryString(dict.booking.guestsSummary, {
+                  adults,
+                  children,
+                })}
               </div>
             </div>
             <ChevronDown
@@ -587,13 +623,13 @@ function ModalContent({
           {openGuests && (
             <div className="absolute z-50 mt-2 w-full bg-white border border-[var(--color-stone-100)] rounded-2xl shadow-[0_24px_48px_-16px_rgb(27_26_23/0.18)] p-5 space-y-4">
               <Counter
-                label="Yetişkin"
+                label={dict.booking.adultsLabel}
                 value={adults}
                 min={1}
                 onChange={setAdults}
               />
               <Counter
-                label="Çocuk"
+                label={dict.booking.childrenLabel}
                 value={children}
                 min={0}
                 onChange={setChildren}
@@ -602,7 +638,7 @@ function ModalContent({
                 onClick={() => setOpenGuests(false)}
                 className="btn-dark w-full !py-2.5 mt-2"
               >
-                Tamam
+                {dict.booking.confirm}
               </button>
             </div>
           )}
@@ -623,8 +659,7 @@ function ModalContent({
             min_stay esnetildi. Yeni kart/modal yok; sade inline not. */}
         {isGapOverride && (
           <p className="text-[12px] text-emerald-700 bg-emerald-50/70 border border-emerald-100 rounded-xl px-3 py-2">
-            Kısa süreli boşluk fırsatı nedeniyle bu tarih aralığı rezerve
-            edilebilir.
+            {dict.booking.gapOverrideNotice}
           </p>
         )}
 
@@ -655,11 +690,11 @@ function ModalContent({
             !minimumStayValid ? "!opacity-50 !cursor-not-allowed" : ""
           }`}
         >
-          Rezervasyon Yap
+          {dict.booking.bookNow}
         </button>
 
         <p className="text-[11px] text-[var(--color-stone-400)] text-center leading-relaxed">
-          Ücret seçilen tarihlere göre otomatik hesaplanır
+          {dict.booking.feeAutoCalculated}
         </p>
       </div>
     </div>

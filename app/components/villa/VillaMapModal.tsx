@@ -29,12 +29,21 @@
 import { useEffect, useState } from "react";
 import { X, Map as MapIcon, Navigation } from "lucide-react";
 
+/* 🛡️ PHASE 10G — locale-aware UI metinleri + Google Maps embed `hl=`
+   parametresi. `locale` OPSİYONEL, default "tr" → TR çıktısı BİREBİR
+   AYNI. Harita verisi/koşulları (map_type/coords/embed) DEĞİŞMEDİ. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import type { Locale } from "@/lib/i18n/config";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+
 type Props = {
   mapType?: string;
   latitude?: number;
   longitude?: number;
   mapEmbed?: string;
   villaTitle?: string;
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
+  locale?: Locale;
 };
 
 export default function VillaMapModal({
@@ -43,7 +52,9 @@ export default function VillaMapModal({
   longitude,
   mapEmbed,
   villaTitle,
+  locale,
 }: Props) {
+  const dict = getDictionary(locale);
   const [isOpen, setIsOpen] = useState(false);
 
   /* === ESC tuşu → close (VillaVideoModal ile aynı desen) === */
@@ -91,7 +102,7 @@ export default function VillaMapModal({
           "
         >
           <MapIcon size={16} strokeWidth={1.8} />
-          Harita
+          {dict.map.openMap}
         </button>
 
         {hasDirections ? (
@@ -111,14 +122,14 @@ export default function VillaMapModal({
             "
           >
             <Navigation size={16} strokeWidth={1.8} />
-            Yol Tarifi
+            {dict.map.directions}
           </a>
         ) : (
           <button
             type="button"
             disabled
             aria-disabled="true"
-            title="Yol tarifi için konum bilgisi yok"
+            title={dict.map.directionsUnavailableTitle}
             className="
               inline-flex items-center justify-center gap-2
               rounded-xl border-2 border-[var(--color-stone-200)] bg-white px-4 py-3.5
@@ -127,7 +138,7 @@ export default function VillaMapModal({
             "
           >
             <Navigation size={16} strokeWidth={1.8} />
-            Yol Tarifi
+            {dict.map.directions}
           </button>
         )}
       </div>
@@ -137,7 +148,11 @@ export default function VillaMapModal({
           role="dialog"
           aria-modal="true"
           aria-label={
-            villaTitle ? `${villaTitle} — Harita` : "Villa haritası"
+            villaTitle
+              ? formatDictionaryString(dict.map.modalAriaLabel, {
+                  title: villaTitle,
+                })
+              : dict.map.modalAriaLabelFallback
           }
           className="fade-in fixed inset-0 z-[1100] flex items-center justify-center p-4"
         >
@@ -152,7 +167,7 @@ export default function VillaMapModal({
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              aria-label="Haritayı kapat"
+              aria-label={dict.map.closeAriaLabel}
               className="
                 absolute -top-12 right-0 sm:-top-2 sm:-right-12
                 w-10 h-10 rounded-full
@@ -175,13 +190,13 @@ export default function VillaMapModal({
                   <MapIcon size={15} strokeWidth={1.8} />
                 </span>
                 <h2 className="font-display text-[17px] text-[var(--color-stone-900)] tracking-[-0.01em]">
-                  Nerede?
+                  {dict.map.whereTitle}
                 </h2>
               </div>
 
               {hasCoords && (
                 <iframe
-                  src={`https://www.google.com/maps?q=${latitude},${longitude}&hl=tr&z=14&output=embed`}
+                  src={`https://www.google.com/maps?q=${latitude},${longitude}&hl=${dict.map.embedLanguage}&z=14&output=embed`}
                   className="w-full h-[60vh] max-h-[480px] border-0"
                   loading="lazy"
                 />
@@ -194,14 +209,14 @@ export default function VillaMapModal({
                     dangerouslySetInnerHTML={{ __html: mapEmbed as string }}
                   />
                   <div className="p-4 md:px-5 border-t border-[var(--color-stone-100)] text-sm text-[var(--color-stone-500)]">
-                    Harita Google Maps üzerinden sağlanmaktadır
+                    {dict.map.poweredByGoogle}
                   </div>
                 </>
               )}
 
               {!hasCoords && !hasEmbed && (
                 <div className="h-[240px] flex items-center justify-center text-[var(--color-stone-400)] italic">
-                  Konum bilgisi bulunamadı
+                  {dict.map.noLocation}
                 </div>
               )}
             </div>

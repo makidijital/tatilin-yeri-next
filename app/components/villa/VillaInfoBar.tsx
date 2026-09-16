@@ -59,6 +59,12 @@
 
 import { MapPin, Users, BedDouble, Bath } from "lucide-react";
 
+/* 🛡️ PHASE 10G — locale-aware bilgi etiketleri. `locale` OPSİYONEL,
+   default "tr" → TR çıktısı BİREBİR AYNI. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import type { Locale } from "@/lib/i18n/config";
+
 type Props = {
   villaTitle: string;
   location: string;
@@ -68,6 +74,8 @@ type Props = {
   /* T.C. Kültür ve Turizm Bakanlığı belge no — opsiyonel ham text.
      null/boş → belge item'ı render edilmez. */
   tourismDocumentNumber?: string | null;
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
+  locale?: Locale;
 };
 
 export default function VillaInfoBar({
@@ -77,7 +85,9 @@ export default function VillaInfoBar({
   bedrooms,
   bathrooms,
   tourismDocumentNumber,
+  locale,
 }: Props) {
+  const dict = getDictionary(locale);
   const certificateNo = tourismDocumentNumber?.trim() || "";
   const hasCertificate = certificateNo.length > 0;
   const hasAnyInfoItem =
@@ -179,7 +189,7 @@ export default function VillaInfoBar({
                     icon={<Users size={15} strokeWidth={1.8} />}
                     accentColor="#0973BA"
                     value={guests}
-                    label="Kişi"
+                    label={dict.card.person}
                   />
                 )}
                 {bedrooms > 0 && (
@@ -187,7 +197,7 @@ export default function VillaInfoBar({
                     icon={<BedDouble size={15} strokeWidth={1.8} />}
                     accentColor="#ED7926"
                     value={bedrooms}
-                    label="Yatak Odası"
+                    label={dict.card.bedroom}
                   />
                 )}
                 {bathrooms > 0 && (
@@ -195,10 +205,18 @@ export default function VillaInfoBar({
                     icon={<Bath size={15} strokeWidth={1.8} />}
                     accentColor="#0973BA"
                     value={bathrooms}
-                    label="Banyo"
+                    label={dict.card.bathroom}
                   />
                 )}
-                {hasCertificate && <CertificateItem documentNumber={certificateNo} />}
+                {hasCertificate && (
+                  <CertificateItem
+                    label={dict.villa.tourismCertificate}
+                    documentNumberLabel={formatDictionaryString(
+                      dict.villa.documentNumber,
+                      { n: certificateNo }
+                    )}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -269,7 +287,13 @@ function InfoItem({
    getirildi — yeni ikon paketi/dependency YOK. Belge no gerçek
    veriden (tourismDocumentNumber) gelir; koşul AYNEN (boş değilse).
 ─────────────────────────────────────────────────────────────── */
-function CertificateItem({ documentNumber }: { documentNumber: string }) {
+function CertificateItem({
+  label,
+  documentNumberLabel,
+}: {
+  label: string;
+  documentNumberLabel: string;
+}) {
   return (
     <div
       className="
@@ -304,10 +328,10 @@ function CertificateItem({ documentNumber }: { documentNumber: string }) {
         />
       </span>
       <p className="mt-2.5 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[#0973BA] leading-snug">
-        Turizm Belgesi
+        {label}
       </p>
       <p className="mt-0.5 w-full text-[10.5px] md:text-[11px] font-medium text-[var(--color-stone-700)] leading-snug truncate">
-        Belge No: {documentNumber}
+        {documentNumberLabel}
       </p>
     </div>
   );

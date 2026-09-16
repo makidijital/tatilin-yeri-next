@@ -1,5 +1,8 @@
 import { Check } from "lucide-react";
 
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import type { Locale } from "@/lib/i18n/config";
+
 /* ===============================================================
    🛡️ VillaPriceIncludesAndRulesSection — PHASE 8D-2
    ===============================================================
@@ -29,10 +32,14 @@ export type TranslatedRule = {
 export default function VillaPriceIncludesAndRulesSection({
   priceIncludes,
   rules,
+  locale,
 }: {
   priceIncludes: TranslatedPriceInclude[];
   rules: TranslatedRule[];
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
   if (priceIncludes.length === 0 && rules.length === 0) {
     return null;
   }
@@ -55,7 +62,7 @@ export default function VillaPriceIncludesAndRulesSection({
           "
         >
           <h2 className="font-display text-2xl md:text-3xl text-emerald-900 tracking-[-0.015em]">
-            Konaklama ücretine dahil
+            {dict.villa.priceIncludesTitle}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
@@ -90,7 +97,7 @@ export default function VillaPriceIncludesAndRulesSection({
           "
         >
           <h2 className="font-display text-2xl md:text-3xl text-rose-900 tracking-[-0.015em]">
-            Konaklama kuralları
+            {dict.villa.rulesTitle}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">

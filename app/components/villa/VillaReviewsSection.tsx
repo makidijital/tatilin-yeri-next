@@ -50,7 +50,14 @@ import type {
   VillaReviewPublic,
   VillaReviewStats,
 } from "@/app/services/villa-review.service";
-import { formatDateTr } from "@/lib/date-format";
+/* 🛡️ PHASE 10G — `formatDateForLocale(x, "tr")` çıktısı `formatDateTr(x)`
+   ile BİREBİR AYNIDIR (lib/date-format.ts — aynı toIstanbulDate + aynı
+   MONTHS_TR_SHORT). `locale` OPSİYONEL, default "tr" → TR çıktısı
+   DEĞİŞMEZ. Yorum verisi/onay akışı/server action DOKUNULMADI. */
+import { formatDateForLocale } from "@/lib/date-format";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import type { Locale } from "@/lib/i18n/config";
 
 const MIN_NAME_LEN = 2;
 const MIN_COMMENT_LEN = 10;
@@ -60,11 +67,16 @@ export default function VillaReviewsSection({
   villaId,
   reviews,
   stats,
+  locale,
 }: {
   villaId: string;
   reviews: VillaReviewPublic[];
   stats: VillaReviewStats;
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
+  const effectiveLocale: Locale = locale ?? "tr";
   /* Featured review header'ın altında yer alır; diğerleri liste içinde. */
   const { featured, rest } = useMemo(() => {
     const featuredIdx = reviews.findIndex((r) => r.is_featured);
@@ -84,10 +96,10 @@ export default function VillaReviewsSection({
           ════════════════════════════════════════════════════ */}
       <header>
         <p className="eyebrow mb-3 flex items-center gap-2">
-          <Star size={11} /> Yorumlar
+          <Star size={11} /> {dict.reviews.eyebrow}
         </p>
         <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
-          Misafir Yorumları
+          {dict.reviews.title}
         </h2>
 
         {stats.count > 0 ? (
@@ -98,16 +110,20 @@ export default function VillaReviewsSection({
               >
                 {stats.average.toFixed(1)}
               </span>
-              <span className="text-[var(--color-stone-500)] text-sm">/ 5</span>
+              <span className="text-[var(--color-stone-500)] text-sm">
+                {dict.reviews.outOfFive}
+              </span>
             </div>
-            <StarRow value={stats.average} size={16} />
+            <StarRow value={stats.average} size={16} locale={locale} />
             <span className="text-[13.5px] text-[var(--color-stone-500)] tabular-nums">
-              {stats.count} misafir yorumu
+              {formatDictionaryString(dict.reviews.countLabel, {
+                n: stats.count,
+              })}
             </span>
           </div>
         ) : (
           <p className="text-[var(--color-stone-500)] mt-4 text-sm">
-            Henüz onaylanmış yorum yok. İlk yorumu siz bırakabilirsiniz.
+            {dict.reviews.empty}
           </p>
         )}
       </header>
@@ -131,10 +147,10 @@ export default function VillaReviewsSection({
               text-[10.5px] tracking-[0.18em] uppercase font-medium
               text-[var(--color-champagne-700)]
             "
-            aria-label="Öne çıkan yorum"
+            aria-label={dict.reviews.featuredAriaLabel}
           >
             <Sparkles size={11} />
-            Öne çıkan
+            {dict.reviews.featuredBadge}
           </span>
           <Quote
             size={28}
@@ -159,12 +175,12 @@ export default function VillaReviewsSection({
                 </p>
                 {featured.created_at && (
                   <p className="text-[11.5px] text-[var(--color-stone-400)] mt-0.5 tabular-nums">
-                    {formatDateTr(featured.created_at)}
+                    {formatDateForLocale(featured.created_at, effectiveLocale)}
                   </p>
                 )}
               </div>
             </div>
-            <StarRow value={featured.rating} size={14} />
+            <StarRow value={featured.rating} size={14} locale={locale} />
           </div>
         </article>
       )}
@@ -175,7 +191,7 @@ export default function VillaReviewsSection({
       {rest.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {rest.map((r) => (
-            <ReviewCard key={r.id} review={r} />
+            <ReviewCard key={r.id} review={r} locale={locale} />
           ))}
         </div>
       )}
@@ -187,7 +203,7 @@ export default function VillaReviewsSection({
           Tıklayınca form expand olur, tekrar tıklayınca toggle.
           Submit logic / form state / API / validation YALNIZ
           ReviewForm içinde — accordion sadece visibility layer'ı. */}
-      <ReviewFormAccordion villaId={villaId} />
+      <ReviewFormAccordion villaId={villaId} locale={locale} />
     </section>
   );
 }
@@ -204,7 +220,14 @@ export default function VillaReviewsSection({
    ait — accordion remount'ta state sıfırlanır (ekstra kontrol
    gerekmez; mevcut UX kabulü).
    =============================================================== */
-function ReviewFormAccordion({ villaId }: { villaId: string }) {
+function ReviewFormAccordion({
+  villaId,
+  locale,
+}: {
+  villaId: string;
+  locale?: Locale;
+}) {
+  const dict = getDictionary(locale);
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -231,7 +254,7 @@ function ReviewFormAccordion({ villaId }: { villaId: string }) {
           className="text-[var(--color-champagne-600)]"
           aria-hidden
         />
-        {isOpen ? "Formu Kapat" : "Yorum Yap"}
+        {isOpen ? dict.reviews.formClose : dict.reviews.formOpen}
         <ChevronDown
           size={14}
           aria-hidden
@@ -241,7 +264,7 @@ function ReviewFormAccordion({ villaId }: { villaId: string }) {
           }
         />
       </button>
-      {isOpen && <ReviewForm villaId={villaId} />}
+      {isOpen && <ReviewForm villaId={villaId} locale={locale} />}
     </div>
   );
 }
@@ -281,7 +304,14 @@ function Avatar({ name }: { name: string }) {
 /* ===============================================================
    REVIEW CARD — list item
    =============================================================== */
-function ReviewCard({ review }: { review: VillaReviewPublic }) {
+function ReviewCard({
+  review,
+  locale,
+}: {
+  review: VillaReviewPublic;
+  locale?: Locale;
+}) {
+  const effectiveLocale: Locale = locale ?? "tr";
   return (
     <article
       className="
@@ -302,12 +332,12 @@ function ReviewCard({ review }: { review: VillaReviewPublic }) {
             </p>
             {review.created_at && (
               <p className="text-[11.5px] text-[var(--color-stone-400)] mt-0.5 tabular-nums">
-                {formatDateTr(review.created_at)}
+                {formatDateForLocale(review.created_at, effectiveLocale)}
               </p>
             )}
           </div>
         </div>
-        <StarRow value={review.rating} size={13} />
+        <StarRow value={review.rating} size={13} locale={locale} />
       </div>
 
       <p
@@ -325,12 +355,23 @@ function ReviewCard({ review }: { review: VillaReviewPublic }) {
 /* ===============================================================
    STAR ROW — display
    =============================================================== */
-function StarRow({ value, size = 13 }: { value: number; size?: number }) {
+function StarRow({
+  value,
+  size = 13,
+  locale,
+}: {
+  value: number;
+  size?: number;
+  locale?: Locale;
+}) {
+  const dict = getDictionary(locale);
   const rounded = Math.round(value);
   return (
     <span
       className="inline-flex items-center gap-0.5 text-amber-500"
-      aria-label={`${value.toFixed(1)} / 5`}
+      aria-label={formatDictionaryString(dict.reviews.ratingAriaLabel, {
+        value: value.toFixed(1),
+      })}
     >
       {[1, 2, 3, 4, 5].map((i) => (
         <Star
@@ -356,18 +397,21 @@ function StarPicker({
   value,
   onChange,
   disabled,
+  locale,
 }: {
   value: number;
   onChange: (n: number) => void;
   disabled?: boolean;
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
   const [hover, setHover] = useState<number | null>(null);
   const displayed = hover ?? value;
 
   return (
     <div
       role="radiogroup"
-      aria-label="Puanınız"
+      aria-label={dict.reviews.ratingPickerAriaLabel}
       className="inline-flex items-center gap-1"
       onMouseLeave={() => setHover(null)}
     >
@@ -388,7 +432,9 @@ function StarPicker({
               "disabled:opacity-50 disabled:cursor-not-allowed " +
               (filled ? "text-amber-500" : "text-[var(--color-stone-300)]")
             }
-            aria-label={`${i} yıldız`}
+            aria-label={formatDictionaryString(dict.reviews.starAriaLabel, {
+              n: i,
+            })}
           >
             <Star size={22} fill={filled ? "currentColor" : "none"} strokeWidth={1.5} />
           </button>
@@ -410,7 +456,14 @@ type FormStatus =
   | { kind: "success" }
   | { kind: "error"; message: string };
 
-function ReviewForm({ villaId }: { villaId: string }) {
+function ReviewForm({
+  villaId,
+  locale,
+}: {
+  villaId: string;
+  locale?: Locale;
+}) {
+  const dict = getDictionary(locale);
   const [name, setName] = useState("");
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
@@ -472,10 +525,10 @@ function ReviewForm({ villaId }: { villaId: string }) {
         </span>
         <div>
           <h3 className="font-display text-[18px] md:text-[20px] text-[var(--color-stone-900)] tracking-[-0.015em]">
-            Yorumunuzu paylaşın
+            {dict.reviews.formTitle}
           </h3>
           <p className="text-[12.5px] text-[var(--color-stone-500)] mt-1">
-            Yorumunuz admin onayı sonrası bu sayfada yayınlanır.
+            {dict.reviews.formSubtitle}
           </p>
         </div>
       </div>
@@ -487,7 +540,7 @@ function ReviewForm({ villaId }: { villaId: string }) {
             htmlFor="review-name"
             className="block text-[12px] tracking-[0.04em] uppercase font-medium text-[var(--color-stone-500)] mb-1.5"
           >
-            Adınız
+            {dict.reviews.nameLabel}
           </label>
           <input
             id="review-name"
@@ -496,7 +549,7 @@ function ReviewForm({ villaId }: { villaId: string }) {
             onChange={(e) => setName(e.target.value)}
             disabled={isLoading}
             maxLength={80}
-            placeholder="Örn. İlhan D."
+            placeholder={dict.reviews.namePlaceholder}
             className="
               w-full
               rounded-xl border border-[var(--color-stone-200)]
@@ -514,12 +567,13 @@ function ReviewForm({ villaId }: { villaId: string }) {
         {/* RATING */}
         <div>
           <p className="block text-[12px] tracking-[0.04em] uppercase font-medium text-[var(--color-stone-500)] mb-1.5">
-            Puanınız
+            {dict.reviews.ratingLabel}
           </p>
           <StarPicker
             value={rating}
             onChange={setRating}
             disabled={isLoading}
+            locale={locale}
           />
         </div>
 
@@ -529,7 +583,7 @@ function ReviewForm({ villaId }: { villaId: string }) {
             htmlFor="review-comment"
             className="block text-[12px] tracking-[0.04em] uppercase font-medium text-[var(--color-stone-500)] mb-1.5"
           >
-            Yorumunuz
+            {dict.reviews.commentLabel}
           </label>
           <textarea
             id="review-comment"
@@ -538,7 +592,7 @@ function ReviewForm({ villaId }: { villaId: string }) {
             disabled={isLoading}
             rows={5}
             maxLength={MAX_COMMENT_LEN}
-            placeholder="Konaklama deneyiminiz nasıldı?"
+            placeholder={dict.reviews.commentPlaceholder}
             className="
               w-full
               rounded-xl border border-[var(--color-stone-200)]
@@ -554,7 +608,11 @@ function ReviewForm({ villaId }: { villaId: string }) {
             "
           />
           <div className="flex justify-between items-center mt-1.5 text-[11px] text-[var(--color-stone-400)] tabular-nums">
-            <span>En az 10 karakter</span>
+            <span>
+              {formatDictionaryString(dict.reviews.minChars, {
+                n: MIN_COMMENT_LEN,
+              })}
+            </span>
             <span>
               {trimmedComment.length} / {MAX_COMMENT_LEN}
             </span>
@@ -573,7 +631,7 @@ function ReviewForm({ villaId }: { villaId: string }) {
           >
             <ShieldCheck size={15} aria-hidden />
             <span>
-              Yorumunuz inceleme sonrası yayınlanacaktır. Teşekkürler.
+              {dict.reviews.successMessage}
             </span>
           </div>
         )}
@@ -596,7 +654,7 @@ function ReviewForm({ villaId }: { villaId: string }) {
             disabled={!isReady}
             className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? "Gönderiliyor…" : "Yorumumu gönder"}
+            {isLoading ? dict.reviews.submitting : dict.reviews.submit}
           </button>
         </div>
       </form>

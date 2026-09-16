@@ -45,11 +45,18 @@ import {
   type VillaYouTubeVideo,
 } from "@/lib/youtube.helper";
 
+/* 🛡️ PHASE 10G — locale-aware erişilebilirlik metinleri. `locale`
+   OPSİYONEL, default "tr" → TR çıktısı BİREBİR AYNI. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import type { Locale } from "@/lib/i18n/config";
+
 type Props = {
   isOpen: boolean;
   onClose: () => void;
   videos: VillaYouTubeVideo[];
   villaTitle?: string;
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
+  locale?: Locale;
 };
 
 export default function VillaVideoModal({
@@ -57,7 +64,9 @@ export default function VillaVideoModal({
   onClose,
   videos,
   villaTitle,
+  locale,
 }: Props) {
+  const dict = getDictionary(locale);
   /* Aktif sekme — hangi videonun gösterildiği (multi-video).
      Her modal açılışında 0'a reset (state-local useState mount). */
   const [activeIndex, setActiveIndex] = useState(0);
@@ -123,7 +132,7 @@ export default function VillaVideoModal({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Videoyu kapat"
+          aria-label={dict.gallery.closeVideoAriaLabel}
           className="
             absolute -top-12 right-0 sm:-top-2 sm:-right-12
             w-10 h-10 rounded-full
@@ -168,7 +177,7 @@ export default function VillaVideoModal({
         {videos.length > 1 && (
           <div
             role="tablist"
-            aria-label="Diğer videolar"
+            aria-label={dict.gallery.otherVideosAriaLabel}
             className="mt-4 flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"
           >
             {videos.map((v, i) => {

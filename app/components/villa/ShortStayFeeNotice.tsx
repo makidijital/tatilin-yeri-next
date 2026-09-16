@@ -5,6 +5,11 @@ import { AlertTriangle, ChevronDown } from "lucide-react";
 
 import { convertPrice, formatCurrency } from "@/lib/currency";
 import { useCurrency } from "@/app/context/CurrencyContext";
+/* 🛡️ PHASE 10G — locale-aware uyarı metni. `locale` OPSİYONEL, default
+   "tr" → TR çıktısı BİREBİR AYNI. Ücret/kural hesabı DEĞİŞMEDİ. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import type { Locale } from "@/lib/i18n/config";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 
 /* ===============================================================
    🛡️ ShortStayFeeNotice — kısa süreli konaklama ücreti uyarı kartı
@@ -67,6 +72,7 @@ export default function ShortStayFeeNotice({
   cleaningFee,
   cleaningCurrency,
   cleaningLimit,
+  locale,
 }: {
   /** Villa-level temizlik/kısa-konaklama ücreti. <= 0 → render yok. */
   cleaningFee?: number | null;
@@ -74,7 +80,10 @@ export default function ShortStayFeeNotice({
   cleaningCurrency?: string | null;
   /** Bu gece sayısının ALTI kısa süreli sayılır. <= 0 → render yok. */
   cleaningLimit?: number | null;
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
   const { currency, rates } = useCurrency();
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -140,7 +149,9 @@ export default function ShortStayFeeNotice({
         }}
         aria-expanded={open}
         aria-controls={panelId}
-        aria-label={`Kısa süreli konaklama ücreti detayı — ${cleaningLimit} gece altı konaklamalarda uygulanır`}
+        aria-label={formatDictionaryString(dict.shortStay.ariaLabel, {
+          n: cleaningLimit,
+        })}
         className="
           ssfn-pulse
           group/notice relative w-full text-left overflow-hidden
@@ -170,12 +181,12 @@ export default function ShortStayFeeNotice({
 
           <div className="min-w-0 flex-1">
             <p className="text-[13.5px] md:text-[14.5px] leading-relaxed font-medium text-red-900">
-              Tüm villalarımızda geçerli olmak üzere {cleaningLimit} gece
-              altı kiralamalarda ekstra kısa süreli konaklama ücreti
-              bulunmaktadır.
+              {formatDictionaryString(dict.shortStay.body, {
+                n: cleaningLimit,
+              })}
             </p>
             <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-red-500/80">
-              Ücreti görmek için üzerine gelin / dokunun
+              {dict.shortStay.hint}
             </span>
           </div>
 

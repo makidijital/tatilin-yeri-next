@@ -2,6 +2,10 @@
 
 import { Heart } from "lucide-react";
 import { useFavorites } from "@/hooks/use-favorites";
+/* 🛡️ PHASE 10G — locale-aware etiket. `locale` OPSİYONEL, default "tr"
+   → TR çıktısı BİREBİR AYNI. localStorage/favorites mantığı DEĞİŞMEDİ. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import type { Locale } from "@/lib/i18n/config";
 
 /* ===============================================================
    🛡️ FAZ 36 — FAVORITE BUTTON (reusable)
@@ -51,17 +55,21 @@ export default function FavoriteButton({
      Card variant'ta override için (örn. detail'de küçük secondary
      yerine card-style göstermek istenirse): `alwaysVisible`. */
   alwaysVisible = false,
+  locale,
 }: {
   villaId: string;
   variant?: Variant;
   alwaysVisible?: boolean;
+  /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
   const { isFavorite, toggleFavorite, isHydrated } = useFavorites();
 
   /* Aktif state'i yalnız hidrasyondan sonra etkin tut.
      Aksi takdirde SSR vs client mismatch. */
   const active = isHydrated && isFavorite(villaId);
-  const label = active ? "Favorilerden kaldır" : "Favorilere ekle";
+  const label = active ? dict.favorites.remove : dict.favorites.add;
 
   const handleClick = (e: React.MouseEvent) => {
     /* VillaCard sarmalı `<Link>` içine konumlandığında parent
@@ -103,7 +111,7 @@ export default function FavoriteButton({
           strokeWidth={1.75}
           aria-hidden
         />
-        {active ? "Favorilerimde" : "Favorilere Kaydet"}
+        {active ? dict.favorites.saved : dict.favorites.save}
       </button>
     );
   }
