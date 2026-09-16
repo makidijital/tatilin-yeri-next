@@ -60,6 +60,38 @@ export function resolveLocale(explicitLocale?: string | null): Locale {
 }
 
 /* ===============================================================
+   🛡️ PHASE 9A — PATHNAME'DEN LOCALE TESPİTİ (yalnız /en, /de prefix'i)
+   ===============================================================
+   AMAÇ: Header.tsx ("use client", zaten `usePathname()` kullanıyor —
+   Phase 9A audit'inde doğrulandı) kendi locale'ini middleware/headers()
+   OLMADAN, saf/senkron şekilde tespit edebilsin. Yalnız TAM segment
+   eşleşmesi kabul edilir (`/en/...` veya tam `/en`) — `/energy` gibi
+   path'ler YANLIŞLIKLA eşleşmez (lib/i18n/seo-alternates.ts'teki
+   `stripLocalePrefix`'in AYNI segment-sınırı ilkesi; o fonksiyon
+   private/farklı bir iş yaptığı için buraya AYRI, minimal bir kopya
+   olarak yazıldı — import edilip paylaşılmadı, ÇÜNKÜ o dosya path
+   REBUILD ediyor, bu fonksiyon yalnız TESPİT ediyor).
+
+   `/tr` prefix'i bu projede HİÇBİR ZAMAN üretilmez (Phase 4A kararı) —
+   yine de savunmacı olarak `firstSegment === "tr"` özel durumu
+   DEFAULT_LOCALE'e düşürülür (üstteki `toLocale` ile AYNI "asla throw
+   etme, güvenli fallback" convention'ı).
+
+   Bu fonksiyon React'e/Next'e bağımlı DEĞİL (saf string işlemi) —
+   yalnız `usePathname()`'in DÖNDÜRDÜĞÜ değer buraya geçirilir; hook'un
+   kendisi burada ÇAĞRILMAZ (server-safe, client-safe, test-safe). */
+export function localeFromPathname(
+  pathname: string | null | undefined
+): Locale {
+  if (!pathname) return DEFAULT_LOCALE;
+  const firstSegment = pathname.split("/")[1] || "";
+  if (firstSegment === "en" || firstSegment === "de") {
+    return firstSegment;
+  }
+  return DEFAULT_LOCALE;
+}
+
+/* ===============================================================
    SETTINGS ENTEGRASYONU (Phase 1A alanlarının type-safe okuması)
    =============================================================== */
 

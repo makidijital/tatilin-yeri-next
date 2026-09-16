@@ -94,6 +94,9 @@ const selectMock = vi.fn();
 const maybeSingleMock = vi.fn();
 /* 🛡️ PHASE 8D-1 — yalnız findManyForLocale'ın kullandığı `.in()` için. */
 const inMock = vi.fn();
+/* 🛡️ PHASE 10A — yalnız upsertOne'ın kullandığı `.upsert()` / `.single()` için. */
+const upsertMock = vi.fn();
+const singleMock = vi.fn();
 
 vi.mock("@/lib/db/native", () => ({
   dbNative: {
@@ -107,6 +110,8 @@ beforeEach(() => {
   selectMock.mockReset();
   maybeSingleMock.mockReset();
   inMock.mockReset();
+  upsertMock.mockReset();
+  singleMock.mockReset();
 
   /* Chainable stub: from() → {select} → {eq} → {eq} → {maybeSingle}
      (Phase 3) / from() → {select} → {in} → {eq} (Phase 8D-1, .then()
@@ -129,6 +134,31 @@ beforeEach(() => {
   chain.maybeSingle = (...args: unknown[]) => {
     maybeSingleMock(...args);
     return Promise.resolve({ data: null, error: null });
+  };
+  /* 🛡️ PHASE 10A — upsertOne: .upsert(...).select("*").single() zinciri.
+     .upsert() chain'i kendini döner (fluent); .single() Promise resolve
+     eder (findOne'daki .maybeSingle() ile AYNI seviyede stub). */
+  chain.upsert = (...args: unknown[]) => {
+    upsertMock(...args);
+    return chain;
+  };
+  chain.single = (...args: unknown[]) => {
+    singleMock(...args);
+    return Promise.resolve({
+      data: {
+        id: "translation-row-1",
+        villa_id: "villa-uuid-1",
+        locale: "en",
+        title: "Mock Title",
+        description: null,
+        badge: null,
+        seo_title: null,
+        seo_description: null,
+        created_at: "2026-01-01T00:00:00.000Z",
+        updated_at: "2026-01-01T00:00:00.000Z",
+      },
+      error: null,
+    });
   };
   chain.then = (resolve: (v: unknown) => void) =>
     Promise.resolve({ data: [], error: null }).then(resolve);
@@ -294,4 +324,78 @@ describe("translationRepository.findManyForLocale", () => {
       ]);
     }
   );
+});
+
+
+/* ===============================================================
+   🛡️ PHASE 10A — translationRepository.upsertOne
+   ===============================================================
+   Admin Villa Translation UI'nin DB yazma primitive'i. Yalnız
+   doğru tablo/parentIdColumn/locale/kolonlar/onConflict ile
+   db.from(...).upsert(...).select("*").single() çağrıldığını
+   doğrular — iş kuralı (locale whitelist, parent existence, alan
+   uzunlukları) BU KATMANDA DEĞİL, app/services/villa-translation
+   .service.ts'te test edilir (bkz. villa-translation-service.test.ts).
+   findOne/findAllForParent/findManyForLocale testleri ETKİLENMEDİ. */
+describe("translationRepository.upsertOne", () => {
+  it("villa entity → villa_translations + villa_id + onConflict='villa_id,locale' ile upsert çağrılır", async () => {
+    const { translationRepository } = await import(
+      "@/lib/db/translation.repository.server"
+    );
+
+    await translationRepository.upsertOne("villa", "villa-uuid-1", "en", {
+      title: "Test Villa",
+      description: "Açıklama",
+      badge: null,
+      seo_title: null,
+      seo_description: null,
+    });
+
+    expect(fromMock).toHaveBeenCalledWith("villa_translations");
+    expect(upsertMock).toHaveBeenCalledWith(
+      {
+        villa_id: "villa-uuid-1",
+        locale: "en",
+        title: "Test Villa",
+        description: "Açıklama",
+        badge: null,
+        seo_title: null,
+        seo_description: null,
+      },
+      { onConflict: "villa_id,locale" }
+    );
+    expect(selectMock).toHaveBeenCalledWith("*");
+    expect(singleMock).toHaveBeenCalled();
+  });
+
+  it("rule_item entity → rule_item_translations + rule_id + onConflict='rule_id,locale' kullanır", async () => {
+    const { translationRepository } = await import(
+      "@/lib/db/translation.repository.server"
+    );
+
+    await translationRepository.upsertOne("rule_item", "rule-uuid-1", "de", {
+      title: "Regel",
+    });
+
+    expect(fromMock).toHaveBeenCalledWith("rule_item_translations");
+    expect(upsertMock).toHaveBeenCalledWith(
+      { rule_id: "rule-uuid-1", locale: "de", title: "Regel" },
+      { onConflict: "rule_id,locale" }
+    );
+  });
+
+  it("upsertOne'ın çağrısı findOne/findAllForParent/findManyForLocale davranışını DEĞİŞTİRMEZ", async () => {
+    const { translationRepository } = await import(
+      "@/lib/db/translation.repository.server"
+    );
+
+    await translationRepository.upsertOne("villa", "villa-uuid-1", "en", {
+      title: "X",
+    });
+    await translationRepository.findOne("villa", "villa-uuid-1", "en");
+
+    expect(maybeSingleMock).toHaveBeenCalled();
+    expect(eqMock).toHaveBeenCalledWith("villa_id", "villa-uuid-1");
+    expect(eqMock).toHaveBeenCalledWith("locale", "en");
+  });
 });

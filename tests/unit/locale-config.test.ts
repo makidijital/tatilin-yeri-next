@@ -21,6 +21,7 @@ import {
   resolveLocale,
   isMultilingualEnabled,
   getPublicDefaultLocale,
+  localeFromPathname,
 } from "@/lib/i18n/config";
 
 describe("SUPPORTED_LOCALES / DEFAULT_LOCALE", () => {
@@ -123,6 +124,43 @@ describe("isMultilingualEnabled (Phase 1A settings entegrasyonu)", () => {
   it("settings null/undefined -> false", () => {
     expect(isMultilingualEnabled(null)).toBe(false);
     expect(isMultilingualEnabled(undefined)).toBe(false);
+  });
+});
+
+describe("localeFromPathname (Phase 9A — Header client-side locale tespiti)", () => {
+  it("'/en' veya '/en/...' -> 'en'", () => {
+    expect(localeFromPathname("/en")).toBe("en");
+    expect(localeFromPathname("/en/kiralik-villa/ornek-slug")).toBe("en");
+    expect(localeFromPathname("/en/kiralik-villalar")).toBe("en");
+  });
+
+  it("'/de' veya '/de/...' -> 'de'", () => {
+    expect(localeFromPathname("/de")).toBe("de");
+    expect(localeFromPathname("/de/kiralik-villa/ornek-slug")).toBe("de");
+  });
+
+  it("TR path'leri (prefix yok) -> 'tr'", () => {
+    expect(localeFromPathname("/")).toBe("tr");
+    expect(localeFromPathname("/kiralik-villa/ornek-slug")).toBe("tr");
+    expect(localeFromPathname("/kiralik-villalar")).toBe("tr");
+    expect(localeFromPathname("/arama")).toBe("tr");
+  });
+
+  it("segment sınırı korunur — '/en'/'/de' ile BAŞLAYAN ama farklı bir segment olan path'ler YANLIŞLIKLA eşleşmez", () => {
+    expect(localeFromPathname("/energy-tasarrufu")).toBe("tr");
+    expect(localeFromPathname("/destek")).toBe("tr");
+    expect(localeFromPathname("/development")).toBe("tr");
+  });
+
+  it("null/undefined/boş -> 'tr' fallback", () => {
+    expect(localeFromPathname(null)).toBe("tr");
+    expect(localeFromPathname(undefined)).toBe("tr");
+    expect(localeFromPathname("")).toBe("tr");
+  });
+
+  it("'/tr' prefix'i (bu projede hiç üretilmez) yine de savunmacı olarak 'tr'ye düşer", () => {
+    expect(localeFromPathname("/tr")).toBe("tr");
+    expect(localeFromPathname("/tr/kiralik-villa/x")).toBe("tr");
   });
 });
 

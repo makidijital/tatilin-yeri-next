@@ -1,5 +1,12 @@
 import HeaderWrapper from "@/app/components/layout/HeaderWrapper";
-import Footer from "@/app/components/layout/Footer";
+/* 🛡️ PHASE 9B — Footer, HeaderWrapper/Header deseninin birebir aynısına
+   taşındı: DB/service veri-çekimi artık FooterWrapper'da (async server),
+   Footer.tsx artık "use client" (usePathname ile locale tespiti, bkz. o
+   dosya). Bu satır DIŞINDA bu layout dosyasında HİÇBİR değişiklik YOK —
+   maintenance-mode gate, getCachedSettings, phoneHref/whatsappHref
+   türetimi BİREBİR aynı. headers()/cookies() KULLANILMADI; bu dosyanın
+   static/ISR rendering uygunluğu ETKİLENMEDİ. */
+import FooterWrapper from "@/app/components/layout/FooterWrapper";
 import CookieConsent from "@/app/components/layout/CookieConsent";
 import FloatingSocial from "@/app/components/layout/FloatingSocial";
 import BottomNav from "@/app/components/layout/BottomNav";
@@ -66,7 +73,7 @@ export default async function PublicLayout({
       </main>
 
       {/* FOOTER */}
-      <Footer />
+      <FooterWrapper />
 
       {/* 🛡️ Floating Social — fixed bottom-right WhatsApp/Instagram/YouTube
          widget'i. Server component; settings'ten okur, üç href de boşsa

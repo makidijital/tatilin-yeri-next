@@ -102,4 +102,39 @@ export const translationRepository = {
       .in(parentIdColumn, parentIds)
       .eq("locale", locale);
   },
+
+  /**
+   * 🛡️ PHASE 10A — Bir parent kaydın TEK bir locale'deki çevirisini
+   * UPSERT eder (varsa günceller, yoksa oluşturur). Migration 082'nin
+   * `UNIQUE(<parent>_id, locale)` constraint'i onConflict hedefi olarak
+   * kullanılır (örn. villa → "villa_id,locale").
+   *
+   * ⚠️ BUSINESS VALIDATION BURADA YAPILMAZ (locale whitelist, parent
+   * existence, alan uzunlukları vb.) — bu, caller'ın sorumluluğu (bkz.
+   * app/services/villa-translation.service.ts). Bu metod yalnız DB
+   * yazma primitive'i; `findOne`/`findAllForParent`/`findManyForLocale`
+   * DEĞİŞMEDİ.
+   *
+   * `.insert(payload).select("*").single()` deseni (external-calendar-
+   * source.repository.ts'in `insert` metodu — "yaz + satırı geri al")
+   * ile AYNI prensip; `.upsert()` zaten native query builder'ın
+   * kanıtlanmış primitive'i (exchange-rate.repository.server.ts,
+   * external-calendar-event.repository.server.ts).
+   */
+  async upsertOne<E extends TranslationEntity>(
+    entity: E,
+    parentId: string,
+    locale: Locale,
+    fields: Record<string, unknown>
+  ) {
+    const { table, parentIdColumn } = TRANSLATION_ENTITY_CONFIG[entity];
+    return db
+      .from<TranslationRowFor<E>>(table)
+      .upsert(
+        { [parentIdColumn]: parentId, locale, ...fields },
+        { onConflict: `${parentIdColumn},locale` }
+      )
+      .select("*")
+      .single();
+  },
 };

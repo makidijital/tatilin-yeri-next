@@ -52,6 +52,7 @@ import type {
   BathroomLayoutItem,
 } from "@/lib/villa-layout.helper";
 import IcalSyncCard from "./_components/IcalSyncCard";
+import VillaTranslationsCard from "./_components/VillaTranslationsCard";
 
 /* 🛡️ FAZ 1+2 — typed villa form pipeline + helper-driven payload/audit. */
 import {
@@ -155,6 +156,7 @@ export default function EditVilla() {
     { id: 5, label: "Kurallar & Dahil" },
     { id: 6, label: "SEO" },
     { id: 7, label: "iCal" },
+    { id: 8, label: "Çeviriler" },
   ];
   const TOTAL_STEPS = STEPS.length;
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -523,6 +525,18 @@ export default function EditVilla() {
         <IcalSyncCard
           villaId={id as string}
           villaSlug={slug || slugifyTr(form.title)}
+          villaTitle={form.title}
+        />
+      )}
+
+      {/* 🛡️ PHASE 10A — Admin Villa Translation UI.
+          IcalSyncCard ile AYNI prensip: yalnız "Çeviriler" sekmesinde
+          (currentStep === 8) mount edilir; kendi state/save mekanizması
+          var, handleUpdate/buildVillaUpdatePayload/audit zincirine
+          KARIŞMAZ. Steps 1-7 ve handleUpdate DEĞİŞMEDİ. */}
+      {id && currentStep === 8 && (
+        <VillaTranslationsCard
+          villaId={id as string}
           villaTitle={form.title}
         />
       )}

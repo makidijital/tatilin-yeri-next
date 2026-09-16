@@ -3,7 +3,13 @@ import Link from "next/link";
 import { Home, Search, Compass } from "lucide-react";
 
 import HeaderWrapper from "@/app/components/layout/HeaderWrapper";
-import Footer from "@/app/components/layout/Footer";
+/* 🛡️ PHASE 9B — Footer artık "use client" (usePathname ile locale
+   tespiti, veri çekimi YOK). Bu sayfa (public)/layout.tsx'in DIŞINDA
+   olduğu için kendi Footer'ını kendisi render eder — bu yüzden burada
+   da (public)/layout.tsx'teki gibi self-contained FooterWrapper
+   (async server, DB'den veri çeker) kullanılır. Davranış BİREBİR aynı;
+   yalnızca veri-çekme sorumluluğu Footer'dan FooterWrapper'a taşındı. */
+import FooterWrapper from "@/app/components/layout/FooterWrapper";
 import VillaCard from "@/app/components/villa/VillaCard";
 import { getCachedVillas } from "@/lib/cache.helpers";
 
@@ -110,7 +116,7 @@ export default async function NotFound() {
         )}
       </main>
 
-      <Footer />
+      <FooterWrapper />
     </div>
   );
 }

@@ -10,16 +10,22 @@ import HeaderFavoritesLink from "@/app/components/favorites/HeaderFavoritesLink"
 /* 🛡️ Canlı arama paylaşılan component (header + hero) — duplikasyon yok.
    Arama state/debounce/dropdown mantığı VillaSearchBox'a taşındı. */
 import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
-/* 🛡️ PHASE 2 — UI Translation Dictionary Core (örnek entegrasyon).
-   DEFAULT_LOCALE ("tr") sabit geçiliyor — bu fazda cookie/URL/header
-   okuma YOK, site hâlâ tamamen Türkçe. dictionary.header.offer/
-   menuOpen/menuClose değerleri aşağıda değiştirilen sabit metinlerle
-   ("Teklif Al" / "Menüyü aç" / "Menüyü kapat") BİREBİR aynı — render
-   çıktısı değişmiyor, yalnız kaynağı dictionary'ye taşındı. */
+/* 🛡️ PHASE 2 — UI Translation Dictionary Core.
+   🛡️ PHASE 9A GÜNCELLEMESİ — artık modül seviyesinde SABİT
+   DEFAULT_LOCALE değil; component gövdesinde, zaten mevcut olan
+   `usePathname()` sonucundan `localeFromPathname()` (lib/i18n/config.ts,
+   Phase 9A) ile locale tespit edilip `getDictionary(locale)` HER
+   RENDER'DA çağrılır (saf/ucuz fonksiyon — DB sorgusu YOK, yeni bir
+   cache mekanizması gerektirmiyor). TR route'larında (pathname `/en`
+   veya `/de` ile başlamıyorsa) `localeFromPathname` DEFAULT_LOCALE
+   ("tr") döner — dictionary.header.offer/menuOpen/menuClose değerleri
+   ÖNCEKİ sabit TR metinlerle ("Teklif Al" / "Menüyü aç" / "Menüyü
+   kapat") BİREBİR aynı, TR render çıktısı DEĞİŞMEDİ. Middleware/
+   headers() KULLANILMADI (bkz. Phase 9A audit — bu, Footer'ın aksine
+   Header zaten "use client" olduğu ve `usePathname()`'e sahip olduğu
+   için mümkün; site-wide dynamic-rendering riski YOK). */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
-import { DEFAULT_LOCALE } from "@/lib/i18n/config";
-
-const dictionary = getDictionary(DEFAULT_LOCALE);
+import { localeFromPathname } from "@/lib/i18n/config";
 
 /* ===============================================================
    🛡️ FAZ 39C — HEADER CSS CLEANUP
@@ -75,6 +81,17 @@ export default function Header({
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+
+  /* 🛡️ PHASE 9A — locale, ZATEN var olan `pathname`'den saf/senkron
+     şekilde türetilir; middleware/headers() gerektirmez. `getDictionary`
+     saf bir modül-import lookup'ı (DB sorgusu YOK) — her render'da
+     çağrılmasının performans maliyeti yoktur. TR path'lerinde
+     (pathname `/en`/`/de` ile başlamıyorsa) `dictionary` ÖNCEKİ modül-
+     seviyesi sabitle (`getDictionary(DEFAULT_LOCALE)`) BİREBİR AYNI
+     referans/değerleri döner. */
+  const locale = localeFromPathname(pathname);
+  const dictionary = getDictionary(locale);
+
   /* 🛡️ Header search (desktop + mobile) TÜM sayfalarda gösterilir —
      anasayfa dahil (eski `!isHome` gizleme kaldırıldı). İç sayfa
      davranışı birebir aynı; paylaşılan VillaSearchBox mantığı değişmedi.

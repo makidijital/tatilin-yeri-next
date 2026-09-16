@@ -1,24 +1,31 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
+import { usePathname } from "next/navigation";
 
-import {
-  getPublicSettings,
-} from "@/app/services/settings.service";
-import type { Settings } from "@/app/services/settings.types";
-import { menuRepository } from "@/lib/db/menu.repository";
-import { pagesRepository } from "@/lib/db/pages.repository";
 import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
-/* 🛡️ PHASE 2 — UI Translation Dictionary Core (örnek entegrasyon).
-   DEFAULT_LOCALE ("tr") sabit — cookie/URL/header okuma YOK, site
-   hâlâ tamamen Türkçe. Aşağıda değiştirilen metinler (Keşfet,
-   Villalar, Bölgeler, Tüm kategoriler/bölgeler, Telefon, E-posta,
-   Adres, Rezervasyon Sorgula, Web Geliştirme) dictionary değerleriyle
-   BİREBİR aynı — render çıktısı değişmiyor. */
+import type { Settings } from "@/app/services/settings.types";
+/* 🛡️ PHASE 9B — TaxonomyItem/CorporatePage tipleri artık FooterWrapper'da
+   tanımlı (veriyi ÜRETEN yer) — buradan `import type` ile alınır; runtime
+   yan etkisi YOK (yalnız tip, derleme sonrası erişilmez). */
+import type { TaxonomyItem, CorporatePage } from "./FooterWrapper";
+/* 🛡️ PHASE 2 — UI Translation Dictionary Core.
+   🛡️ PHASE 9B GÜNCELLEMESİ — Footer artık "use client"; DB/service
+   erişimi tamamen FooterWrapper.tsx'e taşındı (bkz. o dosya). Locale,
+   Header.tsx'teki (Phase 9A) ile BİREBİR AYNI mekanizmayla — zaten
+   mevcut `usePathname()` sonucundan `localeFromPathname()` (Phase 9A,
+   lib/i18n/config.ts) ile tespit edilip `getDictionary(locale)` HER
+   RENDER'DA çağrılır (saf/ucuz fonksiyon — DB sorgusu YOK). TR
+   route'larında (pathname `/en`/`/de` ile başlamıyorsa) dictionary
+   ÖNCEKİ modül-seviyesi sabitle (`getDictionary(DEFAULT_LOCALE)`)
+   BİREBİR AYNI değerleri döner — TR render çıktısı DEĞİŞMEDİ.
+   Middleware/headers() KULLANILMADI — bu component zaten client
+   olduğu için Header'daki gibi gerek yok; site-wide dynamic-rendering
+   riski YOK (bkz. Phase 9B audit — bu tasarımın seçilme nedeni). */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
-import { DEFAULT_LOCALE } from "@/lib/i18n/config";
-
-const dictionary = getDictionary(DEFAULT_LOCALE);
+import { localeFromPathname } from "@/lib/i18n/config";
 
 /* ---------------- INLINE SOCIAL ICONS (stroke=currentColor) ---------------- */
 
@@ -160,10 +167,6 @@ function FooterLink({
   );
 }
 
-/* ---------------- DYNAMIC TAXONOMY ITEMS ---------------- */
-
-type TaxonomyItem = { id: string; name: string; slug: string | null };
-
 /* Slug/id fallback — `/arama` resolver UUID + slug ikisini de
    accept ediyor (LocationCollection.tsx pattern referansı). */
 function taxonomyHref(prefix: string, item: TaxonomyItem): string {
@@ -171,93 +174,39 @@ function taxonomyHref(prefix: string, item: TaxonomyItem): string {
   return `/arama?${prefix}=${encodeURIComponent(token)}`;
 }
 
-/* ---------------- KURUMSAL — CMS-DRIVEN ----------------
-   Veri kaynağı: `pagesRepository.findActivePages()` (slim).
-   Header (`getMenu()`) ile AYRI kanal:
-     • Header  : is_active=true VE show_in_menu=true (mevcut)
-     • Footer  : is_active=true (show_in_menu YOK)
-   Admin "Menüde Göster" sadece header navigation'ı kontrol eder.
-   Yayında olan her sayfa otomatik footer Kurumsal'da görünür.
-   Sıralama: menu_order ASC nulls-last, sonra created_at ASC.
----------------------------------------------------------- */
-type CorporatePage = {
-  id: string;
-  title: string;
-  slug: string;
-  menu_order?: number | null;
-  created_at?: string | null;
-};
-
 /* =================================================================
-   ROOT COMPONENT — async server
+   ROOT COMPONENT — client
+   🛡️ PHASE 9B: DB erişimi YOK — tüm veri FooterWrapper'dan props
+   olarak gelir. Yalnız locale tespiti + dictionary lookup + render.
 =================================================================== */
 
-export default async function Footer() {
-  /* Dört paralel fetch — biri fail olursa diğeri etkilenmez.
-     Promise.allSettled tüm sonuçları döner; reject olanlar null. */
-  const [settingsRes, locsRes, typesRes, corpPagesRes] =
-    await Promise.allSettled([
-      getPublicSettings(),
-      menuRepository.findAllVillaLocations(),
-      menuRepository.findAllVillaTypes(),
-      /* Footer'a özel slim helper — `findActivePages` (show_in_menu
-         filtresi YOK). Header'ın `findActivePagesForMenu` helper'ı
-         DOKUNULMADI; iki kanal birbirinden bağımsız. */
-      pagesRepository.findActivePages(),
-    ]);
+type FooterProps = {
+  settings: Settings | null;
+  locations: TaxonomyItem[];
+  villaTypes: TaxonomyItem[];
+  corporatePages: CorporatePage[];
+  year: number;
+  siteName: string;
+  phoneDigits: string;
+};
 
-  const settings: Settings | null =
-    settingsRes.status === "fulfilled" ? settingsRes.value : null;
-
-  const locations: TaxonomyItem[] =
-    locsRes.status === "fulfilled" && Array.isArray(locsRes.value?.data)
-      ? (locsRes.value.data as TaxonomyItem[])
-          .filter((l) => l?.name)
-          .slice(0, 7)
-      : [];
-
-  const villaTypes: TaxonomyItem[] =
-    typesRes.status === "fulfilled" && Array.isArray(typesRes.value?.data)
-      ? (typesRes.value.data as TaxonomyItem[])
-          .filter((t) => t?.name)
-          .slice(0, 7)
-      : [];
-
-  /* Kurumsal CMS pages — filter + sort.
-     Repo `is_active=true` filtreli; show_in_menu KASTEN filtrelenmez
-     (footer header'dan ayrı kanal). slug + title sanity check.
-     Sıralama: menu_order ASC nulls-last, sonra created_at ASC
-     (deterministic tie-break). */
-  const corporatePages: CorporatePage[] =
-    corpPagesRes.status === "fulfilled" &&
-    Array.isArray(corpPagesRes.value?.data)
-      ? (corpPagesRes.value.data as CorporatePage[])
-          .filter(
-            (p) =>
-              typeof p?.slug === "string" &&
-              p.slug.trim().length > 0 &&
-              typeof p?.title === "string" &&
-              p.title.trim().length > 0
-          )
-          .sort((a, b) => {
-            const ao =
-              typeof a.menu_order === "number"
-                ? a.menu_order
-                : Number.MAX_SAFE_INTEGER;
-            const bo =
-              typeof b.menu_order === "number"
-                ? b.menu_order
-                : Number.MAX_SAFE_INTEGER;
-            if (ao !== bo) return ao - bo;
-            const ac = a.created_at || "";
-            const bc = b.created_at || "";
-            return ac.localeCompare(bc);
-          })
-      : [];
-
-  const year = new Date().getFullYear();
-  const siteName = settings?.site_name || "VillayaGel";
-  const phoneDigits = settings?.phone?.replace(/[^\d]/g, "") || "";
+export default function Footer({
+  settings,
+  locations,
+  villaTypes,
+  corporatePages,
+  year,
+  siteName,
+  phoneDigits,
+}: FooterProps) {
+  /* 🛡️ PHASE 9B — locale, Header.tsx (Phase 9A) ile BİREBİR AYNI şekilde
+     `usePathname()` + `localeFromPathname()` ile saf/senkron türetilir;
+     middleware/headers() gerektirmez. TR path'lerinde `dictionary`
+     ÖNCEKİ modül-seviyesi sabitle (`getDictionary(DEFAULT_LOCALE)`)
+     BİREBİR AYNI referans/değerleri döner. */
+  const pathname = usePathname();
+  const locale = localeFromPathname(pathname);
+  const dictionary = getDictionary(locale);
 
   return (
     <footer
