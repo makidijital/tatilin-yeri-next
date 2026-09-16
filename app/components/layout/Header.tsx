@@ -26,6 +26,13 @@ import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
    için mümkün; site-wide dynamic-rendering riski YOK). */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { localeFromPathname } from "@/lib/i18n/config";
+/* 🛡️ PHASE 10H — `source_type: "category"` menü öğelerinin adı (villa
+   tipi) locale'e göre çözülür; çeviri yoksa canonical TR adı kalır.
+   Saf helper — DB/server bağımlılığı YOK. */
+import {
+  resolveTaxonomyName,
+  type TaxonomyNameByLocale,
+} from "@/lib/i18n/taxonomy-name.helper";
 
 /* ===============================================================
    🛡️ FAZ 39C — HEADER CSS CLEANUP
@@ -69,6 +76,10 @@ type MenuItem = {
   name: string;
   href: string;
   children?: MenuItem[];
+  /** 🛡️ PHASE 10H — OPSİYONEL. Yalnız villa tipi (`category`) kaynaklı
+   *  öğelerde `HeaderWrapper` tarafından doldurulur; diğer öğelerde
+   *  undefined → canonical `name` gösterilir (eski davranış). */
+  nameByLocale?: TaxonomyNameByLocale;
 };
 
 export default function Header({
@@ -237,6 +248,13 @@ export default function Header({
               {menu.map((item) => {
                 const isActive = pathname === item.href;
                 const hasChildren = item.children && item.children.length > 0;
+                /* 🛡️ PHASE 10H — villa tipi (category) öğelerinde
+                   locale karşılığı; diğer öğelerde canonical `name`. */
+                const itemName = resolveTaxonomyName(
+                  item.name,
+                  item.nameByLocale,
+                  locale
+                );
 
                 return (
                   <div
@@ -252,7 +270,7 @@ export default function Header({
                           : "hover:text-[var(--color-stone-900)]")
                       }
                     >
-                      {item.name}
+                      {itemName}
                       {hasChildren && (
                         <ChevronDown size={14} className="opacity-70" />
                       )}
@@ -279,7 +297,11 @@ export default function Header({
                               href={child.href}
                               className="block px-5 py-3 text-[16px] text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)] transition"
                             >
-                              {child.name}
+                              {resolveTaxonomyName(
+                                child.name,
+                                child.nameByLocale,
+                                locale
+                              )}
                             </Link>
                           ))}
                         </div>
@@ -414,6 +436,15 @@ export default function Header({
               const hasChildren =
                 item.children && item.children.length > 0;
               const isSubmenuOpen = openSubmenus.has(itemKey);
+              /* 🛡️ PHASE 10H — masaüstüyle AYNI çözüm. `itemKey` bilinçli
+                 olarak canonical `item.name`'den türetilmeye devam eder
+                 (React key + açık submenu state'i locale değişiminden
+                 ETKİLENMEMELİ). */
+              const itemName = resolveTaxonomyName(
+                item.name,
+                item.nameByLocale,
+                locale
+              );
 
               return (
                 <div
@@ -425,7 +456,7 @@ export default function Header({
                       href={item.href}
                       className="block flex-1 font-medium text-[var(--color-stone-900)]"
                     >
-                      {item.name}
+                      {itemName}
                     </Link>
 
                     {/* 🛡️ SUBMENU TOGGLE — ayrı, bağımsız tıklama alanı.
@@ -441,7 +472,7 @@ export default function Header({
                         aria-expanded={isSubmenuOpen}
                         aria-label={
                           (isSubmenuOpen ? "Kapat: " : "Aç: ") +
-                          item.name +
+                          itemName +
                           " alt menüsü"
                         }
                         className="
@@ -483,7 +514,11 @@ export default function Header({
                               href={child.href}
                               className="block text-[16.5px] text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] transition"
                             >
-                              {child.name}
+                              {resolveTaxonomyName(
+                                child.name,
+                                child.nameByLocale,
+                                locale
+                              )}
                             </Link>
                           ))}
                         </div>

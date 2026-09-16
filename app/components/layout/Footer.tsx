@@ -26,6 +26,9 @@ import type { TaxonomyItem, CorporatePage } from "./FooterWrapper";
    riski YOK (bkz. Phase 9B audit — bu tasarımın seçilme nedeni). */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { localeFromPathname } from "@/lib/i18n/config";
+/* 🛡️ PHASE 10H — villa tipi adı locale'e göre çözülür; çeviri yoksa
+   canonical TR adı (saf helper, DB/server bağımlılığı YOK). */
+import { resolveTaxonomyName } from "@/lib/i18n/taxonomy-name.helper";
 
 /* ---------------- INLINE SOCIAL ICONS (stroke=currentColor) ---------------- */
 
@@ -338,7 +341,7 @@ export default function Footer({
                     {villaTypes.map((t) => (
                       <li key={t.id}>
                         <FooterLink href={taxonomyHref("villa-turleri", t)}>
-                          {t.name}
+                          {resolveTaxonomyName(t.name, t.nameByLocale, locale)}
                         </FooterLink>
                       </li>
                     ))}

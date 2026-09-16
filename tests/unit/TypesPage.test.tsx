@@ -47,9 +47,15 @@ vi.mock("@/app/services/settings.action", () => ({
   getPublicSettingsAction: () => getPublicSettingsMock(),
 }));
 
+/* 🛡️ PHASE 10H — çeviri kaydı ARTIK public Header/Footer'ı etkiliyor;
+   bu yüzden TR adı güncellemesiyle AYNI invalidation çifti çağrılmalı.
+   Mock'lar `vi.fn()` referansları olarak dışarı alındı ki çağrıldıkları
+   DOĞRULANABİLSİN (önceki inline `vi.fn()`'ler erişilemiyordu). */
+const revalidateTaxonomyMock = vi.fn().mockResolvedValue(undefined);
+const revalidateMenuMock = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/app/services/revalidate.actions", () => ({
-  revalidateTaxonomy: vi.fn().mockResolvedValue(undefined),
-  revalidateMenu: vi.fn().mockResolvedValue(undefined),
+  revalidateTaxonomy: (...args: unknown[]) => revalidateTaxonomyMock(...args),
+  revalidateMenu: (...args: unknown[]) => revalidateMenuMock(...args),
 }));
 
 const notifyErrorMock = vi.fn();
@@ -101,6 +107,8 @@ beforeEach(() => {
   setVillaTypeSortOrdersMock.mockReset();
   loadTypeTranslationsMock.mockReset();
   saveTypeTranslationMock.mockReset();
+  revalidateTaxonomyMock.mockClear();
+  revalidateMenuMock.mockClear();
   getPublicSettingsMock.mockReset();
   notifyErrorMock.mockReset();
   notifySuccessMock.mockReset();
@@ -295,6 +303,42 @@ describe("TypesPage — Phase 10D Batch 3 — mevcut çeviri yükleme + kaydet",
       )
     );
     expect(notifySuccessMock).not.toHaveBeenCalled();
+  });
+
+  /* ===============================================================
+     🛡️ PHASE 10H — CACHE INVALIDATION
+     ===============================================================
+     Villa tipi adının EN/DE karşılığı artık public Header + Footer'da
+     okunuyor. Bu yüzden çeviri kaydı, TR adı değiştirildiğinde
+     (`handleUpdate`) çağrılan AYNI invalidation çiftini çağırmalı —
+     aksi halde admin çeviriyi kaydeder ama public taraf stale kalır.
+     =============================================================== */
+  it("14) 🛡️ PHASE 10H — başarılı çeviri kaydı revalidateTaxonomy + revalidateMenu çağırır", async () => {
+    getPublicSettingsMock.mockResolvedValue(settingsWith(true));
+    render(<TypesPage />);
+
+    fireEvent.click((await screen.findAllByRole("button", { name: /çevirileri/i }))[0]);
+    const input = await screen.findByLabelText("English");
+    fireEvent.change(input, { target: { value: "Luxury Villa" } });
+    fireEvent.click(screen.getByRole("button", { name: /sürümünü kaydet/i }));
+
+    await waitFor(() => expect(revalidateTaxonomyMock).toHaveBeenCalled());
+    expect(revalidateMenuMock).toHaveBeenCalled();
+  });
+
+  it("15) 🛡️ PHASE 10H — kayıt BAŞARISIZ ise invalidation çağrılmaz", async () => {
+    saveTypeTranslationMock.mockResolvedValue({ ok: false, error: "Yetkisiz" });
+    getPublicSettingsMock.mockResolvedValue(settingsWith(true));
+    render(<TypesPage />);
+
+    fireEvent.click((await screen.findAllByRole("button", { name: /çevirileri/i }))[0]);
+    const input = await screen.findByLabelText("English");
+    fireEvent.change(input, { target: { value: "Luxury Villa" } });
+    fireEvent.click(screen.getByRole("button", { name: /sürümünü kaydet/i }));
+
+    await waitFor(() => expect(notifyErrorMock).toHaveBeenCalled());
+    expect(revalidateTaxonomyMock).not.toHaveBeenCalled();
+    expect(revalidateMenuMock).not.toHaveBeenCalled();
   });
 });
 

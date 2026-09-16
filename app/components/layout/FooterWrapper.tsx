@@ -4,10 +4,26 @@ import { getPublicSettings } from "@/app/services/settings.service";
 import type { Settings } from "@/app/services/settings.types";
 import { menuRepository } from "@/lib/db/menu.repository";
 import { pagesRepository } from "@/lib/db/pages.repository";
+/* 🛡️ PHASE 10H — villa tipi adlarının EN/DE karşılıkları (migration 082,
+   `villa_type_translations`). Locale'den BAĞIMSIZ okunur; seçim client
+   tarafta (`Footer.tsx`, `usePathname()` locale'i) yapılır — bu wrapper
+   `headers()`/`cookies()` KULLANMAMAYA devam eder, yani layout'un
+   statik/ISR uygunluğu DEĞİŞMEZ. */
+import { isMultilingualEnabled } from "@/lib/i18n/config";
+import { getVillaTypeNamesByLocale } from "@/lib/i18n/get-villa-type-translations.server";
+import type { TaxonomyNameByLocale } from "@/lib/i18n/taxonomy-name.helper";
 
 /* ---------------- DYNAMIC TAXONOMY ITEMS ---------------- */
 
-export type TaxonomyItem = { id: string; name: string; slug: string | null };
+export type TaxonomyItem = {
+  id: string;
+  name: string;
+  slug: string | null;
+  /** 🛡️ PHASE 10H — OPSİYONEL. Yalnız villa tipleri için doldurulur;
+   *  bölgeler (locations) bu fazın kapsamı DIŞINDA, undefined kalır →
+   *  `resolveTaxonomyName` canonical TR adına düşer (eski davranış). */
+  nameByLocale?: TaxonomyNameByLocale;
+};
 
 /* ---------------- KURUMSAL — CMS-DRIVEN ----------------
    Veri kaynağı: `pagesRepository.findActivePages()` (slim).
@@ -66,12 +82,29 @@ export default async function FooterWrapper() {
           .slice(0, 7)
       : [];
 
-  const villaTypes: TaxonomyItem[] =
+  const villaTypesBase: TaxonomyItem[] =
     typesRes.status === "fulfilled" && Array.isArray(typesRes.value?.data)
       ? (typesRes.value.data as TaxonomyItem[])
           .filter((t) => t?.name)
           .slice(0, 7)
       : [];
+
+  /* 🛡️ PHASE 10H — EN/DE villa tipi adları.
+     `multilingual_enabled` kapalıyken /en ve /de route'ları zaten
+     `requirePublicLocaleEnabled()` ile 404 döner → çeviri okumak
+     GEREKSİZ bir sorgu olur, bu yüzden hiç çağrılmaz (ek maliyet YOK,
+     TR davranışı BİREBİR aynı). Okuma fail olursa footer çökmez:
+     harita boş kalır → canonical TR adı gösterilir. */
+  const typeNamesByLocale: Record<string, TaxonomyNameByLocale> =
+    isMultilingualEnabled(settings) && villaTypesBase.length > 0
+      ? await getVillaTypeNamesByLocale(
+          villaTypesBase.map((t) => t.id)
+        ).catch(() => ({}))
+      : {};
+
+  const villaTypes: TaxonomyItem[] = villaTypesBase.map((t) =>
+    typeNamesByLocale[t.id] ? { ...t, nameByLocale: typeNamesByLocale[t.id] } : t
+  );
 
   /* Kurumsal CMS pages — filter + sort.
      Repo `is_active=true` filtreli; show_in_menu KASTEN filtrelenmez

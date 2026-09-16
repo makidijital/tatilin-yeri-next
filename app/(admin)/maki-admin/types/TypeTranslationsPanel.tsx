@@ -18,6 +18,15 @@ import {
   loadTypeTranslationsAction,
   saveTypeTranslationAction,
 } from "./type-translations.action";
+/* 🛡️ PHASE 10H — villa tipi adının EN/DE karşılığı ARTIK public tarafta
+   (Header + Footer) okunuyor. Bu yüzden çeviri kaydı, TR adı
+   değiştirildiğinde `types/page.tsx`'in çağırdığı AYNI invalidation
+   çiftini çağırır (`handleUpdate`, satır ~160). Yeni bir cache/
+   invalidation mekanizması İCAT EDİLMEDİ. */
+import {
+  revalidateTaxonomy,
+  revalidateMenu,
+} from "@/app/services/revalidate.actions";
 
 type WritableLocale = "en" | "de";
 
@@ -110,6 +119,11 @@ export default function TypeTranslationsPanel({ typeId, typeName }: Props) {
       toast.success(`${LOCALE_LABELS[activeLocale]} çevirisi kaydedildi`, {
         id: `type-translations-save-${typeId}`,
       });
+
+      /* 🛡️ CACHE INVALIDATION — TR adı güncellemesiyle AYNI çift
+         (bkz. types/page.tsx > handleUpdate). Non-blocking. */
+      revalidateTaxonomy().catch(() => {});
+      revalidateMenu().catch(() => {});
     } finally {
       setSaving(false);
     }
