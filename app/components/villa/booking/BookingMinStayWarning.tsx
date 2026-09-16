@@ -14,16 +14,32 @@
    =============================================================== */
 
 import { CalendarDays } from "lucide-react";
+/* 🛡️ PHASE 10B — locale-aware UI stringleri. `locale` opsiyonel,
+   default "tr" — mevcut TR call-site'ı (BookingSidebar) hiç
+   değişmeden byte-identical render eder. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import type { Locale } from "@/lib/i18n/config";
 
 type Props = {
   minStayThreshold: number;
   selectedNights: number;
+  /* 🛡️ PHASE 10B — opsiyonel, default "tr". */
+  locale?: Locale;
 };
 
 export default function BookingMinStayWarning({
   minStayThreshold,
   selectedNights,
+  locale,
 }: Props) {
+  const dict = getDictionary(locale);
+  /* `minStayWarningBody` template'i "{n}" token'ı çevresinde bölünür
+     ki sayı eskisi gibi ayrı, kalın (font-semibold) bir <span> içinde
+     kalsın (yalnızca dictionary text kaynağı değişti, DOM/stil AYNI). */
+  const [bodyBefore, bodyAfter] = dict.booking.minStayWarningBody.split(
+    "{n}"
+  );
   return (
     <div
       role="alert"
@@ -48,18 +64,19 @@ export default function BookingMinStayWarning({
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[10.5px] tracking-[0.18em] uppercase font-semibold text-[var(--color-champagne-700)]">
-          Minimum Konaklama
+          {dict.booking.minStayWarningTitle}
         </p>
         <p className="text-[13.5px] text-[var(--color-stone-800)] mt-1 leading-snug">
-          Bu villa için minimum konaklama süresi{" "}
+          {bodyBefore}
           <span className="font-semibold tabular-nums">
             {minStayThreshold}
-          </span>{" "}
-          gecedir.
+          </span>
+          {bodyAfter}
         </p>
         <p className="text-[11.5px] text-[var(--color-stone-500)] mt-1 tabular-nums">
-          Seçilen: {selectedNights} gece — lütfen daha uzun bir
-          aralık seçin.
+          {formatDictionaryString(dict.booking.minStayWarningSelected, {
+            n: selectedNights,
+          })}
         </p>
       </div>
     </div>

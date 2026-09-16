@@ -25,6 +25,13 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+/* 🛡️ PHASE 10B — GERÇEK (mock'lanmamış) dictionary. Villa detay artık
+   ComingSoon yerine gerçek locale metni render ediyor; assertion'lar
+   TR hardcoded string yerine BU'ndan okunan gerçek EN/DE değerleriyle
+   yapılıyor (dictionary'nin kendi doğruluğu tests/unit/dictionary*.test.ts
+   gibi ayrı testlerde zaten doğrulanıyor — burada yalnız page.tsx'in
+   doğru anahtarı render ettiği kontrol ediliyor). */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 const requirePublicLocaleEnabledMock = vi.fn();
 const getVillaBySlugMock = vi.fn();
@@ -42,6 +49,18 @@ const getRuleItemsByVillaMock = vi.fn();
 const getPriceIncludeItemsByVillaMock = vi.fn();
 const getTranslationsForParentsMock = vi.fn();
 const getDistanceIconKeyMock = vi.fn();
+/* 🛡️ PHASE 10B, Section 9 — EN/DE villa detay artık Gallery/PriceList/
+   AvailabilityInlineCalendar/BookingSidebar/MobileBookingCta render ediyor.
+   Bu component'lerin page.tsx'te okuduğu YENİ servisler — gerçek DB/network'e
+   gidilmesin diye mock'lanıyor (bu dosyanın amacı routing/render testi,
+   fiyat/availability/rezervasyon MANTIĞI kendi testlerinde ayrıntılı
+   doğrulanıyor, bkz. price.engine/villa-availability.helper testleri). */
+const getVillaImagesMock = vi.fn();
+const getVillaPricesMock = vi.fn();
+const getVillaDiscountsMock = vi.fn();
+const fetchExternalCalendarStringsForVillaMock = vi.fn();
+const getCachedSettingsMock = vi.fn();
+const getCachedVillaReviewStatsMock = vi.fn();
 
 vi.mock("@/lib/i18n/public-locale-gate.server", () => ({
   requirePublicLocaleEnabled: () => requirePublicLocaleEnabledMock(),
@@ -110,6 +129,34 @@ vi.mock("@/lib/distance.helper", () => ({
   getDistanceIconKey: (...args: unknown[]) => getDistanceIconKeyMock(...args),
 }));
 
+/* 🛡️ PHASE 10B, Section 9 */
+vi.mock("@/app/services/villa-image/villa-image.read", () => ({
+  getVillaImages: (...args: unknown[]) => getVillaImagesMock(...args),
+}));
+vi.mock("@/app/services/villa-price.service", () => ({
+  getVillaPrices: (...args: unknown[]) => getVillaPricesMock(...args),
+}));
+vi.mock("@/app/services/villa-discount.service", () => ({
+  getVillaDiscounts: (...args: unknown[]) => getVillaDiscountsMock(...args),
+}));
+vi.mock("@/lib/external-calendar.public.helper", () => ({
+  fetchExternalCalendarStringsForVilla: (...args: unknown[]) =>
+    fetchExternalCalendarStringsForVillaMock(...args),
+  /* 🛡️ Gerçek (mock'lanmamış) sabit değer — `EMPTY_EXTERNAL_STRING_ARRAYS`
+     saf bir `Object.freeze` sabiti (network/DB YOK), page.tsx'in `.catch()`
+     fallback'inde kullandığı DEĞERLE birebir aynı olması gerekiyor. */
+  EMPTY_EXTERNAL_STRING_ARRAYS: Object.freeze({
+    checkin: [],
+    checkout: [],
+    middle: [],
+  }),
+}));
+vi.mock("@/lib/cache.helpers", () => ({
+  getCachedSettings: (...args: unknown[]) => getCachedSettingsMock(...args),
+  getCachedVillaReviewStats: (...args: unknown[]) =>
+    getCachedVillaReviewStatsMock(...args),
+}));
+
 beforeEach(() => {
   requirePublicLocaleEnabledMock.mockReset();
   getVillaBySlugMock.mockReset();
@@ -122,6 +169,27 @@ beforeEach(() => {
   getPriceIncludeItemsByVillaMock.mockReset();
   getTranslationsForParentsMock.mockReset();
   getDistanceIconKeyMock.mockReset();
+  /* 🛡️ PHASE 10B, Section 9 */
+  getVillaImagesMock.mockReset();
+  getVillaPricesMock.mockReset();
+  getVillaDiscountsMock.mockReset();
+  fetchExternalCalendarStringsForVillaMock.mockReset();
+  getCachedSettingsMock.mockReset();
+  getCachedVillaReviewStatsMock.mockReset();
+  /* Varsayılan: boş koleksiyonlar / nötr ayarlar — TR route'larını (bu
+     servisleri hiç çağırmayan) ETKİLEMEZ; yalnız EN/DE villa detay
+     testlerinin sayfayı çökertmeden render etmesini sağlar. İlgili
+     testler kendi ihtiyacına göre override eder. */
+  getVillaImagesMock.mockResolvedValue([]);
+  getVillaPricesMock.mockResolvedValue([]);
+  getVillaDiscountsMock.mockResolvedValue([]);
+  fetchExternalCalendarStringsForVillaMock.mockResolvedValue({
+    checkin: [],
+    checkout: [],
+    middle: [],
+  });
+  getCachedSettingsMock.mockResolvedValue({});
+  getCachedVillaReviewStatsMock.mockResolvedValue({ count: 0, average: 0 });
   getVillaBySlugMock.mockResolvedValue({
     id: "test-villa-id",
     slug: "test-villa",
@@ -170,21 +238,35 @@ beforeEach(() => {
    hâlâ hiç prop almıyor (PHASE 4A ile birebir). */
 const VILLA_PAGE_PROPS = { params: Promise.resolve({ slug: "test-villa" }) };
 
-/* [modül yolu, beklenen locale, page prop'ları] — 8 route. */
-const ROUTES: Array<
+/* [modül yolu, beklenen locale, page prop'ları] — 6 route (villa detay
+   AYRI gruba taşındı, bkz. VILLA_DETAIL_GATE_ROUTES). */
+const COMING_SOON_ROUTES: Array<
   [string, "en" | "de", Record<string, unknown> | undefined]
 > = [
   ["@/app/(public)/en/kiralik-villalar/page", "en", undefined],
   ["@/app/(public)/de/kiralik-villalar/page", "de", undefined],
   ["@/app/(public)/en/arama/page", "en", undefined],
   ["@/app/(public)/de/arama/page", "de", undefined],
-  ["@/app/(public)/en/kiralik-villa/[slug]/page", "en", VILLA_PAGE_PROPS],
-  ["@/app/(public)/de/kiralik-villa/[slug]/page", "de", VILLA_PAGE_PROPS],
   ["@/app/(public)/en/rezervasyon/[slug]/page", "en", undefined],
   ["@/app/(public)/de/rezervasyon/[slug]/page", "de", undefined],
 ];
 
-describe.each(ROUTES)("%s", (modulePath, locale, pageProps) => {
+/* 🛡️ PHASE 10B, Section 9 — villa detay artık ComingSoon'un YERİNE
+   gerçek Gallery/PriceList/AvailabilityInlineCalendar/BookingSidebar/
+   MobileBookingCta render ediyor (PHASE 10B IMPLEMENTATION talimatının
+   AÇIK hedefi). Gate davranışı (requirePublicLocaleEnabled çağrısı +
+   notFound() propagate) YUKARIDAKİ route'larla BİREBİR aynı kaldığı
+   için AYRI bir route grubu + AYRI describe.each ile test ediliyor —
+   yalnız "ComingSoon metni var" assertion'ı bu route'lar için ARTIK
+   GEÇERSİZ (bkz. aşağıda). */
+const VILLA_DETAIL_GATE_ROUTES: Array<
+  [string, "en" | "de", Record<string, unknown> | undefined]
+> = [
+  ["@/app/(public)/en/kiralik-villa/[slug]/page", "en", VILLA_PAGE_PROPS],
+  ["@/app/(public)/de/kiralik-villa/[slug]/page", "de", VILLA_PAGE_PROPS],
+];
+
+describe.each(COMING_SOON_ROUTES)("%s", (modulePath, locale, pageProps) => {
   it(`gate geçtiğinde (multilingual_enabled=true) locale="${locale}" ile render eder`, async () => {
     requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
 
@@ -210,6 +292,47 @@ describe.each(ROUTES)("%s", (modulePath, locale, pageProps) => {
     await expect(Page(pageProps)).rejects.toThrow("NEXT_NOT_FOUND");
   });
 });
+
+/* 🛡️ PHASE 10B, Section 9 — villa detay için AYNI iki test (gate
+   çağrısı + notFound propagate), yalnız "içerik" assertion'ı ComingSoon
+   yerine GERÇEK (mock'lanmamış getDictionary'den okunan) booking CTA
+   metnine bakıyor — hem BookingSidebar'ın hem MobileBookingCta'nın
+   "Rezervasyon Yap/Book Now/Jetzt Buchen" metnini paylaştığı biliniyor
+   (bkz. dictionary), bu yüzden getAllByText + length>0. */
+describe.each(VILLA_DETAIL_GATE_ROUTES)(
+  "%s",
+  (modulePath, locale, pageProps) => {
+    it(`gate geçtiğinde (multilingual_enabled=true) locale="${locale}" ile GERÇEK villa detay render eder (ComingSoon YOK)`, async () => {
+      requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
+
+      const { default: Page } = await import(modulePath);
+      const element = await Page(pageProps);
+      render(element);
+
+      expect(requirePublicLocaleEnabledMock).toHaveBeenCalledTimes(1);
+      expect(
+        screen.queryByText(/this page isn't translated yet/i)
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/diese seite ist noch nicht übersetzt/i)
+      ).not.toBeInTheDocument();
+      const dict = getDictionary(locale);
+      expect(
+        screen.getAllByText(dict.booking.bookNow).length
+      ).toBeGreaterThan(0);
+    });
+
+    it("gate notFound() fırlattığında sayfa bunu YUTMAZ (aynen propagate eder)", async () => {
+      requirePublicLocaleEnabledMock.mockRejectedValue(
+        new Error("NEXT_NOT_FOUND")
+      );
+
+      const { default: Page } = await import(modulePath);
+
+      await expect(Page(pageProps)).rejects.toThrow("NEXT_NOT_FOUND");
+    });
+  }
+);
 
 /* ===============================================================
    🛡️ PHASE 8B — EN/DE villa detay: description overlay page-body testleri
@@ -266,11 +389,18 @@ describe.each(VILLA_DETAIL_ROUTES)(
       const { container } = render(element);
 
       expect(screen.getByText("Safe text")).toBeInTheDocument();
-      expect(container.querySelector("script")).toBeNull();
+      /* 🛡️ PHASE 10B, Section 10 — villa detay artık MEŞRU bir
+         `<script type="application/ld+json">` (JsonLd/StructuredData)
+         render ediyor; "sayfada HİÇ <script> yok" assertion'ı artık
+         YANLIŞ POZİTİF verir. Doğru/daha KESKİN kontrol: XSS payload'ının
+         (`alert(2)`) DOM'un HİÇBİR yerinde (JSON-LD içinde bile,
+         string olarak) GÖRÜNMEMESİ — sanitizeHtml'in description'dan
+         gerçekten temizlediğinin kanıtı. */
+      expect(container.innerHTML).not.toContain("alert(2)");
       expect(container.innerHTML).not.toContain("onclick");
     });
 
-    it("9) resolved description boş/whitespace → 'Açıklama bulunmuyor' fallback (hardcoded metin DEĞİŞMEDİ)", async () => {
+    it("9) resolved description boş/whitespace → locale-aware fallback (Phase 10B — artık dictionary'den, TR hardcoded metin DEĞİL)", async () => {
       getVillaTranslatedDescriptionMock.mockResolvedValue("   ");
 
       const { default: Page } = await import(modulePath);
@@ -279,7 +409,10 @@ describe.each(VILLA_DETAIL_ROUTES)(
       });
       render(element);
 
-      expect(screen.getByText("Açıklama bulunmuyor")).toBeInTheDocument();
+      const dict = getDictionary(locale);
+      expect(
+        screen.getByText(dict.villa.descriptionEmpty)
+      ).toBeInTheDocument();
     });
   }
 );
@@ -561,6 +694,128 @@ describe.each(VILLA_DETAIL_ROUTES)(
       expect(
         screen.getByText("Özellik bilgisi bulunmuyor")
       ).toBeInTheDocument();
+    });
+  }
+);
+
+/* ===============================================================
+   🛡️ PHASE 10B, Section 14 — YENİ TESTLER: component visibility +
+   JSON-LD locale
+   ===============================================================
+   Hedef: standing "PHASE 10B IMPLEMENTATION" talimatının Section 14
+   maddesinde AÇIKÇA istenen ek test kapsamı:
+     - EN/DE component visibility (Gallery/PriceList/Availability
+       gerçekten render ediyor — BookingSidebar/MobileBookingCta zaten
+       yukarıdaki VILLA_DETAIL_GATE_ROUTES bloğunda "bookNow" ile
+       doğrulanıyor, burada TEKRAR EDİLMİYOR)
+     - EN/DE JSON-LD locale (vacationRentalLd/breadcrumbLd'nin
+       `inLanguage` alanına page.tsx'in gerçekten "en"/"de" geçirdiği —
+       buildVacationRental/buildBreadcrumb'ın KENDİ locale mantığı
+       tests/unit/structured-data-locale.test.ts'te ayrıntılı test
+       edildi, burada yalnız page.tsx'in DOĞRU parametreyle çağırdığı
+       doğrulanıyor)
+   Yalnız beforeEach'in VARSAYILAN (boş) mock'larını kullanır — images/
+   prices/discounts/externalBlocks hepsi boş, bu yüzden Gallery "Görsel
+   yok" / PriceList "Fiyat bilgisi yok" gibi boş-durum metinlerini
+   render eder — bu METİNLERİN KENDİSİ locale-aware olduğu için (dict'ten
+   okunuyor) doğru locale ile render edildiklerini kanıtlamaya yeterli. */
+describe.each(VILLA_DETAIL_ROUTES)(
+  "%s — Phase 10B Section 14: component visibility + JSON-LD locale",
+  (modulePath, locale) => {
+    beforeEach(() => {
+      requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
+    });
+
+    it("19) Gallery boş-durum metni doğru locale ile render edilir (component gerçekten mount edildi)", async () => {
+      const dict = getDictionary(locale);
+      const { default: Page } = await import(modulePath);
+      const element = await Page({
+        params: Promise.resolve({ slug: "test-villa" }),
+      });
+      render(element);
+
+      expect(screen.getByText(dict.gallery.noImages)).toBeInTheDocument();
+    });
+
+    it("20) PriceList boş-durum metni doğru locale ile render edilir", async () => {
+      const dict = getDictionary(locale);
+      const { default: Page } = await import(modulePath);
+      const element = await Page({
+        params: Promise.resolve({ slug: "test-villa" }),
+      });
+      render(element);
+
+      expect(screen.getByText(dict.price.noPriceInfo)).toBeInTheDocument();
+    });
+
+    it("21) AvailabilityInlineCalendar doğru locale aria-label'larla render edilir", async () => {
+      const dict = getDictionary(locale);
+      const { default: Page } = await import(modulePath);
+      const element = await Page({
+        params: Promise.resolve({ slug: "test-villa" }),
+      });
+      render(element);
+
+      expect(
+        screen.getByLabelText(dict.availability.prevMonth)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(dict.availability.nextMonth)
+      ).toBeInTheDocument();
+    });
+
+    it("22) JSON-LD: vacationRentalLd + breadcrumbLd 'inLanguage' alanı sayfanın locale'iyle eşleşir", async () => {
+      const { default: Page } = await import(modulePath);
+      const element = await Page({
+        params: Promise.resolve({ slug: "test-villa" }),
+      });
+      const { container } = render(element);
+
+      const scripts = Array.from(
+        container.querySelectorAll('script[type="application/ld+json"]')
+      );
+      expect(scripts.length).toBe(2);
+
+      const payloads = scripts.map(
+        (s) => JSON.parse(s.textContent || "{}") as Record<string, unknown>
+      );
+
+      const vacationRental = payloads.find(
+        (p) => p["@type"] === "VacationRental"
+      );
+      const breadcrumb = payloads.find(
+        (p) => p["@type"] === "BreadcrumbList"
+      );
+
+      expect(vacationRental).toBeTruthy();
+      expect(breadcrumb).toBeTruthy();
+      expect(vacationRental?.inLanguage).toBe(locale);
+      expect(breadcrumb?.inLanguage).toBe(locale);
+    });
+
+    it("23) JSON-LD breadcrumb isimleri locale-aware (dict.header.home/villas + çevrilmiş title)", async () => {
+      const dict = getDictionary(locale);
+      const { default: Page } = await import(modulePath);
+      const element = await Page({
+        params: Promise.resolve({ slug: "test-villa" }),
+      });
+      const { container } = render(element);
+
+      const scripts = Array.from(
+        container.querySelectorAll('script[type="application/ld+json"]')
+      );
+      const payloads = scripts.map(
+        (s) => JSON.parse(s.textContent || "{}") as Record<string, unknown>
+      );
+      const breadcrumb = payloads.find(
+        (p) => p["@type"] === "BreadcrumbList"
+      ) as { itemListElement: Array<{ name?: string }> } | undefined;
+
+      expect(breadcrumb).toBeTruthy();
+      const names = (breadcrumb!.itemListElement || []).map((i) => i.name);
+      expect(names).toContain(dict.header.home);
+      expect(names).toContain(dict.header.villas);
+      expect(names).toContain("Test Villa Title");
     });
   }
 );

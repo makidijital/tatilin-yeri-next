@@ -22,6 +22,13 @@ import {
   EMPTY_EXTERNAL_STRING_ARRAYS,
   type ExternalCalendarStringArrays,
 } from "@/lib/external-calendar.public.shared";
+/* 🛡️ PHASE 10B — locale-aware UI stringleri (hafta günü baş harfleri,
+   ay adı, prev/next aria-label). `locale` opsiyonel, default "tr" —
+   mevcut TR call-site'ı (kiralik-villa/[slug]/page.tsx) hiç değişmeden
+   byte-identical render eder. Availability fetch / `getDayStyle`
+   çağrısına ve renk kontratına DOKUNULMADI. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { LOCALE_BCP47, type Locale } from "@/lib/i18n/config";
 
 /* ===============================================================
    🛡️ AvailabilityInlineCalendar — PUBLIC VILLA DETAY TAKVİMİ
@@ -70,8 +77,6 @@ import {
      import edilmiyor; yalnız UI pattern'i ilham alındı.
      calendar.engine: AYNEN reuse (getDayStyle).
    =============================================================== */
-
-const WEEKDAY_HEADERS = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"] as const;
 
 type GridCell = { date: Date; inMonth: boolean };
 
@@ -139,14 +144,19 @@ type Props = {
    *  GÖRMEZ — "iCal" badge yok, source_name yok. Default empty
    *  → backward-compat. */
   externalBlocks?: ExternalCalendarStringArrays;
+  /* 🛡️ PHASE 10B — opsiyonel, default "tr". */
+  locale?: Locale;
 };
 
 export default function AvailabilityInlineCalendar({
   villaId,
   prices,
   externalBlocks = EMPTY_EXTERNAL_STRING_ARRAYS,
+  locale,
 }: Props) {
   const { currency, rates } = useCurrency();
+  const dict = getDictionary(locale);
+  const bcp47 = LOCALE_BCP47[locale ?? "tr"];
 
   /* Availability arrays — shared helper'dan gelir. Boş başlangıç
      hızlı render; useEffect sonrası real data. */
@@ -258,7 +268,7 @@ export default function AvailabilityInlineCalendar({
             )
           }
           className="w-9 h-9 rounded-full bg-white border border-[var(--color-stone-100)] shadow-[0_4px_12px_-6px_rgba(11,31,58,0.2)] flex items-center justify-center text-[var(--color-stone-800)] hover:-translate-y-0.5 hover:border-[var(--color-stone-200)] hover:shadow-[0_8px_18px_-8px_rgba(11,31,58,0.25)] transition-[transform,box-shadow,border-color] duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-          aria-label="Önceki ay"
+          aria-label={dict.availability.prevMonth}
         >
           <ChevronLeft size={16} />
         </button>
@@ -270,7 +280,7 @@ export default function AvailabilityInlineCalendar({
             )
           }
           className="w-9 h-9 rounded-full bg-white border border-[var(--color-stone-100)] shadow-[0_4px_12px_-6px_rgba(11,31,58,0.2)] flex items-center justify-center text-[var(--color-stone-800)] hover:-translate-y-0.5 hover:border-[var(--color-stone-200)] hover:shadow-[0_8px_18px_-8px_rgba(11,31,58,0.25)] transition-[transform,box-shadow,border-color] duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-          aria-label="Sonraki ay"
+          aria-label={dict.availability.nextMonth}
         >
           <ChevronRight size={16} />
         </button>
@@ -292,7 +302,7 @@ export default function AvailabilityInlineCalendar({
             >
               <div className="px-1 mb-1.5">
                 <span className="font-display text-[12px] font-semibold text-[var(--color-stone-800)] tracking-[-0.01em] capitalize">
-                  {viewMonth.toLocaleDateString("tr-TR", { month: "long" })}
+                  {viewMonth.toLocaleDateString(bcp47, { month: "long" })}
                   <span className="text-[var(--color-stone-400)] font-normal ml-1">
                     {viewMonth.getFullYear()}
                   </span>
@@ -300,7 +310,7 @@ export default function AvailabilityInlineCalendar({
               </div>
 
               <div className="grid grid-cols-7 gap-0.5 px-0.5 mb-1">
-                {WEEKDAY_HEADERS.map((w) => (
+                {dict.availability.weekdayShort.map((w) => (
                   <div
                     key={w}
                     className="text-center text-[9px] font-bold tracking-[0.14em] uppercase text-[var(--color-stone-400)] py-1"

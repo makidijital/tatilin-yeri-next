@@ -6,6 +6,15 @@ import WatermarkOverlay from "./WatermarkOverlay";
 import VillaVideoModal from "./VillaVideoModal";
 import type { WatermarkPosition } from "@/app/services/settings.types";
 import type { VillaYouTubeVideo } from "@/lib/youtube.helper";
+/* 🛡️ PHASE 10B — locale-aware UI stringleri. `locale` opsiyonel,
+   default "tr" (getDictionary(undefined) zaten TR'ye düşer) — mevcut
+   TR call-site'ları (kiralik-villa/[slug]/page.tsx, v/[token]/page.tsx,
+   AdminGallery.tsx) HİÇ DEĞİŞMEDEN, byte-identical render etmeye devam
+   eder. Lightbox/swipe/keyboard/video-modal/image-loading mantığına
+   DOKUNULMADI — yalnız UI string kaynağı değişti. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import type { Locale } from "@/lib/i18n/config";
 
 type WatermarkProps = {
   logo?: string | null;
@@ -26,13 +35,24 @@ type WatermarkProps = {
 function buildImageAlt(
   villaTitle: string | undefined | null,
   index: number,
-  total: number
+  total: number,
+  dict: ReturnType<typeof getDictionary>
 ): string {
   const t = (villaTitle || "Villa").trim();
   if (index === 0) {
-    return `${t} — kapak fotoğrafı`;
+    return formatDictionaryString(dict.gallery.coverPhotoAlt, { title: t });
   }
-  return `${t} — fotoğraf ${index + 1}${total > 1 ? `/${total}` : ""}`;
+  if (total > 1) {
+    return formatDictionaryString(dict.gallery.photoAltWithTotal, {
+      title: t,
+      index: index + 1,
+      total,
+    });
+  }
+  return formatDictionaryString(dict.gallery.photoAlt, {
+    title: t,
+    index: index + 1,
+  });
 }
 
 export default function Gallery({
@@ -41,6 +61,7 @@ export default function Gallery({
   villaTitle,
   videos,
   actions,
+  locale,
 }: {
   images: string[];
   watermark?: WatermarkProps;
@@ -55,7 +76,11 @@ export default function Gallery({
      aksiyon slotu (FavoriteButton). Logic'e ASLA dokunulmaz, yalnız DOM
      konumu. Opsiyonel — verilmezse hiçbir aksiyon görünmez. */
   actions?: ReactNode;
+  /* 🛡️ PHASE 10B — opsiyonel, default "tr" (getDictionary(undefined)).
+     TR call-site'ları bu prop'u hiç geçmeden BYTE-IDENTICAL çalışır. */
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [videoOpen, setVideoOpen] = useState(false);
   const safeVideos = videos ?? [];
@@ -151,7 +176,7 @@ export default function Gallery({
   if (!images || images.length === 0) {
     return (
       <div className="h-64 bg-gray-800 rounded-xl flex items-center justify-center">
-        Görsel yok
+        {dict.gallery.noImages}
       </div>
     );
   }
@@ -173,8 +198,11 @@ export default function Gallery({
                 onClick={() => setVideoOpen(true)}
                 aria-label={
                   villaTitle
-                    ? `${villaTitle} villa videosunu oynat`
-                    : "Villa videosunu oynat"
+                    ? formatDictionaryString(
+                        dict.gallery.playVideoAriaLabelWithTitle,
+                        { title: villaTitle }
+                      )
+                    : dict.gallery.playVideoAriaLabel
                 }
                 className="
                   group/video
@@ -206,7 +234,7 @@ export default function Gallery({
                     className="ml-0.5"
                   />
                 </span>
-                <span className="whitespace-nowrap">Villa Videosu</span>
+                <span className="whitespace-nowrap">{dict.gallery.playVideo}</span>
               </button>
             )}
             {actions}
@@ -225,7 +253,7 @@ export default function Gallery({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={images[0]}
-              alt={buildImageAlt(villaTitle, 0, images.length)}
+              alt={buildImageAlt(villaTitle, 0, images.length, dict)}
               className="w-full h-full object-cover transition-transform duration-500 ease-out group-active:scale-[1.03]"
             />
             <WatermarkOverlay {...watermark} />
@@ -240,7 +268,7 @@ export default function Gallery({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={images[1]}
-                  alt={buildImageAlt(villaTitle, 1, images.length)}
+                  alt={buildImageAlt(villaTitle, 1, images.length, dict)}
                   className="w-full h-full object-cover transition-transform duration-500 ease-out group-active:scale-[1.03]"
                 />
                 <WatermarkOverlay {...watermark} />
@@ -254,7 +282,7 @@ export default function Gallery({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={images[2]}
-                    alt={buildImageAlt(villaTitle, 2, images.length)}
+                    alt={buildImageAlt(villaTitle, 2, images.length, dict)}
                     className="w-full h-full object-cover transition-transform duration-500 ease-out group-active:scale-[1.03]"
                   />
                   <WatermarkOverlay {...watermark} />
@@ -282,7 +310,7 @@ export default function Gallery({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={images[0]}
-              alt={buildImageAlt(villaTitle, 0, images.length)}
+              alt={buildImageAlt(villaTitle, 0, images.length, dict)}
               className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
             />
             <WatermarkOverlay {...watermark} />
@@ -300,7 +328,7 @@ export default function Gallery({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={images[1]}
-                alt={buildImageAlt(villaTitle, 1, images.length)}
+                alt={buildImageAlt(villaTitle, 1, images.length, dict)}
                 className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
               />
               <WatermarkOverlay {...watermark} />
@@ -316,7 +344,7 @@ export default function Gallery({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={images[2]}
-                alt={buildImageAlt(villaTitle, 2, images.length)}
+                alt={buildImageAlt(villaTitle, 2, images.length, dict)}
                 className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
               />
               <WatermarkOverlay {...watermark} />
@@ -333,7 +361,10 @@ export default function Gallery({
           <button
             type="button"
             onClick={() => setActiveIndex(0)}
-            aria-label={`Tüm fotoğrafları gör (${images.length} fotoğraf)`}
+            aria-label={formatDictionaryString(
+              dict.gallery.viewAllPhotosAriaLabel,
+              { count: images.length }
+            )}
             className="
               absolute bottom-3 right-3 md:bottom-4 md:right-4 z-10
               inline-flex items-center gap-1.5
@@ -358,7 +389,9 @@ export default function Gallery({
               <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
               <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
             </svg>
-            Tüm Fotoğraflar · {images.length}
+            {formatDictionaryString(dict.gallery.viewAllPhotos, {
+              count: images.length,
+            })}
           </button>
         )}
       </div>
@@ -399,7 +432,7 @@ export default function Gallery({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={images[activeIndex]}
-                alt={buildImageAlt(villaTitle, activeIndex, images.length)}
+                alt={buildImageAlt(villaTitle, activeIndex, images.length, dict)}
                 className="max-h-[78vh] max-w-[90vw] object-contain rounded-xl"
               />
               <WatermarkOverlay {...watermark} />
@@ -437,7 +470,10 @@ export default function Gallery({
                     thumbRefs.current[i] = el;
                   }}
                   onClick={() => setActiveIndex(i)}
-                  aria-label={`Fotoğraf ${i + 1}`}
+                  aria-label={formatDictionaryString(
+                    dict.gallery.photoAriaLabel,
+                    { index: i + 1 }
+                  )}
                   aria-current={i === activeIndex ? "true" : undefined}
                   className={
                     "relative shrink-0 h-14 w-20 md:h-16 md:w-24 " +

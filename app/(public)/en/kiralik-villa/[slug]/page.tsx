@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { cache } from "react";
-import { notFound } from "next/navigation";
 
 import { requirePublicLocaleEnabled } from "@/lib/i18n/public-locale-gate.server";
 import { setRequestLocale } from "@/lib/i18n/request-locale.server";
@@ -9,13 +8,15 @@ import {
   getVillaTranslatedTitle,
   getVillaTranslatedDescription,
   getVillaTranslatedSeoDescription,
+  /* 🛡️ PHASE 10B, Section 11 — SEO title override (varsa). */
+  getVillaTranslatedSeoTitle,
 } from "@/lib/i18n/get-villa-translation.server";
 /* 🛡️ PHASE 8D-2 — batch translation okuma (8D-1) + generic fallback. */
 import {
   getTranslationsForParents,
   resolveTranslatedField,
 } from "@/lib/i18n/get-translation.server";
-import { getCachedSettings } from "@/lib/cache.helpers";
+import { getCachedSettings, getCachedVillaReviewStats } from "@/lib/cache.helpers";
 import { isMultilingualEnabled } from "@/lib/i18n/config";
 import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
 import { sanitizeHtml, stripHtml } from "@/lib/html-sanitize";
@@ -41,7 +42,53 @@ import VillaPriceIncludesAndRulesSection, {
   type TranslatedPriceInclude,
   type TranslatedRule,
 } from "@/app/components/villa/VillaPriceIncludesAndRulesSection";
-import LocaleRouteComingSoon from "@/app/components/i18n/LocaleRouteComingSoon";
+
+/* ===============================================================
+   🛡️ PHASE 10B, Section 9 — ComingSoon'un YERİNE gerçek villa detay.
+   ===============================================================
+   `LocaleRouteComingSoon` importu/render'ı KALDIRILDI. Aşağıdaki 5
+   component TR'nin KULLANDIĞI AYNI shared component'ler (A/C mimarisi —
+   paralel component/ikinci booking engine YOK); hepsi bu fazda eklenen
+   opsiyonel `locale` prop'unu alır, business logic'lerine (price.engine,
+   calendar.engine, villa-availability.helper, useBookingEngine'in
+   selection/pricing/min-stay/orphan-gap mantığı) KESİNLİKLE DOKUNULMADI. */
+import Gallery from "@/app/components/villa/Gallery";
+import PriceList from "@/app/components/villa/PriceList";
+import AvailabilityInlineCalendar from "@/app/components/villa/AvailabilityInlineCalendar";
+import BookingSidebar from "@/app/components/villa/BookingSidebar";
+import MobileBookingCta from "@/app/components/villa/MobileBookingCta";
+
+/* 🛡️ PHASE 10B, Section 9 — Gallery/PriceList/AvailabilityInlineCalendar/
+   BookingSidebar/MobileBookingCta'nın ihtiyaç duyduğu veri: TR
+   sayfasındaki (`kiralik-villa/[slug]/page.tsx`, DEĞİŞTİRİLMEDİ) AYNI
+   servisler/helper'lar, AYNI argümanlar. Yeni bir veri kaynağı/sorgu
+   PATTERN'İ İCAT EDİLMEDİ. */
+import { getVillaImages } from "@/app/services/villa-image/villa-image.read";
+import { getVillaPrices } from "@/app/services/villa-price.service";
+import { getVillaDiscounts } from "@/app/services/villa-discount.service";
+import {
+  resolveVillaImageUrl,
+  resolveAssetUrlVersioned,
+} from "@/lib/storage.helpers";
+import {
+  fetchExternalCalendarStringsForVilla,
+  EMPTY_EXTERNAL_STRING_ARRAYS,
+} from "@/lib/external-calendar.public.helper";
+import {
+  normalizeYouTubeVideos,
+  type VillaYouTubeVideo,
+} from "@/lib/youtube.helper";
+/* 🛡️ PHASE 10B, Section 10 — JSON-LD (TR'nin KULLANDIĞI AYNI builder'lar,
+   ikisi de zaten `locale` param'ı destekliyor — Phase 7D). TR'nin kendi
+   JSON-LD'sine (kiralik-villa/[slug]/page.tsx) DOKUNULMADI. */
+import {
+  JsonLd,
+  buildBreadcrumb,
+  buildVacationRental,
+} from "@/app/components/seo/StructuredData";
+/* 🛡️ PHASE 10B, Section 13 — locale-aware "Villa bulunamadı" eşdeğeri +
+   Section 9'un "Açıklama bulunmuyor" fallback'i artık bu dictionary'den. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 /* ===============================================================
    🛡️ /en/kiralik-villa/[slug] — PHASE 4A (Public Locale Routing Core)
@@ -173,7 +220,23 @@ export async function generateMetadata({
     };
   }
 
-  const title = await getVillaTranslatedTitle(villa.id, villa.title, "en");
+  const fallbackTitle = await getVillaTranslatedTitle(
+    villa.id,
+    villa.title,
+    "en"
+  );
+  /* 🛡️ PHASE 10B, Section 11 — TR'nin generateMetadata'sındaki AYNI
+     öncelik: seo_title (çevirisi) varsa/doluysa O, yoksa çevrilmiş
+     normal title. `getVillaTranslatedSeoTitle` de AYNI
+     getVillaTranslationCached(villa.id,"en") çağrısını reuse eder —
+     YENİ bir DB sorgusu EKLENMEZ. */
+  const translatedSeoTitle = await getVillaTranslatedSeoTitle(
+    villa.id,
+    villa.seo_title,
+    "en"
+  );
+  const title =
+    (translatedSeoTitle && translatedSeoTitle.trim()) || fallbackTitle;
   /* 🛡️ PHASE 8C — title ile AYNI getVillaTranslationCached(villa.id,"en")
      çağrısını reuse eder (React cache() request-scoped dedupe);
      seo_description için AYRI bir DB sorgusu EKLENMEZ. Yalnız
@@ -216,10 +279,31 @@ export default async function EnVillaDetailPage({
   setRequestLocale("en");
   await requirePublicLocaleEnabled();
 
+  const dict = getDictionary("en");
+
   const { slug } = await params;
   const villa = await getVillaBySlugCached(slug);
   if (!villa) {
-    notFound();
+    /* 🛡️ PHASE 10B, Section 13 — TR sayfasının (kiralik-villa/[slug]/
+       page.tsx, DEĞİŞTİRİLMEDİ) kendi "Villa bulunamadı" bloğuyla AYNI
+       desen/stil, locale-aware metinle (dictionary'den). Önceki davranış
+       (`notFound()` → gerçek 404) TR ile PARİTE SAĞLAMIYORDU (TR bu
+       durumda custom 200 render ediyor) — TR'nin kendi mimarisiyle
+       TUTARLI hale getirildi. */
+    return (
+      <section className="section-narrow py-32 text-center">
+        <p className="eyebrow !text-[var(--color-stone-400)]">404</p>
+        <h2 className="font-display text-3xl text-[var(--color-stone-900)] mt-3">
+          {dict.villa.notFoundTitle}
+        </h2>
+        <p className="text-[var(--color-stone-500)] mt-3">
+          {dict.villa.notFoundBody}
+        </p>
+        <a href="/en/arama" className="btn-ghost mt-6 inline-flex">
+          {dict.villa.notFoundCta}
+        </a>
+      </section>
+    );
   }
 
   const title = await getVillaTranslatedTitle(villa.id, villa.title, "en");
@@ -232,6 +316,13 @@ export default async function EnVillaDetailPage({
     "en"
   );
 
+  /* 🛡️ PHASE 10B, Section 9 — YouTube videoları Gallery'ye geçmek için;
+     TR sayfasındaki AYNI saf/sync normalize helper (ek sorgu YOK,
+     villa.youtube_videos zaten DTO'da mevcut). */
+  const youtubeVideos: VillaYouTubeVideo[] = normalizeYouTubeVideos(
+    villa.youtube_videos
+  );
+
   /* 🛡️ PHASE 8D-2 — TR sayfasındaki AYNI 4 servis, AYNI (villa.id)
      argümanı, Promise.all ile paralel (TR'nin kendi Promise.all
      desenine paralel — TR dosyasına dokunulmadı). */
@@ -241,6 +332,27 @@ export default async function EnVillaDetailPage({
     getRuleItemsByVilla(villa.id),
     getPriceIncludeItemsByVilla(villa.id),
   ]);
+
+  /* 🛡️ PHASE 10B, Section 9 — Gallery/PriceList/AvailabilityInlineCalendar/
+     BookingSidebar/MobileBookingCta'nın ihtiyaç duyduğu veri. TR
+     sayfasındaki (kiralik-villa/[slug]/page.tsx) AYNI servisler, AYNI
+     argümanlar (villa.id), AYNI paralel-fetch deseni (Promise.all) —
+     yeni bir veri kaynağı/sorgu PATTERN'İ İCAT EDİLMEDİ. externalBlocks
+     fail-safe: TR'deki AYNI `.catch(() => EMPTY_EXTERNAL_STRING_ARRAYS)`.
+     reviewStats — JSON-LD aggregateRating için (Section 10); VillaReviewsSection
+     BU FAZIN KAPSAMI DIŞI (kullanıcının açık component listesinde YOK),
+     yalnız cached, salt-okunur bir sayı okunuyor. */
+  const [images, prices, discounts, externalBlocks, settings, reviewStats] =
+    await Promise.all([
+      getVillaImages(villa.id),
+      getVillaPrices(villa.id),
+      getVillaDiscounts(villa.id),
+      fetchExternalCalendarStringsForVilla(villa.id).catch(
+        () => EMPTY_EXTERNAL_STRING_ARRAYS
+      ),
+      getCachedSettings(),
+      getCachedVillaReviewStats(villa.id),
+    ]);
 
   /* 🛡️ PHASE 8D-2 — koleksiyon başına TAM 1 batch çeviri sorgusu
      (Phase 8D-1 `getTranslationsForParents`, `.in()` ile) — item
@@ -326,8 +438,78 @@ export default async function EnVillaDetailPage({
       )
     : villa.location;
 
+  /* 🛡️ PHASE 10B, Section 9 — TR sayfasındaki AYNI watermark objesi
+     (resolveAssetUrlVersioned reuse — hesaplama YOK, yalnız çağrı). */
+  const watermark = {
+    logo:
+      resolveAssetUrlVersioned(
+        settings?.watermark_logo,
+        settings?.updated_at
+      ) ?? null,
+    enabled: settings?.watermark_enabled ?? false,
+    opacity: settings?.watermark_opacity ?? 0.15,
+    position: settings?.watermark_position ?? "center",
+    size: settings?.watermark_size ?? 25,
+  } as const;
+
+  /* 🛡️ Bucket-fix — TR sayfasındaki AYNI resolveVillaImageUrl reuse. */
+  const imageUrls = images
+    .map((img) => resolveVillaImageUrl(img.image_url))
+    .filter((u): u is string => typeof u === "string" && u.length > 0);
+
+  /* 🛡️ PHASE 10B, Section 9/10 — TR'nin AYNI saf minPrice reduce'u
+     (price.engine'e DOKUNULMADI; bu yalnız MobileBookingCta/JSON-LD
+     için basit bir görüntüleme türetimi). */
+  const minPrice = prices?.length
+    ? prices.reduce(
+        (acc, pr) =>
+          pr.price > 0 && (acc === null || pr.price < acc.price)
+            ? { price: Number(pr.price), currency: pr.currency || "TRY" }
+            : acc,
+        null as { price: number; currency: string } | null
+      )
+    : null;
+
+  /* 🛡️ PHASE 10B, Section 10 — JSON-LD (locale="en", TR'nin kendi
+     JSON-LD'sine DOKUNULMADI). Sayfanın GÖRÜNEN içeriğiyle tutarlı olsun
+     diye ÇEVRİLMİŞ title/description kullanılır (TR aynı fonksiyonu
+     kendi orijinal TR villa.title/description'ıyla çağırıyor). */
+  const vacationRentalLd = buildVacationRental({
+    slug: villa.slug || slug,
+    title,
+    description: stripHtml(description || villa.description),
+    images: imageUrls,
+    locationName: locationName || null,
+    latitude: typeof villa.latitude === "number" ? villa.latitude : null,
+    longitude: typeof villa.longitude === "number" ? villa.longitude : null,
+    guests: villa.guests,
+    bedrooms: villa.bedrooms,
+    bathrooms: villa.bathrooms,
+    features: translatedFeatures.map((f) => f.displayName).filter(Boolean),
+    priceFrom: minPrice
+      ? { amount: minPrice.price, currency: minPrice.currency }
+      : null,
+    aggregateRating:
+      reviewStats.count > 0
+        ? { ratingValue: reviewStats.average, reviewCount: reviewStats.count }
+        : null,
+    locale: "en",
+  });
+
+  const breadcrumbLd = buildBreadcrumb(
+    [
+      { name: dict.header.home, url: "/" },
+      { name: dict.header.villas, url: "/en/arama" },
+      { name: title },
+    ],
+    "en"
+  );
+
   return (
     <>
+      <JsonLd data={vacationRentalLd} />
+      <JsonLd data={breadcrumbLd} />
+
       <div className="max-w-3xl mx-auto px-5 md:px-0 pt-16 md:pt-24 text-center">
         <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)]">
           Villa
@@ -336,10 +518,23 @@ export default async function EnVillaDetailPage({
           {title}
         </h1>
       </div>
+
+      {/* 🛡️ PHASE 10B, Section 9 — Gallery (ComingSoon'un YERİNE). */}
+      <div className="max-w-3xl mx-auto px-5 md:px-0 mt-8">
+        <Gallery
+          images={imageUrls}
+          watermark={watermark}
+          villaTitle={title}
+          videos={youtubeVideos}
+          locale="en"
+        />
+      </div>
+
       {/* 🛡️ PHASE 8B — description overlay. TR sayfasının (kiralik-villa/
           [slug]/page.tsx) description bloğuyla AYNI koşullu desen + AYNI
-          sanitize mekanizması + AYNI hardcoded fallback metni
-          ("Açıklama bulunmuyor" — bu faz hardcoded UI'a dokunmuyor). */}
+          sanitize mekanizması. 🛡️ PHASE 10B, Section 9 — boş-durum
+          fallback metni ARTIK dictionary'den (locale-aware), TR hardcoded
+          metin DEĞİL. */}
       <div className="max-w-3xl mx-auto px-5 md:px-0 mt-8">
         {description && description.trim() ? (
           <CollapsibleDescription
@@ -349,15 +544,20 @@ export default async function EnVillaDetailPage({
         ) : (
           <div className="card-premium mt-5 p-6 md:p-7 text-[var(--color-stone-600)] leading-[1.75] text-[15px]">
             <span className="italic text-[var(--color-stone-400)]">
-              Açıklama bulunmuyor
+              {dict.villa.descriptionEmpty}
             </span>
           </div>
         )}
       </div>
+
       {/* 🛡️ PHASE 8D-2 — location/distances/features/priceIncludes/rules.
           TR'deki sıra korunuyor. VillaDetailTabs (use client,
           fiyatlar/musaitlik prop'ları zorunlu) KULLANILMIYOR — audit'in
-          onaylanan kararı gereği düz/art arda section'lar. */}
+          onaylanan kararı gereği düz/art arda section'lar.
+          🛡️ PHASE 10B, Section 9 — PriceList/AvailabilityInlineCalendar/
+          BookingSidebar AYNI akışa, AYNI düz/art arda desenle eklendi
+          (TR'nin VillaDetailTabs sekme yapısı KOPYALANMADI — kullanıcı
+          talimatının açık kısıtı). */}
       <div className="max-w-3xl mx-auto px-5 md:px-0 mt-10 space-y-10">
         <VillaInfoBar
           villaTitle={title}
@@ -367,14 +567,66 @@ export default async function EnVillaDetailPage({
           bathrooms={villa.bathrooms}
           tourismDocumentNumber={villa.tourism_document_number}
         />
+
+        <PriceList
+          prices={prices}
+          minimumStayNights={villa.minimum_stay_nights ?? null}
+          deposit={villa.deposit ?? null}
+          discounts={discounts}
+          locale="en"
+        />
+
+        <div className="overflow-x-auto">
+          <AvailabilityInlineCalendar
+            villaId={villa.id}
+            prices={prices}
+            externalBlocks={externalBlocks}
+            locale="en"
+          />
+        </div>
+
         <VillaDistancesSection distances={translatedDistances} />
         <VillaFeaturesSection features={translatedFeatures} />
         <VillaPriceIncludesAndRulesSection
           priceIncludes={translatedPriceIncludes}
           rules={translatedRules}
         />
+
+        {/* 🛡️ PHASE 10B, Section 6/9 — BookingSidebar (useBookingEngine'in
+            TEK, PAYLAŞILAN state machine'i — TR/`/v/[token]` ile AYNI).
+            Business logic'e (min-stay/orphan-gap/price/discount/prepayment/
+            blocked-ranges) DOKUNULMADI; yalnız `locale="en"` prop'u ile UI
+            metni/tarih formatı/navigation locale param'ı locale-aware. */}
+        <div id="booking-sidebar-en">
+          <BookingSidebar
+            villaSlug={villa.slug}
+            villaId={villa.id}
+            externalBlocks={externalBlocks}
+            prices={prices}
+            discounts={discounts}
+            deposit={villa.deposit}
+            cleaning_fee={villa.cleaning_fee}
+            cleaning_currency={villa.cleaning_currency}
+            cleaning_limit={villa.cleaning_limit}
+            pool_heating_fee={villa.pool_heating_fee}
+            pool_heating_currency={villa.pool_heating_currency}
+            pool_heating_months={villa.pool_heating_months}
+            custom_prepayment_rate={villa.custom_prepayment_rate ?? null}
+            minimum_stay_nights={villa.minimum_stay_nights ?? null}
+            orphanGapRuleEnabled={settings?.orphan_gap_rule_enabled ?? true}
+            locale="en"
+          />
+        </div>
       </div>
-      <LocaleRouteComingSoon locale="en" />
+
+      {/* 🛡️ PHASE 10B, Section 8/9 — MobileBookingCta (yalnız <lg,
+          TR'deki AYNI davranış). */}
+      <MobileBookingCta
+        priceAmount={minPrice?.price ?? null}
+        priceCurrency={minPrice?.currency ?? null}
+        targetId="booking-sidebar-en"
+        locale="en"
+      />
     </>
   );
 }

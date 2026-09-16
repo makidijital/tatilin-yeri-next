@@ -1,3 +1,5 @@
+import type { Locale } from "@/lib/i18n/config";
+
 /* ===============================================================
    🔥 DATE FORMAT/PARSE — TEK MERKEZİ HELPER
    ===============================================================
@@ -348,4 +350,73 @@ export function nightsBetween(
   const eD = parseUtcDate(end);
   if (!sD || !eD) return 0;
   return Math.max(0, Math.ceil((eD.getTime() - sD.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
+/* ===============================================================
+   🛡️ PHASE 10B — LOCALE-AWARE KISA TARİH FORMATI (EN/DE villa detail)
+   ===============================================================
+   `formatDateTr` (yukarıda) DEĞİŞTİRİLMEDİ — mail/voucher/admin gibi
+   TÜM mevcut çağıranlar (TR-only, Europe/Istanbul UTC+3 manuel shift
+   davranışı) o fonksiyonu AYNEN kullanmaya devam eder.
+
+   Bu, PriceList.tsx'in EN/DE'de "Ocak/Şubat" gibi Türkçe ay adları
+   göstermesini önlemek için EKLENEN, AYRI bir fonksiyon —
+   `formatDateTr` ile AYNI Istanbul-offset/"—" fallback mantığını
+   kullanır (`toIstanbulDate` — bu dosyanın private helper'ı, AYNEN
+   reuse), yalnız ay adı dizisi locale'e göre seçilir. `formatDateTr`
+   HİÇBİR ŞEKİLDE bu fonksiyonu çağırmaz veya tersi — iki fonksiyon
+   birbirinden bağımsız, TR davranışı sıfır risk taşır. */
+const MONTHS_EN_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+const MONTHS_DE_SHORT = [
+  "Jan",
+  "Feb",
+  "Mär",
+  "Apr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Dez",
+] as const;
+
+const MONTHS_SHORT_BY_LOCALE: Record<Locale, readonly string[]> = {
+  tr: MONTHS_TR_SHORT,
+  en: MONTHS_EN_SHORT,
+  de: MONTHS_DE_SHORT,
+};
+
+/** `formatDateTr` ile AYNI çıktı şekli ("11 May 2026" / "—"), yalnız
+ *  ay adı `locale`'e göre seçilir. `locale` desteklenmiyorsa/geçersizse
+ *  TR'ye düşer (`MONTHS_SHORT_BY_LOCALE` her zaman 3 key'in hepsini
+ *  içerir — TypeScript `Record<Locale,...>` zaten eksiksizliği
+ *  garanti eder). */
+export function formatDateForLocale(
+  value: string | null | undefined,
+  locale: Locale
+): string {
+  if (!value) return "—";
+  const ist = toIstanbulDate(value);
+  if (!ist) return value;
+  const day = ist.getUTCDate();
+  const months = MONTHS_SHORT_BY_LOCALE[locale] || MONTHS_TR_SHORT;
+  const month = months[ist.getUTCMonth()];
+  const year = ist.getUTCFullYear();
+  return `${day} ${month} ${year}`;
 }

@@ -82,6 +82,22 @@ describe("Dictionary — üç dictionary aynı key yapısına sahip (eksik key y
             (acc, key) => (acc as Record<string, unknown>)?.[key],
             dict
           );
+        /* 🛡️ PHASE 10B — `availability.weekdayShort` gibi bazı dictionary
+           key'leri artık ARRAY (7 hafta günü kısaltması) — `collectKeyPaths`
+           yukarıda (dosya-üstü yorum) array'leri BİLEREK leaf olarak
+           (tek path) ele alıyor, elemanlarına inmiyor. Bu yüzden buradaki
+           "boş değer yok" kontrolü de İKİ ŞEKLİ desteklemeli: scalar
+           string (eski/mevcut TÜM key'ler) VE string[] (yeni array
+           key'ler) — her iki durumda da HİÇBİR eleman boş/undefined
+           olmamalı. Scalar path'ler için davranış BİREBİR ESKİSİYLE aynı. */
+        if (Array.isArray(value)) {
+          expect(value.length).toBeGreaterThan(0);
+          for (const item of value) {
+            expect(typeof item).toBe("string");
+            expect((item as string).length).toBeGreaterThan(0);
+          }
+          continue;
+        }
         expect(typeof value).toBe("string");
         expect((value as string).length).toBeGreaterThan(0);
       }

@@ -68,6 +68,14 @@ import { formatCurrency } from "@/lib/currency";
 import { useCurrency } from "@/app/context/CurrencyContext";
 
 import type { BookingResult, ActiveStayDiscount } from "./useBookingEngine";
+/* 🛡️ PHASE 10B — locale-aware UI stringleri. `locale` opsiyonel,
+   default "tr" — mevcut TR call-site'ları (BookingSidebar,
+   VillaCardBookingModal) hiç değişmeden byte-identical render eder.
+   Hesap/formatCurrency semantiğine DOKUNULMADI — yalnız metin
+   kaynağı değişti. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import type { Locale } from "@/lib/i18n/config";
 
 type Props = {
   result: BookingResult;
@@ -95,6 +103,8 @@ type Props = {
      caller'lar (varsa) bu prop'u geçmeden BYTE-IDENTICAL davranır
      (checkbox eskisi gibi yalnız fee>0'a bakarak görünür). */
   poolHeatingActiveForRange?: boolean;
+  /* 🛡️ PHASE 10B — opsiyonel, default "tr". */
+  locale?: Locale;
 };
 
 export default function BookingSummary({
@@ -110,8 +120,14 @@ export default function BookingSummary({
   onPoolHeatingChange,
   poolHeatingTotal = 0,
   poolHeatingActiveForRange = true,
+  locale,
 }: Props) {
   const { currency } = useCurrency();
+  const dict = getDictionary(locale);
+  const accommodationLabel = formatDictionaryString(
+    dict.booking.accommodationAmountLabel,
+    { n: result.nights }
+  );
 
   return (
     <div className="relative bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-2xl p-4 space-y-2.5 text-sm">
@@ -132,7 +148,7 @@ export default function BookingSummary({
       {activeStayDiscount ? (
         <div className="flex items-start justify-between gap-3">
           <span className="text-[var(--color-stone-600)]">
-            {`Konaklama Tutarı (${result.nights} Gece)`}
+            {accommodationLabel}
           </span>
           <div className="text-right">
             <span className="block text-[11px] text-[var(--color-stone-400)] line-through tabular-nums">
@@ -147,19 +163,19 @@ export default function BookingSummary({
                 gerçekten aktifse (activeStayDiscount != null) render edilir;
                 indirim yoksa bu blok hiç yok, `Row` dalı BİREBİR aynı. */}
             <span className="mt-1 inline-block rounded-full bg-[#0973BA] px-2.5 py-0.5 text-[10px] font-semibold text-white text-center whitespace-nowrap">
-              İndirimli Tutar
+              {dict.booking.discountedTotal}
             </span>
           </div>
         </div>
       ) : (
         <Row
-          label={`Konaklama Tutarı (${result.nights} Gece)`}
+          label={accommodationLabel}
           value={formatCurrency(result.stay, currency)}
         />
       )}
       {result.cleaning > 0 && (
         <Row
-          label="Kısa Süreli Konaklama Ücreti"
+          label={dict.booking.shortStayFeeLabel}
           value={formatCurrency(result.cleaning, currency)}
         />
       )}
@@ -181,7 +197,7 @@ export default function BookingSummary({
                 className="!w-4 !h-4 shrink-0 accent-[var(--color-champagne-500)] !rounded"
               />
               <span className="text-[var(--color-stone-600)] group-hover:text-[var(--color-stone-900)] transition-colors">
-                Havuz Isıtma Ücreti
+                {dict.booking.poolHeatingFeeLabel}
               </span>
             </span>
             {poolHeatingSelected && (
@@ -191,8 +207,12 @@ export default function BookingSummary({
             )}
           </label>
           <p className="pl-[26px] mt-0.5 text-[11px] text-[var(--color-stone-400)]">
-            {formatCurrency(poolHeatingFee, poolHeatingCurrency || "TRY")} / gece
-            {poolHeatingSelected && ` × ${result.nights} gece`}
+            {formatCurrency(poolHeatingFee, poolHeatingCurrency || "TRY")}{" "}
+            {dict.booking.poolHeatingPerNightSuffix}
+            {poolHeatingSelected &&
+              ` ${formatDictionaryString(dict.booking.poolHeatingNightsMultiplier, {
+                n: result.nights,
+              })}`}
           </p>
         </div>
       )}
@@ -200,7 +220,7 @@ export default function BookingSummary({
       {/* TOPLAM TUTAR — yeşil, yumuşak zeminle vurgulu */}
       <div className="border-t border-[var(--color-sand-100)] pt-3">
         <div className="flex items-center justify-between rounded-xl bg-green-50/70 px-3 py-2.5">
-          <span className="font-semibold text-green-800">Toplam Tutar</span>
+          <span className="font-semibold text-green-800">{dict.booking.total}</span>
           <span className="font-display text-lg font-bold text-green-700 tabular-nums">
             {formatCurrency(result.total, currency)}
           </span>
@@ -212,7 +232,9 @@ export default function BookingSummary({
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl border border-purple-100 bg-purple-50/60 px-3 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-purple-500">
-            Ön ödeme (%{prepaymentRate})
+            {formatDictionaryString(dict.booking.prepaymentAmountLabel, {
+              rate: prepaymentRate,
+            })}
           </p>
           <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
             {formatCurrency(prepayment, currency)}
@@ -220,7 +242,7 @@ export default function BookingSummary({
         </div>
         <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
-            Girişte ödenecek
+            {dict.booking.dueAtCheckinLabel}
           </p>
           <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
             {formatCurrency(result.total - prepayment, currency)}
@@ -237,15 +259,14 @@ export default function BookingSummary({
               <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#0973BA]/10 text-[#0973BA]">
                 <ShieldCheck size={11} strokeWidth={2} aria-hidden />
               </span>
-              Hasar Depozitosu
+              {dict.booking.depositLabel}
             </span>
             <span className="font-semibold text-[var(--color-stone-900)] tabular-nums">
               {formatCurrency(convertedDeposit, currency)}
             </span>
           </div>
           <p className="mt-1.5 text-xs text-[var(--color-stone-500)] leading-relaxed">
-            Girişte hasar depozitosu ek olarak alınır. Villada herhangi bir
-            hasar oluşmaması durumunda çıkışta eksiksiz olarak iade edilir.
+            {dict.booking.depositNote}
           </p>
         </div>
       )}

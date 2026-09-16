@@ -49,6 +49,14 @@ import { useBookingEngine } from "@/app/components/villa/booking/useBookingEngin
 import BookingCalendar from "@/app/components/villa/booking/BookingCalendar";
 import BookingSummary from "@/app/components/villa/booking/BookingSummary";
 import BookingMinStayWarning from "@/app/components/villa/booking/BookingMinStayWarning";
+/* 🛡️ PHASE 10B — locale-aware UI stringleri. `locale` opsiyonel,
+   default "tr" — mevcut TR call-site'ı (kiralik-villa/[slug]/page.tsx)
+   hiç değişmeden byte-identical render eder. Selection/pricing/
+   navigation mantığına (useBookingEngine) DOKUNULMADI — yalnız
+   `locale` engine'e ve child component'lere iletiliyor. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import { LOCALE_BCP47, type Locale } from "@/lib/i18n/config";
 
 /* 🛡️ HAVUZ ISITMA — yerleşim turu. Satır BookingSummary'nin içine
    taşındı (bkz. o dosyadaki yorum); bu dosyada artık formatCurrency/
@@ -60,8 +68,8 @@ import BookingMinStayWarning from "@/app/components/villa/booking/BookingMinStay
    tarihin gösterim biçimi. Eski tek-pill kodundaki
    `toLocaleDateString("tr-TR", { day: "numeric", month: "short" })`
    çağrısıyla BİREBİR aynı; state/hesaplama YOK, yalnız display format. */
-function formatDatePillLabel(date: Date): string {
-  return date.toLocaleDateString("tr-TR", {
+function formatDatePillLabel(date: Date, bcp47: string): string {
+  return date.toLocaleDateString(bcp47, {
     day: "numeric",
     month: "short",
   });
@@ -101,6 +109,8 @@ type Props = {
   /* External iCal block date strings (server-fetched).
      Engine reservation/manual array'leriyle merge eder. */
   externalBlocks?: ExternalCalendarStringArrays;
+  /* 🛡️ PHASE 10B — opsiyonel, default "tr". */
+  locale?: Locale;
 };
 
 export default function BookingSidebar({
@@ -121,7 +131,11 @@ export default function BookingSidebar({
   externalBlocks = EMPTY_EXTERNAL_STRING_ARRAYS,
   initialStart = null,
   initialEnd = null,
+  locale,
 }: Props) {
+  const dict = getDictionary(locale);
+  const bcp47 = LOCALE_BCP47[locale ?? "tr"];
+
   /* === DOMAIN — TEK SOURCE-OF-TRUTH === */
   const engine = useBookingEngine({
     villaSlug,
@@ -141,6 +155,7 @@ export default function BookingSidebar({
     externalBlocks,
     initialStart,
     initialEnd,
+    locale,
   });
 
   const {
@@ -231,13 +246,13 @@ export default function BookingSidebar({
             aria-hidden="true"
             className="inline-block w-3.5 h-px bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
           />
-          Rezervasyon
+          {dict.booking.sidebarEyebrow}
         </span>
         <h2 className="mt-2 font-display text-[21px] md:text-[23px] leading-tight tracking-[-0.02em] text-[var(--color-stone-900)]">
-          Konaklamanızı planlayın
+          {dict.booking.sidebarTitle}
         </h2>
         <p className="mt-1.5 text-[13px] text-[var(--color-stone-500)] leading-relaxed">
-          Uygun tarihleri seçin, konaklama detaylarını hemen görüntüleyin.
+          {dict.booking.sidebarSubtitle}
         </p>
       </div>
 
@@ -258,10 +273,12 @@ export default function BookingSidebar({
         >
           <div className="flex-1 min-w-0">
             <div className="text-[10px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-400)] group-hover:text-[#ED7926] transition-colors duration-200 motion-reduce:transition-none">
-              Check-in
+              {dict.booking.checkInPillLabel}
             </div>
             <div className="mt-1 text-[15px] font-medium text-[var(--color-stone-900)] truncate">
-              {startDate ? formatDatePillLabel(startDate) : "Tarih seç"}
+              {startDate
+                ? formatDatePillLabel(startDate, bcp47)
+                : dict.booking.selectDatePlaceholder}
             </div>
           </div>
 
@@ -272,10 +289,12 @@ export default function BookingSidebar({
 
           <div className="flex-1 min-w-0">
             <div className="text-[10px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-400)] group-hover:text-[#0973BA] transition-colors duration-200 motion-reduce:transition-none">
-              Check-out
+              {dict.booking.checkOutPillLabel}
             </div>
             <div className="mt-1 text-[15px] font-medium text-[var(--color-stone-900)] truncate">
-              {endDate ? formatDatePillLabel(endDate) : "Tarih seç"}
+              {endDate
+                ? formatDatePillLabel(endDate, bcp47)
+                : dict.booking.selectDatePlaceholder}
             </div>
           </div>
 
@@ -301,6 +320,7 @@ export default function BookingSidebar({
               currentMonth={currentMonth}
               onCurrentMonthChange={setCurrentMonth}
               onSelectComplete={() => setOpenCalendar(false)}
+              locale={locale}
             />
           </div>
         )}
@@ -316,10 +336,13 @@ export default function BookingSidebar({
         >
           <div className="flex-1 min-w-0">
             <div className="text-[10px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-400)] group-hover:text-[#ED7926] transition-colors duration-200 motion-reduce:transition-none">
-              Misafir
+              {dict.booking.guestsLabel}
             </div>
             <div className="mt-1 text-[15px] font-medium text-[var(--color-stone-900)]">
-              {adults} yetişkin · {children} çocuk
+              {formatDictionaryString(dict.booking.guestsSummary, {
+                adults,
+                children,
+              })}
             </div>
           </div>
           <ChevronDown
@@ -333,13 +356,13 @@ export default function BookingSidebar({
         {openGuests && (
           <div className="absolute z-50 mt-3 w-full bg-white border border-[var(--color-stone-100)] rounded-2xl shadow-[0_16px_40px_-16px_rgba(11,31,58,0.16)] p-5 space-y-4">
             <Counter
-              label="Yetişkin"
+              label={dict.booking.adultsLabel}
               value={adults}
               min={1}
               onChange={setAdults}
             />
             <Counter
-              label="Çocuk"
+              label={dict.booking.childrenLabel}
               value={children}
               min={0}
               onChange={setChildren}
@@ -348,7 +371,7 @@ export default function BookingSidebar({
               onClick={() => setOpenGuests(false)}
               className="w-full rounded-full bg-[var(--color-stone-900)] hover:bg-[var(--color-stone-800)] text-white text-[13px] font-semibold py-2.5 transition-colors duration-200 motion-reduce:transition-none"
             >
-              Tamam
+              {dict.booking.confirm}
             </button>
           </div>
         )}
@@ -368,14 +391,14 @@ export default function BookingSidebar({
           <BookingMinStayWarning
             minStayThreshold={minStayThreshold}
             selectedNights={selectedNights}
+            locale={locale}
           />
         )}
 
       {/* 🛡️ GAP OVERRIDE bilgi metni — koşul AYNEN. */}
       {isGapOverride && (
         <p className="text-[12px] text-emerald-700 bg-emerald-50/70 border border-emerald-100 rounded-xl px-3 py-2">
-          Kısa süreli boşluk fırsatı nedeniyle bu tarih aralığı rezerve
-          edilebilir.
+          {dict.booking.gapOverrideNotice}
         </p>
       )}
 
@@ -402,6 +425,7 @@ export default function BookingSidebar({
             onPoolHeatingChange={setPoolHeatingSelected}
             poolHeatingTotal={poolHeatingTotal}
             poolHeatingActiveForRange={poolHeatingActiveForRange}
+            locale={locale}
           />
         </div>
       )}
@@ -441,11 +465,11 @@ export default function BookingSidebar({
             }
           `}
         >
-          Rezervasyon Yap
+          {dict.booking.bookNow}
         </button>
 
         <p className="text-[11px] text-[var(--color-stone-400)] text-center leading-relaxed">
-          Ücret seçilen tarihlere göre otomatik hesaplanır
+          {dict.booking.feeAutoCalculated}
         </p>
       </div>
 
@@ -497,7 +521,7 @@ export default function BookingSidebar({
             />
 
             <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-stone-400)]">
-              Ödeme Kolaylığı
+              {dict.booking.installmentEyebrow}
             </span>
 
             <div className="mt-2.5 flex items-center gap-4">
@@ -516,10 +540,10 @@ export default function BookingSidebar({
               />
               <div className="min-w-0">
                 <p className="text-[13.5px] font-semibold text-[var(--color-stone-900)] leading-snug">
-                  Şimdi Öde
+                  {dict.booking.payNowPerk}
                 </p>
                 <p className="mt-0.5 text-[13.5px] text-[var(--color-stone-500)] leading-snug">
-                  Kalanı Tatilde Öde
+                  {dict.booking.payAtCheckinPerk}
                 </p>
               </div>
             </div>

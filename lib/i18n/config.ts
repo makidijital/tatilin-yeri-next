@@ -119,3 +119,23 @@ export function getPublicDefaultLocale(
 ): Locale {
   return toLocale(settings?.public_default_locale);
 }
+
+/* ===============================================================
+   🛡️ PHASE 10B — Intl/`toLocaleDateString` İÇİN BCP-47 ETİKETİ
+   ===============================================================
+   AMAÇ: AvailabilityInlineCalendar/BookingCalendar'ın ay başlığı
+   (`toLocaleDateString(tag, {month:"long"})`) ve MobileBookingCta'nın
+   sayı formatlaması (`toLocaleNumber`/`toLocaleString`) için native
+   `Intl` çağrılarına geçirilecek locale tag'i. `app/components/seo/
+   StructuredData.tsx`'in `SCHEMA_IN_LANGUAGE` haritasıyla AYNI ilke
+   (region-agnostic EN/DE, region-specific TR) — ANCAK schema.org
+   `inLanguage` alanı için DEĞİL, `Intl`/`toLocaleDateString` için
+   AYRI bir sabit (farklı tüketici, farklı dosya; bilinçli olarak
+   BAĞLANMADI — birini değiştirmek diğerini etkilemez). Yeni bir
+   locale/config mekanizması İCAT EDİLMEDİ, yalnız SUPPORTED_LOCALES
+   üzerinden türetilen statik bir Record. */
+export const LOCALE_BCP47: Record<Locale, string> = {
+  tr: "tr-TR",
+  en: "en-US",
+  de: "de-DE",
+};

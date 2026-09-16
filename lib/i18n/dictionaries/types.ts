@@ -29,6 +29,9 @@ export type Dictionary = {
     error: string;
     success: string;
     viewAll: string;
+    /* 🛡️ PHASE 10B — MobileBookingCta.tsx */
+    checkAvailability: string;
+    perNight: string;
   };
   header: {
     home: string;
@@ -70,6 +73,56 @@ export type Dictionary = {
     discount: string;
     discountedTotal: string;
     nights: string;
+    /* 🛡️ PHASE 10B — BookingSidebar/BookingSummary/BookingMinStayWarning/
+       BookingCalendar/useBookingEngine/MobileBookingCta UI stringleri.
+       Yukarıdaki 13 anahtar (Phase 2) DEĞİŞMEDİ — bunlar EKLEME. */
+    sidebarEyebrow: string;
+    sidebarTitle: string;
+    sidebarSubtitle: string;
+    checkInPillLabel: string;
+    checkOutPillLabel: string;
+    selectDatePlaceholder: string;
+    guestsLabel: string;
+    /** template: {adults}, {children} */
+    guestsSummary: string;
+    adultsLabel: string;
+    childrenLabel: string;
+    confirm: string;
+    gapOverrideNotice: string;
+    bookNow: string;
+    feeAutoCalculated: string;
+    installmentEyebrow: string;
+    payNowPerk: string;
+    payAtCheckinPerk: string;
+    minStayWarningTitle: string;
+    /** template: {n} */
+    minStayWarningBody: string;
+    /** template: {n} */
+    minStayWarningSelected: string;
+    /** template: {n} */
+    accommodationAmountLabel: string;
+    /* 🛡️ PHASE 10B — BookingSummary.tsx "Kısa Süreli Konaklama Ücreti"
+       satırı. `booking.cleaningFee` ("Temizlik Ücreti") ile KASITLI
+       olarak AYRI tutuldu — component'in bugünkü gerçek metni farklı;
+       mevcut `cleaningFee` anahtarı/değeri DEĞİŞTİRİLMEDİ. */
+    shortStayFeeLabel: string;
+    poolHeatingFeeLabel: string;
+    poolHeatingPerNightSuffix: string;
+    /** template: {n} */
+    poolHeatingNightsMultiplier: string;
+    /** template: {rate} */
+    prepaymentAmountLabel: string;
+    dueAtCheckinLabel: string;
+    depositLabel: string;
+    depositNote: string;
+    reservationErrorSelectDate: string;
+    /** template: {n} */
+    reservationErrorMinStay: string;
+    /** template: {n} */
+    reservationErrorOrphanGap: string;
+    conflictError: string;
+    calendarToday: string;
+    mobileCtaAriaLabel: string;
   };
   filters: {
     filter: string;
@@ -79,5 +132,69 @@ export type Dictionary = {
     villaType: string;
     apply: string;
     clear: string;
+  };
+  /* 🛡️ PHASE 10B — AvailabilityInlineCalendar + BookingCalendar
+     (legend/nav/hafta günleri) ortak anahtarları. */
+  availability: {
+    /** Pzt/Sal/Çar/Per/Cum/Cmt/Paz sırasıyla — 7 eleman sabit. */
+    weekdayShort: readonly [
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      string
+    ];
+    prevMonth: string;
+    nextMonth: string;
+    legendConfirmed: string;
+    legendConfirmedTitle: string;
+    legendPending: string;
+    legendPendingTitle: string;
+    legendAvailable: string;
+    legendAvailableTitle: string;
+  };
+  /* 🛡️ PHASE 10B — Gallery.tsx UI stringleri. */
+  gallery: {
+    noImages: string;
+    playVideo: string;
+    /** template: {title} */
+    playVideoAriaLabelWithTitle: string;
+    playVideoAriaLabel: string;
+    /** template: {count} */
+    viewAllPhotos: string;
+    /** template: {count} */
+    viewAllPhotosAriaLabel: string;
+    /** template: {title} */
+    coverPhotoAlt: string;
+    /** template: {title}, {index} */
+    photoAlt: string;
+    /** template: {title}, {index}, {total} */
+    photoAltWithTotal: string;
+    /** template: {index} */
+    photoAriaLabel: string;
+  };
+  /* 🛡️ PHASE 10B — PriceList.tsx UI stringleri. */
+  price: {
+    noPriceInfo: string;
+    nightly: string;
+    /** template: {percent} */
+    discountedBadgeWithPercent: string;
+    discountedBadge: string;
+    infoAriaLabel: string;
+    /** template: {n} */
+    minNights: string;
+    /** template: {amount} */
+    damageDeposit: string;
+  };
+  /* 🛡️ PHASE 10B — EN/DE villa detail sayfası, TR page.tsx'in özel
+     "Villa bulunamadı" bloğunun ve boş açıklama fallback'inin
+     locale-aware karşılığı. */
+  villa: {
+    notFoundTitle: string;
+    notFoundBody: string;
+    notFoundCta: string;
+    descriptionEmpty: string;
   };
 };

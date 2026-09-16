@@ -5,8 +5,19 @@ import { Calendar, Moon, ShieldCheck, Info } from "lucide-react";
 
 import { convertPrice, formatCurrency } from "@/lib/currency";
 import { useCurrency } from "@/app/context/CurrencyContext";
-import { formatDateTr, parseLocalDate, formatLocalDate } from "@/lib/date-format";
+import { formatDateForLocale, parseLocalDate, formatLocalDate } from "@/lib/date-format";
 import { applyDiscountToDailyPrice, type DiscountRange } from "@/lib/price.engine";
+/* 🛡️ PHASE 10B — locale-aware UI stringleri + tarih formatı.
+   `locale` opsiyonel, default "tr". `formatDateForLocale(x,"tr")`
+   `formatDateTr(x)` ile BYTE-IDENTICAL çıktı üretir (AYNI Istanbul-
+   offset + AYNI ay kısaltmaları) — bu yüzden eski `formatDateTr`
+   import'u bu dosyada bu locale-aware karşılığıyla DEĞİŞTİRİLDİ;
+   `lib/date-format.ts`'teki `formatDateTr`'nin KENDİSİ DOKUNULMADI,
+   diğer TÜM çağıranları (mail/voucher/admin) etkilenmez. price.engine
+   fonksiyonlarına (`applyDiscountToDailyPrice` vb.) DOKUNULMADI. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import type { Locale } from "@/lib/i18n/config";
 
 /* ===============================================================
    🛡️ PriceList — EDITORIAL LIST (klasik kart/tablo DEĞİL)
@@ -231,6 +242,7 @@ export default function PriceList({
   minimumStayNights = null,
   deposit = null,
   discounts = null,
+  locale,
 }: {
   prices: Price[];
   /* Villa-level min stay. null veya 0 → Bilgi panelinde satır yok.
@@ -245,16 +257,20 @@ export default function PriceList({
      sayfası) davranış BİREBİR ESKİSİYLE aynı — hiçbir segment bölünmez,
      her sezon tek satır olarak görünür. */
   discounts?: DiscountRange[] | null;
+  /* 🛡️ PHASE 10B — opsiyonel, default "tr". */
+  locale?: Locale;
 }) {
   const { currency, rates } = useCurrency();
   const [openId, setOpenId] = useState<string | null>(null);
+  const dict = getDictionary(locale);
+  const effectiveLocale = locale ?? "tr";
 
   /* Boş array yine de gelirse defansif fallback (caller outer'da
      zaten ternary ile koruyor; bu inner guard backward-compat). */
   if (!prices || prices.length === 0) {
     return (
       <p className="text-[var(--color-stone-400)] text-sm italic">
-        Fiyat bilgisi yok
+        {dict.price.noPriceInfo}
       </p>
     );
   }
@@ -418,8 +434,11 @@ export default function PriceList({
             {isDiscounted && (
               <span className="relative mb-2 inline-flex items-center gap-1 rounded-full bg-green-600 px-2.5 py-1 text-[9.5px] font-semibold uppercase tracking-[0.05em] text-white shadow-[0_4px_10px_-3px_rgba(22,163,74,0.45)]">
                 {discountPercent !== null
-                  ? `İndirimli · %${discountPercent}`
-                  : "İndirimli"}
+                  ? formatDictionaryString(
+                      dict.price.discountedBadgeWithPercent,
+                      { percent: discountPercent }
+                    )
+                  : dict.price.discountedBadge}
               </span>
             )}
 
@@ -433,11 +452,11 @@ export default function PriceList({
                   <Calendar size={14} strokeWidth={1.9} />
                 </span>
                 <span className="tabular-nums">
-                  {formatDateTr(seg.start_date)}
+                  {formatDateForLocale(seg.start_date, effectiveLocale)}
                   <span className="mx-2 text-[#ED7926]/55 font-medium">
                     —
                   </span>
-                  {formatDateTr(seg.end_date)}
+                  {formatDateForLocale(seg.end_date, effectiveLocale)}
                 </span>
               </p>
 
@@ -459,7 +478,7 @@ export default function PriceList({
                       className="text-[8.5px] tracking-[0.18em] uppercase text-[var(--color-stone-400)] font-medium mt-1.5"
                       aria-hidden
                     >
-                      Gecelik
+                      {dict.price.nightly}
                     </p>
                   </div>
                 ) : (
@@ -474,7 +493,7 @@ export default function PriceList({
                       className="text-[8.5px] tracking-[0.18em] uppercase text-[var(--color-stone-400)] font-medium mt-1.5"
                       aria-hidden
                     >
-                      Gecelik
+                      {dict.price.nightly}
                     </p>
                   </div>
                 )}
@@ -498,7 +517,7 @@ export default function PriceList({
                         setOpenId((cur) => (cur === seg.key ? null : seg.key))
                       }
                       aria-expanded={isOpen}
-                      aria-label="Bilgi"
+                      aria-label={dict.price.infoAriaLabel}
                       className={
                         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-semibold tracking-wide transition-all duration-200 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40 " +
                         (isOpen
@@ -527,7 +546,9 @@ export default function PriceList({
                               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#ED7926]/10 text-[#ED7926] shrink-0">
                                 <Moon size={12} strokeWidth={1.9} aria-hidden />
                               </span>
-                              Min. {minimumStayNights} Gece
+                              {formatDictionaryString(dict.price.minNights, {
+                                n: minimumStayNights as number,
+                              })}
                             </li>
                           )}
                           {hasDeposit && (
@@ -535,7 +556,9 @@ export default function PriceList({
                               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0973BA]/10 text-[#0973BA] shrink-0">
                                 <ShieldCheck size={12} strokeWidth={1.9} aria-hidden />
                               </span>
-                              Hasar Depozitosu: {formatCurrency(convertedDeposit, currency)}
+                              {formatDictionaryString(dict.price.damageDeposit, {
+                                amount: formatCurrency(convertedDeposit, currency),
+                              })}
                             </li>
                           )}
                         </ul>

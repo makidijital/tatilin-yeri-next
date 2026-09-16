@@ -29,7 +29,7 @@
 
 import { DayPicker, type DayContentProps } from "react-day-picker";
 import "react-day-picker/dist/style.css";
-import { tr } from "date-fns/locale";
+import { tr, enUS, de } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { useState } from "react";
@@ -39,6 +39,14 @@ import { getDayStyle } from "@/lib/calendar.engine";
 import { getValidEndDate } from "@/lib/date-range";
 
 import type { UseBookingEngineReturn } from "./useBookingEngine";
+/* 🛡️ PHASE 10B — locale-aware UI stringleri + date-fns locale seçimi.
+   `locale` opsiyonel, default "tr" — mevcut TR call-site'ları
+   (BookingSidebar, VillaCardBookingModal) hiç değişmeden byte-identical
+   render eder. Engine/DayPicker selection/conflict/pricing mantığına
+   DOKUNULMADI — yalnız UI string kaynağı ve date-fns `locale` objesi
+   değişti. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { LOCALE_BCP47, type Locale } from "@/lib/i18n/config";
 
 type Props = {
   engine: UseBookingEngineReturn;
@@ -47,6 +55,8 @@ type Props = {
   /* Selection commit'inden sonra çağrılır (sidebar dropdown'u kapatır,
      modal noop veya animasyon yapabilir). Opsiyonel. */
   onSelectComplete?: () => void;
+  /* 🛡️ PHASE 10B — opsiyonel, default "tr". */
+  locale?: Locale;
 };
 
 export default function BookingCalendar({
@@ -54,8 +64,13 @@ export default function BookingCalendar({
   currentMonth,
   onCurrentMonthChange,
   onSelectComplete,
+  locale,
 }: Props) {
   const { currency } = useCurrency();
+  const dict = getDictionary(locale);
+  const bcp47 = LOCALE_BCP47[locale ?? "tr"];
+  const dateFnsLocale =
+    locale === "en" ? enUS : locale === "de" ? de : tr;
 
   /* 🛡️ Modern inline error — alert() yerine takvim üstünde geçici
      uyarı banner'ı; 3 saniye sonra otomatik temizlenir. */
@@ -104,7 +119,7 @@ export default function BookingCalendar({
           ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-2 mb-4">
         <h3 className="font-display text-[14px] text-[var(--color-stone-900)] tracking-[-0.015em] capitalize">
-          {currentMonth.toLocaleDateString("tr-TR", {
+          {currentMonth.toLocaleDateString(bcp47, {
             month: "long",
           })}
           <span className="text-[var(--color-stone-400)] font-normal ml-1.5">
@@ -124,7 +139,7 @@ export default function BookingCalendar({
               )
             }
             className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-[var(--color-sand-50)] transition motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
-            aria-label="Önceki ay"
+            aria-label={dict.availability.prevMonth}
           >
             <ChevronLeft size={15} className="text-[var(--color-stone-600)]" />
           </button>
@@ -136,7 +151,7 @@ export default function BookingCalendar({
             }}
             className="px-2 py-1 rounded-md text-[10px] tracking-[0.12em] uppercase font-medium text-[var(--color-stone-500)] hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)] transition motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
           >
-            Bugün
+            {dict.booking.calendarToday}
           </button>
           <button
             type="button"
@@ -150,7 +165,7 @@ export default function BookingCalendar({
               )
             }
             className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-[var(--color-sand-50)] transition motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
-            aria-label="Sonraki ay"
+            aria-label={dict.availability.nextMonth}
           >
             <ChevronRight size={15} className="text-[var(--color-stone-600)]" />
           </button>
@@ -158,7 +173,7 @@ export default function BookingCalendar({
       </div>
 
       <DayPicker
-        locale={tr}
+        locale={dateFnsLocale}
         mode="range"
         month={currentMonth}
         onMonthChange={onCurrentMonthChange}
@@ -221,7 +236,7 @@ export default function BookingCalendar({
           if (hasConflict(from, to)) {
             /* 🛡️ alert() yerine inline banner — 3 saniye sonra otomatik
                kaybolur; kullanıcı flow'unu blok etmez. */
-            setConflictError("Bu tarih aralığı dolu gün içeriyor");
+            setConflictError(dict.booking.conflictError);
             setTimeout(() => setConflictError(null), 3000);
             return;
           }
@@ -445,35 +460,35 @@ export default function BookingCalendar({
       <div className="mt-4 flex items-center justify-center gap-4 text-[10px] tracking-[0.04em] text-[var(--color-stone-400)]">
         <span
           className="inline-flex items-center gap-1.5"
-          title="Onaylanmış rezervasyonlar"
+          title={dict.availability.legendConfirmedTitle}
         >
           <span
             className="inline-block w-1.5 h-1.5 rounded-full"
             style={{ background: "rgba(239,68,68,0.55)" }}
             aria-hidden
           />
-          Onaylı
+          {dict.availability.legendConfirmed}
         </span>
         <span
           className="inline-flex items-center gap-1.5"
-          title="Bekleyen rezervasyonlar"
+          title={dict.availability.legendPendingTitle}
         >
           <span
             className="inline-block w-1.5 h-1.5 rounded-full"
             style={{ background: "#facc15" }}
             aria-hidden
           />
-          Beklemede
+          {dict.availability.legendPending}
         </span>
         <span
           className="inline-flex items-center gap-1.5"
-          title="Müsait günler"
+          title={dict.availability.legendAvailableTitle}
         >
           <span
             className="inline-block w-1.5 h-1.5 rounded-full border border-[var(--color-stone-300)] bg-white"
             aria-hidden
           />
-          Müsait
+          {dict.availability.legendAvailable}
         </span>
       </div>
     </>

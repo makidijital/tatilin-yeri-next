@@ -1,6 +1,12 @@
 "use client";
 
 import Link from "next/link";
+/* 🛡️ PHASE 10B — locale-aware UI stringleri. `locale` opsiyonel,
+   default "tr" — mevcut TR call-site'ı (kiralik-villa/[slug]/page.tsx)
+   hiç değişmeden byte-identical render eder. Scroll-to-anchor/handler
+   mantığına DOKUNULMADI. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { LOCALE_BCP47, type Locale } from "@/lib/i18n/config";
 
 /* ===============================================================
    🛡️ MOBILE BOOKING CTA — sticky bottom bar (mobile/tablet only)
@@ -47,6 +53,7 @@ export default function MobileBookingCta({
   priceAmount,
   priceCurrency,
   targetId,
+  locale,
 }: {
   /** Gece başına en düşük fiyat. null/0 → "Müsaitlik Sorgula" fallback. */
   priceAmount: number | null;
@@ -54,7 +61,11 @@ export default function MobileBookingCta({
   priceCurrency: string | null;
   /** Smooth scroll hedefi anchor id'si (page.tsx'te `<aside id=...>`). */
   targetId: string;
+  /* 🛡️ PHASE 10B — opsiyonel, default "tr". */
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
+  const bcp47 = LOCALE_BCP47[locale ?? "tr"];
   function handleClick(e: React.MouseEvent<HTMLAnchorElement>) {
     e.preventDefault();
     if (typeof document === "undefined") return;
@@ -91,7 +102,7 @@ export default function MobileBookingCta({
 
   return (
     <aside
-      aria-label="Hızlı rezervasyon"
+      aria-label={dict.booking.mobileCtaAriaLabel}
       className="
         lg:hidden
         fixed inset-x-0 bottom-0
@@ -109,16 +120,16 @@ export default function MobileBookingCta({
         {hasPrice ? (
           <>
             <span className="text-[10.5px] tracking-[0.18em] uppercase text-[var(--color-stone-500)] font-medium">
-              Gece başına
+              {dict.common.perNight}
             </span>
             <span className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums truncate">
-              {Math.round(priceAmount as number).toLocaleString("tr-TR")}{" "}
+              {Math.round(priceAmount as number).toLocaleString(bcp47)}{" "}
               {priceCurrency}
             </span>
           </>
         ) : (
           <span className="text-[13px] text-[var(--color-stone-700)] font-medium">
-            Müsaitlik Sorgula
+            {dict.common.checkAvailability}
           </span>
         )}
       </div>
@@ -129,7 +140,7 @@ export default function MobileBookingCta({
         onClick={handleClick}
         className="btn-primary shrink-0 !px-5 !py-3 text-[13.5px]"
       >
-        Rezervasyon Yap
+        {dict.booking.bookNow}
       </Link>
     </aside>
   );

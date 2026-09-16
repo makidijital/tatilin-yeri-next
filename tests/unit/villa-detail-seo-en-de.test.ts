@@ -29,6 +29,9 @@ const requirePublicLocaleEnabledMock = vi.fn();
 const getVillaBySlugMock = vi.fn();
 const getVillaTranslatedTitleMock = vi.fn();
 const getVillaTranslatedSeoDescriptionMock = vi.fn();
+/* 🛡️ PHASE 10B, Section 11 — generateMetadata artık seo_title
+   çevirisini de okuyor (varsa title yerine onu kullanır). */
+const getVillaTranslatedSeoTitleMock = vi.fn();
 const getCachedSettingsMock = vi.fn();
 
 vi.mock("@/lib/i18n/public-locale-gate.server", () => ({
@@ -44,6 +47,9 @@ vi.mock("@/lib/i18n/get-villa-translation.server", () => ({
      mock'lanmazsa `undefined` çağrılır ve TypeError fırlatır. */
   getVillaTranslatedSeoDescription: (...args: unknown[]) =>
     getVillaTranslatedSeoDescriptionMock(...args),
+  /* 🛡️ PHASE 10B, Section 11 — AYNI zorunlu düzeltme (bkz. üst yorum). */
+  getVillaTranslatedSeoTitle: (...args: unknown[]) =>
+    getVillaTranslatedSeoTitleMock(...args),
 }));
 vi.mock("@/lib/cache.helpers", () => ({
   getCachedSettings: (...args: unknown[]) => getCachedSettingsMock(...args),
@@ -60,6 +66,18 @@ beforeEach(() => {
      ihtiyaç duyduğunda kendi mockResolvedValue'sini set eder. */
   getVillaTranslatedSeoDescriptionMock.mockResolvedValue(
     "Translated SEO description."
+  );
+  /* 🛡️ PHASE 10B, Section 11 — varsayılan: ECHO deseni (originalSeoTitle
+     geri döner). `BASE_VILLA`'da `seo_title` alanı YOK (undefined) →
+     `translatedSeoTitle` undefined'a çözülür → page.tsx'in
+     `(translatedSeoTitle && ...) || fallbackTitle` mantığı fallbackTitle'a
+     (getVillaTranslatedTitleMock) düşer — MEVCUT title testleri BİREBİR
+     aynı şekilde geçmeye devam eder. seo_title-spesifik testler kendi
+     mockResolvedValue'sini set eder. */
+  getVillaTranslatedSeoTitleMock.mockReset();
+  getVillaTranslatedSeoTitleMock.mockImplementation(
+    (_villaId: string, originalSeoTitle: string | null | undefined) =>
+      Promise.resolve(originalSeoTitle)
   );
   getCachedSettingsMock.mockReset();
 });

@@ -102,6 +102,18 @@ import {
    gap-fill mantığını BOZMAZ; yalnız orphan bırakan seçimi ek olarak eler. */
 import { evaluateOrphanGap } from "@/lib/stay-rules.helper";
 
+/* 🛡️ PHASE 10B — YALNIZ 3 reservationError string'i + handleReservation
+   navigation URL'ine (EN/DE için) `&locale=` query param'ı eklemek için.
+   `locale` opsiyonel, default "tr" (getDictionary(undefined) zaten TR'ye
+   düşer) — mevcut TR caller'ları (BookingSidebar, VillaCardBookingModal)
+   bu prop'u hiç geçmeden BYTE-IDENTICAL çalışır (dict TR metinleriyle
+   birebir aynı; URL'e hiçbir ek query param eklenmez — bkz. aşağıdaki
+   `locale && locale !== "tr"` guard). Selection/availability/pricing/
+   min-stay/orphan-gap HESAP MANTIĞINA KESİNLİKLE DOKUNULMADI. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import type { Locale } from "@/lib/i18n/config";
+
 /* ===============================================================
    INPUT KONTRAT
    ===============================================================
@@ -140,6 +152,11 @@ export type UseBookingEngineInput = {
      kısıtlaması yok" (12 ay aktif) — mevcut caller'lar geçmeden
      BYTE-IDENTICAL çalışır. */
   pool_heating_months?: number[] | null;
+
+  /* 🛡️ PHASE 10B — opsiyonel, default "tr". Yalnız reservationError
+     mesajları + handleReservation navigation URL'i (EN/DE `&locale=`
+     query param'ı) için kullanılır. */
+  locale?: Locale;
 };
 
 /* ===============================================================
@@ -272,9 +289,11 @@ export function useBookingEngine(
     pool_heating_fee = 0,
     pool_heating_currency = "TRY",
     pool_heating_months = null,
+    locale,
   } = input;
 
   const { currency, rates } = useCurrency();
+  const dict = getDictionary(locale);
 
   /* 🛡️ FAZ 55K — Data boundary normalization (currency garantisi).
      `prices` raw DB-shape; normalizePriceRanges null start/end
@@ -865,13 +884,15 @@ export function useBookingEngine(
     if (!startDate || !endDate) {
       /* 🛡️ alert() yerine inline state — consumer banner gösterir.
          3sn sonra otomatik temizlenir, kullanıcı UX'i blok etmez. */
-      setReservationError("Lütfen tarih seçiniz.");
+      setReservationError(dict.booking.reservationErrorSelectDate);
       setTimeout(() => setReservationError(null), 3000);
       return;
     }
     if (!minimumStayValid) {
       setReservationError(
-        `Minimum konaklama süresi ${minStayThreshold} gecedir.`
+        formatDictionaryString(dict.booking.reservationErrorMinStay, {
+          n: minStayThreshold,
+        })
       );
       setTimeout(() => setReservationError(null), 3000);
       return;
@@ -880,9 +901,9 @@ export function useBookingEngine(
       /* Orphan gap: seçim, min-stay'den kısa kullanılamaz bir boşluk
          bırakıyor → engelle (mevcut error mekanizması). */
       setReservationError(
-        `Bu tarih aralığı, minimum ${minStayThreshold} gecelik kuralı ` +
-          `karşılamayan kısa bir boşluk bırakıyor. Lütfen boşluğun tamamını ` +
-          `kapsayan veya uygun bir aralık seçin.`
+        formatDictionaryString(dict.booking.reservationErrorOrphanGap, {
+          n: minStayThreshold,
+        })
       );
       setTimeout(() => setReservationError(null), 5000);
       return;
@@ -904,7 +925,21 @@ export function useBookingEngine(
        poolHeatingSelected zaten bu hook'un closure'ında (prop threading
        gerekmiyor); URL query param olarak taşınıp `/rezervasyon/[slug]/page.tsx`
        tarafından okunuyor. Yeni global state/context YOK. */
-    const url = `/rezervasyon/${villaSlug}?start=${start}&end=${end}&adults=${adults}&children=${children}&poolHeating=${poolHeatingSelected ? "1" : "0"}`;
+    const baseUrl = `/rezervasyon/${villaSlug}?start=${start}&end=${end}&adults=${adults}&children=${children}&poolHeating=${poolHeatingSelected ? "1" : "0"}`;
+    /* 🛡️ PHASE 10B, Section 7 — `/rezervasyon/[slug]/page.tsx` HİÇ
+       değiştirilmedi (do-not-touch listesinde) ve `searchParams` tipini
+       yalnız bilinen alanlar (`sp.start`/`sp.end`/`sp.adults`/
+       `sp.children`/`sp.poolHeating`) için okuyor — bilinmeyen bir query
+       param (`locale`) sayfada asla okunmaz, TR akışını SIFIR etkiler.
+       Yine de locale bilgisini SESSİZCE KAYBETMEMEK için (gelecekteki bir
+       fazın ReservationForm'u locale-aware yapması için) EN/DE'de
+       `&locale=` eklenir. TR'de (locale undefined/"tr") URL BYTE-IDENTICAL
+       kalır — hiçbir ek query param eklenmez. EN/DE kullanıcıları hâlâ
+       `/en/rezervasyon/...` veya `/de/rezervasyon/...`'a YÖNLENDİRİLMEZ
+       (o route'lar hâlâ ComingSoon) — yalnız mevcut TR-only
+       `/rezervasyon/[slug]` route'una locale query param'ı ile gider. */
+    const url =
+      locale && locale !== "tr" ? `${baseUrl}&locale=${locale}` : baseUrl;
 
     window.location.href = url;
   };
