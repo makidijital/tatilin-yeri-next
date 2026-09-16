@@ -7,6 +7,11 @@
    null yerine full row'dan gelir (RLS'in gizlediği logo görünür; secret voucher
    çıktısına ulaşmaz — yalnız site_logo okunur). */
 import { settingsServerRepository as settingsRepository } from "@/lib/db/settings.repository.server";
+/* 🛡️ PHASE 10L — EN/DE settings çevirileri (migration 083). Yalnız
+   `multilingual_enabled` AÇIKKEN okunur; kapalıyken bu modül hiç
+   çalıştırılmaz → TR davranışı ve sorgu sayısı BİREBİR aynı kalır. */
+import { isMultilingualEnabled } from "@/lib/i18n/config";
+import { getPublicSettingsTranslations } from "./settings-translation.service";
 import type { Settings } from "./settings.types";
 
 /* ===============================================================
@@ -68,7 +73,39 @@ export async function getPublicSettings(): Promise<Settings | null> {
     return null;
   }
 
-  return (data as Settings) || null;
+  const settings = (data as Settings) || null;
+
+  /* ===============================================================
+     🛡️ PHASE 10L §5 — EN/DE ÇEVİRİLERİNİ PAYLOAD'A EKLE
+     ===============================================================
+     NEDEN RPC DEĞİL, AYRI SORGU:
+       `get_public_settings` (migration 081) SECURITY DEFINER bir
+       KOLON WHITELIST'idir — `settings` satırının güvenli alt kümesini
+       döndürür. Çeviriler AYRI bir tabloda (`settings_translations`,
+       migration 083) ve 0..2 SATIR halinde durur; bunu whitelist'e
+       sıkıştırmak RPC'yi (ve onun güvenlik sözleşmesini) yeniden
+       yazmayı gerektirirdi. Bu yüzden RPC'ye DOKUNULMADI (§5/§14) ve
+       çeviriler burada, dar bir okuma ile eklenir.
+
+     NEDEN `multilingual_enabled` KAPIYA KOYULDU:
+       Çoklu dil kapalıyken /en ve /de route'ları zaten
+       `requirePublicLocaleEnabled()` ile 404 döner → çeviri okumak
+       SAF İSRAF olurdu. `FooterWrapper` (Phase 10H) ile AYNI desen.
+       Sonuç: bugünkü production davranışında (multilingual kapalı)
+       EK SORGU YOK, dönen obje AYNI REFERANS → TR bit-bire aynı.
+
+     GÜVENLİK: `settings_translations` tablosunda secret kolon YOKTUR
+     (migration 083); dönen payload yalnız 4 doğal-dil alanı taşır.
+     Okuma başarısız olursa public site ÇÖKMEZ — çeviri eklenmez,
+     TR canonical'e düşülür. */
+  if (!settings?.id || !isMultilingualEnabled(settings)) return settings;
+
+  const translations = await getPublicSettingsTranslations(settings.id).catch(
+    () => null
+  );
+  if (!translations) return settings;
+
+  return { ...settings, translations };
 }
 
 /* ===============================================================

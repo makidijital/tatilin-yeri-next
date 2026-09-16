@@ -11,6 +11,7 @@ import {
   AtSign,
   Plug,
   Wrench,
+  Languages,
 } from "lucide-react";
 
 /* ===============================================================
@@ -42,6 +43,9 @@ const ITEMS: NavItem[] = [
   { href: "/maki-admin/settings/sosyal-medya", label: "Sosyal Medya", icon: AtSign },
   { href: "/maki-admin/settings/entegrasyonlar", label: "Entegrasyonlar", icon: Plug },
   { href: "/maki-admin/settings/gelismis", label: "Gelişmiş", icon: Wrench },
+  /* 🛡️ PHASE 10K — settings'in yönetilebilir doğal dil metinlerinin
+     EN/DE içerikleri. Mevcut 8 bölümün sırası/yapısı DEĞİŞMEDİ. */
+  { href: "/maki-admin/settings/ceviriler", label: "Çeviriler", icon: Languages },
 ];
 
 export default function SettingsNav() {

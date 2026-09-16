@@ -13,6 +13,8 @@
      RPC katmanında korunur (bu tip dosyası yalnız şekil tanımlar).
 =============================================================== */
 
+import type { SettingsTranslationsByLocale } from "@/lib/i18n/settings-translations.types";
+
 export type WatermarkPosition =
   | "center"
   | "top-left"
@@ -136,4 +138,17 @@ export type Settings = {
      browser / Supabase Storage CDN / Next/Image optimizer cache hepsi
      cache-miss eder. get_public_settings() RPC whitelist'inde (mig 051). */
   updated_at?: string | null;
+
+  /* 🛡️ PHASE 10L — EN/DE çevirileri (migration 083, `settings_translations`).
+     DB'de `settings` tablosunun BİR KOLONU DEĞİLDİR; `getPublicSettings()`
+     bu alanı AYRI, dar bir sorgudan türetip payload'a ekler
+     (`get_public_settings` RPC whitelist'i DEĞİŞTİRİLMEDİ).
+
+     • Yalnız 4 alan taşır: footer_copyright, maintenance_message,
+       default_meta_title, default_meta_description.
+     • `multilingual_enabled` KAPALIYKEN hiç doldurulmaz (undefined) —
+       ek sorgu da atılmaz, TR davranışı BİREBİR aynı kalır.
+     • Secret (resend_api_key / mail_from*) bu alana ASLA giremez:
+       `settings_translations` tablosunda öyle bir kolon YOKTUR. */
+  translations?: SettingsTranslationsByLocale | null;
 };

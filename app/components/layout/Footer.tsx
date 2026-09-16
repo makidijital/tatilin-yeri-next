@@ -26,6 +26,10 @@ import type { TaxonomyItem, CorporatePage } from "./FooterWrapper";
    riski YOK (bkz. Phase 9B audit — bu tasarımın seçilme nedeni). */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { localeFromPathname } from "@/lib/i18n/config";
+/* 🛡️ PHASE 10L — admin'de girilen `footer_copyright` metninin EN/DE
+   karşılığı (migration 083). Saf/senkron resolver; TR'de canonical
+   değeri AYNEN döndürür (bkz. lib/i18n/settings-translation.helper.ts). */
+import { resolveSettingsText } from "@/lib/i18n/settings-translation.helper";
 /* 🛡️ PHASE 10H — villa tipi adı locale'e göre çözülür; çeviri yoksa
    canonical TR adı (saf helper, DB/server bağımlılığı YOK). */
 import { resolveTaxonomyName } from "@/lib/i18n/taxonomy-name.helper";
@@ -210,6 +214,17 @@ export default function Footer({
   const pathname = usePathname();
   const locale = localeFromPathname(pathname);
   const dictionary = getDictionary(locale);
+
+  /* 🛡️ PHASE 10L §7 — `settings.translations` (migration 083) locale'e
+     göre çözülür. `settings` prop'u zaten `getPublicSettings()`'ten
+     geliyor; YENİ PROP EKLENMEDİ. TR'de sonuç canonical değerin
+     KENDİSİDİR (aynı string referansı). */
+  const copyrightTemplate = resolveSettingsText(
+    settings?.footer_copyright,
+    settings?.translations,
+    locale,
+    "footer_copyright"
+  );
 
   return (
     <footer
@@ -447,9 +462,18 @@ export default function Footer({
             konum/sıra ve renkler değişti. */}
         <div className="mt-14 md:mt-16 pt-8 border-t border-[var(--color-stone-200)]">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 text-[12px] text-[var(--color-stone-500)]">
+            {/* 🛡️ PHASE 10L §7 — locale-aware telif metni.
+                TR: `resolveSettingsText` canonical değeri AYNEN
+                (trim'siz, aynı referansla) döndürür → aşağıdaki
+                truthy kontrolü + iki `.replace()` + Türkçe fallback
+                BİREBİR eskisi gibi çalışır (bit-bire aynı çıktı).
+                EN/DE: çeviri varsa o, yoksa yine TR canonical.
+                ⚠️ `{year}` / `{site_name}` yer tutucu ikamesi ÇEVİRİ
+                metninde de AYNEN uygulanır — bu yüzden `.replace()`
+                zinciri resolver'ın SONUCUNA uygulanıyor. */}
             <p>
-              {settings?.footer_copyright
-                ? settings.footer_copyright
+              {copyrightTemplate
+                ? copyrightTemplate
                     .replace(/\{year\}/g, String(year))
                     .replace(/\{site_name\}/g, siteName)
                 : `© ${year} ${siteName} · Tüm hakları saklıdır`}

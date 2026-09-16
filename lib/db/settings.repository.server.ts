@@ -59,6 +59,19 @@ export const settingsServerRepository = {
       .maybeSingle();
   },
 
+  /** 🛡️ PHASE 10L — Singleton settings satırının YALNIZ `id` alanı.
+   *  `settings_translations.settings_id` FK'sini çözmek için gerekir.
+   *  `findZipNameFields` ile AYNI "slim projeksiyon" deseni: FULL row
+   *  (`resend_api_key` DAHİL) okumamak için bilinçli olarak dar —
+   *  çeviri okuma/yazma yolu secret'a HİÇ YAKLAŞMAZ.
+   *  Mevcut method'ların hiçbiri DEĞİŞMEDİ; bu yalnız EK bir okuma. */
+  async findSingletonId() {
+    return await dbAdmin
+      .from("settings")
+      .select("id")
+      .maybeSingle();
+  },
+
   /** ZIP filename için slim projeksiyon (site_name, company_legal_name),
    *  .maybeSingle(). /api/villa-zip/[token] delege. BİREBİR select. */
   async findZipNameFields() {
