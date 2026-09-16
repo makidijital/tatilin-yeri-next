@@ -7,6 +7,8 @@ import {
   type SVGProps,
   type ReactNode,
 } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronDown, Phone, Mail } from "lucide-react";
 
 import {
@@ -14,6 +16,28 @@ import {
 } from "@/app/services/settings.action";
 import type { Settings } from "@/app/services/settings.types";
 import { useCurrency } from "@/app/context/CurrencyContext";
+
+/* 🛡️ PHASE 10C — TopBar dil değiştirici (Admin > Genel Ayarlar >
+   `multilingual_enabled` açıkken görünür). YENİDEN İCAT EDİLMEDİ:
+     - Aktif locale tespiti: `localeFromPathname()` (Phase 9A,
+       Header.tsx ile AYNI desen — middleware/headers() gerektirmez).
+     - Hedef URL üretimi: `getLocaleSwitchTargets()` (Phase 10C,
+       lib/i18n/locale-switch.helper.ts) → `buildLocaleAlternates()`
+       (Phase 7B) üzerine kurulu; locale karşılığı olmayan route'lar
+       için ASLA 404 üretmez, hedef locale'in ana sayfasına döner.
+     - Dictionary: `getDictionary()` (mevcut sistem, yeni key YOK —
+       yalnız `common.language` eklendi, hiçbir mevcut key
+       değişmedi/silinmedi).
+   Bu dropdown currency seçiciyle YALNIZ görsel/mekanik olarak
+   ÖZDEŞ — state/ref/dışa-tık efekti TAMAMEN AYRI (aşağıda). */
+import {
+  isMultilingualEnabled,
+  localeFromPathname,
+  SUPPORTED_LOCALES,
+  type Locale,
+} from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { getLocaleSwitchTargets } from "@/lib/i18n/locale-switch.helper";
 
 /* 🛡️ Para birimi seçenekleri — bayraklar LOCAL SVG asset (public/flags).
    Emoji yerine OS-bağımsız render (Windows'ta da görünür). DEĞİŞMEDİ. */
@@ -170,7 +194,42 @@ export default function TopBar() {
     return () => document.removeEventListener("mousedown", onDown);
   }, [curOpen]);
 
+  /* 🛡️ PHASE 10C — Aktif locale, `usePathname()` + `localeFromPathname()`
+     (Phase 9A, Header.tsx/Footer.tsx ile BİREBİR AYNI desen) ile
+     tespit edilir. TopBar zaten "use client" — middleware/headers()
+     gerektirmez, yeni bir cache/fetch katmanı YOK. */
+  const pathname = usePathname();
+  const locale = localeFromPathname(pathname);
+  const dictionary = getDictionary(locale);
+
+  /* 🛡️ Dil seçici dropdown — currency seçiciyle (`curOpen`/`curRef`)
+     AYNI mekanik (state + dışa-tık kapanma) ama TAMAMEN AYRI state/
+     ref/efekt. Kullanıcı talebi gereği İKİSİ ASLA PAYLAŞILMAZ. */
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!langOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [langOpen]);
+
   if (!settings) return null;
+
+  /* 🛡️ PHASE 10C — Dil değiştirici GÖRÜNÜRLÜK KOŞULU: yalnız
+     `settings.multilingual_enabled === true` (null/undefined/hata →
+     `isMultilingualEnabled` false döner, `!settings` guard'ı zaten
+     settings null/fetch-hatası durumunu üstte fail-safe kapatıyor).
+     `getLocaleSwitchTargets` yalnız switcher görünürken hesaplanır
+     (gereksiz iş yok). */
+  const multilingualEnabled = isMultilingualEnabled(settings);
+  const localeSwitchTargets = multilingualEnabled
+    ? getLocaleSwitchTargets(pathname)
+    : null;
 
   /* 🛡️ İLETİŞİM HREF TÜRETME — mevcut projede zaten kullanılan
      pattern'lerin AYNISI (yeni mantık YOK, sadece TopBar'a taşındı):
@@ -434,6 +493,73 @@ export default function TopBar() {
             </ul>
           )}
         </div>
+
+        {/* 🛡️ PHASE 10C — Dil değiştirici. Currency seçiciyle
+            (yukarıdaki `curRef` bloğu) GÖRSEL/MEKANİK olarak ÖZDEŞ —
+            rounded-pill buton + ChevronDown + aynı absolute dropdown
+            stili. State/ref TAMAMEN AYRI (`langOpen`/`langRef`).
+            Yalnız `multilingualEnabled` iken render edilir — kapalı/
+            null/hata durumunda hiçbir DOM eklenmez (fail-safe). */}
+        {multilingualEnabled && localeSwitchTargets && (
+          <div className="relative shrink-0" ref={langRef}>
+            <button
+              type="button"
+              onClick={() => setLangOpen((o) => !o)}
+              aria-haspopup="listbox"
+              aria-expanded={langOpen}
+              aria-label={dictionary.common.language}
+              className="
+                inline-flex items-center gap-1.5
+                rounded-full px-2.5 py-[3px]
+                bg-white/10 hover:bg-white/[0.16]
+                ring-1 ring-inset ring-white/10 hover:ring-white/25
+                text-white/90 hover:text-white
+                text-[14px] font-medium cursor-pointer
+                transition-colors
+                focus:outline-none focus-visible:ring-2
+                focus-visible:ring-[#0973BA]/60
+              "
+            >
+              {locale.toUpperCase()}
+              <ChevronDown size={11} className="text-white/55" />
+            </button>
+
+            {langOpen && (
+              <ul
+                role="listbox"
+                aria-label={dictionary.common.language}
+                className="absolute right-0 mt-2 z-50 min-w-[90px] bg-white rounded-xl border border-[var(--color-stone-100)] shadow-[0_16px_36px_-14px_rgb(11_31_58/0.35)] overflow-hidden py-1"
+              >
+                {SUPPORTED_LOCALES.map((l: Locale) =>
+                  l === locale ? (
+                    <li key={l}>
+                      <span
+                        role="option"
+                        aria-selected="true"
+                        aria-current="true"
+                        className="w-full flex items-center px-3 py-1.5 text-[14px] font-medium text-left bg-gradient-to-r from-[#ED7926]/10 to-[#0973BA]/10 text-[var(--color-stone-900)]"
+                      >
+                        {l.toUpperCase()}
+                      </span>
+                    </li>
+                  ) : (
+                    <li key={l}>
+                      <Link
+                        href={localeSwitchTargets[l]}
+                        role="option"
+                        aria-selected="false"
+                        onClick={() => setLangOpen(false)}
+                        className="w-full flex items-center px-3 py-1.5 text-[14px] font-medium text-left text-[var(--color-stone-700)] hover:bg-[var(--color-stone-50)] transition-colors"
+                      >
+                        {l.toUpperCase()}
+                      </Link>
+                    </li>
+                  )
+                )}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

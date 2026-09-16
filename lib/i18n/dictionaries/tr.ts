@@ -27,6 +27,7 @@ export const tr: Dictionary = {
     viewAll: "Tümünü Gör",
     checkAvailability: "Müsaitlik Sorgula",
     perNight: "Gece başına",
+    language: "Dil",
   },
   header: {
     home: "Anasayfa",

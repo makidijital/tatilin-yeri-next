@@ -32,6 +32,8 @@ export type Dictionary = {
     /* 🛡️ PHASE 10B — MobileBookingCta.tsx */
     checkAvailability: string;
     perNight: string;
+    /* 🛡️ PHASE 10C — TopBar dil değiştirici (aria-label/erişilebilirlik) */
+    language: string;
   };
   header: {
     home: string;

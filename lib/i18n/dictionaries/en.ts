@@ -24,6 +24,7 @@ export const en: Dictionary = {
     viewAll: "View All",
     checkAvailability: "Check Availability",
     perNight: "Per night",
+    language: "Language",
   },
   header: {
     home: "Home",
