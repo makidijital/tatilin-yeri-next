@@ -34,14 +34,14 @@ export type VillaTranslationRow = {
   updated_at: string;
 };
 
-export type VillaLocationTranslationRow = {
-  id: string;
-  location_id: string;
-  locale: Locale;
-  name: string | null;
-  created_at: string;
-  updated_at: string;
-};
+/* 🛡️ PHASE 10I — `VillaLocationTranslationRow` KALDIRILDI.
+   Bölge adları (Kalkan, Kaş, Fethiye, Çavdır …) ÖZEL İSİMDİR; EN/DE
+   karşılıkları yoktur ve çevrilmez. `villa_location_translations`
+   tablosu migration 082'de (commit 2014fc1) DURUYOR — migration
+   geçmişi DEĞİŞTİRİLMEDİ — ancak koddan artık HİÇ okunmaz/yazılmaz.
+   Tipin ve aşağıdaki entity kaydının kaldırılması, yanlışlıkla
+   yeniden bağlanmasını DERLEME ZAMANINDA engeller (`villa.title`
+   için Phase 10F'te uygulanan AYNI desen). */
 
 export type VillaTypeTranslationRow = {
   id: string;
@@ -119,7 +119,7 @@ export type FaqTranslationRow = {
 
 export type TranslationEntity =
   | "villa"
-  | "villa_location"
+  /* 🛡️ PHASE 10I — "villa_location" KALDIRILDI (bkz. yukarıdaki not). */
   | "villa_type"
   | "villa_feature"
   | "rule_item"
@@ -130,14 +130,12 @@ export type TranslationEntity =
 
 export type TranslationRowFor<E extends TranslationEntity> = E extends "villa"
   ? VillaTranslationRow
-  : E extends "villa_location"
-    ? VillaLocationTranslationRow
-    : E extends "villa_type"
-      ? VillaTypeTranslationRow
-      : E extends "villa_feature"
-        ? VillaFeatureTranslationRow
-        : E extends "rule_item"
-          ? RuleItemTranslationRow
+  : E extends "villa_type"
+    ? VillaTypeTranslationRow
+    : E extends "villa_feature"
+      ? VillaFeatureTranslationRow
+      : E extends "rule_item"
+        ? RuleItemTranslationRow
           : E extends "price_include_item"
             ? PriceIncludeItemTranslationRow
             : E extends "villa_distance"
@@ -166,10 +164,6 @@ export const TRANSLATION_ENTITY_CONFIG: Record<
   TranslationEntityConfig
 > = {
   villa: { table: "villa_translations", parentIdColumn: "villa_id" },
-  villa_location: {
-    table: "villa_location_translations",
-    parentIdColumn: "location_id",
-  },
   villa_type: {
     table: "villa_type_translations",
     parentIdColumn: "type_id",

@@ -506,7 +506,11 @@ describe.each(VILLA_DETAIL_ROUTES)(
       requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
     });
 
-    it("10) location çevirisi varsa (location_id eşleşmesiyle) VillaInfoBar'a çevrilmiş değer geçer", async () => {
+    /* 🛡️ PHASE 10I — BÖLGE ADLARI ÇEVRİLMEZ (özel isim). Bu test, eski
+       "çeviri varsa çevrilmiş değeri göster" davranışının TERSİNİ kilitler:
+       DB'de bir `villa_location` çevirisi BULUNSA BİLE sayfa canonical
+       `villa.location` göstermeli ve çeviri sorgusu HİÇ atılmamalı. */
+    it("10) 🛡️ PHASE 10I — çeviri KAYDI OLSA BİLE canonical bölge adı gösterilir, sorgu atılmaz", async () => {
       getVillaBySlugMock.mockResolvedValue({
         id: "test-villa-id",
         slug: "test-villa",
@@ -534,17 +538,20 @@ describe.each(VILLA_DETAIL_ROUTES)(
       });
       render(element);
 
+      /* Canonical TR bölge adı — çeviri satırı mock'ta DOLU olmasına rağmen. */
+      expect(screen.getByText("Orijinal TR Konum")).toBeInTheDocument();
       expect(
-        screen.getByText(`Translated location (${locale})`)
-      ).toBeInTheDocument();
-      expect(getTranslationsForParentsMock).toHaveBeenCalledWith(
+        screen.queryByText(`Translated location (${locale})`)
+      ).not.toBeInTheDocument();
+      /* `villa_location` entity'si registry'den kaldırıldı → sorgu YOK. */
+      expect(getTranslationsForParentsMock).not.toHaveBeenCalledWith(
         "villa_location",
-        ["loc-1"],
-        locale
+        expect.anything(),
+        expect.anything()
       );
     });
 
-    it("11) location çevirisi yoksa villa.location TR fallback olarak VillaInfoBar'a geçer", async () => {
+    it("11) location_id DOLU + çeviri yok → canonical villa.location gösterilir", async () => {
       getVillaBySlugMock.mockResolvedValue({
         id: "test-villa-id",
         slug: "test-villa",
@@ -571,7 +578,7 @@ describe.each(VILLA_DETAIL_ROUTES)(
       ).toBeInTheDocument();
     });
 
-    it("12) location_id null ise villa_location çeviri sorgusu HİÇ atılmaz, villa.location kullanılır", async () => {
+    it("12) location_id null ise de canonical villa.location kullanılır, çeviri sorgusu atılmaz", async () => {
       /* beforeEach'in varsayılan villa mock'u zaten location_id: null. */
       const { default: Page } = await import(modulePath);
       const element = await Page({

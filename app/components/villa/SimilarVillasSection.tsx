@@ -5,13 +5,14 @@ import VillaCard from "@/app/components/villa/VillaCard";
 import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getStartingPrice } from "@/lib/price.engine";
-/* 🛡️ PHASE 10G — locale-aware bölüm başlığı + lokasyon/badge çevirisi.
+/* 🛡️ PHASE 10G — locale-aware bölüm başlığı + badge çevirisi.
    `locale` OPSİYONEL, default "tr". TR'de `getTranslationsForParents`
    daha ilk satırda boş Map döner (DEFAULT_LOCALE guard) → EK DB SORGUSU
-   YOK, çıktı BİREBİR AYNI. Villa ADI çevrilmez (özel isim) — canonical
-   `villa.title` her locale'de aynen gösterilir. `findSimilarCards`
-   sorgusu/repository DEĞİŞTİRİLMEDİ (`select("*")` zaten `location_id`
-   döndürüyor). */
+   YOK, çıktı BİREBİR AYNI. `findSimilarCards` sorgusu/repository
+   DEĞİŞTİRİLMEDİ.
+   🛡️ PHASE 10I — ÇEVRİLMEYEN ÖZEL İSİMLER: villa ADI (`villa.title`) ve
+   BÖLGE ADI (`villa_locations.name`) her locale'de canonical gösterilir;
+   yalnız `badge` çevrilir. */
 import {
   getTranslationsForParents,
   resolveTranslatedField,
@@ -52,9 +53,6 @@ type SimilarRow = {
   id: string;
   slug: string | null;
   title: string | null;
-  /* 🛡️ PHASE 10G — `select("*")` zaten döndürüyor; yalnız tipe eklendi
-     (EN/DE'de villa_location çevirisini eşlemek için). */
-  location_id: string | null;
   badge: string | null;
   currency: string | null;
   bedrooms: number | null;
@@ -113,22 +111,14 @@ export default async function SimilarVillasSection({
 
   /* 🛡️ PHASE 10G — koleksiyon başına TAM 1 batch çeviri sorgusu
      (Phase 8D-1 deseni, `.in()`); item başına sorgu YOK (N+1 yok).
-     TR'de her iki çağrı da DB'ye HİÇ gitmez (DEFAULT_LOCALE guard). */
-  const locationIds = Array.from(
-    new Set(
-      rows
-        .map((r) => r.location_id)
-        .filter((id): id is string => typeof id === "string" && id.length > 0)
-    )
+     TR'de DB'ye HİÇ gidilmez (DEFAULT_LOCALE guard).
+     🛡️ PHASE 10I — `villa_location` okuması KALDIRILDI: bölge adı özel
+     isimdir, çevrilmez (aşağıda canonical değer kullanılır). */
+  const villaTranslations = await getTranslationsForParents(
+    "villa",
+    rows.map((r) => r.id),
+    effectiveLocale
   );
-  const [villaTranslations, locationTranslations] = await Promise.all([
-    getTranslationsForParents(
-      "villa",
-      rows.map((r) => r.id),
-      effectiveLocale
-    ),
-    getTranslationsForParents("villa_location", locationIds, effectiveLocale),
-  ]);
 
   const villas = rows.map((v) => {
     let images: string[] = [];
@@ -154,12 +144,8 @@ export default async function SimilarVillasSection({
       slug: v.slug ?? "",
       /* 🛡️ Villa ADI ÇEVRİLMEZ — özel isim, canonical `villa.title`. */
       title: v.title ?? "",
-      location: v.location_id
-        ? resolveTranslatedField(
-            locationTranslations.get(v.location_id)?.name,
-            v.location?.name ?? ""
-          )
-        : v.location?.name ?? "",
+      /* 🛡️ PHASE 10I — BÖLGE ADI ÇEVRİLMEZ (özel isim) — canonical. */
+      location: v.location?.name ?? "",
       price: sp?.price,
       currency: sp?.currency || v.currency || "TRY",
       images,

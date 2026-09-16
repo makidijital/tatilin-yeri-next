@@ -15,7 +15,7 @@
    KAPSAM:
      1) TR / EN / DE locale render
      2) Bölüm başlığı dictionary'den (locale-aware)
-     3) Lokasyon adı çevirisi (villa_location) + fallback
+     3) Bölge adı CANONICAL kalır (villa_location çevirisi YOK)
      4) Badge çevirisi (villa) + fallback
      5) VillaCard'a locale aktarımı → locale-prefixed detay linki
      6) Villa ADI ÇEVRİLMEZ (canonical villa.title)
@@ -252,29 +252,22 @@ describe("SimilarVillasSection — villa adı canonical", () => {
 });
 
 /* ===============================================================
-   4) LOKASYON + BADGE ÇEVİRİSİ
+   4) BÖLGE ADI (canonical) + BADGE ÇEVİRİSİ
+   ===============================================================
+   🛡️ PHASE 10I — Bölge adları ÖZEL İSİMDİR (Kalkan, Kaş, Fethiye,
+   Çavdır …); EN/DE karşılıkları yoktur ve çevrilmez. Aşağıdaki ilk iki
+   test, eski "lokasyon çevirisi" davranışının TERSİNİ kilitler.
    =============================================================== */
-describe("SimilarVillasSection — lokasyon ve badge çevirisi", () => {
-  it("EN: lokasyon adı çevrilmişse çevrilmiş değer render edilir", async () => {
-    findManyForLocaleMock.mockImplementation((entity: string) => {
-      if (entity === "villa_location") {
-        return Promise.resolve({
-          data: [{ location_id: "loc-1", locale: "en", name: "Kalkan, Antalya (EN)" }],
-          error: null,
-        });
-      }
-      return Promise.resolve({ data: [], error: null });
-    });
-    await renderSection("en");
-    expect(screen.getByText("Kalkan, Antalya (EN)")).toBeInTheDocument();
-    expect(screen.queryByText("Kalkan, Antalya")).not.toBeInTheDocument();
-  });
-
-  it("DE: lokasyon çevirisi YOKSA orijinal TR değere düşer", async () => {
-    findManyForLocaleMock.mockResolvedValue({ data: [], error: null });
-    await renderSection("de");
-    expect(screen.getByText("Kalkan, Antalya")).toBeInTheDocument();
-  });
+describe("SimilarVillasSection — bölge adı canonical, badge çevrilir", () => {
+  it.each(["en", "de"] as const)(
+    "%s: bölge adı canonical kalır — villa_location için sorgu HİÇ atılmaz",
+    async (locale) => {
+      await renderSection(locale);
+      expect(screen.getByText("Kalkan, Antalya")).toBeInTheDocument();
+      const entities = findManyForLocaleMock.mock.calls.map((c) => c[0]);
+      expect(entities).not.toContain("villa_location");
+    }
+  );
 
   it("EN: badge çevirisi varsa çevrilmiş badge render edilir", async () => {
     findManyForLocaleMock.mockImplementation((entity: string) => {
@@ -296,7 +289,7 @@ describe("SimilarVillasSection — lokasyon ve badge çevirisi", () => {
     expect(screen.getByText("Popüler")).toBeInTheDocument();
   });
 
-  it("location_id null olan satırda lokasyon embed adı kullanılır (çökmez)", async () => {
+  it("location_id null olan satırda da embed bölge adı kullanılır (çökmez)", async () => {
     findSimilarCardsMock.mockImplementation(
       (opts: { locationId: string | null }) =>
         Promise.resolve({
@@ -323,16 +316,13 @@ describe("SimilarVillasSection — TR'de ek sorgu yok", () => {
     expect(findManyForLocaleMock).not.toHaveBeenCalled();
   });
 
-  it("EN: koleksiyon başına TEK batch sorgu (villa + villa_location)", async () => {
+  it("EN: TEK batch sorgu — yalnız `villa` (badge); villa_location YOK", async () => {
     await renderSection("en");
     const entities = findManyForLocaleMock.mock.calls.map((c) => c[0]);
-    expect(entities).toContain("villa");
-    expect(entities).toContain("villa_location");
-    /* N+1 YOK — 1 satır için toplam 2 çağrıdan fazlası olmamalı. */
-    expect(findManyForLocaleMock.mock.calls.length).toBe(2);
-    for (const call of findManyForLocaleMock.mock.calls) {
-      expect(call[2]).toBe("en");
-    }
+    expect(entities).toEqual(["villa"]);
+    /* 🛡️ PHASE 10I — bölge çevirisi kaldırıldığı için sorgu sayısı 2 → 1. */
+    expect(findManyForLocaleMock.mock.calls.length).toBe(1);
+    expect(findManyForLocaleMock.mock.calls[0][2]).toBe("en");
   });
 });
 

@@ -137,12 +137,14 @@ describe("getTranslation", () => {
     expect(findOneMock).toHaveBeenCalledWith("rule_item", "rule-uuid-9", "de");
   });
 
-  /* --- 9) Boş tablo / tüm entity'ler güvenli --- */
-  it("9) translation tablosu boşken (data:null,error:null) 9 entity'nin TAMAMI için güvenli null döner", async () => {
+  /* --- 9) Boş tablo / tüm entity'ler güvenli ---
+     🛡️ PHASE 10I — 9 → 8 entity: `villa_location` registry'den kaldırıldı
+     (bölge adları özel isimdir, çevrilmez). Liste daraltıldı, test
+     mantığı/assertion'ları DEĞİŞMEDİ. */
+  it("9) translation tablosu boşken (data:null,error:null) 8 entity'nin TAMAMI için güvenli null döner", async () => {
     findOneMock.mockResolvedValue({ data: null, error: null });
     const entities = [
       "villa",
-      "villa_location",
       "villa_type",
       "villa_feature",
       "rule_item",

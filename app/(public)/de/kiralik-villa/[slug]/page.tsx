@@ -237,31 +237,20 @@ export default async function DeVillaDetailPage({
   ]);
 
   /* 🛡️ PHASE 8D-2 — koleksiyon başına TAM 1 batch çeviri sorgusu. */
-  const [
-    featureTranslations,
-    ruleTranslations,
-    priceIncludeTranslations,
-    locationTranslations,
-  ] = await Promise.all([
-    getTranslationsForParents(
-      "villa_feature",
-      features.map((f) => f.id),
-      "de"
-    ),
-    getTranslationsForParents("rule_item", rules.map((r) => r.id), "de"),
-    getTranslationsForParents(
-      "price_include_item",
-      priceIncludes.map((p) => p.id),
-      "de"
-    ),
-    villa.location_id
-      ? getTranslationsForParents(
-          "villa_location",
-          [villa.location_id],
-          "de"
-        )
-      : Promise.resolve(new Map()),
-  ]);
+  const [featureTranslations, ruleTranslations, priceIncludeTranslations] =
+    await Promise.all([
+      getTranslationsForParents(
+        "villa_feature",
+        features.map((f) => f.id),
+        "de"
+      ),
+      getTranslationsForParents("rule_item", rules.map((r) => r.id), "de"),
+      getTranslationsForParents(
+        "price_include_item",
+        priceIncludes.map((p) => p.id),
+        "de"
+      ),
+    ]);
 
   /* 🛡️ ICON KEY — ORİJİNAL (TR) d.title'dan hesaplanır. */
   const translatedDistances: TranslatedDistance[] = distances.map((d) => ({
@@ -299,12 +288,11 @@ export default async function DeVillaDetailPage({
     })
   );
 
-  const locationName = villa.location_id
-    ? resolveTranslatedField(
-        locationTranslations.get(villa.location_id)?.name,
-        villa.location
-      )
-    : villa.location;
+  /* 🛡️ PHASE 10I — BÖLGE ADI ÇEVRİLMEZ: Kalkan/Kaş/Fethiye/Çavdır gibi
+     bölge adları ÖZEL İSİMDİR, EN/DE karşılıkları yoktur. Her locale'de
+     canonical `villa.location` (villa_locations.name) gösterilir.
+     (`villa_location` çeviri okuması KALDIRILDI — bkz. Phase 10I.) */
+  const locationName = villa.location;
 
   /* 🛡️ TR sayfasındaki AYNI watermark objesi. */
   const watermark = {

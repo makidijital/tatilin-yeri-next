@@ -5,8 +5,10 @@ import type { VillaTypeTranslationRow } from "@/lib/i18n/translations.types";
  * 🛡️ PHASE 10D — Batch 1 — Villa Tipi (villa_types) Çeviri Servisi
  *
  * `app/services/villa-translation.service.ts` (Phase 10A) ile BİREBİR
- * AYNI desen — bkz. `villa-location-translation.service.ts`'in dosya
- * başı yorumundaki aynı gerekçeler (paylaşılan taxonomy, `/maki-admin/
+ * AYNI desen — aynı gerekçeler
+ * (🛡️ PHASE 10I: bu satır daha önce `villa-location-translation.
+ * service.ts`'e atıfta bulunuyordu; o dosya KALDIRILDI — bölge
+ * adları özel isimdir, çevrilmez) (paylaşılan taxonomy, `/maki-admin/
  * types` sayfasından çağrılır, villa orchestration'a bağlanmaz, parent
  * existence pre-check yok — `villa-type.repository.ts`'de tekil
  * `findById` YOK, FK constraint hatası generic mesaja çevrilir).

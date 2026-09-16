@@ -14,7 +14,6 @@ import {
   Pencil,
   Check,
   X,
-  Languages,
 } from "lucide-react";
 import {
   useNotify,
@@ -31,15 +30,16 @@ import {
   SITE_ASSETS_BUCKET_NAME,
 } from "@/lib/storage.helpers";
 import { convertImageToWebP } from "@/lib/image.helpers";
-/* 🛡️ PHASE 10D — Batch 3 — multilingual_enabled kontrolü. Batch 2'de
-   Features için kanıtlanan TopBar.tsx deseni (getPublicSettingsAction,
-   public-safe, "use client" bileşenlerden çağrılabilir) BİREBİR aynı
-   şekilde buraya taşındı — yeni bir settings-fetch sistemi İCAT
-   EDİLMEDİ. Locations sayfasının CRUD'ı (adminFetch → REST route)
-   farklı bir mekanizma kullansa da, çeviri action'ı Batch 1/2 ile aynı
-   bağımsız "use server" desenini izler — CRUD mekanizması DEĞİŞMEDİ. */
-import { getPublicSettingsAction } from "@/app/services/settings.action";
-import LocationTranslationsPanel from "./LocationTranslationsPanel";
+/* 🛡️ PHASE 10I — BÖLGE ADLARI ÇEVRİLMEZ.
+   Kalkan / Kaş / Fethiye / Çavdır gibi bölge adları ÖZEL İSİMDİR;
+   İngilizce veya Almanca karşılıkları yoktur. Bu yüzden Phase 10D
+   Batch 3'te eklenen EN/DE çeviri UI'ı (LocationTranslationsPanel +
+   location-translations.action + villa-location-translation.service)
+   TAMAMEN KALDIRILDI; `multilingual_enabled` okuması da bu sayfada
+   BAŞKA HİÇBİR ŞEY İÇİN kullanılmadığı için birlikte kaldırıldı.
+   Public EN/DE tarafında canonical `villa_locations.name` gösterilir.
+   Bölge CRUD / slug / aktif-pasif / sıralama / kapak görseli / filtre
+   kürasyonu DEĞİŞMEDİ. */
 
 export default function LocationsPage() {
   const toast = useNotify();
@@ -61,12 +61,6 @@ export default function LocationsPage() {
   const [editShowInFilter, setEditShowInFilter] = useState(false);
   const [editGroup, setEditGroup] = useState("");
   const [editSaving, setEditSaving] = useState(false);
-
-  /* 🛡️ PHASE 10D — Batch 3 — çeviri paneli state'i. `openLocationId`
-     yalnız TEK panelin açık olmasını sağlar (Batch 2 Features ile
-     birebir aynı mekanik). */
-  const [multilingualEnabled, setMultilingualEnabled] = useState(false);
-  const [openLocationId, setOpenLocationId] = useState<string | null>(null);
 
   const startEdit = (loc: {
     id: string;
@@ -169,27 +163,6 @@ export default function LocationsPage() {
   useEffect(() => {
     fetchLocations();
   }, []);
-
-  /* 🛡️ PHASE 10D — Batch 3 — TopBar.tsx / FeaturesPage (Batch 2) ile
-     BİREBİR AYNI fetch mekaniği (useEffect + cancelled guard). Settings
-     null/hata → fail-safe KAPALI. */
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const settings = await getPublicSettingsAction();
-      if (cancelled) return;
-      setMultilingualEnabled(!!settings?.multilingual_enabled);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  function toggleTranslations(id: string) {
-    setOpenLocationId((prev) => (prev === id ? null : id));
-  }
 
   /* 🛡️ SLUG SOURCE-OF-TRUTH — lib/slug > slugifyTr.
      Önceki inline implementasyon punctuation strip etmiyordu
@@ -362,7 +335,6 @@ export default function LocationsPage() {
       });
       return;
     }
-    if (openLocationId === id) setOpenLocationId(null);
     fetchLocations();
     toast.success("Bölge silindi", { id: `location-delete-${id}` });
     /* 🛡️ CACHE INVALIDATION — taxonomy + menu (silinen region
@@ -597,21 +569,6 @@ export default function LocationsPage() {
                       Düzenle
                     </button>
 
-                    {/* 🛡️ PHASE 10D — Batch 3 — yalnız multilingual_enabled=true
-                        iken render edilir; mevcut Düzenle/Sil aksiyonlarını
-                        BOZMAZ, ayrı bir buton. Inline edit modunda (üstteki
-                        `editingId === loc.id` dalı) bu buton zaten görünmez. */}
-                    {multilingualEnabled && (
-                      <button
-                        onClick={() => toggleTranslations(loc.id)}
-                        aria-label={`${loc.name} çevirileri`}
-                        className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-stone-600)] hover:text-[var(--color-stone-900)] px-3 py-1.5 rounded-lg hover:bg-[var(--color-stone-100)] transition"
-                      >
-                        <Languages size={13} />
-                        Çeviriler
-                      </button>
-                    )}
-
                     <button
                       onClick={() => handleDelete(loc.id)}
                       className="inline-flex items-center gap-1.5 text-[13px] text-red-600 hover:text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-50 transition"
@@ -622,15 +579,6 @@ export default function LocationsPage() {
                   </div>
                 )}
                 </div>
-
-                {multilingualEnabled &&
-                  editingId !== loc.id &&
-                  openLocationId === loc.id && (
-                    <LocationTranslationsPanel
-                      locationId={loc.id}
-                      locationName={loc.name}
-                    />
-                  )}
               </div>
             );
           })}
