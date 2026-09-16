@@ -164,4 +164,39 @@ export const de: Dictionary = {
     "Benzin İstasyonu": "Tankstelle",
     "Okul": "Schule",
   },
+  /* 🛡️ PHASE 10E — Konaklama Düzeni enum etiketleri + UI metinleri. */
+  bedTypeLabels: {
+    double: "Doppelbett",
+    single: "Einzelbett",
+    queen: "Queensize-Bett",
+    king: "Kingsize-Bett",
+    bunk: "Etagenbett",
+    sofa: "Schlafsofa",
+  },
+  bathroomTypeLabels: {
+    full: "Vollbad",
+    shower_wc: "Dusche + WC",
+    wc: "WC",
+  },
+  accommodation: {
+    sectionTitle: "Unterkunftsaufteilung",
+    noDetail: "Keine Angaben",
+    bedroomFallback: "Schlafzimmer {n}",
+    bathroomFallback: "Badezimmer {n}",
+  },
+  /* 🛡️ PHASE 10E BATCH 5 — havuz tipi etiketleri + UI metinleri. */
+  poolTypeLabels: {
+    private: "Privatpool",
+    private_sheltered: "Privater überdachter Pool",
+    shared: "Gemeinschaftspool",
+    indoor: "Hallenbad",
+    child: "Kinderpool",
+  },
+  pool: {
+    sectionTitle: "Poolinformationen",
+    width: "Breite",
+    length: "Länge",
+    depth: "Tiefe",
+    noDimensions: "Keine Maßangaben",
+  },
 };

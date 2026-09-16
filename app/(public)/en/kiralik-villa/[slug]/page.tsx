@@ -10,6 +10,10 @@ import {
   getVillaTranslatedSeoDescription,
   /* 🛡️ PHASE 10B, Section 11 — SEO title override (varsa). */
   getVillaTranslatedSeoTitle,
+  /* 🛡️ PHASE 10E — oda/banyo adı çevirileri (migration 083). AYNI
+     getVillaTranslationCached satırını reuse eder → EK DB SORGUSU YOK. */
+  getVillaTranslatedBedroomNames,
+  getVillaTranslatedBathroomNames,
 } from "@/lib/i18n/get-villa-translation.server";
 /* 🛡️ PHASE 8D-2 — batch translation okuma (8D-1) + generic fallback. */
 import {
@@ -39,6 +43,11 @@ import VillaDistancesSection, {
 import VillaFeaturesSection, {
   type TranslatedFeature,
 } from "@/app/components/villa/VillaFeaturesSection";
+/* 🛡️ PHASE 10E — TR sayfasının KULLANDIĞI AYNI component (yeni tasarım/
+   CSS YOK); yalnız locale + çözülmüş adlar prop'larıyla besleniyor. */
+import AccommodationLayout from "@/app/components/villa/AccommodationLayout";
+/* 🛡️ PHASE 10E BATCH 5 — havuz bölümü (TR'deki AYNI yapı, locale-aware). */
+import VillaPoolSection from "@/app/components/villa/VillaPoolSection";
 import VillaPriceIncludesAndRulesSection, {
   type TranslatedPriceInclude,
   type TranslatedRule,
@@ -425,6 +434,20 @@ export default async function EnVillaDetailPage({
     })
   );
 
+  /* 🛡️ PHASE 10E — KONAKLAMA DÜZENİ ADLARI.
+     TR kaynak: villa.bedroom_layout / .bathroom_layout (migration 047,
+     mapVilla içinde zaten normalize edilmiş) — DEĞİŞTİRİLMEZ, yalnız
+     okunur. Çözümleme lib/villa-layout-translation.helper.ts'in
+     index + TR-ad guard'ıyla yapılır; uyuşmazlıkta TR'ye düşülür.
+     İki getter de AYNI cache'lenmiş translation satırını kullanır →
+     yeni DB sorgusu OLUŞMAZ. */
+  const trBedroomNames = (villa.bedroom_layout ?? []).map((r) => r.name);
+  const trBathroomNames = (villa.bathroom_layout ?? []).map((b) => b.name);
+  const [bedroomNames, bathroomNames] = await Promise.all([
+    getVillaTranslatedBedroomNames(villa.id, trBedroomNames, "en"),
+    getVillaTranslatedBathroomNames(villa.id, trBathroomNames, "en"),
+  ]);
+
   const locationName = villa.location_id
     ? resolveTranslatedField(
         locationTranslations.get(villa.location_id)?.name,
@@ -581,6 +604,21 @@ export default async function EnVillaDetailPage({
 
         <VillaDistancesSection distances={translatedDistances} />
         <VillaFeaturesSection features={translatedFeatures} />
+
+        {/* 🛡️ PHASE 10E — TR sayfasındaki AYNI sıra (özellikler →
+            konaklama düzeni). Veri yoksa component null döner →
+            section hiç çizilmez (TR ile aynı davranış). */}
+        <AccommodationLayout
+          bedrooms={villa.bedroom_layout ?? []}
+          bathrooms={villa.bathroom_layout ?? []}
+          locale="en"
+          bedroomNames={bedroomNames}
+          bathroomNames={bathroomNames}
+        />
+
+        {/* 🛡️ PHASE 10E BATCH 5 — TR sayfasındaki AYNI sıra (konaklama
+            düzeni → havuz bilgileri). Havuz yoksa component null döner. */}
+        <VillaPoolSection villa={villa} locale="en" />
         <VillaPriceIncludesAndRulesSection
           priceIncludes={translatedPriceIncludes}
           rules={translatedRules}

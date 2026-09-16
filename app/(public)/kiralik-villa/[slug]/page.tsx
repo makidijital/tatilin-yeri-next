@@ -52,6 +52,11 @@ import PriceList from "@/app/components/villa/PriceList";
 import ShortStayFeeNotice from "@/app/components/villa/ShortStayFeeNotice";
 import CollapsibleDescription from "@/app/components/villa/CollapsibleDescription";
 import AccommodationLayout from "@/app/components/villa/AccommodationLayout";
+/* 🛡️ PHASE 10E BATCH 5 — havuz kartı türetimi + TR etiketleri artık tek
+   canonical kaynaktan. JSX/CSS/ikon DEĞİŞMEDİ; yalnız daha önce bu dosyada
+   ve v/[token]'da TEKRARLANAN TR literal'leri merkeze alındı. */
+import { buildPoolCards } from "@/lib/pool.helper";
+import { getPoolTypeLabel } from "@/lib/pool-label.helper";
 
 import { getVillaBySlug } from "@/app/services/villa.service";
 import { getVillaImages } from "@/app/services/villa-image/villa-image.read";
@@ -660,46 +665,11 @@ export default async function VillaDetail({
               villa.indoor_pool ||
               villa.child_pool) &&
             (() => {
-              type PoolCard = {
-                key: string;
-                label: string;
-                width: string | null | undefined;
-                length: string | null | undefined;
-                depth: string | null | undefined;
-              };
-              const cards: PoolCard[] = [];
-              if (villa.pool_type && villa.pool_type !== "yok") {
-                cards.push({
-                  key: "main",
-                  label:
-                    villa.pool_type === "ozel"
-                      ? villa.pool_sheltered
-                        ? "Özel Korunaklı Havuz"
-                        : "Özel Havuz"
-                      : "Ortak Havuz",
-                  width: villa.pool_width,
-                  length: villa.pool_length,
-                  depth: villa.pool_depth,
-                });
-              }
-              if (villa.indoor_pool) {
-                cards.push({
-                  key: "indoor",
-                  label: "Kapalı Havuz",
-                  width: villa.indoor_pool_width,
-                  length: villa.indoor_pool_length,
-                  depth: villa.indoor_pool_depth,
-                });
-              }
-              if (villa.child_pool) {
-                cards.push({
-                  key: "child",
-                  label: "Çocuk Havuzu",
-                  width: villa.child_pool_width,
-                  length: villa.child_pool_length,
-                  depth: villa.child_pool_depth,
-                });
-              }
+              /* 🛡️ PHASE 10E BATCH 5 — kart türetimi lib/pool.helper.ts'e
+                 taşındı (sıra, React key'leri ve koşullar BİREBİR aynı).
+                 Etiketler TR dictionary'den; değerler bu dosyadaki eski
+                 literal'lerle BİREBİR aynı. */
+              const cards = buildPoolCards(villa);
               if (cards.length === 0) return null;
               return (
                 <section>
@@ -730,7 +700,7 @@ export default async function VillaDetail({
                               aria-hidden="true"
                               className="inline-block w-1.5 h-1.5 rounded-full bg-[#ED7926]"
                             />
-                            {c.label}
+                            {getPoolTypeLabel(c.type, "tr")}
                           </p>
                           {hasDims ? (
                             <div className="mt-3 grid grid-cols-3 gap-2.5">

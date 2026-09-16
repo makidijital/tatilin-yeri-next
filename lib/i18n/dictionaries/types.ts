@@ -15,6 +15,20 @@
    dolayısıyla o metinler şu an dictionary'den beslenmiyor.
    =============================================================== */
 
+/* 🛡️ PHASE 10E — yatak/banyo tipi enum'larının TEK doğruluk kaynağı
+   lib/villa-layout.helper.ts'tir (migration 047). BED_TYPES/BATHROOM_TYPES
+   `as const` tanımlı olduğu için literal union'lar oradan TÜRETİLEBİLİYOR
+   (distanceLabels'ta bu mümkün değildi — DISTANCE_OPTIONS `ReadonlyArray<string>`).
+   Böylece aşağıdaki iki Record alanı derleme zamanında EKSİKSİZ olmak
+   zorunda; enum'a yeni bir değer eklenirse tr/en/de.ts derleme hatası verir.
+   `import type` → sıfır runtime etkisi, çevrim (circular import) riski yok
+   (villa-layout.helper.ts hiçbir şey import etmiyor). */
+import type { BedType, BathroomType } from "@/lib/villa-layout.helper";
+/* 🛡️ PHASE 10E BATCH 5 — havuz tipi union'ı da tek canonical kaynaktan
+   (lib/pool.helper.ts) türetilir; POOL_TYPE_KEYS `as const` olduğu için
+   literal union elde edilir → tr/en/de.ts'te eksik key derleme hatası verir. */
+import type { PoolTypeKey } from "@/lib/pool.helper";
+
 /* ===============================================================
    🛡️ PHASE 10D — BATCH 4: CANONICAL DISTANCE TITLE UNION
    ===============================================================
@@ -239,4 +253,37 @@ export type Dictionary = {
      getTranslatedDistanceLabel() (lib/distance-label.helper.ts) onları
      olduğu gibi döner, dictionary'de aranmaz. */
   distanceLabels: Record<DistanceCanonicalTitle, string>;
+  /* 🛡️ PHASE 10E — Konaklama Düzeni (migration 047) ENUM etiketleri.
+     distanceLabels ile AYNI gerekçe: bunlar serbest DB metni DEĞİL,
+     kapalı küme enum'lardır. Oda/banyo ADLARI buraya GİRMEZ (villa
+     bazlı serbest metin → villa_translations, migration 083). */
+  bedTypeLabels: Record<BedType, string>;
+  bathroomTypeLabels: Record<BathroomType, string>;
+  /* 🛡️ PHASE 10E — AccommodationLayout component'inin UI metinleri.
+     `{n}` şablonları formatDictionaryString() ile doldurulur
+     (lib/i18n/format-dictionary-string.ts — mevcut desen).
+     TR değerleri component'in BUGÜNKÜ hardcoded metinleriyle BİREBİR
+     aynıdır (byte-identical TR davranışı). */
+  accommodation: {
+    sectionTitle: string;
+    noDetail: string;
+    /** template: {n} */
+    bedroomFallback: string;
+    /** template: {n} */
+    bathroomFallback: string;
+  };
+  /* 🛡️ PHASE 10E BATCH 5 — havuz tipi etiketleri. bedTypeLabels ile AYNI
+     gerekçe: kapalı küme canonical enum (serbest DB metni DEĞİL).
+     Key'ler lib/pool.helper.ts'teki PoolTypeKey ile type-safe bağlı. */
+  poolTypeLabels: Record<PoolTypeKey, string>;
+  /* 🛡️ PHASE 10E BATCH 5 — havuz bölümünün UI metinleri. TR değerleri
+     kiralik-villa/[slug] sayfasının BUGÜNKÜ hardcoded metinleriyle
+     BİREBİR aynıdır (byte-identical TR davranışı). */
+  pool: {
+    sectionTitle: string;
+    width: string;
+    length: string;
+    depth: string;
+    noDimensions: string;
+  };
 };

@@ -59,6 +59,9 @@ import { getPublicSettings } from "@/app/services/settings.service";
 
 import { isValidYmd } from "@/lib/availability.helper";
 import { formatPoolDimension } from "@/lib/dimension.helper";
+/* 🛡️ PHASE 10E BATCH 5 — TR literal tekrarı kaldırıldı. */
+import { buildPoolCards } from "@/lib/pool.helper";
+import { getPoolTypeLabel } from "@/lib/pool-label.helper";
 
 /* ===============================================================
    🛡️ FAZ 31 — PRIVATE / TEMPORARY VILLA URL ROUTE
@@ -367,42 +370,15 @@ export default async function PrivateVillaDetail({
             {/* POOL */}
             {(villa.pool_type !== "yok" || villa.indoor_pool || villa.child_pool) &&
               (() => {
-                type PoolCard = {
-                  key: string;
-                  label: string;
-                  width: string | null | undefined;
-                  length: string | null | undefined;
-                  depth: string | null | undefined;
-                };
-                const cards: PoolCard[] = [];
-                if (villa.pool_type && villa.pool_type !== "yok") {
-                  cards.push({
-                    key: "main",
-                    label:
-                      villa.pool_type === "ozel" ? "Özel Havuz" : "Ortak Havuz",
-                    width: villa.pool_width,
-                    length: villa.pool_length,
-                    depth: villa.pool_depth,
-                  });
-                }
-                if (villa.indoor_pool) {
-                  cards.push({
-                    key: "indoor",
-                    label: "Kapalı Havuz",
-                    width: villa.indoor_pool_width,
-                    length: villa.indoor_pool_length,
-                    depth: villa.indoor_pool_depth,
-                  });
-                }
-                if (villa.child_pool) {
-                  cards.push({
-                    key: "child",
-                    label: "Çocuk Havuzu",
-                    width: villa.child_pool_width,
-                    length: villa.child_pool_length,
-                    depth: villa.child_pool_depth,
-                  });
-                }
+                /* 🛡️ PHASE 10E BATCH 5 — kart türetimi lib/pool.helper.ts'e
+                   taşındı. `distinguishSheltered: false` BİLİNÇLİ: bu sayfa
+                   bugün `pool_sheltered`'ı HİÇ okumuyor ve korunaklı havuzu da
+                   "Özel Havuz" olarak gösteriyor; kullanıcıya görünen TR metni
+                   DEĞİŞMESİN diye o davranış AYNEN korundu (iki sayfayı
+                   birleştirmek AYRI bir karar — bkz. Batch 5 raporu). */
+                const cards = buildPoolCards(villa, {
+                  distinguishSheltered: false,
+                });
                 if (cards.length === 0) return null;
 
                 return (
@@ -429,7 +405,7 @@ export default async function PrivateVillaDetail({
                                 className="inline-block w-1 h-1 rounded-full bg-[var(--color-champagne-500)]"
                                 aria-hidden
                               />
-                              {c.label}
+                              {getPoolTypeLabel(c.type, "tr")}
                             </p>
                             {hasDims ? (
                               <>

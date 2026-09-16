@@ -5,6 +5,10 @@ import { cache } from "react";
 import { getTranslation, resolveTranslatedField } from "@/lib/i18n/get-translation.server";
 import type { Locale } from "@/lib/i18n/config";
 import { stripHtml } from "@/lib/html-sanitize";
+/* 🛡️ PHASE 10E — oda/banyo adı çözümlemesi. Drift/index/fallback
+   algoritmasının TEK doğruluk kaynağı bu helper'dır; burada YENİDEN
+   YAZILMAZ (dosya Batch 1'den beri DEĞİŞMEDİ, yalnız import edilir). */
+import { resolveLayoutTranslationNames } from "@/lib/villa-layout-translation.helper";
 
 /* ===============================================================
    🛡️ VILLA TITLE + DESCRIPTION + SEO_DESCRIPTION TRANSLATION OVERLAY
@@ -229,4 +233,54 @@ export async function getVillaTranslatedSeoTitle(
 ): Promise<string | null | undefined> {
   const translation = await getVillaTranslationCached(villaId, locale);
   return resolveTranslatedField(translation?.seo_title, originalSeoTitle);
+}
+
+
+/* ===============================================================
+   🛡️ PHASE 10E — KONAKLAMA DÜZENİ (ODA/BANYO ADI) ÇEVİRİLERİ
+   ===============================================================
+   Migration 083'ün `villa_translations.bedroom_layout` /
+   `.bathroom_layout` kolonlarını okur.
+
+   PERF: Yukarıdaki 5 getter ile BİREBİR AYNI
+   `getVillaTranslationCached(villaId, locale)` çağrısını reuse eder —
+   AYRI bir DB sorgusu EKLENMEZ. Bir request içinde title/description/
+   bedroom/bathroom hepsi istendiğinde React `cache()` aynı (villaId,
+   locale) için TEK `getTranslation("villa", ...)` sorgusunu paylaşır.
+
+   TR: `getTranslation` TR için erken `null` döner (sorgu YOK) →
+   `resolveLayoutTranslationNames` çeviri bulamaz → TR adlar aynen döner.
+
+   GÜVENLİK: Yanlış odaya çeviri bağlanması imkânsızdır — helper
+   uzunluk + index + TR kaynak adı guard'ını uygular; uyuşmazlıkta
+   ilgili satır (veya tüm dizi) TR'ye düşer. Bu fonksiyonlar o kararı
+   DEĞİŞTİRMEZ, yalnız `.names` sonucunu geçirir.
+   =============================================================== */
+
+/**
+ * Bir villanın oda ADLARINI verilen locale için çözer.
+ * Dönen dizi HER ZAMAN `trNames` ile aynı uzunluktadır.
+ */
+export async function getVillaTranslatedBedroomNames(
+  villaId: string,
+  trNames: readonly string[],
+  locale: Locale
+): Promise<string[]> {
+  const translation = await getVillaTranslationCached(villaId, locale);
+  return resolveLayoutTranslationNames(trNames, translation?.bedroom_layout)
+    .names;
+}
+
+/**
+ * Bir villanın banyo ADLARINI verilen locale için çözer.
+ * `getVillaTranslatedBedroomNames` ile AYNI desen ve AYNI cache çağrısı.
+ */
+export async function getVillaTranslatedBathroomNames(
+  villaId: string,
+  trNames: readonly string[],
+  locale: Locale
+): Promise<string[]> {
+  const translation = await getVillaTranslationCached(villaId, locale);
+  return resolveLayoutTranslationNames(trNames, translation?.bathroom_layout)
+    .names;
 }

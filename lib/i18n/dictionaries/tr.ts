@@ -171,4 +171,45 @@ export const tr: Dictionary = {
     "Benzin İstasyonu": "Benzin İstasyonu",
     "Okul": "Okul",
   },
+  /* 🛡️ PHASE 10E — TR değerleri lib/villa-layout.helper.ts'teki
+     BED_TYPE_LABELS/BATHROOM_TYPE_LABELS ile BİREBİR AYNI (TR public
+     render byte-identical kalmalı). O dosya DEĞİŞTİRİLMEDİ. */
+  bedTypeLabels: {
+    double: "Çift Kişilik Yatak",
+    single: "Tek Kişilik Yatak",
+    queen: "Queen Bed",
+    king: "King Bed",
+    bunk: "Ranza",
+    sofa: "Çekyat",
+  },
+  bathroomTypeLabels: {
+    full: "Tam Banyo",
+    shower_wc: "Duş + WC",
+    wc: "WC",
+  },
+  /* 🛡️ PHASE 10E — AccommodationLayout.tsx'in BUGÜNKÜ hardcoded
+     metinleriyle BİREBİR aynı ("Konaklama Düzeni", "Detay belirtilmedi",
+     `${i + 1}. Yatak Odası`, `${i + 1}. Banyo`). */
+  accommodation: {
+    sectionTitle: "Konaklama Düzeni",
+    noDetail: "Detay belirtilmedi",
+    bedroomFallback: "{n}. Yatak Odası",
+    bathroomFallback: "{n}. Banyo",
+  },
+  /* 🛡️ PHASE 10E BATCH 5 — kiralik-villa/[slug] ve v/[token] sayfalarında
+     BUGÜN kullanılan TR literal'lerle BİREBİR aynı. */
+  poolTypeLabels: {
+    private: "Özel Havuz",
+    private_sheltered: "Özel Korunaklı Havuz",
+    shared: "Ortak Havuz",
+    indoor: "Kapalı Havuz",
+    child: "Çocuk Havuzu",
+  },
+  pool: {
+    sectionTitle: "Havuz Bilgileri",
+    width: "Genişlik",
+    length: "Uzunluk",
+    depth: "Derinlik",
+    noDimensions: "Ölçü bilgisi yok",
+  },
 };
