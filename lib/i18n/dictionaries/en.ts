@@ -560,6 +560,36 @@ export const en: Dictionary = {
     },
   },
 
+  /* 🛡️ PUBLIC ARŞİV (/en/kiralik-villalar) statik UI metinleri. */
+  villasArchive: {
+    metaTitle: "Villas for Rent — {brand}",
+    metaDescription:
+      "A curated Mediterranean collection. Discover rental villas designed around private pools, sea views and boutique comfort.",
+    breadcrumbHome: "Home",
+    breadcrumbCurrent: "Villas for Rent",
+    heroEyebrow: "All Villas",
+    heroTitle: "Villas for Rent",
+    heroStatLabel: "Active Villas",
+    collectionName: "Villas for Rent",
+    collectionDescription:
+      "A curated collection of Mediterranean rental villas — private pools, sea views, boutique comfort.",
+    emptyEyebrow: "Collection",
+    emptyTitle: "Coming soon.",
+    emptyBody:
+      "The collection is still being curated. It will be ready to explore soon.",
+    aboutEyebrow: "About",
+    aboutTitleLead: "More than",
+    aboutTitleAccent: "a stay.",
+    aboutParagraph1:
+      "This collection brings together rental villas in the Mediterranean's finest corners, each designed to offer more than a place to stay. Every villa is chosen on its own merits — its private pool, its view, its privacy and its interior architecture.",
+    aboutParagraph2:
+      "Character is not felt on a listing card; it is felt room by room. For anyone looking for a refined villa experience, this collection is not a quick list but an archive to wander through slowly.",
+    aboutParagraph3Lead:
+      "Use the filters on the left to narrow by region, type, dates and number of guests, then",
+    aboutParagraph3LinkLabel: "view the results on the search page",
+    aboutParagraph3Trail: ".",
+  },
+
   /* 🛡️ PHASE 12E — PUBLIC CMS statik UI metinleri. */
   cms: {
     breadcrumbHome: "Home",

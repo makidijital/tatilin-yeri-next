@@ -577,6 +577,38 @@ export const tr: Dictionary = {
     },
   },
 
+  /* 🛡️ PUBLIC ARŞİV (/kiralik-villalar) statik UI metinleri. TR
+     değerleri `app/(public)/kiralik-villalar/page.tsx`'teki ESKİ
+     hardcoded metinlerin BİREBİR kopyasıdır; hiçbiri değiştirilmedi. */
+  villasArchive: {
+    metaTitle: "Kiralık Villalar — {brand}",
+    metaDescription:
+      "Akdeniz'in seçkin koleksiyonu. Özel havuz, deniz manzarası ve butik konforla tasarlanmış kiralık villaları keşfedin.",
+    breadcrumbHome: "Ana sayfa",
+    breadcrumbCurrent: "Kiralık Villalar",
+    heroEyebrow: "Tüm Villalar",
+    heroTitle: "Kiralık Villalar",
+    heroStatLabel: "Aktif Villa",
+    collectionName: "Kiralık Villalar",
+    collectionDescription:
+      "Akdeniz'in seçkin kiralık villa koleksiyonu — özel havuz, deniz manzarası, butik konfor.",
+    emptyEyebrow: "Koleksiyon",
+    emptyTitle: "Yakında burada.",
+    emptyBody:
+      "Koleksiyon henüz oluşturuluyor. Yakında keşfedilmeyi bekleyecek.",
+    aboutEyebrow: "Hakkında",
+    aboutTitleLead: "Bir konaklamadan",
+    aboutTitleAccent: "fazlası.",
+    aboutParagraph1:
+      "Bu koleksiyon, Akdeniz'in en seçkin köşelerinde, bir konaklamadan fazlasını sunmak için tasarlanan kiralık villalardan oluşur. Her villa; özel havuzu, manzarası, mahremiyeti ve iç mimarisiyle bağımsız olarak seçilir.",
+    aboutParagraph2:
+      "Karakter; bir kart üzerinde değil, oda oda hissedilir. Seçkin kiralık villa deneyimi arayanlar için bu koleksiyon, hızlı bir liste değil, sessizce gezilecek bir arşivdir.",
+    aboutParagraph3Lead:
+      "Solda yer alan filtreleri kullanarak bölge, tip, tarih ve kişi sayısına göre seçim yapabilir;",
+    aboutParagraph3LinkLabel: "arama sayfasından",
+    aboutParagraph3Trail: "sonuçları görüntüleyebilirsiniz.",
+  },
+
   /* 🛡️ PHASE 12E — PUBLIC CMS statik UI metinleri. TR değerleri
      `CmsPageBody.tsx`'teki ESKİ hardcoded metinlerin BİREBİR
      kopyasıdır; hiçbiri değiştirilmedi. */

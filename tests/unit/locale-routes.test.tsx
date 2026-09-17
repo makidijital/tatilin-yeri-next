@@ -312,8 +312,9 @@ function openVillaTab(
 const COMING_SOON_ROUTES: Array<
   [string, "en" | "de", Record<string, unknown> | undefined]
 > = [
-  ["@/app/(public)/en/kiralik-villalar/page", "en", undefined],
-  ["@/app/(public)/de/kiralik-villalar/page", "de", undefined],
+  /* 🛡️ `/en|de/kiralik-villalar` ARTIK ComingSoon DEĞİL; gerçek
+     `KiralikVillalarPageBody`'yi render ediyor. Gate sözleşmesi AYNI
+     kaldığı için AYRI gruba taşındı (bkz. ARCHIVE_GATE_ROUTES). */
   /* 🛡️ PHASE 13 — `/en|de/arama` ARTIK ComingSoon DEĞİL; gerçek
      `AramaPageBody`'yi render ediyor. Gate davranışı (gate çağrısı +
      notFound propagate) AYNI kaldığı için, villa detayda uygulanan
@@ -339,6 +340,52 @@ const SEARCH_GATE_ROUTES: Array<
     { searchParams: Promise.resolve({}) },
   ],
 ];
+
+/* 🛡️ Arşiv route'ları (/kiralik-villalar): gate sözleşmesi AYNEN,
+   içerik assertion'ı ComingSoon yerine ortak `KiralikVillalarPageBody`
+   + locale prop'u. `searchParams` Promise'i sayfaya AYNEN geçirilir
+   (URL kontratı DEĞİŞMEDİ). */
+const ARCHIVE_GATE_ROUTES: Array<
+  [string, "en" | "de", Record<string, unknown>]
+> = [
+  [
+    "@/app/(public)/en/kiralik-villalar/page",
+    "en",
+    { searchParams: Promise.resolve({}) },
+  ],
+  [
+    "@/app/(public)/de/kiralik-villalar/page",
+    "de",
+    { searchParams: Promise.resolve({}) },
+  ],
+];
+
+describe.each(ARCHIVE_GATE_ROUTES)("%s", (modulePath, locale, pageProps) => {
+  it(`gate geçtiğinde ortak KiralikVillalarPageBody'yi locale="${locale}" ile render eder`, async () => {
+    requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
+
+    const { default: Page } = await import(modulePath);
+    const { default: KiralikVillalarPageBody } = await import(
+      "@/app/components/search/KiralikVillalarPageBody"
+    );
+    const element = await Page(pageProps);
+
+    expect(requirePublicLocaleEnabledMock).toHaveBeenCalledTimes(1);
+    expect(element.type).toBe(KiralikVillalarPageBody);
+    expect(element.props.locale).toBe(locale);
+    expect(element.props.searchParams).toBe(pageProps.searchParams);
+  });
+
+  it("gate notFound() fırlattığında sayfa bunu YUTMAZ (aynen propagate eder)", async () => {
+    requirePublicLocaleEnabledMock.mockRejectedValue(
+      new Error("NEXT_NOT_FOUND")
+    );
+
+    const { default: Page } = await import(modulePath);
+
+    await expect(Page(pageProps)).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+});
 
 /* 🛡️ PHASE 10B, Section 9 — villa detay artık ComingSoon'un YERİNE
    gerçek Gallery/PriceList/AvailabilityInlineCalendar/BookingSidebar/

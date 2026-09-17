@@ -735,6 +735,53 @@ export type Dictionary = {
   };
 
   /* ===============================================================
+     🛡️ PUBLIC ARŞİV SAYFASI (/kiralik-villalar) STATİK UI METİNLERİ
+     ===============================================================
+     `app/components/search/KiralikVillalarPageBody.tsx` içindeki
+     hardcoded TR arayüz metinleri (metadata, hero, boş koleksiyon
+     durumu, "Hakkında" editorial bloğu, JSON-LD adları).
+
+     ⚠️ BİLİNÇLİ REUSE — burada TEKRARLANMADI: sıralama (`search
+     .sortLabel` / `sortAriaLabel` / `sortOptions`), sayfa boyutu
+     (`search.pageSizeLabel` / `pageSizeAriaLabel`), pagination
+     (`search.paginationAriaLabel` / `paginationPrev` /
+     `paginationNext`) ve FilterSidebar (`search.filters`).
+     Bu arayüz parçaları `/arama` ile BİREBİR AYNI component/metin
+     olduğundan TR değerleri de birebir örtüşür; ikinci bir kopya
+     üretmek çeviri kayması (drift) riski yaratırdı.
+
+     ⚠️ Villa tipi / bölge ADLARI buraya GİRMEZ — onlar DB canonical
+     (villa_type_translations / Phase 10I özel isim kuralı). */
+  villasArchive: {
+    /** `formatDictionaryString` — `{brand}`. */
+    metaTitle: string;
+    metaDescription: string;
+    breadcrumbHome: string;
+    breadcrumbCurrent: string;
+    heroEyebrow: string;
+    heroTitle: string;
+    /** PageHero `stat.label` — sayı AYRI alanda. */
+    heroStatLabel: string;
+    /** JSON-LD CollectionPage `name`. */
+    collectionName: string;
+    /** JSON-LD CollectionPage `description`. */
+    collectionDescription: string;
+    emptyEyebrow: string;
+    emptyTitle: string;
+    emptyBody: string;
+    aboutEyebrow: string;
+    /** Başlık 2 satır: lead + (gri) accent — `<br />` ile ayrılır. */
+    aboutTitleLead: string;
+    aboutTitleAccent: string;
+    aboutParagraph1: string;
+    aboutParagraph2: string;
+    /** 3. paragraf link etrafında 3 parçaya bölünür (lead + link + trail). */
+    aboutParagraph3Lead: string;
+    aboutParagraph3LinkLabel: string;
+    aboutParagraph3Trail: string;
+  };
+
+  /* ===============================================================
      🛡️ PHASE 12E — PUBLIC CMS SAYFASI (/p/[slug]) STATİK UI METİNLERİ
      ===============================================================
      `app/components/cms/CmsPageBody.tsx` içindeki hardcoded TR

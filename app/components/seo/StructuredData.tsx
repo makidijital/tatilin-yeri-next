@@ -40,7 +40,11 @@ function abs(path: string): string {
    şekilde bölgesiz). Yalnız `locale` opsiyonel parametresi GEÇİLİRSE
    kullanılır — geçilmezse (bugünkü TÜM diğer call-site'lar) JSON-LD
    çıktısı `inLanguage` alanı OLMADAN, ÖNCEKİ HALİYLE AYNI kalır. */
-const SCHEMA_IN_LANGUAGE: Record<Locale, string> = {
+/* 🛡️ Locale → schema.org `inLanguage`. `buildBreadcrumb` (Phase 7D)
+   tarafından kullanılır; `/kiralik-villalar` CollectionPage JSON-LD'si
+   de AYNI haritayı kullanır (ikinci bir kopya türetilmedi — TR değeri
+   "tr-TR" olarak KORUNUR). */
+export const SCHEMA_IN_LANGUAGE: Record<Locale, string> = {
   tr: "tr-TR",
   en: "en",
   de: "de",
