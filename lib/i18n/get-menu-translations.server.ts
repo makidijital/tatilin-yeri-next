@@ -29,6 +29,12 @@ import type {
    çağırmalıdır (bkz. HeaderWrapper) — flag kapalıyken /en ve /de
    zaten 404 olduğu için çeviri okumak GEREKSİZ sorgu olur.
 
+   ⚠️ KAPSAM — YALNIZ MANUEL MENÜLER: çağıran taraf (HeaderWrapper)
+   bu fonksiyona SADECE `source_type === "manual"` satırların id'lerini
+   geçirir. page/page-auto (→ `page_translations`), category
+   (→ `villa_type_translations`) ve region (→ çevrilmez) kaynakları bu
+   yoldan HİÇ okunmaz; davranışları BİREBİR korunur.
+
    ⚠️ Yalnız GÖRÜNEN AD. href/slug/source_id bu dosyaya HİÇ girmez.
    =============================================================== */
 

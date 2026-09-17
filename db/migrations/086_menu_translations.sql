@@ -2,9 +2,22 @@
 -- Migration 086 — menu_translations (TR/EN/DE dinamik menü adı çevirileri)
 -- ============================================================================
 -- AMAÇ:
---   `/maki-admin/menu` üzerinden girilen menü adlarının EN/DE karşılıklarını
---   saklamak. Migration 082'nin (PHASE 3) 9 çeviri tablosuyla YAPISAL OLARAK
---   BİREBİR AYNI şema — yeni bir çeviri mimarisi İCAT EDİLMEDİ.
+--   `/maki-admin/menu` üzerinden MANUEL olarak eklenen menülerin
+--   (`menu.source_type = 'manual'`) EN/DE adlarını saklamak. Migration
+--   082'nin (PHASE 3) 9 çeviri tablosuyla YAPISAL OLARAK BİREBİR AYNI
+--   şema — yeni bir çeviri mimarisi İCAT EDİLMEDİ.
+--
+-- ⚠️ KAPSAM — YALNIZ `source_type = 'manual'`:
+--   Diğer menü türlerinin adı kendi kaynak tablosundan gelir ve
+--   çevirileri ZATEN kendi sistemlerindedir:
+--     page / page-auto → pages.title      → public.page_translations
+--     category         → villa_types.name → public.villa_type_translations
+--     region           → villa_locations.name → ÇEVRİLMEZ (özel isim)
+--   Bu tablo o kaynaklara HİÇ dokunmaz ve onlar için satır TUTMAZ.
+--   Kural application katmanında uygulanır (menu-translation.service.ts
+--   parent ön-kontrolü + HeaderWrapper yalnız manual id okur); DB'de
+--   CHECK ile ifade edilemez çünkü kural başka bir tablonun kolonuna
+--   bağlıdır (trigger eklemek mevcut 082 desenini bozardı).
 --
 --   Bu migration'da:
 --     ❌ `public.menu` tablosuna DOKUNULMAZ (kolon eklenmez/değişmez)
@@ -82,9 +95,11 @@ CREATE TABLE IF NOT EXISTS public.menu_translations (
 );
 
 COMMENT ON TABLE public.menu_translations IS
-  'menu.name çevirileri (dinamik navigasyon etiketleri). public.menu TR '
-  'base data SOURCE OF TRUTH kalır; bu tablo BOŞ başlar (TR backfill YOK). '
-  'href/slug/source_id ÇEVRİLMEZ — yalnız görünen ad.';
+  'menu.name çevirileri — YALNIZ source_type=''manual'' satırlar için. '
+  'public.menu TR base data SOURCE OF TRUTH kalır; bu tablo BOŞ başlar '
+  '(TR backfill YOK). Link adresi ve kaynak referansı ÇEVRİLMEZ — yalnız '
+  'görünen ad. page/category/region türlerinin çevirileri kendi '
+  'sistemlerindedir (page_translations / villa_type_translations / yok).';
 
 DROP TRIGGER IF EXISTS menu_translations_touch_updated_at ON public.menu_translations;
 CREATE TRIGGER menu_translations_touch_updated_at

@@ -618,6 +618,12 @@ function SortableItem({
   const parent = items.find((i) => i.id === item.parent_id);
   const isPageAuto = item.kind === "page-auto";
   const isOrphan = !!item.orphan;
+  /* 🛡️ MIGRATION 086 — çeviri paneli YALNIZ manuel menülerde.
+     page / page-auto adı `pages.title`'dan, category adı
+     `villa_types.name`'den gelir; onların çevirisi kendi
+     ekranlarındadır (Sayfalar / Villa Tipleri). region ise Phase
+     10I gereği çevrilmez. Bu satırlarda buton HİÇ render edilmez. */
+  const canTranslate = item.kind === "menu" && item.sourceType === "manual";
 
   /* Source badge metadata — UI'da ne tür navigation reference olduğunu
      açıkça gösterir. Manual badge'siz (default; gürültü yapmasın). */
@@ -715,23 +721,25 @@ function SortableItem({
           </Link>
         ) : (
           <>
-            {/* 🛡️ MIGRATION 086 — menü adı çevirileri (EN/DE). Yalnız
-                `menu` tablosundaki satırlarda; silme butonunun SOLUNDA,
-                mevcut aksiyon dili korunarak. */}
-            <button
-              type="button"
-              onClick={() => onToggleTranslations(item.id)}
-              aria-expanded={translationsOpen}
-              className={
-                "inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1.5 rounded-lg transition " +
-                (translationsOpen
-                  ? "text-[var(--color-stone-900)] bg-[var(--color-sand-100)]"
-                  : "text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] hover:bg-white")
-              }
-            >
-              <Languages size={12} />
-              Çeviriler
-            </button>
+            {/* 🛡️ MIGRATION 086 — menü adı çevirileri (EN/DE). YALNIZ
+                `source_type === "manual"` satırlarda; silme butonunun
+                SOLUNDA, mevcut aksiyon dili korunarak. */}
+            {canTranslate && (
+              <button
+                type="button"
+                onClick={() => onToggleTranslations(item.id)}
+                aria-expanded={translationsOpen}
+                className={
+                  "inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1.5 rounded-lg transition " +
+                  (translationsOpen
+                    ? "text-[var(--color-stone-900)] bg-[var(--color-sand-100)]"
+                    : "text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] hover:bg-white")
+                }
+              >
+                <Languages size={12} />
+                Çeviriler
+              </button>
+            )}
             <button
               onClick={() => onDelete(item)}
               className="inline-flex items-center gap-1.5 text-[12px] text-red-600 hover:text-red-700 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition"
@@ -746,7 +754,7 @@ function SortableItem({
 
       {/* Çeviri paneli — satırın ALTINDA, drag handle'ın dışında.
           Kapalıyken hiçbir DOM/istek üretmez (lazy mount). */}
-      {translationsOpen && !isPageAuto && (
+      {translationsOpen && canTranslate && (
         <div className="mt-3">
           <MenuTranslationsPanel menuId={item.id} menuName={item.name} />
         </div>

@@ -1,4 +1,5 @@
 import { translationRepository } from "@/lib/db/translation.repository.server";
+import { menuServerRepository } from "@/lib/db/menu.repository.server";
 import type { MenuTranslationRow } from "@/lib/i18n/translations.types";
 
 /* ===============================================================
@@ -16,6 +17,15 @@ import type { MenuTranslationRow } from "@/lib/i18n/translations.types";
      kayıt TR fallback'ine döner. Yeni bir fallback mantığı İCAT
      EDİLMEDİ: `resolveTaxonomyName` zaten boş/whitespace çeviriyi
      canonical ada düşürür.
+
+   ⚠️ KAPSAM — YALNIZ `source_type = "manual"` SATIRLAR:
+     `menu_translations` başka hiçbir menü türü için kullanılmaz;
+     yazma yolunda parent `source_type` ön-kontrolü yapılır
+     (`page-translation.service.ts`'in parent pre-check deseni).
+       • page / page-auto → `page_translations` (Pages sistemi)
+       • category         → `villa_type_translations` (Phase 10H)
+       • region           → çevrilmez (Phase 10I, özel isim)
+     Bu kaynaklara bu servis HİÇ DOKUNMAZ.
 
    ⚠️ KAPSAM: yalnız GÖRÜNEN AD. `href` / `source_type` / `source_id`
    bu servise HİÇ girmez — menü linki canonical kalır.
@@ -78,6 +88,22 @@ export async function upsertMenuTranslation(
     };
   }
   const locale = input.locale;
+
+  /* 🛡️ PARENT ÖN-KONTROLÜ — YALNIZ `manual`. Satır yoksa ya da başka
+     bir source_type ise DB'ye HİÇ yazılmaz; böylece tablo yalnız
+     manuel menü etiketlerini tutar (kullanıcı kapsam kararı).
+     Okuma hatası da yazmayı durdurur (fail-closed). */
+  const { data: row, error: parentErr } =
+    await menuServerRepository.findSourceTypeById(menuId);
+  if (parentErr) return { ok: false, error: "Menü okunamadı" };
+  if (!row) return { ok: false, error: "Menü bulunamadı" };
+  if (row.source_type !== "manual") {
+    return {
+      ok: false,
+      error:
+        "Bu menü türünün adı kendi kaynağından gelir — çevirisi ilgili ekrandan yapılır",
+    };
+  }
 
   /* Boş → null (temizleme). Reddetme YOK — bkz. dosya başı notu. */
   const name = normalize(input.name);

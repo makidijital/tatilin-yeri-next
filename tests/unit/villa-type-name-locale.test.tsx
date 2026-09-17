@@ -498,12 +498,13 @@ describe("HeaderWrapper — multilingual gate + ağaç birleştirme", () => {
     expect(
       findManyForLocaleMock.mock.calls.filter((c) => c[0] === "villa_type")
     ).toHaveLength(0);
-    /* 🛡️ MIGRATION 086 — menü satırının KENDİ etiket çevirisi
-       (entity "menu") her durumda okunur; bu, villa tipi sorgusundan
-       BAĞIMSIZ ve yine locale başına TEK sorgudur. */
+    /* 🛡️ MIGRATION 086 (KAPSAM DARALTMASI) — `menu_translations`
+       YALNIZ `source_type === "manual"` satırlar için okunur. Bu
+       senaryodaki tek öğe `page` olduğundan menü çeviri sorgusu da
+       ATILMAZ; sayfa adının çevirisi Pages sisteminin işidir. */
     expect(
       findManyForLocaleMock.mock.calls.filter((c) => c[0] === "menu")
-    ).toHaveLength(2);
+    ).toHaveLength(0);
   });
 
   it("34) çeviri okuması patlarsa header ÇÖKMEZ, TR adına düşer", async () => {

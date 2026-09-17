@@ -59,8 +59,34 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/maki-admin/menu/new",
 }));
 
+/* Liste ekranı için dnd-kit shallow mock — sürükle-bırak bu testlerin
+   konusu DEĞİL; satır render'ı ve aksiyon görünürlüğü test edilir. */
+vi.mock("@dnd-kit/core", () => ({
+  DndContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  closestCenter: () => null,
+}));
+vi.mock("@dnd-kit/sortable", () => ({
+  SortableContext: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  verticalListSortingStrategy: () => null,
+  useSortable: () => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: () => {},
+    transform: null,
+    transition: undefined,
+    isDragging: false,
+  }),
+  arrayMove: <T,>(a: T[]) => a,
+}));
+vi.mock("@dnd-kit/utilities", () => ({
+  CSS: { Transform: { toString: () => undefined } },
+}));
+
 import MenuTranslationsPanel from "@/app/(admin)/maki-admin/menu/MenuTranslationsPanel";
 import NewMenu from "@/app/(admin)/maki-admin/menu/new/page";
+import MenuPage from "@/app/(admin)/maki-admin/menu/page";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -343,5 +369,137 @@ describe("/maki-admin/menu/new — TR + EN + DE", () => {
     await waitFor(() => expect(notifyErrorMock).toHaveBeenCalled());
     expect(saveMenuTranslationMock).not.toHaveBeenCalled();
     expect(routerPushMock).not.toHaveBeenCalled();
+  });
+
+  /* ===========================================================
+     KAPSAM KİLİDİ — çeviri alanları YALNIZ "Manuel Link" türünde
+     =========================================================== */
+  it.each([
+    ["CMS Sayfa"],
+    ["Villa Tipi"],
+    ["Bölge"],
+  ])("17-%#) '%s' türü seçilince EN/DE alanları GİZLENİR", async (label) => {
+    render(<NewMenu />);
+    await waitFor(() => expect(adminFetchMock).toHaveBeenCalled());
+    /* Varsayılan "Manuel Link" → alanlar görünür. */
+    expect(screen.getByLabelText("English")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(label));
+    expect(screen.queryByLabelText("English")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Deutsch")).not.toBeInTheDocument();
+  });
+
+  it("20) manual'de doldurulup tür DEĞİŞTİRİLİRSE çeviri yazılmaz", async () => {
+    mockCreateOk();
+    render(<NewMenu />);
+    await waitFor(() => expect(adminFetchMock).toHaveBeenCalled());
+    fireEvent.change(screen.getByLabelText("English"), {
+      target: { value: "Rental Villas" },
+    });
+    /* Tür değişir → alanlar gizlenir, taslak temizlenir. */
+    fireEvent.click(screen.getByText("Villa Tipi"));
+    fireEvent.click(screen.getByText("Manuel Link"));
+    expect(screen.getByLabelText("English")).toHaveValue("");
+  });
+});
+
+/* ===============================================================
+   D) /maki-admin/menu listesi — "Çeviriler" YALNIZ manual satırda
+   =============================================================== */
+describe("/maki-admin/menu — çeviri aksiyonu görünürlüğü", () => {
+  const MENU_ROWS = [
+    {
+      id: "m-manual",
+      name: "Kiralık Villalar",
+      href: "/kiralik-villalar",
+      order: 1,
+      parent_id: null,
+      source_type: "manual",
+      source_id: null,
+    },
+    {
+      id: "m-page",
+      name: "Hakkımızda",
+      href: "/p/hakkimizda",
+      order: 2,
+      parent_id: null,
+      source_type: "page",
+      source_id: "p1",
+    },
+    {
+      id: "m-category",
+      name: "Lüks Villa",
+      href: "/arama?villa-turleri=luks-villa",
+      order: 3,
+      parent_id: null,
+      source_type: "category",
+      source_id: "t1",
+    },
+    {
+      id: "m-region",
+      name: "Kalkan",
+      href: "/arama?bolgeler=kalkan",
+      order: 4,
+      parent_id: null,
+      source_type: "region",
+      source_id: "l1",
+    },
+  ];
+
+  beforeEach(() => {
+    adminFetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        ok: true,
+        menu: MENU_ROWS,
+        /* page-auto satırı: menüde referansı OLMAYAN, show_in_menu=true */
+        pages: [
+          { id: "p1", title: "Hakkımızda", slug: "hakkimizda", show_in_menu: true },
+          { id: "p2", title: "İletişim", slug: "iletisim", show_in_menu: true },
+        ],
+        types: [{ id: "t1", name: "Lüks Villa", slug: "luks-villa" }],
+        locations: [{ id: "l1", name: "Kalkan", slug: "kalkan" }],
+      }),
+    });
+  });
+
+  it("21) TEK 'Çeviriler' butonu var — yalnız manual satırda", async () => {
+    render(<MenuPage />);
+    await screen.findByText("Kiralık Villalar");
+    expect(screen.getAllByText("Çeviriler")).toHaveLength(1);
+  });
+
+  it("22) page / category / region / page-auto satırlarında buton YOK", async () => {
+    render(<MenuPage />);
+    await screen.findByText("Kiralık Villalar");
+    /* Tüm satırlar listede (sıralama/parent-child değişmedi). */
+    for (const name of ["Hakkımızda", "Lüks Villa", "Kalkan", "İletişim"]) {
+      expect(screen.getAllByText(name).length).toBeGreaterThan(0);
+    }
+    /* Ama çeviri butonu yalnız 1 tane (manual). */
+    const buttons = screen.getAllByText("Çeviriler");
+    expect(buttons).toHaveLength(1);
+  });
+
+  it("23) butona basınca panel AÇILIR ve doğru menuId ile yüklenir", async () => {
+    render(<MenuPage />);
+    await screen.findByText("Kiralık Villalar");
+    fireEvent.click(screen.getByText("Çeviriler"));
+    await waitFor(() =>
+      expect(loadMenuTranslationsMock).toHaveBeenCalledWith("m-manual")
+    );
+    expect(await screen.findByLabelText("English")).toBeInTheDocument();
+  });
+
+  it("24) href / sıralama / kaynak rozetleri DEĞİŞMEDİ", async () => {
+    render(<MenuPage />);
+    await screen.findByText("Kiralık Villalar");
+    expect(screen.getByText("/kiralik-villalar")).toBeInTheDocument();
+    expect(
+      screen.getByText("/arama?villa-turleri=luks-villa")
+    ).toBeInTheDocument();
+    expect(screen.getByText("/arama?bolgeler=kalkan")).toBeInTheDocument();
+    expect(screen.getByText("/p/hakkimizda")).toBeInTheDocument();
   });
 });

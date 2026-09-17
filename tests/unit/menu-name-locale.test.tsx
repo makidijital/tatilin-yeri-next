@@ -83,6 +83,22 @@ describe("migration 086 — menu_translations şeması", () => {
   it("8) migration 082'nin genel touch trigger'ını REUSE eder", () => {
     expect(sql).toMatch(/EXECUTE FUNCTION public\.trg_touch_updated_at\(\)/);
   });
+
+  it("8b) kapsam açıkça MANUAL ile sınırlı olarak belgelenmiş", () => {
+    expect(sql).toMatch(/source_type = 'manual'/);
+    expect(sql).toMatch(/page_translations/);
+    expect(sql).toMatch(/villa_type_translations/);
+  });
+
+  it("8c) diğer çeviri tablolarına DOKUNMAZ (yalnız referans/yorum)", () => {
+    const statements = sql
+      .split("\n")
+      .filter((l) => !l.trimStart().startsWith("--"))
+      .join("\n");
+    expect(statements).not.toMatch(
+      /(ALTER|DROP|UPDATE|INSERT INTO)\s+(TABLE\s+)?public\.(page|villa_type|villa_location)_translations/i
+    );
+  });
 });
 
 /* ===============================================================
@@ -116,6 +132,15 @@ vi.mock("@/lib/db/translation.repository.server", () => ({
   },
 }));
 
+/* 🛡️ KAPSAM DARALTMASI — yazma yolunda parent `source_type`
+   ön-kontrolü (`menu_translations` YALNIZ manual satırlar için). */
+const findSourceTypeByIdMock = vi.fn();
+vi.mock("@/lib/db/menu.repository.server", () => ({
+  menuServerRepository: {
+    findSourceTypeById: (...a: unknown[]) => findSourceTypeByIdMock(...a),
+  },
+}));
+
 import {
   getMenuTranslations,
   upsertMenuTranslation,
@@ -126,6 +151,11 @@ describe("menu-translation.service", () => {
   beforeEach(() => {
     findAllForParentMock.mockReset();
     upsertOneMock.mockReset();
+    findSourceTypeByIdMock.mockReset();
+    findSourceTypeByIdMock.mockResolvedValue({
+      data: { id: "m1", source_type: "manual" },
+      error: null,
+    });
     findAllForParentMock.mockResolvedValue({ data: [], error: null });
     upsertOneMock.mockResolvedValue({
       data: { id: "x", menu_id: "m1", locale: "en", name: "Rental Villas" },
@@ -230,6 +260,59 @@ describe("menu-translation.service", () => {
       name: "X",
     });
     expect(res).toEqual({ ok: false, error: "Çeviri kaydedilemedi" });
+  });
+
+  /* 🛡️ KAPSAM KİLİDİ — tablo YALNIZ manual menü etiketlerini tutar. */
+  it.each(["page", "category", "region"] as const)(
+    "18%s) source_type='%s' → çeviri YAZILMAZ (kendi kaynağı var)",
+    async (sourceType) => {
+      findSourceTypeByIdMock.mockResolvedValue({
+        data: { id: "m1", source_type: sourceType },
+        error: null,
+      });
+      const res = await upsertMenuTranslation({
+        menuId: "m1",
+        locale: "en",
+        name: "Rental Villas",
+      });
+      expect(res.ok).toBe(false);
+      expect(upsertOneMock).not.toHaveBeenCalled();
+    }
+  );
+
+  it("18d) menü satırı BULUNAMAZSA yazılmaz", async () => {
+    findSourceTypeByIdMock.mockResolvedValue({ data: null, error: null });
+    const res = await upsertMenuTranslation({
+      menuId: "m1",
+      locale: "en",
+      name: "X",
+    });
+    expect(res).toEqual({ ok: false, error: "Menü bulunamadı" });
+    expect(upsertOneMock).not.toHaveBeenCalled();
+  });
+
+  it("18e) parent okuma hatası → fail-closed (yazılmaz)", async () => {
+    findSourceTypeByIdMock.mockResolvedValue({
+      data: null,
+      error: new Error("db"),
+    });
+    const res = await upsertMenuTranslation({
+      menuId: "m1",
+      locale: "en",
+      name: "X",
+    });
+    expect(res).toEqual({ ok: false, error: "Menü okunamadı" });
+    expect(upsertOneMock).not.toHaveBeenCalled();
+  });
+
+  it("18f) geçersiz locale ön-kontrolden ÖNCE reddedilir (gereksiz sorgu yok)", async () => {
+    const res = await upsertMenuTranslation({
+      menuId: "m1",
+      locale: "tr",
+      name: "X",
+    });
+    expect(res.ok).toBe(false);
+    expect(findSourceTypeByIdMock).not.toHaveBeenCalled();
   });
 });
 
@@ -444,17 +527,66 @@ describe("HeaderWrapper — menü adı çevirisi", () => {
     }
   });
 
-  it("32) menü çevirisi, villa tipi çevirisinin ÖNÜNE geçer", async () => {
+  it("32) category öğesi `menu_translations`'ı YOK SAYAR — villa tipi çevirisi kullanılır", async () => {
     getMenuMock.mockResolvedValue([CATEGORY_ITEM]);
+    /* Kasıtlı olarak bu category satırı için bir menü çevirisi de
+       "var" gibi davranılır; kaynak ayrışması gereği KULLANILMAMALI. */
     mockTranslations({
       menu: { m9: { en: "Signature Collection" } },
       villaType: { "type-1": { en: "Luxury Villa", de: "Luxusvilla" } },
     });
     render(await HeaderWrapper());
+    expect(screen.getAllByText("Luxury Villa").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Signature Collection")).not.toBeInTheDocument();
+  });
+
+  it("32b) menüde manual satır YOKSA `menu_translations` sorgusu HİÇ atılmaz", async () => {
+    getMenuMock.mockResolvedValue([CATEGORY_ITEM]);
+    mockTranslations({
+      villaType: { "type-1": { en: "Luxury Villa", de: "Luxusvilla" } },
+    });
+    render(await HeaderWrapper());
     expect(
-      screen.getAllByText("Signature Collection").length
-    ).toBeGreaterThan(0);
-    expect(screen.queryByText("Luxury Villa")).not.toBeInTheDocument();
+      findManyForLocaleMock.mock.calls.filter((c) => c[0] === "menu")
+    ).toHaveLength(0);
+    /* Villa tipi sorgusu ETKİLENMEDİ. */
+    expect(
+      findManyForLocaleMock.mock.calls.filter((c) => c[0] === "villa_type")
+    ).toHaveLength(2);
+  });
+
+  it("32c) page / region öğeleri `menu_translations` sorgusuna GİRMEZ", async () => {
+    getMenuMock.mockResolvedValue([
+      {
+        id: "m-page",
+        name: "Hakkımızda",
+        href: "/p/hakkimizda",
+        source_type: "page",
+        source_id: "p1",
+      },
+      {
+        id: "m-region",
+        name: "Kalkan",
+        href: "/arama?bolgeler=kalkan",
+        source_type: "region",
+        source_id: "loc-1",
+      },
+      MANUAL_ITEM,
+    ]);
+    mockTranslations({ menu: { m1: { en: "Rental Villas" } } });
+    render(await HeaderWrapper());
+
+    const menuCalls = findManyForLocaleMock.mock.calls.filter(
+      (c) => c[0] === "menu"
+    );
+    expect(menuCalls).toHaveLength(2);
+    /* YALNIZ manual satırın id'si sorguya girer. */
+    expect(menuCalls[0][1]).toEqual(["m1"]);
+
+    /* page ve region adları canonical kalır. */
+    expect(screen.getAllByText("Hakkımızda").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Kalkan").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rental Villas").length).toBeGreaterThan(0);
   });
 
   it("33) menü çevirisi YOKSA villa tipi çevirisi KORUNUR (Phase 10H regresyon)", async () => {
@@ -466,7 +598,7 @@ describe("HeaderWrapper — menü adı çevirisi", () => {
     expect(screen.getAllByText("Luxury Villa").length).toBeGreaterThan(0);
   });
 
-  it("34) locale BAZINDA merge — EN menüden, DE villa tipinden", async () => {
+  it("34) category öğesinde DE villa tipi çevirisi kullanılır (menü çevirisi karışmaz)", async () => {
     usePathnameMock.mockReturnValue("/de");
     getMenuMock.mockResolvedValue([CATEGORY_ITEM]);
     mockTranslations({
@@ -477,9 +609,20 @@ describe("HeaderWrapper — menü adı çevirisi", () => {
     expect(screen.getAllByText("Luxusvilla").length).toBeGreaterThan(0);
   });
 
-  it("35) PARENT/CHILD yapısı korunur; alt menü de çevrilir — TEK batch", async () => {
+  it("35) PARENT/CHILD yapısı korunur; manual alt menü de çevrilir — TEK batch", async () => {
     getMenuMock.mockResolvedValue([
-      { ...MANUAL_ITEM, children: [{ ...CATEGORY_ITEM, id: "m2" }] },
+      {
+        ...MANUAL_ITEM,
+        children: [
+          {
+            id: "m2",
+            name: "Özel Koleksiyon",
+            href: "/kiralik-villalar?ozel=1",
+            source_type: "manual",
+            source_id: null,
+          },
+        ],
+      },
     ]);
     mockTranslations({
       menu: {

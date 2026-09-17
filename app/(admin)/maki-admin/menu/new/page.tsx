@@ -248,7 +248,11 @@ export default function NewMenu() {
        (kullanıcı listeden "Çeviriler" paneliyle tekrar deneyebilir).
        Boş alanlar için istek HİÇ atılmaz. */
     const newMenuId = (resJson.id ?? "").toString().trim();
-    if (newMenuId) {
+    /* 🛡️ MIGRATION 086 — çeviri YALNIZ manual menüde yazılır. Kullanıcı
+       önce manual'de alanları doldurup sonra türü değiştirdiyse bile
+       (state'te değer kalabilir) istek ATILMAZ; servis tarafında da
+       aynı kural parent ön-kontrolüyle ayrıca uygulanır. */
+    if (newMenuId && sourceType === "manual") {
       const pending: Array<{ locale: "en" | "de"; name: string }> = [];
       if (nameEn.trim()) pending.push({ locale: "en", name: nameEn });
       if (nameDe.trim()) pending.push({ locale: "de", name: nameDe });
@@ -343,6 +347,12 @@ export default function NewMenu() {
                   onClick={() => {
                     setSourceType(card.value);
                     setSelectedSourceId("");
+                    /* 🛡️ MIGRATION 086 — tür değişince çeviri taslağı
+                       temizlenir (yalnız manual'de anlamlı). */
+                    if (card.value !== "manual") {
+                      setNameEn("");
+                      setNameDe("");
+                    }
                   }}
                   className={
                     "text-left rounded-xl border px-4 py-3.5 transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40 " +
@@ -440,9 +450,13 @@ export default function NewMenu() {
 
         {/* ============ 3) Menü adı çevirileri (opsiyonel) ============
             🛡️ MIGRATION 086 — mevcut form tasarım dili (uppercase
-            label + `input` class) korunarak eklendi. Türkçe ad
-            yukarıdaki alanlardan/kaynaktan gelir; burada YALNIZ
-            görünen etiketin EN/DE karşılıkları girilir. */}
+            label + `input` class) korunarak eklendi.
+
+            YALNIZ `manual` türünde gösterilir: diğer türlerde menü adı
+            kaynağından gelir ve çevirisi o kaynağın kendi sisteminde
+            yapılır (CMS Sayfa → Pages, Villa Tipi → Villa Tipleri;
+            Bölge → Phase 10I gereği çevrilmez). */}
+        {sourceType === "manual" && (
         <div className="space-y-5 pt-5 border-t border-[var(--color-stone-100)]">
           <div className="flex items-center gap-1.5">
             <Languages size={13} className="text-[var(--color-champagne-700)]" />
@@ -483,6 +497,7 @@ export default function NewMenu() {
             </p>
           </div>
         </div>
+        )}
 
         {/* ============ 4) URL preview ============ */}
         {(preview.name || preview.href) && (

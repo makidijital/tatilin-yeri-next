@@ -39,29 +39,41 @@ function collectCategoryIds(nodes: MenuNodeLike[], out: string[]): void {
   }
 }
 
-/* 🛡️ MIGRATION 086 — ağaçtaki TÜM düğümlerin kendi `id`'leri.
-   `menu` tablosundan gelen satırlarda bu `menu.id`'dir; legacy
-   auto-include sayfalarda `pages.id`'dir — ikincisi için
-   `menu_translations`'ta kayıt BULUNMAZ (FK menu(id)) ve harita
-   doğal olarak boş kalır, davranış değişmez. */
-function collectNodeIds(nodes: MenuNodeLike[], out: string[]): void {
+/* 🛡️ MIGRATION 086 — YALNIZ `source_type === "manual"` satırların
+   `menu.id`'leri. KAPSAM DARALTMASI (kullanıcı kararı):
+     • manual   → adı `menu.name`; başka bir çeviri kaynağı YOK →
+                  `menu_translations` BU satırlar için vardır.
+     • page / page-auto → adı `pages.title`; çevirisi ZATEN
+                  `page_translations` (Pages sistemi).
+     • category → adı `villa_types.name`; çevirisi ZATEN
+                  `villa_type_translations` (Phase 10H).
+     • region   → adı `villa_locations.name`; Phase 10I gereği
+                  ÇEVRİLMEZ (özel isim, canonical).
+   Bu yüzden manual dışındaki hiçbir düğümün id'si `menu_translations`
+   sorgusuna GİRMEZ — o kaynakların davranışı BİREBİR korunur. */
+function collectManualMenuIds(nodes: MenuNodeLike[], out: string[]): void {
   for (const n of nodes) {
-    if (typeof n?.id === "string" && n.id.length > 0) out.push(n.id);
+    if (n?.source_type === "manual" && typeof n.id === "string" && n.id) {
+      out.push(n.id);
+    }
     if (Array.isArray(n?.children) && n.children.length > 0) {
-      collectNodeIds(n.children, out);
+      collectManualMenuIds(n.children, out);
     }
   }
 }
 
 /** Çeviri haritalarını ağaca uygular (yeni node'lar döner, mutasyon YOK).
  *
- *  🛡️ MIGRATION 086 — İKİ KAYNAK, NET ÖNCELİK (locale bazında):
- *    1. `menuNamesById[node.id]`  → admin'in `/maki-admin/menu`'de o
- *       menü satırı için ELLE girdiği etiket (EN/DE). KAZANIR.
- *    2. `typeNamesById[source_id]` → villa tipi adının çevirisi
- *       (Phase 10H, `villa_type_translations`). Menü çevirisi yoksa
- *       devreye girer — MEVCUT DAVRANIŞ BİREBİR KORUNUR.
- *  Hiçbiri yoksa `nameByLocale` undefined kalır → canonical TR `name`
+ *  🛡️ KAYNAK BAŞINA TEK ÇEVİRİ YOLU — source_type'a göre AYRIŞIR,
+ *  iki kaynak ASLA aynı düğümde yarışmaz (öncelik/merge kuralı YOK):
+ *    • `category` → `typeNamesById[source_id]` (Phase 10H,
+ *      `villa_type_translations`) — MEVCUT DAVRANIŞ BİREBİR.
+ *    • `manual`   → `menuNamesById[node.id]` (migration 086,
+ *      `menu_translations`).
+ *    • `page` / `page-auto` → BURADA DOKUNULMAZ; adı `pages.title`'dan
+ *      gelir, çevirisi Pages sisteminin (`page_translations`) işidir.
+ *    • `region`   → BURADA DOKUNULMAZ; Phase 10I: özel isim, canonical.
+ *  Eşleşme yoksa `nameByLocale` undefined kalır → canonical TR `name`
  *  (`resolveTaxonomyName` fallback'i). */
 function attachTypeNames<T extends MenuNodeLike>(
   nodes: T[],
@@ -73,20 +85,12 @@ function attachTypeNames<T extends MenuNodeLike>(
       ? attachTypeNames(n.children, namesById, menuNamesById)
       : n?.children;
 
-    const typeName =
-      n?.source_type === "category" && typeof n.source_id === "string"
-        ? namesById[n.source_id]
-        : undefined;
-    const menuName =
-      typeof n?.id === "string" ? menuNamesById[n.id] : undefined;
-
-    /* Locale bazında merge — menü çevirisi üstte. Yalnız DOLU
-       (boş/whitespace olmayan) değerler haritalara girdiği için
-       (bkz. get-*-translations.server.ts) ek bir trim gerekmez. */
-    const merged: TaxonomyNameByLocale | undefined =
-      typeName || menuName ? { ...typeName, ...menuName } : undefined;
-    const nameByLocale =
-      merged && Object.keys(merged).length > 0 ? merged : undefined;
+    let nameByLocale: TaxonomyNameByLocale | undefined;
+    if (n?.source_type === "category" && typeof n.source_id === "string") {
+      nameByLocale = namesById[n.source_id];
+    } else if (n?.source_type === "manual" && typeof n.id === "string") {
+      nameByLocale = menuNamesById[n.id];
+    }
 
     if (!nameByLocale && children === n?.children) return n;
     return {
@@ -136,9 +140,9 @@ export default async function HeaderWrapper() {
     if (multilingualEnabled && menuItems.length > 0) {
       const categoryIds: string[] = [];
       collectCategoryIds(menuItems as MenuNodeLike[], categoryIds);
-      /* 🛡️ MIGRATION 086 — menü satırlarının kendi id'leri. */
-      const nodeIds: string[] = [];
-      collectNodeIds(menuItems as MenuNodeLike[], nodeIds);
+      /* 🛡️ MIGRATION 086 — YALNIZ manual menü satırlarının id'leri. */
+      const manualIds: string[] = [];
+      collectManualMenuIds(menuItems as MenuNodeLike[], manualIds);
 
       /* İki batch okuma PARALEL; her biri locale başına TEK `.in()`
          sorgusu (N+1 YOK). Boş id listesinde sorgu HİÇ atılmaz.
@@ -148,8 +152,8 @@ export default async function HeaderWrapper() {
         categoryIds.length > 0
           ? getVillaTypeNamesByLocale(categoryIds).catch(() => ({}))
           : Promise.resolve({}),
-        nodeIds.length > 0
-          ? getMenuNamesByLocale(nodeIds).catch(() => ({}))
+        manualIds.length > 0
+          ? getMenuNamesByLocale(manualIds).catch(() => ({}))
           : Promise.resolve({}),
       ]);
 

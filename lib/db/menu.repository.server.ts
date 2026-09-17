@@ -61,6 +61,19 @@ export const menuServerRepository = {
       .single();
   },
 
+  /** 🛡️ MIGRATION 086 — tek satırın `source_type`'ı (çeviri yazma
+   *  ön-kontrolü). `menu_translations` YALNIZ `manual` satırlar için
+   *  tutulur; page/category/region'ın kendi çeviri kaynakları vardır.
+   *  `pages.repository.server.ts > findById` ile AYNI "parent
+   *  pre-check" deseni (bkz. page-translation.service.ts). */
+  async findSourceTypeById(id: string) {
+    return await dbAdmin
+      .from<{ id: string; source_type: string | null }>("menu")
+      .select("id, source_type")
+      .eq("id", id)
+      .maybeSingle();
+  },
+
   /** Update by id — order/parent_id drag-drop persist. */
   async updateById(id: string, patch: Record<string, unknown>) {
     return await dbAdmin.from("menu").update(patch).eq("id", id);
