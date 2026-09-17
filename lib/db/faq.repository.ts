@@ -40,12 +40,21 @@ export const faqRepository = {
       .order("sort_order", { ascending: true });
   },
 
-  /** Replace-all pattern step 1 — TÜM rowları DELETE. */
+  /** Replace-all pattern step 1 — TÜM rowları DELETE.
+   *  ⚠️ ARTIK `replaceFaqs` TARAFINDAN KULLANILMIYOR (bkz. faq.service.ts
+   *  "ID-KORUYAN SENKRON" notu): `faq_translations.faq_id` FK'si
+   *  ON DELETE CASCADE olduğu için tüm satırları silip yeniden
+   *  eklemek HER KAYITTA çevirileri yok ederdi. Method yüzeyi
+   *  geriye dönük uyumluluk için KALDIRILMADI. */
   async deleteAll() {
     return await db.from("faqs").delete().not("id", "is", null);
   },
 
-  /** Replace-all pattern step 2 — bulk INSERT. */
+  /** Bulk INSERT — YENİ satırlar için.
+   *  🛡️ `.select("id")` EKLENDİ: yeni satırların id'leri, çeviri
+   *  (`faq_translations`) yazımı için caller'a döner. Yazılan satır ve
+   *  kolonlar DEĞİŞMEDİ. Aynı desen projede kanıtlı
+   *  (external-calendar-source.repository.ts, menu.repository.server.ts). */
   async insertMany(
     rows: Array<{
       question: string;
@@ -54,7 +63,29 @@ export const faqRepository = {
       is_active: boolean;
     }>
   ) {
-    return await db.from("faqs").insert(rows);
+    return await db.from<{ id: string }>("faqs").insert(rows).select("id");
+  },
+
+  /** 🛡️ ID-KORUYAN SENKRON — mevcut satırları TEK sorguda günceller
+   *  (`ON CONFLICT (id) DO UPDATE`). `faqs.id` PRIMARY KEY olduğu için
+   *  onConflict hedefi "id"dir. Satır başına ayrı UPDATE atılmaz. */
+  async upsertMany(
+    rows: Array<{
+      id: string;
+      question: string;
+      answer: string;
+      sort_order: number;
+      is_active: boolean;
+    }>
+  ) {
+    return await db.from("faqs").upsert(rows, { onConflict: "id" });
+  },
+
+  /** Admin save sırasında formdan ÇIKARILAN satırlar — TEK sorguda
+   *  (`IN (...)`). Çevirileri FK CASCADE ile birlikte düşer (istenen
+   *  davranış: satır gerçekten siliniyor). */
+  async deleteByIds(ids: readonly string[]) {
+    return await db.from("faqs").delete().in("id", ids as string[]);
   },
 
   /** Single delete — admin tek-satır kullanım için. */

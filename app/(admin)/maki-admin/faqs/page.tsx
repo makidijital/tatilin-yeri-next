@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, X, HelpCircle, Loader2, Sparkles } from "lucide-react";
+import { Plus, X, HelpCircle, Loader2, Sparkles, Languages } from "lucide-react";
 
 import {
   getFaqsForAdminAction as getFaqsForAdmin,
   replaceFaqsAction as replaceFaqs,
 } from "./faqs.action";
 import type { FaqInput } from "@/app/services/faq.service";
+import {
+  loadFaqTranslationsAction,
+  saveFaqTranslationAction,
+} from "./faq-translations.action";
 import { revalidateFaqs } from "@/app/services/revalidate.actions";
 import { useNotify } from "@/app/components/admin/notifications/NotificationProvider";
 
@@ -35,13 +39,50 @@ import { useNotify } from "@/app/components/admin/notifications/NotificationProv
 
 const MAX_FAQS = 15;
 
-type FaqRow = { question: string; answer: string };
+/* 🛡️ ÇOKLU DİL — EN/DE OPSİYONEL. Kaynak tablo `faq_translations`
+   (migration 082, ZATEN VAR). TR alanları canonical `faqs` tablosunda
+   kalır ve bu bloktan ETKİLENMEZ. */
+type WritableLocale = "en" | "de";
+
+const LOCALE_LABELS: Record<WritableLocale, string> = {
+  en: "English",
+  de: "Deutsch",
+};
+
+const LOCALE_FIELD_LABELS: Record<
+  WritableLocale,
+  { question: string; answer: string }
+> = {
+  en: { question: "Question", answer: "Answer" },
+  de: { question: "Frage", answer: "Antwort" },
+};
+
+const EMPTY_TRANSLATIONS: Record<WritableLocale, FaqTranslationFields> = {
+  en: { question: "", answer: "" },
+  de: { question: "", answer: "" },
+};
+
+type FaqTranslationFields = { question: string; answer: string };
+
+type FaqRow = {
+  /** 🛡️ Mevcut kaydın id'si — SAVE sırasında geri gönderilir ki satır
+   *  (ve çevirileri) KORUNSUN. Yeni satırlarda undefined. */
+  id?: string;
+  question: string;
+  answer: string;
+  translations: Record<WritableLocale, FaqTranslationFields>;
+};
 
 export default function FaqsAdminPage() {
   const toast = useNotify();
   const [items, setItems] = useState<FaqRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  /* 🛡️ Aynı anda TEK satırın çeviri bloğu açık (accordion). Mevcut
+     liste/save state'lerinden TAMAMEN AYRI. */
+  const [openTranslationIdx, setOpenTranslationIdx] = useState<number | null>(
+    null
+  );
 
   /* Initial load */
   useEffect(() => {
@@ -49,11 +90,44 @@ export default function FaqsAdminPage() {
     (async () => {
       const data = await getFaqsForAdmin();
       if (cancelled) return;
+
+      /* 🛡️ Çeviriler TEK batch okumada gelir (kayıt başına sorgu YOK).
+         Okuma fail olursa form ÇÖKMEZ: alanlar boş başlar. */
+      let translationMap: Record<
+        string,
+        Partial<Record<WritableLocale, FaqTranslationFields>>
+      > = {};
+      if (data.length > 0) {
+        const res = await loadFaqTranslationsAction(data.map((d) => d.id));
+        if (cancelled) return;
+        if (res.ok) translationMap = res.map;
+      }
+
       /* Boş tabloda 1 placeholder row aç (admin doğrudan yazsın). */
       setItems(
         data.length > 0
-          ? data.map((d) => ({ question: d.question, answer: d.answer }))
-          : [{ question: "", answer: "" }]
+          ? data.map((d) => ({
+              id: d.id,
+              question: d.question,
+              answer: d.answer,
+              translations: {
+                en: {
+                  question: translationMap[d.id]?.en?.question ?? "",
+                  answer: translationMap[d.id]?.en?.answer ?? "",
+                },
+                de: {
+                  question: translationMap[d.id]?.de?.question ?? "",
+                  answer: translationMap[d.id]?.de?.answer ?? "",
+                },
+              },
+            }))
+          : [
+              {
+                question: "",
+                answer: "",
+                translations: { ...EMPTY_TRANSLATIONS },
+              },
+            ]
       );
       setLoading(false);
     })();
@@ -70,8 +144,30 @@ export default function FaqsAdminPage() {
     });
   };
 
+  /* 🛡️ Çeviri alanı güncelleme — canonical TR alanlarına DOKUNMAZ. */
+  const updateTranslation = (
+    idx: number,
+    locale: WritableLocale,
+    key: "question" | "answer",
+    value: string
+  ) => {
+    setItems((prev) => {
+      const next = [...prev];
+      const row = next[idx];
+      next[idx] = {
+        ...row,
+        translations: {
+          ...row.translations,
+          [locale]: { ...row.translations[locale], [key]: value },
+        },
+      };
+      return next;
+    });
+  };
+
   const removeRow = (idx: number) => {
     setItems((prev) => prev.filter((_, i) => i !== idx));
+    setOpenTranslationIdx(null);
   };
 
   const addRow = () => {
@@ -81,12 +177,22 @@ export default function FaqsAdminPage() {
       });
       return;
     }
-    setItems((prev) => [...prev, { question: "", answer: "" }]);
+    setItems((prev) => [
+      ...prev,
+      { question: "", answer: "", translations: { ...EMPTY_TRANSLATIONS } },
+    ]);
   };
 
   const handleSave = async () => {
     setSaving(true);
-    const payload: FaqInput[] = items.map((i) => ({
+
+    /* 🛡️ Servis boş satırları (soru VEYA cevap boş) FİLTRELER — eski
+       davranış. Dönen `ids` bu FİLTRELENMİŞ listeyle aynı sıradadır,
+       bu yüzden çeviri eşlemesi de aynı filtreyi uygular. */
+    const kept = items.filter((i) => i.question.trim() && i.answer.trim());
+
+    const payload: FaqInput[] = kept.map((i) => ({
+      id: i.id,
       question: i.question,
       answer: i.answer,
     }));
@@ -96,9 +202,55 @@ export default function FaqsAdminPage() {
       setSaving(false);
       return;
     }
-    /* Cache invalidate — homepage anlık günceller. */
+
+    /* 🛡️ ÇEVİRİLER — canonical kayıt BAŞARILI olduktan sonra, dönen
+       id'lerle yazılır. Yalnız DEĞERİ OLAN (veya daha önce kaydedilmiş,
+       şimdi temizlenen) diller için istek atılır. Best-effort: çeviri
+       hatası canonical kaydı BOZMAZ. */
+    const savedIds = result.ids || [];
+    const nextItems = kept.map((row, idx) => ({
+      ...row,
+      id: savedIds[idx] || row.id,
+    }));
+
+    let translationFailed = false;
+    for (let idx = 0; idx < nextItems.length; idx++) {
+      const row = nextItems[idx];
+      if (!row.id) continue;
+      for (const locale of ["en", "de"] as WritableLocale[]) {
+        const t = row.translations[locale];
+        const originallyHadId = !!kept[idx].id;
+        /* Yeni satırda boş çeviri için gereksiz istek atma. */
+        if (!t.question.trim() && !t.answer.trim() && !originallyHadId) {
+          continue;
+        }
+        const res = await saveFaqTranslationAction({
+          faqId: row.id,
+          locale,
+          question: t.question,
+          answer: t.answer,
+        });
+        if (!res.ok) translationFailed = true;
+      }
+    }
+
+    /* Form state'ini kalıcı id'lerle senkronla (sonraki kayıtta satır
+       ve çevirileri korunsun). */
+    setItems(
+      nextItems.length > 0
+        ? nextItems
+        : [{ question: "", answer: "", translations: { ...EMPTY_TRANSLATIONS } }]
+    );
+
+    /* Cache invalidate — homepage anlık günceller (üç locale, tek tag). */
     await revalidateFaqs();
-    toast.success("SSS güncellendi.", { id: "faq-save" });
+    if (translationFailed) {
+      toast.error("SSS kaydedildi, bazı çeviriler kaydedilemedi.", {
+        id: "faq-save",
+      });
+    } else {
+      toast.success("SSS güncellendi.", { id: "faq-save" });
+    }
     setSaving(false);
   };
 
@@ -215,6 +367,91 @@ export default function FaqsAdminPage() {
                         className="input w-full !rounded-xl !p-3 min-h-[90px] resize-y leading-relaxed text-[13.5px]"
                         rows={3}
                       />
+                    </div>
+
+                    {/* 🛡️ ÇOKLU DİL — EN/DE (opsiyonel). Mevcut satır
+                        tasarımı KORUNUR: varsayılan KAPALI, açılınca
+                        aynı `input` sınıfları ve aynı label diliyle
+                        render edilir. `MenuTranslationsPanel` /
+                        `TypeTranslationsPanel` ile AYNI davranış
+                        deseni (accordion + opsiyonel alanlar). */}
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenTranslationIdx((prev) =>
+                            prev === idx ? null : idx
+                          )
+                        }
+                        aria-expanded={openTranslationIdx === idx}
+                        className={
+                          "inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1.5 rounded-lg transition-colors motion-reduce:transition-none " +
+                          (openTranslationIdx === idx
+                            ? "text-[var(--admin-text)] bg-[var(--admin-bg-soft)]"
+                            : "text-[var(--admin-muted)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-bg-soft)]")
+                        }
+                      >
+                        <Languages size={12} />
+                        Çeviriler
+                      </button>
+
+                      {openTranslationIdx === idx && (
+                        <div className="mt-3 space-y-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg-soft)] p-3 md:p-4">
+                          {(
+                            Object.keys(LOCALE_LABELS) as WritableLocale[]
+                          ).map((locale) => (
+                            <div key={locale} className="space-y-3">
+                              <p className="text-[10px] tracking-[0.16em] uppercase font-semibold text-[var(--admin-muted)]">
+                                {LOCALE_LABELS[locale]}
+                              </p>
+                              <div className="space-y-1.5">
+                                <label className="block text-[10px] tracking-[0.16em] uppercase font-semibold text-[var(--admin-muted-2)]">
+                                  {LOCALE_FIELD_LABELS[locale].question}
+                                </label>
+                                <input
+                                  type="text"
+                                  aria-label={`${LOCALE_LABELS[locale]} ${LOCALE_FIELD_LABELS[locale].question}`}
+                                  value={row.translations[locale].question}
+                                  onChange={(e) =>
+                                    updateTranslation(
+                                      idx,
+                                      locale,
+                                      "question",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="input w-full"
+                                  autoComplete="off"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="block text-[10px] tracking-[0.16em] uppercase font-semibold text-[var(--admin-muted-2)]">
+                                  {LOCALE_FIELD_LABELS[locale].answer}
+                                </label>
+                                <textarea
+                                  aria-label={`${LOCALE_LABELS[locale]} ${LOCALE_FIELD_LABELS[locale].answer}`}
+                                  value={row.translations[locale].answer}
+                                  onChange={(e) =>
+                                    updateTranslation(
+                                      idx,
+                                      locale,
+                                      "answer",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="input w-full !rounded-xl !p-3 min-h-[80px] resize-y leading-relaxed text-[13.5px]"
+                                  rows={3}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                          <p className="text-[11px] text-[var(--admin-muted-2)] leading-relaxed">
+                            Boş bırakılan dilde Türkçe metin gösterilir.
+                            Çeviriler &ldquo;Kaydet&rdquo; ile birlikte
+                            kaydedilir.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <button

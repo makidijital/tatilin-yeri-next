@@ -25,6 +25,10 @@ export async function getFaqsForAdminAction(): Promise<Faq[]> {
 
 export async function replaceFaqsAction(
   items: FaqInput[]
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; ids?: string[] }> {
+  /* 🛡️ Dönüş tipine `ids` EKLENDİ (additive): kaydedilen satırların
+     id'leri payload SIRASINDA döner; admin ekranı EN/DE çevirilerini
+     bu id'lerle `faq_translations`'a yazar. Mevcut `{ ok, error }`
+     sözleşmesi DEĞİŞMEDİ. */
   return replaceFaqsService(items);
 }

@@ -32,8 +32,14 @@ export type Faq = {
   answer: string;
 };
 
-/** Admin form input — id YOK (replace-all save pattern). */
+/** Admin form input.
+ *  🛡️ `id` OPSİYONEL ve YENİ: mevcut bir satırın id'si gönderilirse o
+ *  satır KORUNUR (güncellenir); gönderilmezse yeni satır eklenir.
+ *  Gerekçe için `replaceFaqs` üstündeki "ID-KORUYAN SENKRON" notuna
+ *  bakınız. `id` verilmeyen çağrılar (eski davranış) ÇALIŞMAYA DEVAM
+ *  EDER — her satır yeni kayıt olarak eklenir. */
 export type FaqInput = {
+  id?: string | null;
   question: string;
   answer: string;
 };
@@ -85,7 +91,24 @@ export async function getFaqsForAdmin(): Promise<Faq[]> {
 }
 
 /* ---------------------------------------------------------------
-   💾 REPLACE ALL — DELETE + bulk INSERT
+   💾 SAVE ALL — ID-KORUYAN SENKRON (eski adıyla "replace all")
+   ---------------------------------------------------------------
+   🛡️ NEDEN DEĞİŞTİ (kritik):
+     Eski akış DELETE ALL + bulk INSERT idi; her kayıtta TÜM satırlar
+     yeni UUID alıyordu. `faq_translations.faq_id` (migration 082) FK'si
+     ON DELETE CASCADE olduğu için bu, HER ADMİN KAYDINDA tüm EN/DE
+     çevirilerini SESSİZCE SİLERDİ. Çeviri desteği ancak id'ler
+     korunursa mümkündür.
+
+   🛡️ `faqs` TABLOSUNUN SONUÇ İÇERİĞİ AYNI:
+     aynı satırlar, aynı `sort_order` (payload index), aynı
+     `is_active=true`, aynı trim/boş-satır filtresi, aynı MAX_FAQS
+     guard'ı ve aynı hata mesajları. DEĞİŞEN TEK ŞEY: mevcut satırların
+     id'leri (ve dolayısıyla çevirileri) KORUNUR.
+
+   SORGU SAYISI: 1 read + en fazla 1 delete + en fazla 1 upsert +
+     en fazla 1 insert = ≤4 (eski: 1 delete + 1 insert = 2). Satır
+     başına sorgu YOK.
    ---------------------------------------------------------------
    Admin save flow. Pattern villa relations'taki RPC pattern'inin
    JS-side eşdeğeri (FAQ global olduğu için parent_id RPC argümanı
@@ -106,10 +129,12 @@ export async function getFaqsForAdmin(): Promise<Faq[]> {
 */
 export async function replaceFaqs(
   items: FaqInput[]
-): Promise<{ ok: boolean; error?: string }> {
-  /* Sanitize + filter empty */
+): Promise<{ ok: boolean; error?: string; ids?: string[] }> {
+  /* Sanitize + filter empty — ESKİ DAVRANIŞ BİREBİR
+     (trim, her iki alan da dolu olmalı, MAX_FAQS guard'ı). */
   const clean = (items || [])
     .map((i) => ({
+      id: (i?.id ?? "").toString().trim() || null,
       question: (i?.question ?? "").trim(),
       answer: (i?.answer ?? "").trim(),
     }))
@@ -122,35 +147,91 @@ export async function replaceFaqs(
     };
   }
 
-  /* DELETE all — Supabase WHERE şart; `not("id","is",null)` =
-     "id IS NOT NULL" = tüm satırlar. */
-  /* FAZ 40: faqRepository delege. */
-  const { error: delErr } = await faqRepository.deleteAll();
+  /* 1) Mevcut id'ler — hangi satır güncellenecek, hangisi silinecek. */
+  const { data: existingData, error: readErr } =
+    await faqRepository.findAllForAdmin();
+  if (readErr) {
+    console.error("[faq.replace] read failed:", readErr.message);
+    return { ok: false, error: readErr.message };
+  }
+  const existingIds = new Set(
+    ((existingData || []) as Array<{ id: string }>).map((r) => r.id)
+  );
 
-  if (delErr) {
-    console.error("[faq.replace] delete failed:", delErr.message);
-    return { ok: false, error: delErr.message };
+  /* 2) Formdan ÇIKARILAN satırlar → sil (tek `IN (...)` sorgusu).
+        Bu satırların çevirileri FK CASCADE ile birlikte düşer — satır
+        gerçekten silindiği için İSTENEN davranış budur. */
+  const keptIds = new Set(
+    clean
+      .map((c) => c.id)
+      .filter((id): id is string => !!id && existingIds.has(id))
+  );
+  const removedIds = [...existingIds].filter((id) => !keptIds.has(id));
+  if (removedIds.length > 0) {
+    const { error: delErr } = await faqRepository.deleteByIds(removedIds);
+    if (delErr) {
+      console.error("[faq.replace] delete failed:", delErr.message);
+      return { ok: false, error: delErr.message };
+    }
   }
 
-  /* Boş payload → DELETE sonrası tablo boş kalır, INSERT atlanır */
-  if (clean.length === 0) {
-    return { ok: true };
+  /* 3) Mevcut satırlar → TEK upsert (`ON CONFLICT (id) DO UPDATE`).
+        sort_order = payload index (ESKİ davranışla AYNI), is_active=true. */
+  const updates = clean
+    .map((c, idx) => ({ c, idx }))
+    .filter(({ c }) => !!c.id && existingIds.has(c.id as string))
+    .map(({ c, idx }) => ({
+      id: c.id as string,
+      question: c.question,
+      answer: c.answer,
+      sort_order: idx,
+      is_active: true,
+    }));
+  if (updates.length > 0) {
+    const { error: upErr } = await faqRepository.upsertMany(updates);
+    if (upErr) {
+      console.error("[faq.replace] upsert failed:", upErr.message);
+      return { ok: false, error: upErr.message };
+    }
   }
 
-  const payload = clean.map((c, idx) => ({
-    question: c.question,
-    answer: c.answer,
-    sort_order: idx,
-    is_active: true,
-  }));
+  /* 4) Yeni satırlar → TEK bulk insert; dönen id'ler sıra korunarak
+        payload pozisyonlarına eşlenir (RETURNING, INSERT sırasını izler). */
+  const insertPositions: number[] = [];
+  const inserts = clean
+    .map((c, idx) => ({ c, idx }))
+    .filter(({ c }) => !(c.id && existingIds.has(c.id)))
+    .map(({ c, idx }) => {
+      insertPositions.push(idx);
+      return {
+        question: c.question,
+        answer: c.answer,
+        sort_order: idx,
+        is_active: true,
+      };
+    });
 
-  const { error: insErr } = await faqRepository.insertMany(payload);
-  if (insErr) {
-    console.error("[faq.replace] insert failed:", insErr.message);
-    return { ok: false, error: insErr.message };
+  const idsByPosition = new Array<string | null>(clean.length).fill(null);
+  clean.forEach((c, idx) => {
+    if (c.id && existingIds.has(c.id)) idsByPosition[idx] = c.id;
+  });
+
+  if (inserts.length > 0) {
+    const { data: insData, error: insErr } =
+      await faqRepository.insertMany(inserts);
+    if (insErr) {
+      console.error("[faq.replace] insert failed:", insErr.message);
+      return { ok: false, error: insErr.message };
+    }
+    const newIds = ((insData || []) as Array<{ id: string }>).map((r) => r.id);
+    insertPositions.forEach((pos, i) => {
+      if (typeof newIds[i] === "string") idsByPosition[pos] = newIds[i];
+    });
   }
 
-  return { ok: true };
+  /* `ids` payload SIRASINDA döner → caller (admin ekranı) her satırın
+     çevirisini doğru faq_id ile yazabilir. Çözülemeyen pozisyon "" olur. */
+  return { ok: true, ids: idsByPosition.map((x) => x ?? "") };
 }
 
 /* ---------------------------------------------------------------
