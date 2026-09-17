@@ -49,12 +49,6 @@ import {
 import { NotificationProvider } from "@/app/components/admin/notifications/NotificationProvider";
 import { NotificationBell } from "@/app/components/admin/notifications/NotificationBell";
 
-/* 🛡️ PHASE 12B — ADMIN LOCALE (localStorage + Context). Provider
-   YALNIZ `(admin)` ağacında mount edilir; public locale mimarisi
-   (URL prefix + `localeFromPathname`) ETKİLENMEZ. */
-import { AdminLocaleProvider } from "@/app/components/admin/AdminLocaleProvider";
-import { AdminLocaleSwitcher } from "@/app/components/admin/AdminLocaleSwitcher";
-
 /* 🛡️ SIDEBAR BADGE COUNTS — 4 menü öğesi (Rezervasyonlar / Teklif
    Talepleri / Mesajlar / Yorumlar) için MEVCUT server action/route'lar
    reuse edilir. Yeni repository/servis/DB alanı YOK — aşağıdaki
@@ -563,22 +557,18 @@ export default function AdminLayout({
   if (pathname === "/maki-admin/login") {
     return (
       <AdminSessionGuard>
-        <AdminLocaleProvider>
-          <NotificationProvider>
-            <main>{children}</main>
-          </NotificationProvider>
-        </AdminLocaleProvider>
+        <NotificationProvider>
+          <main>{children}</main>
+        </NotificationProvider>
       </AdminSessionGuard>
     );
   }
 
   return (
     <AdminSessionGuard>
-      <AdminLocaleProvider>
-        <NotificationProvider>
-          <AdminShell>{children}</AdminShell>
-        </NotificationProvider>
-      </AdminLocaleProvider>
+      <NotificationProvider>
+        <AdminShell>{children}</AdminShell>
+      </NotificationProvider>
     </AdminSessionGuard>
   );
 }
@@ -1118,9 +1108,6 @@ function AdminShell({
               <Eye size={15} />
               Siteyi Görüntüle
             </a>
-
-            {/* 🛡️ PHASE 12B — Admin dil seçici (TR/EN/DE). */}
-            <AdminLocaleSwitcher />
 
             {/* Notification — unified center (preview + persistent log) */}
             <NotificationBell />

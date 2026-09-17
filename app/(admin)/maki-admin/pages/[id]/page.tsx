@@ -18,11 +18,19 @@ import {
   SITE_ASSETS_BUCKET_NAME,
 } from "@/lib/storage.helpers";
 import { convertImageToWebP } from "@/lib/image.helpers";
-/* 🛡️ PHASE 12B — ADMIN I18N. Locale kaynağı `AdminLocaleProvider`
-   (localStorage + React Context, `app/(admin)/maki-admin/layout.tsx`
-   içinde mount edilir). Public locale mimarisi (URL prefix `/en`,
-   `/de` + `localeFromPathname`) BU DOSYADA KULLANILMAZ. */
-import { useAdminLocale } from "@/app/components/admin/AdminLocaleProvider";
+/* 🛡️ PHASE 12C — SAYFA ÇEVİRİLERİ (CMS içeriği; admin ARAYÜZ dili
+   DEĞİL). `types/page.tsx` (Phase 10D Batch 3) ile BİREBİR AYNI
+   `multilingual_enabled` kapısı + aynı `getPublicSettingsAction`
+   fetch mekaniği. Kart self-contained: kendi state'i, kendi save
+   akışı — bu sayfanın `handleSubmit`'ine KARIŞMAZ. */
+import { getPublicSettingsAction } from "@/app/services/settings.action";
+import PageTranslationsCard from "./PageTranslationsCard";
+/* 🛡️ PHASE 12 — ADMIN I18N (Seçenek A: admin'de locale KAYNAĞI YOK).
+   `getDictionary` / `formatDictionaryString` saf fonksiyonlardır →
+   client component içinde güvenle çağrılır. Bu fazda bilinçli olarak
+   DEFAULT_LOCALE sabit; render çıktısı BYTE-IDENTICAL kalır. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 
 /* ===============================================================
@@ -78,12 +86,9 @@ export default function EditPagePage() {
   const router = useRouter();
   const toast = useNotify();
 
-  /* 🛡️ PHASE 12B — locale artık AdminLocaleProvider'dan (localStorage +
-     Context) gelir. Provider yoksa hook TR fallback döner → izole
-     render davranışı Phase 12 ile aynı kalır. */
   /* `common.save` ("Kaydet") admin metniyle BİREBİR aynı → public
      namespace'ten yeniden kullanılır; duplicate key açılmadı. */
-  const { dictionary } = useAdminLocale();
+  const dictionary = getDictionary(DEFAULT_LOCALE);
   const adminDict = dictionary.admin;
   const pagesDict = adminDict.pages;
 
@@ -92,6 +97,10 @@ export default function EditPagePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notFound, setNotFound] = useState(false);
+
+  /* 🛡️ PHASE 12C — çeviri kartı kapısı. `types/page.tsx` ile AYNI
+     mekanik; settings null/hata → fail-safe KAPALI. */
+  const [multilingualEnabled, setMultilingualEnabled] = useState(false);
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -110,6 +119,22 @@ export default function EditPagePage() {
 
   /* Original slug — sadece "URL değişecek" uyarısı için. */
   const [originalSlug, setOriginalSlug] = useState("");
+
+  /* 🛡️ PHASE 12C — TopBar.tsx / TypesPage ile BİREBİR AYNI fetch
+     mekaniği (useEffect + cancelled guard). */
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const settings = await getPublicSettingsAction();
+      if (cancelled) return;
+      setMultilingualEnabled(!!settings?.multilingual_enabled);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -580,6 +605,14 @@ export default function EditPagePage() {
           </button>
         </div>
       </form>
+
+      {/* 🛡️ PHASE 12C — SAYFA ÇEVİRİLERİ (EN / DE). Yalnız
+          `multilingual_enabled=true` ve sayfa yüklendiğinde render
+          edilir; mevcut form/CRUD davranışını BOZMAZ (form dışında,
+          kendi save akışıyla). */}
+      {!loading && multilingualEnabled && id ? (
+        <PageTranslationsCard pageId={id} pageTitle={title} />
+      ) : null}
     </div>
   );
 }

@@ -28,12 +28,13 @@ import {
 } from "@/lib/storage.helpers";
 import { convertImageToWebP } from "@/lib/image.helpers";
 import { slugifyTr } from "@/lib/slug";
-/* 🛡️ PHASE 12B — ADMIN I18N. Locale kaynağı `AdminLocaleProvider`
-   (localStorage + React Context, `app/(admin)/maki-admin/layout.tsx`
-   içinde mount edilir). Public locale mimarisi (URL prefix `/en`,
-   `/de` + `localeFromPathname`) BU DOSYADA KULLANILMAZ. */
-import { useAdminLocale } from "@/app/components/admin/AdminLocaleProvider";
+/* 🛡️ PHASE 12 — ADMIN I18N (Seçenek A: admin'de locale KAYNAĞI YOK).
+   `getDictionary` / `formatDictionaryString` saf fonksiyonlardır →
+   client component içinde güvenle çağrılır. Bu fazda bilinçli olarak
+   DEFAULT_LOCALE sabit; render çıktısı BYTE-IDENTICAL kalır. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 import type { Dictionary } from "@/lib/i18n/dictionaries/types";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import type {
   PageSection,
@@ -59,12 +60,9 @@ export default function NewPagePage() {
   const router = useRouter();
   const toast = useNotify();
 
-  /* 🛡️ PHASE 12B — locale artık AdminLocaleProvider'dan (localStorage +
-     Context) gelir. Provider yoksa hook TR fallback döner → izole
-     render davranışı Phase 12 ile aynı kalır. */
   /* `common.save` ("Kaydet") admin metniyle BİREBİR aynı → public
      namespace'ten yeniden kullanılır; duplicate key açılmadı. */
-  const { dictionary } = useAdminLocale();
+  const dictionary = getDictionary(DEFAULT_LOCALE);
   const adminDict = dictionary.admin;
   const pagesDict = adminDict.pages;
 
