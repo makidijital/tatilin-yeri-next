@@ -22,6 +22,7 @@
      - "/kiralik-villalar"  → app/(public)/en|de/kiralik-villalar/page.tsx (ComingSoon)
      - "/kiralik-villa/*"   → app/(public)/en|de/kiralik-villa/[slug]/page.tsx (Phase 10B, GERÇEK içerik)
      - "/rezervasyon/*"     → app/(public)/en|de/rezervasyon/[slug]/page.tsx (Phase 10B, GERÇEK içerik)
+     - "/p/*"               → app/(public)/en|de/p/[slug]/page.tsx (Phase 12D, GERÇEK içerik)
    Yeni bir `/en`/`/de` route eklendiğinde bu liste GÜNCELLENMELİ —
    aksi halde o route için dil değiştirici (bilinçli, güvenli tarafta
    kalarak) ana sayfaya fallback yapar; bu 404/broken-link ÜRETMEZ,
@@ -48,6 +49,10 @@ const EXACT_LOCALE_ROUTED_PATHS: readonly string[] = [
 const PREFIXED_LOCALE_ROUTED_PATHS: readonly string[] = [
   "/kiralik-villa/",
   "/rezervasyon/",
+  /* 🛡️ PHASE 12D — app/(public)/en|de/p/[slug]/page.tsx (GERÇEK içerik,
+     `page_translations` okur). Bu dosyanın üstyazısındaki bakım kuralı:
+     "Yeni bir /en//de route eklendiğinde bu liste GÜNCELLENMELİ". */
+  "/p/",
 ];
 
 /**

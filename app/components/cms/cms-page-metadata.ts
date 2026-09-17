@@ -1,0 +1,95 @@
+import "server-only";
+
+import type { Metadata } from "next";
+
+import { getPageBySlug } from "@/app/services/page.service";
+import { getPageCoverPublicUrl } from "@/lib/storage.helpers";
+import { getCachedSettings } from "@/lib/cache.helpers";
+import {
+  DEFAULT_LOCALE,
+  isMultilingualEnabled,
+  type Locale,
+} from "@/lib/i18n/config";
+import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
+import { resolvePageContent } from "@/lib/i18n/get-page-translation.server";
+
+/* ===============================================================
+   🛡️ PHASE 12D — /p/[slug] METADATA (TR / EN / DE ORTAK)
+   ===============================================================
+   `app/components/home/home-metadata.ts` (Phase 11) ile AYNI desen:
+   üç locale de TEK helper üzerinden kendi `generateMetadata`'sını
+   üretir.
+
+   TR ÇIKTISI DEĞİŞMEDİ:
+     • title/description/openGraph/twitter/robots mantığı TR
+       sayfasından BİREBİR taşındı.
+     • `alternates`: `multilingual_enabled` KAPALIYKEN (bugünkü
+       production) yalnız `{ canonical }` döner — yani TR çıktısı
+       Phase 12D öncesiyle AYNI. Açıkken hreflang seti eklenir.
+       Bu koşul `app/(public)/en/kiralik-villa/[slug]/page.tsx`'teki
+       MEVCUT desenin birebir aynısıdır; yeni bir SEO kuralı İCAT
+       EDİLMEDİ.
+
+   EN/DE: `seo_title` / `seo_description` `page_translations`'tan
+   gelir (yoksa alan bazında TR'ye fallback). Canonical `/en/p/...`
+   veya `/de/p/...` (`buildLocaleAlternates`, Phase 7B).
+
+   `page.noindex` HER locale'de aynen uygulanır.
+   =============================================================== */
+
+export async function buildCmsPageMetadata(
+  slug: string,
+  locale: Locale = DEFAULT_LOCALE
+): Promise<Metadata> {
+  const page = await getPageBySlug(slug);
+  if (!page) {
+    return {
+      title: "Sayfa bulunamadı",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const resolved = await resolvePageContent(page, locale);
+
+  const title = resolved.seoTitle || resolved.title || "Sayfa";
+  const description =
+    resolved.seoDescription ||
+    (typeof resolved.excerpt === "string" && resolved.excerpt.trim().length > 0
+      ? resolved.excerpt
+      : undefined);
+
+  const cover = getPageCoverPublicUrl(
+    (page as { cover_image?: string | null }).cover_image
+  );
+  const robots = page.noindex
+    ? { index: false, follow: false }
+    : { index: true, follow: true };
+
+  /* TR path'i — hreflang seti bundan türetilir (slug ÇEVRİLMEZ). */
+  const trPath = `/p/${slug}`;
+  const { canonical, languages } = buildLocaleAlternates(trPath, locale);
+  const settings = await getCachedSettings().catch(() => null);
+  const alternates = isMultilingualEnabled(settings)
+    ? { canonical, languages }
+    : { canonical };
+
+  return {
+    title,
+    description,
+    alternates,
+    robots,
+    openGraph: {
+      type: "article",
+      title,
+      description,
+      url: canonical,
+      ...(cover ? { images: [{ url: cover }] } : {}),
+    },
+    twitter: {
+      card: cover ? "summary_large_image" : "summary",
+      title,
+      description,
+      ...(cover ? { images: [cover] } : {}),
+    },
+  };
+}

@@ -72,8 +72,18 @@ describe("hasLocaleRoute", () => {
     expect(hasLocaleRoute("/v/abc123")).toBe(false);
   });
 
-  it("15) '/p/some-slug' → false", () => {
-    expect(hasLocaleRoute("/p/some-slug")).toBe(false);
+  /* 🛡️ PHASE 12D — /en/p/[slug] ve /de/p/[slug] route'ları EKLENDİ;
+     bu yüzden beklenen değer false → true olarak GÜNCELLENDİ. */
+  it("15) '/p/some-slug' (slug'lı) → true", () => {
+    expect(hasLocaleRoute("/p/some-slug")).toBe(true);
+  });
+
+  it("15b) '/p/' (slug'sız, bare prefix) → false", () => {
+    expect(hasLocaleRoute("/p/")).toBe(false);
+  });
+
+  it("15c) '/p' → false", () => {
+    expect(hasLocaleRoute("/p")).toBe(false);
   });
 
   it("16) '/kisa-sureli-tarihler' → false", () => {
