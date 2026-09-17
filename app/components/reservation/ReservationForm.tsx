@@ -51,6 +51,11 @@ import { useRouter } from "next/navigation";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+/* 🛡️ MIGRATION 088 — ödeme yöntemi ADI locale-aware GÖSTERİLİR.
+   Canonical `p.name` (ve `payment_method_id` payload'ı, API sözleşmesi,
+   ödeme/fiyat mantığı) DEĞİŞMEDİ — yalnız görünen etiket çözülür;
+   çeviri yoksa/boşsa TR canonical'a düşer. */
+import { resolveTaxonomyName } from "@/lib/i18n/taxonomy-name.helper";
 
 export default function ReservationForm({
   villa,
@@ -1007,7 +1012,11 @@ export default function ReservationForm({
                     className="text-[var(--color-stone-500)]"
                   />
                   <span className="text-sm font-medium text-[var(--color-stone-900)]">
-                    {p.name}
+                    {resolveTaxonomyName(
+                      p.name,
+                      p.name_by_locale,
+                      activeLocale
+                    )}
                   </span>
                 </label>
               );

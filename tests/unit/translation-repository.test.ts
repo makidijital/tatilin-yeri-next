@@ -37,7 +37,11 @@ import {
 /* 🛡️ MIGRATION 086 — 8 → 9 entity. `menu` EKLENDİ: `/maki-admin/menu`
    üzerinden girilen dinamik menü etiketleri (menu.name) çevrilebilir.
    Şema migration 082'nin desenini birebir izler (menu_id + locale + name). */
-describe("TRANSLATION_ENTITY_CONFIG — 9 tablo, doğru table/parentIdColumn", () => {
+/* 🛡️ MIGRATION 088 — 9 → 10 entity. `payment_method` EKLENDİ:
+   `/maki-admin/payment-methods` üzerinden girilen ödeme yöntemi adları
+   (payment_methods.name) çevrilebilir. Şema migration 082/086 desenini
+   birebir izler (payment_method_id + locale + name). */
+describe("TRANSLATION_ENTITY_CONFIG — 10 tablo, doğru table/parentIdColumn", () => {
   const expected: Record<
     TranslationEntity,
     { table: string; parentIdColumn: string }
@@ -66,10 +70,14 @@ describe("TRANSLATION_ENTITY_CONFIG — 9 tablo, doğru table/parentIdColumn", (
     page: { table: "page_translations", parentIdColumn: "page_id" },
     faq: { table: "faq_translations", parentIdColumn: "faq_id" },
     menu: { table: "menu_translations", parentIdColumn: "menu_id" },
+    payment_method: {
+      table: "payment_method_translations",
+      parentIdColumn: "payment_method_id",
+    },
   };
 
-  it("tam olarak 9 entity içeriyor", () => {
-    expect(Object.keys(TRANSLATION_ENTITY_CONFIG)).toHaveLength(9);
+  it("tam olarak 10 entity içeriyor", () => {
+    expect(Object.keys(TRANSLATION_ENTITY_CONFIG)).toHaveLength(10);
   });
 
   /* 🛡️ PHASE 10I — REGRESYON KİLİDİ: bölge çevirisi geri gelmesin. */

@@ -9,11 +9,14 @@ import {
   createPaymentMethodAction as createPaymentMethod,
   deletePaymentMethodAction as deletePaymentMethod,
 } from "@/app/services/payment-method.action";
-import { Plus, Trash2, CreditCard } from "lucide-react";
+import { Plus, Trash2, CreditCard, Languages } from "lucide-react";
 import {
   useNotify,
   useConfirm,
 } from "@/app/components/admin/notifications/NotificationProvider";
+/* 🛡️ MIGRATION 088 — EN/DE çeviri paneli (opsiyonel, varsayılan KAPALI).
+   Mevcut liste satırı, create ve delete akışları DEĞİŞTİRİLMEDİ. */
+import PaymentMethodTranslationsPanel from "./PaymentMethodTranslationsPanel";
 
 export default function PaymentMethodsPage() {
   const toast = useNotify();
@@ -21,6 +24,11 @@ export default function PaymentMethodsPage() {
   const [items, setItems] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  /* 🛡️ Aynı anda YALNIZ tek satırın çeviri paneli açık (faqs/types
+     ekranlarındaki AYNI davranış). */
+  const [openTranslationId, setOpenTranslationId] = useState<string | null>(
+    null
+  );
 
   const fetchData = async () => {
     const data = await getPaymentMethods();
@@ -113,25 +121,48 @@ export default function PaymentMethodsPage() {
       ) : (
         <div className="space-y-2.5">
           {items.map((item) => (
-            <div
-              key={item.id}
-              className="card-premium p-4 flex justify-between items-center"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="w-9 h-9 rounded-full bg-[var(--color-sand-100)] flex items-center justify-center shrink-0">
-                  <CreditCard size={14} className="text-[var(--color-champagne-700)]" />
-                </span>
-                <span className="font-medium text-[var(--color-stone-900)] truncate">
-                  {item.name}
-                </span>
+            <div key={item.id}>
+              <div className="card-premium p-4 flex justify-between items-center">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-9 h-9 rounded-full bg-[var(--color-sand-100)] flex items-center justify-center shrink-0">
+                    <CreditCard size={14} className="text-[var(--color-champagne-700)]" />
+                  </span>
+                  <span className="font-medium text-[var(--color-stone-900)] truncate">
+                    {item.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {/* 🛡️ ÇOKLU DİL — EN/DE (opsiyonel). Canonical TR ad
+                      bu panelden DÜZENLENEMEZ. */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenTranslationId((prev) =>
+                        prev === item.id ? null : item.id
+                      )
+                    }
+                    aria-expanded={openTranslationId === item.id}
+                    className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] px-3 py-1.5 rounded-lg hover:bg-[var(--color-sand-50)] transition"
+                  >
+                    <Languages size={13} />
+                    Çeviriler
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="inline-flex items-center gap-1.5 text-[13px] text-red-600 hover:text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-50 transition"
+                  >
+                    <Trash2 size={13} />
+                    Sil
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => handleDelete(item.id)}
-                className="inline-flex items-center gap-1.5 text-[13px] text-red-600 hover:text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-50 transition shrink-0"
-              >
-                <Trash2 size={13} />
-                Sil
-              </button>
+
+              {openTranslationId === item.id && (
+                <PaymentMethodTranslationsPanel
+                  paymentMethodId={item.id}
+                  paymentMethodName={item.name}
+                />
+              )}
             </div>
           ))}
         </div>

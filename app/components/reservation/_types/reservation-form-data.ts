@@ -1,6 +1,8 @@
 import type { Dispatch, SetStateAction } from "react";
 
 import type { PaymentPreference } from "@/lib/payment.helper";
+/* 🛡️ MIGRATION 088 — ödeme yöntemi adının EN/DE haritası (additive). */
+import type { TaxonomyNameByLocale } from "@/lib/i18n/taxonomy-name.helper";
 
 /* ===============================================================
    🛡️ FAZ 1 — PUBLIC RESERVATION FORM TYPES (extracted)
@@ -93,8 +95,15 @@ export type CityOption = {
 /** payment_methods.id+name+type — public select için. */
 export type PublicPaymentMethodOption = {
   id: string;
+  /** 🛡️ CANONICAL TR ad — ÇEVİRİYLE EZİLMEZ. `type` gibi bu alan da
+   *  iş mantığında okunabilir (`lib/payment-link.helper.ts`). */
   name: string;
   type?: string | null;
+  /** 🛡️ MIGRATION 088 — ADDITIVE, opsiyonel. `/api/public/payment-methods`
+   *  cevabındaki EN/DE ad haritası; görünen etiket
+   *  `resolveTaxonomyName(name, name_by_locale, locale)` ile çözülür.
+   *  Yoksa/boşsa TR canonical gösterilir. */
+  name_by_locale?: TaxonomyNameByLocale;
 };
 
 /* ---------------- VALIDATION ERROR MAP ----------------

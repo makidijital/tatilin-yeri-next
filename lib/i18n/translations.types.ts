@@ -128,6 +128,21 @@ export type MenuTranslationRow = {
   updated_at: string;
 };
 
+/** 🛡️ MIGRATION 088 — ödeme yöntemi adları (`/maki-admin/payment-methods`).
+ *  Parent tablo `public.payment_methods`; çevrilebilir TEK kolon `name`.
+ *  ⚠️ `type` / `is_active` ÇEVRİLMEZ (kod/flag alanı). Canonical
+ *  `payment_methods.name` iş mantığında da okunur
+ *  (`lib/payment-link.helper.ts > isWesternUnionMethod`) — bu yüzden
+ *  ASLA çeviriyle ezilmez; yalnız GÖRÜNEN etiket çözülür. */
+export type PaymentMethodTranslationRow = {
+  id: string;
+  payment_method_id: string;
+  locale: Locale;
+  name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 /* ---------- Entity registry (repository'nin de kullandığı tek kaynak) ---------- */
 
 export type TranslationEntity =
@@ -142,7 +157,9 @@ export type TranslationEntity =
   | "faq"
   /* 🛡️ MIGRATION 086 — migration 082'nin 9 tablosundan SONRA eklendi;
      şema (parent_id + locale + çevrilebilir alan) BİREBİR aynı. */
-  | "menu";
+  | "menu"
+  /* 🛡️ MIGRATION 088 — aynı şema; ödeme yöntemi etiketleri. */
+  | "payment_method";
 
 export type TranslationRowFor<E extends TranslationEntity> = E extends "villa"
   ? VillaTranslationRow
@@ -162,7 +179,9 @@ export type TranslationRowFor<E extends TranslationEntity> = E extends "villa"
                   ? FaqTranslationRow
                   : E extends "menu"
                     ? MenuTranslationRow
-                    : never;
+                    : E extends "payment_method"
+                      ? PaymentMethodTranslationRow
+                      : never;
 
 export type TranslationEntityConfig = {
   /** migration 082 tablo adı. */
@@ -206,4 +225,9 @@ export const TRANSLATION_ENTITY_CONFIG: Record<
   faq: { table: "faq_translations", parentIdColumn: "faq_id" },
   /* 🛡️ MIGRATION 086 — dinamik menü etiketleri. */
   menu: { table: "menu_translations", parentIdColumn: "menu_id" },
+  /* 🛡️ MIGRATION 088 — ödeme yöntemi etiketleri. */
+  payment_method: {
+    table: "payment_method_translations",
+    parentIdColumn: "payment_method_id",
+  },
 };
