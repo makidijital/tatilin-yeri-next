@@ -367,6 +367,7 @@ export const tr: Dictionary = {
       allRegions: "Tüm bölgeler",
       regionsSelected: "{n} bölge seçildi",
       guestsLabel: "Kişi",
+      guestsOption: "{n} kişi",
       optionsLoading: "Yükleniyor…",
       advanced: "Gelişmiş Arama",
       flexibleHint: "Sonuçlarda 3 gün önceki ve sonraki villaları da göster",
@@ -429,6 +430,14 @@ export const tr: Dictionary = {
       title: "Misafirlerimiz ne diyor?",
       subtitle:
         "Konaklamasını bizimle yapan misafirlerin kendi sözleriyle Akdeniz deneyimleri.",
+      readMore: "Devamını oku",
+      readLess: "Daha az göster",
+      navigationLabel: "Diğer misafir yorumları arasında gezin",
+      showReview: "{name} yorumunu göster",
+    },
+    carousel: {
+      previous: "Geri kaydır",
+      next: "İleri kaydır",
     },
     seo: {
       websiteDescription:

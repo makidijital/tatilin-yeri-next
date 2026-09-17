@@ -49,6 +49,7 @@ export default async function ShortGapsSection({
   locale?: Locale;
 } = {}) {
   const dict = getDictionary(locale).home.shortGaps;
+  const carouselDict = getDictionary(locale).home.carousel;
   const months_ = getDictionary(locale).home.months;
   const monthName = (m: number) => months_[m as MonthNumber] ?? "";
   const { data, error } = await shortGapsRepository.getShortGapCounts();
@@ -125,6 +126,8 @@ export default async function ShortGapsSection({
         <HorizontalCarousel
           showArrows
           ariaLabel={dict.carouselAriaLabel}
+          prevLabel={carouselDict.previous}
+          nextLabel={carouselDict.next}
           className="pb-1"
         >
           <ul role="list" className="flex flex-nowrap min-w-max gap-5 md:gap-6">

@@ -42,6 +42,7 @@ export default async function DiscountCollection({
   locale?: Locale;
 } = {}) {
   const dict = getDictionary(locale).home.discount;
+  const carouselDict = getDictionary(locale).home.carousel;
   const collection = await getCachedDiscountCollectionVillas();
 
   /* Görünürlük kuralı: küratörlü aktif villa yoksa render edilmez. */
@@ -210,6 +211,8 @@ export default async function DiscountCollection({
         <HorizontalCarousel
           showArrows
           ariaLabel={dict.carouselAriaLabel}
+          prevLabel={carouselDict.previous}
+          nextLabel={carouselDict.next}
           className="pb-1"
         >
           <ul role="list" className="flex flex-nowrap min-w-max gap-5">

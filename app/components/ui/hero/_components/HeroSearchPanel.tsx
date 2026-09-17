@@ -134,7 +134,10 @@ export default function HeroSearchPanel({
          Dönüş şekli (id, name, slug) findAllVillaTypes ile BİREBİR; UI değişmez.
          Diğer public alanlarla (CategoryCollection/arama/kiralik/kisa-sureli)
          aynı sıra. Bölge (locations) ve navbar menü sistemi ETKİLENMEZ. */
-      const { types, locations } = await loadHeroFilters();
+      /* 🛡️ PHASE 11 P0 — locale geçilir: EN/DE'de tip adları
+         `villa_type_translations` üzerinden çevrilmiş gelir
+         (VillaTypeCarousel ile AYNI helper'lar). TR'de ek sorgu YOK. */
+      const { types, locations } = await loadHeroFilters(locale);
       if (types) setCategoryOptions(types);
       /* 🛡️ Migration 050 — Hero bölge dropdown'ı yalnız ANA BÖLGELERİ
          (grup kökü: name === filter_group_name) gösterir. Alt bölgeler
@@ -151,7 +154,11 @@ export default function HeroSearchPanel({
       }
     };
     fetchFilters();
-  }, []);
+    /* 🛡️ PHASE 11 P0 — `locale` bağımlılığa eklendi: tip adları locale'e
+       göre çözüldüğü için doğru bağımlılık budur. Pratikte her locale
+       AYRI bir route/sayfa olduğundan değer bir sayfa ömrü boyunca
+       DEĞİŞMEZ → ek fetch OLUŞMAZ (TR davranışı birebir aynı). */
+  }, [locale]);
 
   // Outside click for dropdowns
   useEffect(() => {
@@ -318,7 +325,8 @@ export default function HeroSearchPanel({
           >
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
               <option key={g} value={g}>
-                {g} kişi
+                {/* 🛡️ PHASE 11 P0 — TR'de "{n} kişi" ile BİREBİR aynı çıktı. */}
+                {formatDictionaryString(dict.guestsOption, { n: g })}
               </option>
             ))}
           </select>

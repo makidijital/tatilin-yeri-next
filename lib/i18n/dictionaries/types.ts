@@ -489,6 +489,8 @@ export type Dictionary = {
       /** template: {n} */
       regionsSelected: string;
       guestsLabel: string;
+      /** template: {n} — kişi sayısı dropdown seçenekleri (1..10) */
+      guestsOption: string;
       optionsLoading: string;
       advanced: string;
       flexibleHint: string;
@@ -547,6 +549,19 @@ export type Dictionary = {
       eyebrow: string;
       title: string;
       subtitle: string;
+      /** Uzun yorumu genişleten buton. */
+      readMore: string;
+      readLess: string;
+      /** İsim rail'inin aria-label'ı. */
+      navigationLabel: string;
+      /** template: {name} — rail butonu aria-label'ı. */
+      showReview: string;
+    };
+    /** Yatay kaydırmalı bölümlerin (HorizontalCarousel) ok butonları.
+     *  Yalnız accessibility metni — görsel davranış DEĞİŞMEZ. */
+    carousel: {
+      previous: string;
+      next: string;
     };
     seo: {
       /** WebSite JSON-LD `description` alanı. */

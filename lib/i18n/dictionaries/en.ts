@@ -354,6 +354,7 @@ export const en: Dictionary = {
       allRegions: "All regions",
       regionsSelected: "{n} regions selected",
       guestsLabel: "Guests",
+      guestsOption: "{n} guests",
       optionsLoading: "Loading…",
       advanced: "Advanced Search",
       flexibleHint: "Also show villas 3 days before and after in the results",
@@ -416,6 +417,14 @@ export const en: Dictionary = {
       title: "What do our guests say?",
       subtitle:
         "Mediterranean experiences in the words of the guests who stayed with us.",
+      readMore: "Read more",
+      readLess: "Show less",
+      navigationLabel: "Browse other guest reviews",
+      showReview: "Show {name}'s review",
+    },
+    carousel: {
+      previous: "Scroll back",
+      next: "Scroll forward",
     },
     seo: {
       websiteDescription:

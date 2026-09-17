@@ -44,6 +44,12 @@ import useEmblaCarousel from "embla-carousel-react";
 import { Star } from "lucide-react";
 
 import { formatDateTr } from "@/lib/date-format";
+/* 🛡️ PHASE 11 P0 — görünür buton metinleri + accessibility metinleri
+   locale'e göre. Veri/mantık (Embla, expanded state, CarouselReview)
+   DEĞİŞMEDİ. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 
 export type CarouselReview = {
   id: string;
@@ -61,7 +67,11 @@ type Props = {
   reviews: CarouselReview[];
 };
 
-export default function ReviewsCarousel({ reviews }: Props) {
+export default function ReviewsCarousel({
+  reviews,
+  locale = DEFAULT_LOCALE,
+}: Props & { locale?: Locale }) {
+  const dict = getDictionary(locale).home.reviews;
   const canNavigate = reviews.length > 1;
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -102,7 +112,7 @@ export default function ReviewsCarousel({ reviews }: Props) {
         <div className="flex">
           {reviews.map((r) => (
             <div key={r.id} className="shrink-0 grow-0 basis-full">
-              <ActiveTestimonial review={r} />
+              <ActiveTestimonial review={r} locale={locale} />
             </div>
           ))}
         </div>
@@ -126,7 +136,7 @@ export default function ReviewsCarousel({ reviews }: Props) {
               select event'i üzerinden geri yansır. */}
           <div
             className="mt-4 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1 py-1"
-            aria-label="Diğer misafir yorumları arasında gezin"
+            aria-label={dict.navigationLabel}
           >
             {reviews.map((r, idx) => {
               const isActive = idx === selectedIndex;
@@ -136,7 +146,9 @@ export default function ReviewsCarousel({ reviews }: Props) {
                   type="button"
                   onClick={() => scrollTo(idx)}
                   aria-pressed={isActive}
-                  aria-label={`${r.guest_name} yorumunu göster`}
+                  aria-label={formatDictionaryString(dict.showReview, {
+                    name: r.guest_name,
+                  })}
                   className={
                     "shrink-0 px-3.5 py-2 rounded-full text-[13px] font-medium whitespace-nowrap " +
                     "transition-colors duration-200 motion-reduce:transition-none " +
@@ -161,7 +173,14 @@ export default function ReviewsCarousel({ reviews }: Props) {
    ActiveTestimonial — büyük editorial yorum: dekoratif tırnak +
    büyük tipografi + minimal isim/tarih/puan/villa meta satırı.
    =============================================================== */
-function ActiveTestimonial({ review }: { review: CarouselReview }) {
+function ActiveTestimonial({
+  review,
+  locale = DEFAULT_LOCALE,
+}: {
+  review: CarouselReview;
+  locale?: Locale;
+}) {
+  const dict = getDictionary(locale).home.reviews;
   const [expanded, setExpanded] = useState(false);
   const rating = Math.max(0, Math.min(5, Math.round(review.rating)));
   const comment = (review.comment || "").trim();
@@ -206,7 +225,7 @@ function ActiveTestimonial({ review }: { review: CarouselReview }) {
               "
               aria-expanded={expanded}
             >
-              {expanded ? "Daha az göster" : "Devamını oku"}
+              {expanded ? dict.readLess : dict.readMore}
             </button>
           )}
 

@@ -100,6 +100,7 @@ export default async function VillaTypeCarousel({
   locale?: Locale;
 } = {}) {
   const dict = getDictionary(locale).home.villaTypes;
+  const carouselDict = getDictionary(locale).home.carousel;
   const [types, covers] = await Promise.all([
     getCachedVillaTypes(),
     getCachedCategoryCovers(),
@@ -178,6 +179,8 @@ export default async function VillaTypeCarousel({
         <HorizontalCarousel
           showArrows
           ariaLabel={dict.carouselAriaLabel}
+          prevLabel={carouselDict.previous}
+          nextLabel={carouselDict.next}
           className="pb-1"
         >
           <ul role="list" className="flex flex-nowrap min-w-max gap-3.5 md:gap-4">

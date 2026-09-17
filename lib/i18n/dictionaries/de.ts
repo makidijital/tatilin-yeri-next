@@ -354,6 +354,7 @@ export const de: Dictionary = {
       allRegions: "Alle Regionen",
       regionsSelected: "{n} Regionen ausgewählt",
       guestsLabel: "Gäste",
+      guestsOption: "{n} Gäste",
       optionsLoading: "Wird geladen…",
       advanced: "Erweiterte Suche",
       flexibleHint: "Auch Villen 3 Tage davor und danach in den Ergebnissen anzeigen",
@@ -417,6 +418,14 @@ export const de: Dictionary = {
       title: "Was sagen unsere Gäste?",
       subtitle:
         "Mittelmeer-Erlebnisse in den Worten der Gäste, die bei uns übernachtet haben.",
+      readMore: "Mehr lesen",
+      readLess: "Weniger anzeigen",
+      navigationLabel: "Weitere Gästebewertungen durchsuchen",
+      showReview: "Bewertung von {name} anzeigen",
+    },
+    carousel: {
+      previous: "Zurück scrollen",
+      next: "Vorwärts scrollen",
     },
     seo: {
       websiteDescription:

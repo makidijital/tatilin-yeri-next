@@ -89,6 +89,7 @@ export default async function LocationCollection({
   locale?: Locale;
 } = {}) {
   const dict = getDictionary(locale).home.regions;
+  const carouselDict = getDictionary(locale).home.carousel;
   const [locations, counts] = await Promise.all([
     getCachedVillaLocations(),
     getCachedLocationVillaCounts(),
@@ -193,6 +194,8 @@ export default async function LocationCollection({
         <HorizontalCarousel
           showArrows
           ariaLabel={dict.carouselAriaLabel}
+          prevLabel={carouselDict.previous}
+          nextLabel={carouselDict.next}
           className="pb-1"
         >
           <ul role="list" className="flex flex-nowrap min-w-max gap-7 md:gap-8 lg:gap-9">

@@ -77,7 +77,7 @@ export default async function HomepageReviewsSection({
         </div>
 
         {/* CAROUSEL — client island (Embla) */}
-        <ReviewsCarousel reviews={carouselReviews} />
+        <ReviewsCarousel reviews={carouselReviews} locale={locale} />
       </div>
     </section>
   );

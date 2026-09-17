@@ -36,6 +36,11 @@ type Props = {
   showArrows?: boolean;
   /** Arrow click'inde kaydırılacak piksel. Default 420 (≈ 1 kart + gap). */
   scrollStep?: number;
+  /** 🛡️ PHASE 11 P0 — ok butonlarının accessibility metinleri.
+   *  OPSİYONEL; verilmezse TR default'ları kullanılır → mevcut
+   *  çağıranlar ETKİLENMEZ, görsel davranış DEĞİŞMEZ. */
+  prevLabel?: string;
+  nextLabel?: string;
 };
 
 export default function HorizontalCarousel({
@@ -44,6 +49,8 @@ export default function HorizontalCarousel({
   ariaLabel,
   showArrows = false,
   scrollStep = 420,
+  prevLabel = "Geri kaydır",
+  nextLabel = "İleri kaydır",
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [atStart, setAtStart] = useState(true);
@@ -135,7 +142,7 @@ export default function HorizontalCarousel({
         <button
           type="button"
           onClick={scrollLeft}
-          aria-label="Geri kaydır"
+          aria-label={prevLabel}
           className="hidden md:flex absolute left-3 lg:left-6 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full items-center justify-center bg-white/90 backdrop-blur-sm border border-[var(--color-stone-200)] shadow-[0_4px_16px_-4px_rgb(27_26_23/0.2)] text-[var(--color-stone-800)] hover:bg-white hover:scale-105 transition motion-reduce:transition-none motion-reduce:hover:scale-100"
         >
           <ChevronLeft size={18} />
@@ -145,7 +152,7 @@ export default function HorizontalCarousel({
         <button
           type="button"
           onClick={scrollRight}
-          aria-label="İleri kaydır"
+          aria-label={nextLabel}
           className="hidden md:flex absolute right-3 lg:right-6 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full items-center justify-center bg-white/90 backdrop-blur-sm border border-[var(--color-stone-200)] shadow-[0_4px_16px_-4px_rgb(27_26_23/0.2)] text-[var(--color-stone-800)] hover:bg-white hover:scale-105 transition motion-reduce:transition-none motion-reduce:hover:scale-100"
         >
           <ChevronRight size={18} />
