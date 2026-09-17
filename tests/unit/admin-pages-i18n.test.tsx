@@ -15,9 +15,11 @@
      5) `formatDictionaryString` — `{url}` / `{hint}` parametreli
         4 key doğru yerleşiyor mu? (TR/EN/DE)
 
-   BU FAZDA admin'de locale KAYNAĞI YOK: call-site'lar bilinçli
-   olarak `DEFAULT_LOCALE` kullanır, bu yüzden render testleri TR
-   metinleri bekler (davranış Phase 12 öncesiyle aynı).
+   NOT (Phase 12B): route'lar artık `useAdminLocale()` kullanır.
+   Bu dosyadaki render testleri component'leri PROVIDER'SIZ mount
+   eder → hook TR fallback döner, dolayısıyla beklenen metinler
+   Phase 12'deki gibi TR kalır. Locale DEĞİŞİMİ ayrı dosyada
+   (`admin-locale-provider.test.tsx`) test edilir.
    =============================================================== */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -509,11 +511,14 @@ describe("Phase 12 — source-lock (hardcoded Türkçe kalmadı)", () => {
     });
   }
 
-  it("3 route dosyası da dictionary'yi DEFAULT_LOCALE ile çağırıyor", () => {
+  it("3 route dosyası da locale'i AdminLocaleProvider'dan alıyor", () => {
     for (const rel of ROUTE_FILES) {
       const code = stripComments(readRoute(rel));
-      expect(code, rel).toContain("getDictionary(DEFAULT_LOCALE)");
-      /* Seçenek A: admin'de locale kaynağı YOK. */
+      /* PHASE 12B: sabit DEFAULT_LOCALE yerine context. */
+      expect(code, rel).toContain("useAdminLocale()");
+      expect(code, rel).not.toContain("getDictionary(DEFAULT_LOCALE)");
+      /* Persistence YALNIZ provider'da; route dosyaları storage'a
+         ve public locale mimarisine DOKUNMAZ. */
       expect(code, rel).not.toContain("localStorage");
       expect(code, rel).not.toContain("document.cookie");
       expect(code, rel).not.toContain("localeFromPathname");

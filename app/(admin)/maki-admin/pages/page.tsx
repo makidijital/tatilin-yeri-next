@@ -12,15 +12,11 @@ import {
 } from "@/app/components/admin/notifications/NotificationProvider";
 import { revalidateMenu } from "@/app/services/revalidate.actions";
 import { logActivity } from "@/lib/activity-log.client";
-/* 🛡️ PHASE 12 — ADMIN I18N (Seçenek A: admin'de locale KAYNAĞI YOK).
-   `getDictionary` saf/senkron bir fonksiyondur (Phase 2) → client
-   component içinde güvenle çağrılır, server/client sınırı bozulmaz.
-   Bu fazda cookie/localStorage/middleware/DB locale alanı EKLENMEDİ;
-   bilinçli olarak DEFAULT_LOCALE sabit kullanılır → render çıktısı
-   Phase 12 öncesiyle BYTE-IDENTICAL. İleride tek bir admin locale
-   kaynağı bağlandığında yalnız bu argüman değişir. */
-import { getDictionary } from "@/lib/i18n/get-dictionary";
-import { DEFAULT_LOCALE } from "@/lib/i18n/config";
+/* 🛡️ PHASE 12B — ADMIN I18N. Locale kaynağı `AdminLocaleProvider`
+   (localStorage + React Context, `app/(admin)/maki-admin/layout.tsx`
+   içinde mount edilir). Public locale mimarisi (URL prefix `/en`,
+   `/de` + `localeFromPathname`) BU DOSYADA KULLANILMAZ. */
+import { useAdminLocale } from "@/app/components/admin/AdminLocaleProvider";
 
 /* ===============================================================
    🛡️ ADMIN > SAYFALAR — UNIFIED CONFIRM DIALOG (Faz: confirm parity)
@@ -60,7 +56,11 @@ export default function AdminPages() {
   const toast = useNotify();
   const confirm = useConfirm();
 
-  const adminDict = getDictionary(DEFAULT_LOCALE).admin;
+  /* 🛡️ PHASE 12B — locale artık AdminLocaleProvider'dan (localStorage +
+     Context) gelir. Provider yoksa hook TR fallback döner → izole
+     render davranışı Phase 12 ile aynı kalır. */
+  const { dictionary } = useAdminLocale();
+  const adminDict = dictionary.admin;
   const pagesDict = adminDict.pages;
 
   const [pages, setPages] = useState<PageRow[]>([]);
