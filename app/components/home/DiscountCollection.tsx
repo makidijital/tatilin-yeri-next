@@ -1,7 +1,11 @@
 import { getCachedDiscountCollectionVillas } from "@/lib/cache.helpers";
-import { DISCOUNT_COLLECTION_DEFAULTS } from "@/app/services/discount-collection.service";
 import VillaCard from "../villa/VillaCard";
 import HorizontalCarousel from "../villa/HorizontalCarousel";
+/* 🛡️ PHASE 11 — section başlığı dictionary'den; villa ADI ve BÖLGESİ
+   CANONICAL kalır. Kart rozeti (badge) locale'e göre çözülür. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { getVillaBadgesByLocale } from "@/lib/i18n/get-villa-badge-translations.server";
 
 /* ===============================================================
    🛡️ DISCOUNT COLLECTION — anasayfa "İndirimli Koleksiyon" section
@@ -32,13 +36,26 @@ import HorizontalCarousel from "../villa/HorizontalCarousel";
    prefers-reduced-motion: reduce → tüm animasyonlar kapanır/azalır.
 =============================================================== */
 
-export default async function DiscountCollection() {
+export default async function DiscountCollection({
+  locale = DEFAULT_LOCALE,
+}: {
+  locale?: Locale;
+} = {}) {
+  const dict = getDictionary(locale).home.discount;
   const collection = await getCachedDiscountCollectionVillas();
 
   /* Görünürlük kuralı: küratörlü aktif villa yoksa render edilmez. */
   if (collection.length === 0) return null;
 
-  const title = DISCOUNT_COLLECTION_DEFAULTS.title;
+  /* 🛡️ PHASE 11 — TR'de `DISCOUNT_COLLECTION_DEFAULTS.title` ile BİREBİR
+     aynı metin (dictionary'ye taşındı); EN/DE'de çevirisi kullanılır. */
+  const title = dict.title;
+
+  /* Rozet çevirileri TEK batch sorguda (N+1 YOK); TR'de sorgu atılmaz. */
+  const badgeByVillaId = await getVillaBadgesByLocale(
+    collection.map((c) => c.id),
+    locale
+  );
 
   /* 🔄 KÖK NEDEN DÜZELTMESİ (bu tur) — kart JSX'i TEK yerde tanımlanır,
      hem mobile carousel hem desktop grid AYNI render fonksiyonunu
@@ -54,13 +71,15 @@ export default async function DiscountCollection() {
       price={c.price ?? 0}
       currency={c.currency || "TRY"}
       images={c.images}
-      badge={c.badge ?? undefined}
+      badge={badgeByVillaId.get(c.id) ?? c.badge ?? undefined}
       bedrooms={c.bedrooms || 1}
       bathrooms={c.bathrooms || 1}
       guests={c.guests || 2}
       reviewAverage={c.review_average}
       reviewCount={c.review_count}
       discount={c.discount}
+      /* 🛡️ PHASE 11 — VillaCard'ın mevcut locale desteği (Phase 10G). */
+      locale={locale}
     />
   );
 
@@ -190,7 +209,7 @@ export default async function DiscountCollection() {
             VillaCard kullanımları bu kuraldan ETKİLENMEZ. */}
         <HorizontalCarousel
           showArrows
-          ariaLabel="İndirimli kiralık villalar"
+          ariaLabel={dict.carouselAriaLabel}
           className="pb-1"
         >
           <ul role="list" className="flex flex-nowrap min-w-max gap-5">

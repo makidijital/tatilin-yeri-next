@@ -85,11 +85,27 @@ export function parseBucketMonthNumber(bucketMonth: string): number | null {
 
 /** "YYYY-MM-DD" → görünen "Haziran 2026". */
 export function bucketMonthLabelTr(bucketMonth: string): string {
+  return bucketMonthLabel(bucketMonth, (m) => monthNumberToNameTr(m));
+}
+
+/**
+ * 🛡️ PHASE 11 — `bucketMonthLabelTr`'nin DİL BAĞIMSIZ çekirdeği.
+ * Ay adını dışarıdan bir çözücüyle alır (ana sayfa `home.months`
+ * sözlüğünü geçirir), çıktı biçimi (`"<Ay> <Yıl>"`) AYNEN korunur.
+ * `bucketMonthLabelTr` bunun TR sarmalayıcısıdır → o fonksiyonun
+ * davranışı ve mevcut çağıranları (`/kisa-sureli-tarihler/[ay]/[gece]`)
+ * BİT-BİRE AYNI kalır.
+ */
+export function bucketMonthLabel(
+  bucketMonth: string,
+  monthName: (month: number) => string
+): string {
   const match = /^(\d{4})-(\d{2})-\d{2}$/.exec((bucketMonth || "").trim());
   if (!match) return "";
   const year = match[1];
   const m = Number(match[2]);
-  const name = monthNumberToNameTr(m);
+  if (!Number.isInteger(m) || m < 1 || m > 12) return "";
+  const name = monthName(m);
   return name ? `${name} ${year}` : "";
 }
 

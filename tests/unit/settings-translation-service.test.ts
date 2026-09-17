@@ -121,20 +121,40 @@ beforeEach(() => {
 /* ================= 1) TİP/REGİSTRY ================= */
 
 describe("settings-translations.types — whitelist", () => {
-  it("1) TAM OLARAK 3 çevrilebilir alan (Phase 10M: bakım mesajı çıkarıldı)", () => {
+  it("1) TAM OLARAK 8 çevrilebilir alan (10M: bakım mesajı YOK · 11: hero VAR)", () => {
     expect([...SETTINGS_TRANSLATABLE_FIELDS]).toEqual([
       "footer_copyright",
       "default_meta_title",
       "default_meta_description",
+      "hero_title",
+      "hero_subtitle",
+      "hero_badge_text",
+      "hero_primary_cta_text",
+      "hero_secondary_cta_text",
     ]);
+  });
+
+  it("1b) DİL BAĞIMSIZ hero alanları whitelist'e ASLA girmez", () => {
+    /* CTA href'leri sayfa-içi anchor; hero görseli görsel — çevrilmez. */
+    for (const field of [
+      "hero_primary_cta_href",
+      "hero_secondary_cta_href",
+      "hero_background_image",
+      "hero_enabled",
+      "hero_overlay_opacity",
+    ]) {
+      expect(isSettingsTranslatableField(field)).toBe(false);
+    }
   });
 
   it("2) kapsam dışı alanlar whitelist'te YOK", () => {
     for (const field of [
       /* 🛡️ PHASE 10M — bakım mesajı artık çeviri kapsamında DEĞİL. */
       "maintenance_message",
-      "hero_title",
-      "hero_subtitle",
+      /* 🛡️ PHASE 11 — hero METİNLERİ kapsama girdi; ama HREF/görsel
+         alanları ve teknik hero ayarları HÂLÂ kapsam DIŞI. */
+      "hero_primary_cta_href",
+      "hero_background_image",
       "business_hours",
       "address",
       "site_name",
@@ -169,11 +189,16 @@ describe("settingsTranslationRepository — query wiring", () => {
     expect(fromMock).toHaveBeenCalledWith("settings_translations");
   });
 
-  it("6) upsertOne payload'ı TAM OLARAK 5 anahtar taşır (keyfi kolon İMKÂNSIZ)", async () => {
+  it("6) upsertOne payload'ı TAM OLARAK 10 anahtar taşır (keyfi kolon İMKÂNSIZ)", async () => {
     await settingsTranslationRepository.upsertOne("settings-1", "en", {
       footer_copyright: "A",
       default_meta_title: "C",
       default_meta_description: "D",
+      hero_title: "T",
+      hero_subtitle: "S",
+      hero_badge_text: "B",
+      hero_primary_cta_text: "P",
+      hero_secondary_cta_text: "Q",
     });
 
     const [payload, options] = upsertMock.mock.calls[0] as [
@@ -187,6 +212,11 @@ describe("settingsTranslationRepository — query wiring", () => {
         "footer_copyright",
         "locale",
         "settings_id",
+        "hero_title",
+        "hero_subtitle",
+        "hero_badge_text",
+        "hero_primary_cta_text",
+        "hero_secondary_cta_text",
       ].sort()
     );
     expect(options).toEqual({ onConflict: "settings_id,locale" });
@@ -256,7 +286,7 @@ describe("upsertSettingsTranslation — alan whitelist ve normalizasyon", () => 
       /* @ts-expect-error — kasıtlı: runtime'da da yok sayılmalı */
       resend_api_key: "SECRET",
       site_name: "HACK",
-      hero_title: "HERO",
+      hero_background_image: "https://evil.example/x.png",
       business_hours: "09-18",
       id: "another-settings-row",
       settings_id: "attacker-controlled",
@@ -266,7 +296,7 @@ describe("upsertSettingsTranslation — alan whitelist ve normalizasyon", () => 
     expect(payload.settings_id).toBe("settings-1"); // server tarafında çözüldü
     expect(payload).not.toHaveProperty("resend_api_key");
     expect(payload).not.toHaveProperty("site_name");
-    expect(payload).not.toHaveProperty("hero_title");
+    expect(payload).not.toHaveProperty("hero_background_image");
     expect(payload).not.toHaveProperty("business_hours");
     expect(payload).not.toHaveProperty("id");
   });

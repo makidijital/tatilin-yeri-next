@@ -11,6 +11,15 @@ import {
 } from "@/lib/storage.helpers";
 
 import HorizontalCarousel from "./HorizontalCarousel";
+/* 🛡️ PHASE 11 — villa tipi ADLARI mevcut `villa_type_translations`
+   altyapısıyla çevrilir: `getVillaTypeNamesByLocale` (Phase 10H, TEK
+   batch sorgu) + `resolveTaxonomyName` (saf fallback). Yeni helper
+   YAZILMADI. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import { getVillaTypeNamesByLocale } from "@/lib/i18n/get-villa-type-translations.server";
+import { resolveTaxonomyName } from "@/lib/i18n/taxonomy-name.helper";
 
 /* ===============================================================
    🛡️ VILLA TYPE CAROUSEL — homepage "Villa Tiplerini Keşfedin"
@@ -85,13 +94,27 @@ type Item = {
   show_on_homepage: boolean;
 };
 
-export default async function VillaTypeCarousel() {
+export default async function VillaTypeCarousel({
+  locale = DEFAULT_LOCALE,
+}: {
+  locale?: Locale;
+} = {}) {
+  const dict = getDictionary(locale).home.villaTypes;
   const [types, covers] = await Promise.all([
     getCachedVillaTypes(),
     getCachedCategoryCovers(),
   ]);
 
   if (!types?.length) return null;
+
+  /* 🛡️ PHASE 11 — TEK batch sorgu (N+1 YOK). TR'de HİÇ çağrılmaz →
+     sorgu sayısı ve çıktı BİREBİR eskisi gibi kalır. */
+  const nameByLocale =
+    locale === DEFAULT_LOCALE
+      ? {}
+      : await getVillaTypeNamesByLocale(types.map((t) => String(t.id))).catch(
+          () => ({})
+        );
 
   const items: Item[] = types
     .map((t) => {
@@ -117,7 +140,12 @@ export default async function VillaTypeCarousel() {
       return {
         id: tid,
         slug,
-        name: String(t.name || "").trim(),
+        /* Çeviri varsa o, yoksa canonical TR adı (resolveTaxonomyName). */
+        name: resolveTaxonomyName(
+          String(t.name || "").trim(),
+          nameByLocale[tid],
+          locale
+        ).trim(),
         count: covers[tid]?.villaCount ?? 0,
         coverUrl,
         show_on_homepage:
@@ -134,22 +162,22 @@ export default async function VillaTypeCarousel() {
 
   return (
     <section
-      aria-label="Villa Tipleri"
+      aria-label={dict.sectionAriaLabel}
       className="px-5 md:px-10 lg:px-16 pt-10 md:pt-14 pb-2 md:pb-4"
     >
       <div className="max-w-[1280px] mx-auto">
         <div className="text-center mb-7 md:mb-10">
           <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] leading-tight tracking-[-0.02em]">
-            Villa Tiplerini Keşfedin
+            {dict.title}
           </h2>
           <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-stone-500)] max-w-md mx-auto">
-            Size en uygun villa kategorisini seçerek aramaya başlayın.
+            {dict.subtitle}
           </p>
         </div>
 
         <HorizontalCarousel
           showArrows
-          ariaLabel="Villa tipleri"
+          ariaLabel={dict.carouselAriaLabel}
           className="pb-1"
         >
           <ul role="list" className="flex flex-nowrap min-w-max gap-3.5 md:gap-4">
@@ -158,7 +186,7 @@ export default async function VillaTypeCarousel() {
                 key={item.id}
                 className="snap-start shrink-0 w-[78vw] max-w-[280px] sm:w-[300px] md:w-[240px] lg:w-[252px]"
               >
-                <VillaTypeCard item={item} />
+                <VillaTypeCard item={item} countBadge={dict.countBadge} />
               </li>
             ))}
           </ul>
@@ -171,13 +199,20 @@ export default async function VillaTypeCarousel() {
 /* ===============================================================
    VillaTypeCard — premium editorial görsel + gradient count badge
 =============================================================== */
-function VillaTypeCard({ item }: { item: Item }) {
+function VillaTypeCard({
+  item,
+  countBadge,
+}: {
+  item: Item;
+  /** `home.villaTypes.countBadge` — template: {count} */
+  countBadge: string;
+}) {
   /* SEO-friendly URL: slug öncelikli, fallback UUID — CategoryCollection
      ile birebir aynı canonical contract. */
   const token = item.slug || item.id;
   const href = `/arama?villa-turleri=${encodeURIComponent(token)}`;
   const initial = (item.name?.[0] || "·").toUpperCase();
-  const countLabel = `${item.count} Villa`;
+  const countLabel = formatDictionaryString(countBadge, { count: item.count });
 
   return (
     <Link

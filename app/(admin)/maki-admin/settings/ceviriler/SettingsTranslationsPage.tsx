@@ -24,8 +24,10 @@ import { SaveButton } from "../_components/SettingsField";
 /* ===============================================================
    🛡️ ADMIN > SETTINGS > ÇEVİRİLER — client island
    ===============================================================
-   🛡️ PHASE 10L / 10M — KAYIT AKTİF (yalnız 3 alan):
-     footer_copyright · default_meta_title · default_meta_description
+   🛡️ PHASE 11 — KAYIT AKTİF (8 alan):
+     footer_copyright · default_meta_title · default_meta_description ·
+     hero_title · hero_subtitle · hero_badge_text ·
+     hero_primary_cta_text · hero_secondary_cta_text
 
    🛡️ PHASE 10M — "Bakım Modu" ve "İletişim · Adres" bölümleri
    KALDIRILDI. Bakım mesajı artık ÇEVRİLMEZ (çeviri kolonu migration
@@ -35,20 +37,24 @@ import { SaveButton } from "../_components/SettingsField";
 
    TR canonical değerler server component (`page.tsx`) tarafından
    okunup prop olarak verilir ve bu ekrandan DÜZENLENMEZ. EN ve DE
-   birbirinden BAĞIMSIZ kaydedilir: aktif sekmenin 3 alanı tek bir
+   birbirinden BAĞIMSIZ kaydedilir: aktif sekmenin 8 alanı tek bir
    `saveSettingsTranslation({ locale, … })` çağrısıyla yazılır.
 
    ⚠️ NEDEN TEK SAVE BUTONU (bölüm başına DEĞİL):
      `settings_translations` bir locale için TEK SATIR tutar ve upsert
-     3 kolonun tamamını yazar. Bölüm başına ayrı kaydet olsaydı, bir
+     8 kolonun tamamını yazar. Bölüm başına ayrı kaydet olsaydı, bir
      bölümü kaydetmek diğer bölümlerin kolonlarını sessizce null'lardı.
      Bu yüzden aktif dilin TAM durumu her kayıtta birlikte gönderilir —
      mevcut settings alt sayfalarının "tek form + tek SaveButton"
      konvansiyonuyla da aynıdır.
 
-   ⚠️ KAPSAM DIŞI (değişmedi): Ana Sayfa·Hero ve Çalışma Saatleri
-   (yakında) grupları salt okunur kalmaya devam eder —
-   `TranslationField`'a `onChange` GEÇİLMEZ.
+   ⚠️ KAPSAM DIŞI: yalnız "Çalışma Saatleri" grubu salt okunur kalır
+   (`TranslationField`'a `onChange` GEÇİLMEZ) — ilgili public EN/DE
+   iletişim sayfası henüz yok.
+
+   🛡️ PHASE 11 — "Ana Sayfa · Hero" grubu ARTIK KAYDEDİLEBİLİR
+   (migration 085). CTA href'leri ve hero görseli DİL BAĞIMSIZ
+   olduğu için bu ekranda YOKTUR.
 
    ⚠️ Mevcut settings save akışı (`/api/admin/settings` PUT) ve 7
    settings alt sayfası DEĞİŞTİRİLMEDİ; çeviri payload'ı o akışa
@@ -76,6 +82,11 @@ function emptyDraft(): DraftValues {
     footer_copyright: "",
     default_meta_title: "",
     default_meta_description: "",
+    hero_title: "",
+    hero_subtitle: "",
+    hero_badge_text: "",
+    hero_primary_cta_text: "",
+    hero_secondary_cta_text: "",
   };
 }
 
@@ -147,7 +158,7 @@ export default function SettingsTranslationsPage({
       : {};
 
   /** Bölüm durumu (§10): çevirisi VARSA "active", yoksa "review".
-   *  Bu 3 alan için "planned" ASLA kullanılmaz — public tarafta
+   *  Bu 8 alan için "planned" ASLA kullanılmaz — public tarafta
    *  bugün gerçekten render ediliyorlar. */
   const statusOf = useMemo(
     () =>
@@ -177,6 +188,11 @@ export default function SettingsTranslationsPage({
       footer_copyright: current.footer_copyright,
       default_meta_title: current.default_meta_title,
       default_meta_description: current.default_meta_description,
+      hero_title: current.hero_title,
+      hero_subtitle: current.hero_subtitle,
+      hero_badge_text: current.hero_badge_text,
+      hero_primary_cta_text: current.hero_primary_cta_text,
+      hero_secondary_cta_text: current.hero_secondary_cta_text,
     }).catch(() => ({ ok: false as const, error: "Çeviri kaydedilemedi" }));
 
     setSaving(false);
@@ -197,6 +213,11 @@ export default function SettingsTranslationsPage({
         footer_copyright: result.values.footer_copyright ?? "",
         default_meta_title: result.values.default_meta_title ?? "",
         default_meta_description: result.values.default_meta_description ?? "",
+        hero_title: result.values.hero_title ?? "",
+        hero_subtitle: result.values.hero_subtitle ?? "",
+        hero_badge_text: result.values.hero_badge_text ?? "",
+        hero_primary_cta_text: result.values.hero_primary_cta_text ?? "",
+        hero_secondary_cta_text: result.values.hero_secondary_cta_text ?? "",
       },
     }));
     setSaved(true);
@@ -234,7 +255,7 @@ export default function SettingsTranslationsPage({
         </p>
       </div>
 
-      {/* ══════════ KAYDEDİLEBİLİR GRUPLAR (3 alan) ══════════ */}
+      {/* ══════════ KAYDEDİLEBİLİR GRUPLAR (8 alan) ══════════ */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* ── 1) FOOTER ── */}
         <TranslationSection
@@ -276,61 +297,72 @@ export default function SettingsTranslationsPage({
           />
         </TranslationSection>
 
+        {/* ── 3) ANA SAYFA · HERO ── */}
+        <TranslationSection
+          title="Ana Sayfa · Hero"
+          description="Ana sayfanın üst bölümündeki pazarlama metinleri."
+          status={statusOf([
+            "hero_title",
+            "hero_subtitle",
+            "hero_badge_text",
+            "hero_primary_cta_text",
+            "hero_secondary_cta_text",
+          ])}
+          note="Boş bırakılan alanlarda o dilde Türkçe canonical metin gösterilir. Buton bağlantıları (href) ve hero görseli DİL BAĞIMSIZDIR; çevrilmez."
+        >
+          <TranslationField
+            label="Hero rozet metni"
+            locale={locale}
+            canonicalValue={canonical.hero_badge_text}
+            {...editableProps("hero_badge_text")}
+          />
+          <TranslationField
+            label="Hero başlığı"
+            locale={locale}
+            canonicalValue={canonical.hero_title}
+            hint="Satır sonu karakterleri başlıkta olduğu gibi korunur."
+            multiline
+            rows={2}
+            {...editableProps("hero_title")}
+          />
+          <TranslationField
+            label="Hero alt başlık"
+            locale={locale}
+            canonicalValue={canonical.hero_subtitle}
+            multiline
+            rows={3}
+            {...editableProps("hero_subtitle")}
+          />
+          <TranslationField
+            label="Birincil buton metni"
+            locale={locale}
+            canonicalValue={canonical.hero_primary_cta_text}
+            hint="Yalnız buton metni çevrilir; buton bağlantısı (href) canonical kalır."
+            {...editableProps("hero_primary_cta_text")}
+          />
+          <TranslationField
+            label="İkincil buton metni"
+            locale={locale}
+            canonicalValue={canonical.hero_secondary_cta_text}
+            hint="Yalnız buton metni çevrilir; buton bağlantısı (href) canonical kalır."
+            {...editableProps("hero_secondary_cta_text")}
+          />
+        </TranslationSection>
+
         {/* ── KAYDET — yalnız EN/DE sekmesinde ── */}
         {writableLocale && (
           <div className="flex items-center justify-end gap-4">
             <p className="text-[12px] text-[var(--color-stone-500)]">
-              Yukarıdaki iki grup birlikte, yalnız seçili dil için kaydedilir.
+              Yukarıdaki üç grup birlikte, yalnız seçili dil için kaydedilir.
             </p>
             <SaveButton loading={saving} saved={saved} />
           </div>
         )}
       </form>
 
-      {/* ══════════ KAPSAM DIŞI GRUPLAR — salt okunur ══════════ */}
+      {/* ══════════ KAPSAM DIŞI GRUP — salt okunur ══════════ */}
 
-      {/* ── 3) ANA SAYFA / HERO ── */}
-      <TranslationSection
-        title="Ana Sayfa · Hero"
-        description="Ana sayfanın üst bölümündeki pazarlama metinleri."
-        status="planned"
-        note="Bu alanlar bugün yalnız Türkçe ana sayfada (/) render ediliyor. EN/DE ana sayfası aktif olduğunda kullanılacak."
-      >
-        <TranslationField
-          label="Hero rozet metni"
-          locale={locale}
-          canonicalValue={canonical.hero_badge_text}
-        />
-        <TranslationField
-          label="Hero başlığı"
-          locale={locale}
-          canonicalValue={canonical.hero_title}
-          hint="Satır sonu karakterleri başlıkta olduğu gibi korunur."
-          multiline
-          rows={2}
-        />
-        <TranslationField
-          label="Hero alt başlık"
-          locale={locale}
-          canonicalValue={canonical.hero_subtitle}
-          multiline
-          rows={3}
-        />
-        <TranslationField
-          label="Birincil buton metni"
-          locale={locale}
-          canonicalValue={canonical.hero_primary_cta_text}
-          hint="Yalnız buton metni çevrilir; buton bağlantısı (href) canonical kalır."
-        />
-        <TranslationField
-          label="İkincil buton metni"
-          locale={locale}
-          canonicalValue={canonical.hero_secondary_cta_text}
-          hint="Yalnız buton metni çevrilir; buton bağlantısı (href) canonical kalır."
-        />
-      </TranslationSection>
-
-      {/* ── 4) İLETİŞİM · ÇALIŞMA SAATLERİ ── */}
+      {/* ── İLETİŞİM · ÇALIŞMA SAATLERİ ── */}
       <TranslationSection
         title="İletişim · Çalışma Saatleri"
         description="İletişim sayfasında gösterilen çalışma saatleri metni."

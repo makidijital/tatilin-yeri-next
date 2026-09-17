@@ -58,6 +58,10 @@ export type DistanceCanonicalTitle =
   | "Benzin İstasyonu"
   | "Okul";
 
+/** 1..12 — `home.months` sözlüğünün exhaustiveness anahtarı. */
+export type MonthNumber =
+  | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+
 export type Dictionary = {
   common: {
     search: string;
@@ -449,5 +453,107 @@ export type Dictionary = {
     reserveNights: string;
     flexibleTitle: string;
     flexibleSubtitle: string;
+  };
+  /* ===============================================================
+     🛡️ PHASE 11 — ANA SAYFA (homepage) UI METİNLERİ
+     ===============================================================
+     Yalnız STATİK UI metni. Admin'in girdiği içerik (hero_*,
+     settings_translations) ve DB içeriği (villa adı, bölge adı,
+     villa tipi adı, SSS soru/cevap) BURADA YOKTUR — onlar kendi
+     çeviri kaynaklarından gelir.
+
+     `hero.*` alanları ADMIN BOŞ BIRAKIRSA kullanılan varsayılanlardır
+     (lib/hero.helpers.ts > HERO_DEFAULTS / HERO_CTA_DEFAULTS ile TR'de
+     BİREBİR aynı değerler).
+     =============================================================== */
+  home: {
+    hero: {
+      badge: string;
+      /** `\n` ile çok satırlı olabilir (Hero ilk satırı beyaz render eder). */
+      title: string;
+      subtitle: string;
+      primaryCtaText: string;
+      secondaryCtaText: string;
+      /** Hero arka plan görselinin alt metni (başlık boşsa kullanılır). */
+      imageAlt: string;
+    };
+    search: {
+      dateLabel: string;
+      datePlaceholder: string;
+      typeLabel: string;
+      villaType: string;
+      /** template: {n} */
+      typesSelected: string;
+      regionLabel: string;
+      allRegions: string;
+      /** template: {n} */
+      regionsSelected: string;
+      guestsLabel: string;
+      optionsLoading: string;
+      advanced: string;
+      flexibleHint: string;
+      submit: string;
+    };
+    advantages: {
+      sectionAriaLabel: string;
+      experienceTitle: string;
+      experienceDescription: string;
+      priceTitle: string;
+      priceDescription: string;
+      trustTitle: string;
+      trustDescription: string;
+    };
+    discount: {
+      title: string;
+      carouselAriaLabel: string;
+    };
+    villaTypes: {
+      sectionAriaLabel: string;
+      title: string;
+      subtitle: string;
+      carouselAriaLabel: string;
+      /** template: {count} */
+      countBadge: string;
+    };
+    villas: {
+      title: string;
+      ctaAll: string;
+      emptyEyebrow: string;
+      emptyTitle: string;
+      emptyBody: string;
+    };
+    regions: {
+      sectionAriaLabel: string;
+      title: string;
+      subtitle: string;
+      carouselAriaLabel: string;
+      ctaAll: string;
+    };
+    shortGaps: {
+      title: string;
+      subtitle: string;
+      carouselAriaLabel: string;
+      badge: string;
+      /** template: {n} */
+      nightsLabel: string;
+    };
+    faq: {
+      eyebrow: string;
+      title: string;
+      subtitle: string;
+    };
+    reviews: {
+      sectionAriaLabel: string;
+      eyebrow: string;
+      title: string;
+      subtitle: string;
+    };
+    seo: {
+      /** WebSite JSON-LD `description` alanı. */
+      websiteDescription: string;
+    };
+    /** Ay adları (1=Ocak … 12=Aralık). ShortGaps kart başlıkları.
+     *  `lib/short-gaps.helpers.ts > MONTH_NAMES_TR` ile TR'de BİREBİR. */
+    months: Record<MonthNumber, string>;
   };
 };

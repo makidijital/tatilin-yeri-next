@@ -9,6 +9,13 @@ import {
 } from "@/lib/hero.helpers";
 
 import HeroSearchPanel from "./hero/_components/HeroSearchPanel";
+/* 🛡️ PHASE 11 — Hero locale-aware. İÇERİK (badge/title/subtitle/CTA
+   metinleri) zaten `resolveHeroContent` tarafından locale'e göre
+   çözülüp `content` prop'uyla gelir; burada yalnız görsel alt metni
+   ve arama panelinin locale'i kalır. CTA HREF'leri ve hero görseli
+   DİL BAĞIMSIZDIR — bu dosyada o mantık DEĞİŞMEDİ. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 import type { HeroReviewStats } from "./hero/_types/hero";
 
@@ -127,12 +134,15 @@ function HeroCta({
 export default function Hero({
   content,
   reviewStats,
+  locale = DEFAULT_LOCALE,
 }: {
   content?: HeroContent;
   reviewStats?: HeroReviewStats | null;
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale).home.hero;
   /* Defensive: prop verilmediyse defaults. */
-  const hero: HeroContent = content || resolveHeroContent(null);
+  const hero: HeroContent = content || resolveHeroContent(null, { locale });
   const titleLines = (hero.title || "").split("\n");
 
   /* reviewStats render edilmiyor (önceki versiyonda da öyleydi —
@@ -185,7 +195,7 @@ export default function Hero({
         <div className="absolute inset-0">
           <Image
             src={hero.backgroundImage}
-            alt={hero.title || "Akdeniz villası"}
+            alt={hero.title || dict.imageAlt}
             fill
             priority
             sizes="100vw"
@@ -412,7 +422,7 @@ export default function Hero({
         </div>
 
         {/* ─── FLOATING SEARCH PANEL — client island, AYNEN ───── */}
-        <HeroSearchPanel />
+        <HeroSearchPanel locale={locale} />
       </div>
 
       {/* 🛡️ DATEPICKER PORTAL TARGET — HeroSearchPanel'in

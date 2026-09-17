@@ -2,6 +2,10 @@ import { getCachedHomepageReviews } from "@/lib/cache.helpers";
 import ReviewsCarousel, {
   type CarouselReview,
 } from "./ReviewsCarousel";
+/* 🛡️ PHASE 11 — yalnız section başlıkları çevrilir. Yorum METNİ ve
+   misafir adı KULLANICI ÜRETİMİDİR; villa adı özel isimdir → çevrilmez. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 /* ===============================================================
    🛡️ HOMEPAGE REVIEWS SECTION — sabit yükseklikli premium carousel
@@ -23,7 +27,12 @@ import ReviewsCarousel, {
    EMPTY STATE: reviews.length === 0 → null (CLS yok).
 =============================================================== */
 
-export default async function HomepageReviewsSection() {
+export default async function HomepageReviewsSection({
+  locale = DEFAULT_LOCALE,
+}: {
+  locale?: Locale;
+} = {}) {
+  const dict = getDictionary(locale).home.reviews;
   const reviews = await getCachedHomepageReviews().catch(() => []);
 
   if (!reviews || reviews.length === 0) return null;
@@ -43,7 +52,7 @@ export default async function HomepageReviewsSection() {
   return (
     <section
       id="misafir-deneyimleri"
-      aria-label="Misafir Deneyimleri"
+      aria-label={dict.sectionAriaLabel}
       className="px-5 md:px-10 lg:px-16 pt-14 md:pt-20 pb-12 md:pb-16"
     >
       <div className="max-w-[1280px] mx-auto">
@@ -57,14 +66,13 @@ export default async function HomepageReviewsSection() {
               aria-hidden="true"
               className="inline-block w-4 h-px bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
             />
-            Misafirlerimizin Deneyimi
+            {dict.eyebrow}
           </span>
           <h2 className="mt-4 font-display font-medium text-[28px] md:text-[36px] text-[var(--color-stone-900)] leading-[1.08] tracking-[-0.02em]">
-            Misafirlerimiz ne diyor?
+            {dict.title}
           </h2>
           <p className="mt-3 text-[14.5px] md:text-[15px] leading-relaxed text-[var(--color-stone-500)]">
-            Konaklamasını bizimle yapan misafirlerin kendi sözleriyle
-            Akdeniz deneyimleri.
+            {dict.subtitle}
           </p>
         </div>
 

@@ -1,142 +1,27 @@
 import type { Metadata } from "next";
 
-import Hero from "@/app/components/ui/Hero";
-/* 🛡️ Hero'nun HEMEN altındaki "güven/avantaj" kartları — saf
-   presentational, Hero'nun kendi kodu/prop'ları/mantığı DEĞİŞMEDİ. */
-import HeroAdvantageCards from "@/app/components/home/HeroAdvantageCards";
-import VillaTypeCarousel from "@/app/components/villa/VillaTypeCarousel";
-import LocationCollection from "@/app/components/villa/LocationCollection";
-import VillaList from "@/app/components/villa/VillaList";
-/* 🛡️ İndirimli Koleksiyon (migration 062) — VillaList paraleli, AYRI
-   section. Enabled + aktif villa yoksa null döner; diğerlerini etkilemez. */
-import DiscountCollection from "@/app/components/home/DiscountCollection";
-import FaqSection from "@/app/components/ui/FaqSection";
-/* 🛡️ FAZ 34 — Homepage testimonial section (approved reviews) */
-import HomepageReviewsSection from "@/app/components/home/HomepageReviewsSection";
-/* 🛡️ Kısa Süreli Tarihler — takvimdeki iç boşluklar (053/054).
-   Salt-okuma; boş veride null döner. Diğer section'ları etkilemez. */
-import ShortGapsSection from "@/app/components/home/ShortGapsSection";
+import HomePageBody from "@/app/components/home/HomePageBody";
+import { buildHomeMetadata } from "@/app/components/home/home-metadata";
 
-import {
-  JsonLd,
-  buildWebsite,
-  buildOrganization,
-  buildFaqJsonLd,
-} from "@/app/components/seo/StructuredData";
-import {
-  getCachedSettings,
-  getCachedFaqs,
-  getCachedGlobalReviewStats,
-} from "@/lib/cache.helpers";
-import { resolveHeroContent } from "@/lib/hero.helpers";
+/* ===============================================================
+   🛡️ ANA SAYFA — "/" (TR)
+   ===============================================================
+   🛡️ PHASE 11 — Gövde `HomePageBody` (TR/EN/DE ORTAK) component'ine
+   taşındı; `/en` ve `/de` AYNI component'i render eder (üç kopya YOK).
+   Bu dosyada TR davranışı DEĞİŞMEDİ: aynı section sırası, aynı
+   JSON-LD'ler, aynı veri kaynakları.
 
-/* 🛡️ CANONICAL — anasayfa "/". Title/description/OG root layout'tan
-   miras alınır; burada yalnız self-canonical eklenir (metadataBase ile
-   absolute'a çözülür). www/non-www, trailing-slash, query varyasyonları
-   tek kanonik kök URL'de toplanır. */
-export const metadata: Metadata = {
-  alternates: { canonical: "/" },
-};
+   CANONICAL/METADATA: önceden yalnız statik `metadata.alternates.
+   canonical = "/"` vardı; artık `buildHomeMetadata("tr")` ile
+   canonical + hreflang (tr/en/de/x-default) birlikte üretilir.
+   Title/description TR canonical değerlerden gelir → çıktı
+   root layout'un ürettiğiyle AYNI metin. Root layout'a DOKUNULMADI.
+   =============================================================== */
+
+export async function generateMetadata(): Promise<Metadata> {
+  return buildHomeMetadata("tr");
+}
 
 export default async function Home() {
-  /* 🛡️ SEO structured data — WebSite + Organization.
-     getCachedSettings: tag "settings", TTL 1 saat. Admin settings
-     save sonrası revalidateSettings() ile invalidate. Aynı render
-     lifecycle'da farklı yerlerden çağrı dedupe edilir. */
-  const settings = await getCachedSettings().catch(() => null);
-  const brandName = settings?.site_name?.trim() || "Villa Kiralama";
-
-  /* 🛡️ FAZ 25 — Global SSS cached fetch.
-     Tag: "faqs", TTL 1 saat; admin replaceFaqs sonrası invalidate.
-     Boş array dönerse section + JSON-LD render YOK (caller guard). */
-  const faqs = await getCachedFaqs().catch(() => []);
-
-  /* 🛡️ FAZ 39F — Hero floating review card real-data wiring.
-     Tek query global aggregate (cached, tag villa-reviews); admin
-     moderation invalidate eder. N+1 yok; client fetch yok. */
-  const heroReviewStats = await getCachedGlobalReviewStats().catch(
-    () => ({ count: 0, average: 0 })
-  );
-
-  /* 🛡️ HERO CACHE-KEY — settings.updated_at varsa onu kullan, yoksa
-     stable bucket'a düş (12-saatlik). Önceki davranış Date.now() ile
-     her render farklı ts üretiyordu → browser cache hero için
-     pratik olarak kapalıydı. Şimdi:
-       - settings save edilince → tag invalidate → settings re-fetch
-         → updated_at güncel → hero image URL yeni ts ile render
-         → browser cache miss → fresh fetch
-       - mutation yokken → cacheKey stable → browser cache hit
-     DB schema'sında updated_at varsa otomatik kullanılır; yoksa
-     12-saatlik bucket fallback'i (kabul edilebilir refresh penceresi). */
-  const settingsUpdatedAt = (
-    settings as { updated_at?: string | null } | null
-  )?.updated_at;
-  /* 🛡️ React 19 react-hooks/purity rule `Date.now()` during render
-     is impure — burada kasıtlı: 12-saatlik bucket fallback, settings
-     `updated_at` yoksa hero cache key'in zaman-sabit kalmasını
-     engelliyor. Render stability burada kabul edilen trade-off. */
-  // eslint-disable-next-line react-hooks/purity
-  const stableBucket = Math.floor(Date.now() / (12 * 3600 * 1000));
-  const heroCacheKey = settingsUpdatedAt ?? stableBucket;
-  const heroContent = resolveHeroContent(settings, {
-    cacheKey: heroCacheKey,
-  });
-
-  const websiteLd = buildWebsite({
-    name: brandName,
-    description:
-      "Akdeniz'in seçkin villalarında özel havuz, deniz manzarası ve butik konfor.",
-  });
-
-  const organizationLd = buildOrganization({
-    name: brandName,
-    legalName: settings?.company_legal_name || null,
-    logo: settings?.site_logo || null,
-    phone: settings?.phone || null,
-    email: settings?.email || null,
-    address: settings?.address || null,
-    sameAs: [
-      settings?.instagram,
-      settings?.facebook,
-      settings?.youtube,
-      settings?.tiktok,
-    ],
-  });
-
-  return (
-    <>
-      <JsonLd data={websiteLd} />
-      <JsonLd data={organizationLd} />
-      {/* 🛡️ FAZ 25 — FAQPage structured data (rich snippets için).
-         FAQ varsa render edilir; boşsa hiç JSON-LD basılmaz. */}
-      {faqs.length > 0 && <JsonLd data={buildFaqJsonLd(faqs)} />}
-      <Hero content={heroContent} reviewStats={heroReviewStats} />
-      <HeroAdvantageCards />
-      {/* 🛡️ "İndirimli Koleksiyon" — küratörlü fırsat villaları. Enabled
-         + aktif villa yoksa null döner; Homepage Collection'ın ÜSTÜNDE. */}
-      <DiscountCollection />
-      {/* 🛡️ "Villa Tiplerini Keşfedin" — premium carousel, VillaList
-         ("Sizin için seçtiklerimiz") bölümünün HEMEN ÜSTÜNDE. Mevcut
-         getCachedVillaTypes/getCachedCategoryCovers reuse edilir; N+1
-         yok. Villa tipi yoksa/hepsi count=0 ise component null döner
-         → layout sessizce etkilenmez. */}
-      <VillaTypeCarousel />
-      <VillaList />
-      {/* 🛡️ "Bölgeler" — VillaList altı, Footer üstü. CategoryCollection
-         ile aynı chip pattern; sadece veri kaynağı (locations) ve
-         URL param (`regions=`) farklı. Empty location'larda null
-         render → layout sessizce gizlenir. */}
-      <LocationCollection />
-      {/* 🛡️ "Kısa Süreli Tarihler" — takvimdeki dolu-boş-dolu iç boşluklar.
-         Veri yoksa component null döner; layout etkilenmez. */}
-      <ShortGapsSection />
-      {/* 🛡️ FAZ 25 — Global SSS section (testimonials ÜSTÜNE taşındı).
-         FAQ tablosu boşsa component kendi içinde null döner; layout
-         etkilenmez. */}
-      <FaqSection faqs={faqs} />
-      {/* 🛡️ FAZ 34 — "Misafir Yorumları" testimonial section. Approved
-         review yoksa component null döner; CLS yok, layout etkilenmez. */}
-      <HomepageReviewsSection />
-    </>
-  );
+  return <HomePageBody locale="tr" />;
 }

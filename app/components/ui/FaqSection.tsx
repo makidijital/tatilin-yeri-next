@@ -3,6 +3,14 @@
 import { useState } from "react";
 import { Plus, Minus } from "lucide-react";
 
+/* 🛡️ PHASE 11 — section başlıkları locale'e göre. SSS SORU/CEVAP metni
+   `faq_translations` (migration 082) üzerinden SERVER tarafında çözülür
+   ve zaten çevrilmiş olarak `faqs` prop'uyla gelir — bu component
+   çeviri sorgusu YAPMAZ. Header/Footer/VillaCard ile AYNI desen:
+   `getDictionary` saf/statik lookup, ek bundle maliyeti YOK. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+
 /* ===============================================================
    🛡️ FaqSection — Luxury hospitality accordion (Faz 25)
    ===============================================================
@@ -34,7 +42,14 @@ type FaqItem = {
   answer: string;
 };
 
-export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
+export default function FaqSection({
+  faqs,
+  locale = DEFAULT_LOCALE,
+}: {
+  faqs: FaqItem[];
+  locale?: Locale;
+}) {
+  const dict = getDictionary(locale).home.faq;
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   if (!faqs || faqs.length === 0) return null;
@@ -55,16 +70,16 @@ export default function FaqSection({ faqs }: { faqs: FaqItem[] }) {
               aria-hidden="true"
               className="inline-block w-4 h-px bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
             />
-            Sıkça Sorulan
+            {dict.eyebrow}
           </span>
           <h2
             id="faq-heading"
             className="mt-4 font-display font-medium text-[28px] md:text-[36px] text-[var(--color-stone-900)] leading-[1.08] tracking-[-0.02em]"
           >
-            Sıkça Sorulan Sorular
+            {dict.title}
           </h2>
           <p className="mt-3 text-[14.5px] md:text-[15px] text-[var(--color-stone-500)] max-w-md">
-            Misafirlerimizin en çok merak ettiği sorular.
+            {dict.subtitle}
           </p>
         </div>
 

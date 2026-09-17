@@ -1,5 +1,13 @@
 import type { Settings } from "@/app/services/settings.types";
 import { resolveAssetUrl } from "@/lib/storage.helpers";
+/* 🛡️ PHASE 11 — Hero locale-aware. Metin defaultları artık dictionary'den
+   gelir (TR değerleri `HERO_DEFAULTS`/`HERO_CTA_DEFAULTS` ile BİREBİR aynı
+   → TR çıktısı DEĞİŞMEZ). Admin'in girdiği içeriğin EN/DE karşılığı
+   `settings_translations` (migration 085) üzerinden çözülür. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { resolveSettingsText } from "@/lib/i18n/settings-translation.helper";
+import type { SettingsTranslationsByLocale } from "@/lib/i18n/settings-translations.types";
 
 /* ===============================================================
    🛡️ HOMEPAGE HERO — RESOLVER + DEFAULTS
@@ -129,14 +137,26 @@ function withCacheBust(url: string, cacheKey: string | number): string {
  */
 export function resolveHeroContent(
   settings: Settings | null | undefined,
-  options?: { cacheKey?: string | number }
+  options?: {
+    cacheKey?: string | number;
+    /** 🛡️ PHASE 11 — verilmezse `"tr"`; TR davranışı BİREBİR eskisi gibi. */
+    locale?: Locale;
+    /** migration 085 EN/DE hero çevirileri (`getPublicSettings()` payload'ı). */
+    translations?: SettingsTranslationsByLocale | null;
+  }
 ): HeroContent {
+  const locale: Locale = options?.locale ?? DEFAULT_LOCALE;
+  const translations = options?.translations ?? null;
+  /* Metin defaultları — TR'de `HERO_DEFAULTS`/`HERO_CTA_DEFAULTS` ile
+     BİREBİR aynı değerler (bkz. lib/i18n/dictionaries/tr.ts > home.hero). */
+  const d = getDictionary(locale).home.hero;
+
   if (!settings || settings.hero_enabled === false) {
     return {
       enabled: settings ? settings.hero_enabled !== false : true,
-      badge: HERO_DEFAULTS.badge,
-      title: HERO_DEFAULTS.title,
-      subtitle: HERO_DEFAULTS.subtitle,
+      badge: d.badge,
+      title: d.title,
+      subtitle: d.subtitle,
       backgroundImage: HERO_DEFAULTS.backgroundImage,
       overlayOpacity: HERO_DEFAULTS.overlayOpacity,
       primaryCta: null,
@@ -167,20 +187,51 @@ export function resolveHeroContent(
        artık `hero.badge && (...)` / `hero.title && (...)` ile koşullu
        render ediyor. `hero_enabled === false` (yukarıdaki early-return)
        davranışı BU SATIRLARDAN etkilenmez, aynen HERO_DEFAULTS.* döner. */
-    badge: pickStrOrEmpty(settings.hero_badge_text),
-    title: pickStrOrEmpty(settings.hero_title),
-    subtitle: pickStrOrEmpty(settings.hero_subtitle),
+    /* 🛡️ PHASE 11 — locale çözümü: EN/DE çevirisi varsa o, yoksa TR
+       canonical. `locale === "tr"` dalında `resolveSettingsText`
+       canonical değeri AYNEN (referans olarak) döndürür → aşağıdaki
+       `pickStrOrEmpty` zinciri ESKİSİYLE BİT-BİRE AYNI çalışır. */
+    badge: pickStrOrEmpty(
+      resolveSettingsText(
+        settings.hero_badge_text,
+        translations,
+        locale,
+        "hero_badge_text"
+      )
+    ),
+    title: pickStrOrEmpty(
+      resolveSettingsText(settings.hero_title, translations, locale, "hero_title")
+    ),
+    subtitle: pickStrOrEmpty(
+      resolveSettingsText(
+        settings.hero_subtitle,
+        translations,
+        locale,
+        "hero_subtitle"
+      )
+    ),
     backgroundImage,
     overlayOpacity: clamp01(
       settings.hero_overlay_opacity,
       HERO_DEFAULTS.overlayOpacity
     ),
+    /* ⚠️ CTA HREF'LERİ DİL BAĞIMSIZ — yalnız METİN çevrilir. */
     primaryCta: pickCta(
-      settings.hero_primary_cta_text,
+      resolveSettingsText(
+        settings.hero_primary_cta_text,
+        translations,
+        locale,
+        "hero_primary_cta_text"
+      ),
       settings.hero_primary_cta_href
     ),
     secondaryCta: pickCta(
-      settings.hero_secondary_cta_text,
+      resolveSettingsText(
+        settings.hero_secondary_cta_text,
+        translations,
+        locale,
+        "hero_secondary_cta_text"
+      ),
       settings.hero_secondary_cta_href
     ),
   };

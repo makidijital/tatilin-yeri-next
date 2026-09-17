@@ -24,7 +24,12 @@ import { discountRepository } from "@/lib/db/discount.repository";
 import { getPublicSettings } from "@/app/services/settings.service";
 import { getMenu } from "@/app/services/menu.service";
 import { getVillas } from "@/app/services/villa.service";
-import { getFaqs } from "@/app/services/faq.service";
+import { getFaqs, type Faq } from "@/app/services/faq.service";
+/* 🛡️ PHASE 11 — SSS çevirisi (faq_translations, migration 082). Locale
+   BAŞINA AYRI cache key'i kullanılır (aşağıya bkz.) — çapraz-dil
+   sızıntısı yapısal olarak imkânsız. */
+import { applyFaqTranslations } from "@/lib/i18n/get-faq-translations.server";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/config";
 import {
   getApprovedVillaReviews,
   getFeaturedHomepageReviews,
@@ -111,11 +116,36 @@ export const getCachedVillas = unstable_cache(
 
    EMPTY STATE: tablo boş → [] döner; homepage caller `if (!faqs.length)`
    ile section'ı hiç render etmez. */
-export const getCachedFaqs = unstable_cache(
-  async () => getFaqs(),
-  ["faqs:get"],
-  { tags: ["faqs"], revalidate: 3600 }
-);
+/* 🛡️ PHASE 11 — LOCALE BAŞINA AYRI CACHE (çapraz-dil sızıntısı KORUMASI)
+   ===============================================================
+   Tek bir `unstable_cache` örneğini locale argümanıyla çağırmak yerine
+   HER LOCALE İÇİN AYRI bir örnek kurulur; cache key'e locale AÇIKÇA
+   (`["faqs:get", locale]`) gömülür. Böylece EN çevirisi TR isteğine
+   (veya tersi) ASLA servis edilemez — bu bir konfigürasyon detayı
+   değil, yapısal bir garanti.
+
+   TTL (3600) ve tag ("faqs") DEĞİŞMEDİ: admin `replaceFaqs` sonrası
+   `revalidateFaqs()` ÜÇ locale cache'ini birden invalidate eder
+   (aynı tag).
+
+   TR yolu: `applyFaqTranslations` `locale === "tr"` iken sorgu HİÇ
+   atmaz → TR davranışı ve sorgu sayısı BİREBİR eskisi gibi. */
+const CACHED_FAQS_BY_LOCALE: Record<Locale, () => Promise<Faq[]>> =
+  Object.fromEntries(
+    SUPPORTED_LOCALES.map((locale) => [
+      locale,
+      unstable_cache(
+        async () => applyFaqTranslations(await getFaqs(), locale),
+        ["faqs:get", locale],
+        { tags: ["faqs"], revalidate: 3600 }
+      ),
+    ])
+  ) as Record<Locale, () => Promise<Faq[]>>;
+
+/** Locale verilmezse TR — mevcut çağıranlar (`getCachedFaqs()`) DEĞİŞMEDİ. */
+export function getCachedFaqs(locale: Locale = DEFAULT_LOCALE): Promise<Faq[]> {
+  return CACHED_FAQS_BY_LOCALE[locale]();
+}
 
 /* ===============================================================
    🛡️ VILLA REVIEWS (Faz 33) — guest reviews per villa

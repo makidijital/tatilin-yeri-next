@@ -97,18 +97,25 @@ describe("getPublicSettings — §5 çeviri payload'ı", () => {
     expect(result?.translations?.de).toBeUndefined();
   });
 
-  it("4) çeviri payload'ı YALNIZ 3 alan taşır — id/settings_id/timestamp YOK", async () => {
+  it("4) çeviri payload'ı YALNIZ 8 alan taşır — id/settings_id/timestamp YOK", async () => {
     findPublicViaRpcMock.mockResolvedValue({
       data: { id: "settings-1", multilingual_enabled: true },
       error: null,
     });
 
     const result = await getPublicSettings();
-    expect(Object.keys(result!.translations!.en!).sort()).toEqual([
-      "default_meta_description",
-      "default_meta_title",
-      "footer_copyright",
-    ]);
+    expect(Object.keys(result!.translations!.en!).sort()).toEqual(
+      [
+        "default_meta_description",
+        "default_meta_title",
+        "footer_copyright",
+        "hero_title",
+        "hero_subtitle",
+        "hero_badge_text",
+        "hero_primary_cta_text",
+        "hero_secondary_cta_text",
+      ].sort()
+    );
   });
 
   it("5) çeviri okuması hata verirse public ÇÖKMEZ, çeviri eklenmez", async () => {

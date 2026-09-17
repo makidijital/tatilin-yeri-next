@@ -347,4 +347,106 @@ export const tr: Dictionary = {
     flexibleTitle: "Esnek Tarih Fırsatı",
     flexibleSubtitle: "±3 gün içinde müsait",
   },
+  home: {
+    hero: {
+      badge: "Akdeniz Collection",
+      title: "Sessizce\nolağanüstü.",
+      subtitle:
+        "Akdeniz'in seçkin villalarında özel havuz, deniz manzarası ve butik konfor. Her detay, bir konaklamadan fazlasını sunmak için tasarlandı.",
+      primaryCtaText: "Kısa Süreli Fırsatlar",
+      secondaryCtaText: "Sıkça Sorulan Sorular",
+      imageAlt: "Akdeniz villası",
+    },
+    search: {
+      dateLabel: "Tarih",
+      datePlaceholder: "Tarih seç",
+      typeLabel: "Tip",
+      villaType: "Villa tipi",
+      typesSelected: "{n} villa tipi seçildi",
+      regionLabel: "Bölge",
+      allRegions: "Tüm bölgeler",
+      regionsSelected: "{n} bölge seçildi",
+      guestsLabel: "Kişi",
+      optionsLoading: "Yükleniyor…",
+      advanced: "Gelişmiş Arama",
+      flexibleHint: "Sonuçlarda 3 gün önceki ve sonraki villaları da göster",
+      submit: "Villa bul",
+    },
+    advantages: {
+      sectionAriaLabel: "Neden bizi tercih etmelisiniz",
+      experienceTitle: "14 Yıllık Tecrübe",
+      experienceDescription:
+        "14 yıllık sektör deneyimiyle tatilinizi güvenle planlayın.",
+      priceTitle: "En Uygun Fiyat Garantisi",
+      priceDescription:
+        "En doğru villa, en avantajlı fiyat. Tatiliniz için en iyi seçimi yapın.",
+      trustTitle: "Güvenli Rezervasyon",
+      trustDescription:
+        "Rezervasyon sürecinizi güvenilir ve şeffaf bir hizmet anlayışıyla kolayca tamamlayın.",
+    },
+    discount: {
+      title: "İndirimli Kiralık Villalar",
+      carouselAriaLabel: "İndirimli kiralık villalar",
+    },
+    villaTypes: {
+      sectionAriaLabel: "Villa Tipleri",
+      title: "Villa Tiplerini Keşfedin",
+      subtitle: "Size en uygun villa kategorisini seçerek aramaya başlayın.",
+      carouselAriaLabel: "Villa tipleri",
+      countBadge: "{count} Villa",
+    },
+    villas: {
+      title: "Sizin için seçtiklerimiz",
+      ctaAll: "Tüm Villaları Gör",
+      emptyEyebrow: "Koleksiyon",
+      emptyTitle: "Yakında burada.",
+      emptyBody:
+        "Akdeniz'in en seçkin villalarını sizin için hazırlıyoruz. Koleksiyon, kısa süre içinde keşfedilmeyi bekleyecek.",
+    },
+    regions: {
+      sectionAriaLabel: "Bölgeler",
+      title: "Villa Kiralama Bölgeleri",
+      subtitle: "Özenle seçilmiş bölgeler",
+      carouselAriaLabel: "Villa kiralama bölgeleri",
+      ctaAll: "Tüm bölgeler",
+    },
+    shortGaps: {
+      title: "Kısa Süreli Fırsatlar",
+      subtitle:
+        "Takvimdeki kısa boşluklarda avantajlı kaçamak fırsatlarını keşfedin.",
+      carouselAriaLabel: "Kısa süreli fırsatlar",
+      badge: "Son Dakika Fırsatı",
+      nightsLabel: "{n} gecelik villalar",
+    },
+    faq: {
+      eyebrow: "Sıkça Sorulan",
+      title: "Sıkça Sorulan Sorular",
+      subtitle: "Misafirlerimizin en çok merak ettiği sorular.",
+    },
+    reviews: {
+      sectionAriaLabel: "Misafir Deneyimleri",
+      eyebrow: "Misafirlerimizin Deneyimi",
+      title: "Misafirlerimiz ne diyor?",
+      subtitle:
+        "Konaklamasını bizimle yapan misafirlerin kendi sözleriyle Akdeniz deneyimleri.",
+    },
+    seo: {
+      websiteDescription:
+        "Akdeniz'in seçkin villalarında özel havuz, deniz manzarası ve butik konfor.",
+    },
+    months: {
+      1: "Ocak",
+      2: "Şubat",
+      3: "Mart",
+      4: "Nisan",
+      5: "Mayıs",
+      6: "Haziran",
+      7: "Temmuz",
+      8: "Ağustos",
+      9: "Eylül",
+      10: "Ekim",
+      11: "Kasım",
+      12: "Aralık",
+    },
+  },
 };

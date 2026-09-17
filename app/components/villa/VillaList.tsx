@@ -3,8 +3,19 @@ import {
   getCachedHomepageCollectionVillas,
 } from "@/lib/cache.helpers";
 import VillaCard from "./VillaCard";
+/* 🛡️ PHASE 11 — section metinleri dictionary'den; villa ADI ve BÖLGESİ
+   her dilde CANONICAL kalır (proje kararı). Yalnız kart rozeti (badge)
+   `villa_translations.badge` üzerinden çevrilir. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { getVillaBadgesByLocale } from "@/lib/i18n/get-villa-badge-translations.server";
 
-export default async function VillaList() {
+export default async function VillaList({
+  locale = DEFAULT_LOCALE,
+}: {
+  locale?: Locale;
+} = {}) {
+  const dict = getDictionary(locale).home.villas;
   /* 🛡️ MANUEL CURASYON KONTRATI (migration 012):
      1) getCachedHomepageCollectionVillas → admin manuel seçilmiş villalar
         (is_active=true kayıtlar, sort_order ASC, villa görünür filter)
@@ -42,6 +53,13 @@ export default async function VillaList() {
         }))
       : autoVillas;
 
+  /* 🛡️ PHASE 11 — rozet çevirileri TEK batch sorguda (N+1 YOK).
+     TR'de sorgu HİÇ atılmaz → davranış ve maliyet BİREBİR eskisi gibi. */
+  const badgeByVillaId = await getVillaBadgesByLocale(
+    villas.map((v) => v.id),
+    locale
+  );
+
   if (!villas.length) {
     return (
       <section className="px-5 md:px-10 lg:px-16 py-28 md:py-40">
@@ -49,14 +67,13 @@ export default async function VillaList() {
           <div className="max-w-xl">
             <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)]">
               <span className="inline-block w-8 h-px bg-[var(--color-stone-300)] align-middle mr-3" />
-              Koleksiyon
+              {dict.emptyEyebrow}
             </p>
             <h2 className="font-display text-[40px] md:text-[64px] text-[var(--color-stone-900)] mt-6 leading-[1.02] tracking-[-0.03em]">
-              Yakında burada.
+              {dict.emptyTitle}
             </h2>
             <p className="text-[var(--color-stone-500)] mt-5 leading-relaxed text-[15px] md:text-[16px]">
-              Akdeniz&apos;in en seçkin villalarını sizin için hazırlıyoruz.
-              Koleksiyon, kısa süre içinde keşfedilmeyi bekleyecek.
+              {dict.emptyBody}
             </p>
           </div>
         </div>
@@ -74,7 +91,7 @@ export default async function VillaList() {
            dominant kalır. */}
         <div className="text-center mb-8 md:mb-12">
           <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] leading-tight tracking-[-0.02em]">
-            Sizin için seçtiklerimiz
+            {dict.title}
           </h2>
         </div>
 
@@ -91,13 +108,16 @@ export default async function VillaList() {
               price={villa.price}
               currency={villa.currency || "TRY"}
               images={villa.images}
-              badge={villa.badge}
+              badge={badgeByVillaId.get(villa.id) ?? villa.badge}
               bedrooms={villa.bedrooms || 1}
               bathrooms={villa.bathrooms || 1}
               guests={villa.guests || 2}
               /* 🛡️ FAZ 35 — review trust meta (★ avg · count yorum). */
               reviewAverage={villa.review_average}
               reviewCount={villa.review_count}
+              /* 🛡️ PHASE 11 — VillaCard ZATEN locale destekliyor
+                 (Phase 10G); burada yalnız prop geçiliyor. */
+              locale={locale}
             />
           ))}
         </div>
@@ -117,7 +137,7 @@ export default async function VillaList() {
               transition-colors motion-reduce:transition-none
             "
           >
-            <span>Tüm Villaları Gör</span>
+            <span>{dict.ctaAll}</span>
             <span
               aria-hidden="true"
               className="text-[var(--color-stone-500)] group-hover:text-[var(--brand-coral)]"

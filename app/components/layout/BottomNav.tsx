@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 
 import SearchBottomSheet from "@/app/components/layout/SearchBottomSheet";
+/* 🛡️ PHASE 11 — locale prefix'ini soymak için (Phase 7B helper'ı). */
+import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
 
 /* ===============================================================
    🛡️ BOTTOM NAVIGATION — MOBİL (iOS/Airbnb kalitesi, premium)
@@ -51,11 +53,25 @@ export default function BottomNav({
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
 
+  /* 🛡️ PHASE 11 — LOCALE PREFIX BUG DÜZELTMESİ.
+     Önceden `pathname` HAM kullanılıyordu; `/en/kiralik-villa/x` ve
+     `/de/kiralik-villa/x` `startsWith("/kiralik-villa/")` ile
+     EŞLEŞMİYORDU → EN/DE villa detayında ÇİFT alt bar çıkıyordu.
+     Aynı şekilde `/en` ana sayfasında "Anasayfa" sekmesi aktif
+     görünmüyordu.
+
+     Çözüm mevcut helper'la: `buildLocaleAlternates(path, "tr")`
+     (Phase 7B) `/en`,`/de` prefix'ini segment-sınırlı şekilde soyup
+     TR-eşdeğeri base path'i verir — `getLocaleSwitchTargets` ile AYNI
+     desen. Yeni bir path/locale mantığı İCAT EDİLMEDİ. TR path'lerinde
+     `basePath === pathname` olduğu için davranış BİREBİR AYNI kalır. */
+  const basePath = buildLocaleAlternates(pathname || "/", "tr").languages.tr;
+
   // Villa detay → tek alt bar (MobileBookingCta) kalsın; nav gizle.
-  if (pathname.startsWith("/kiralik-villa/")) return null;
+  if (basePath.startsWith("/kiralik-villa/")) return null;
 
   const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname === href;
+    href === "/" ? basePath === "/" : basePath === href;
 
   return (
     <>

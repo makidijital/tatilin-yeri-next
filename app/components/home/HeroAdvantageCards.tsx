@@ -1,6 +1,10 @@
 import { Award, BadgePercent, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+/* 🛡️ PHASE 11 — metinler dictionary'den; ikon/renk/tone DEĞİŞMEDİ. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+
 /* ===============================================================
    🛡️ HeroAdvantageCards — Hero'nun HEMEN altında, "güven / avantaj"
    kartları bölümü.
@@ -61,32 +65,34 @@ type Advantage = {
   tone: AdvantageTone;
 };
 
-const ADVANTAGES: Advantage[] = [
-  {
-    key: "experience",
-    icon: Award,
-    title: "14 Yıllık Tecrübe",
-    description:
-      "14 yıllık sektör deneyimiyle tatilinizi güvenle planlayın.",
-    tone: "orange",
-  },
-  {
-    key: "price",
-    icon: BadgePercent,
-    title: "En Uygun Fiyat Garantisi",
-    description:
-      "En doğru villa, en avantajlı fiyat. Tatiliniz için en iyi seçimi yapın.",
-    tone: "blue",
-  },
-  {
-    key: "trust",
-    icon: ShieldCheck,
-    title: "Güvenli Rezervasyon",
-    description:
-      "Rezervasyon sürecinizi güvenilir ve şeffaf bir hizmet anlayışıyla kolayca tamamlayın.",
-    tone: "duo",
-  },
-];
+/* 🛡️ PHASE 11 — sıra, ikon, `key` ve `tone` DEĞİŞMEDİ; yalnız metinler
+   locale'e göre dictionary'den çözülür (TR değerleri birebir aynı). */
+function buildAdvantages(locale: Locale): Advantage[] {
+  const t = getDictionary(locale).home.advantages;
+  return [
+    {
+      key: "experience",
+      icon: Award,
+      title: t.experienceTitle,
+      description: t.experienceDescription,
+      tone: "orange",
+    },
+    {
+      key: "price",
+      icon: BadgePercent,
+      title: t.priceTitle,
+      description: t.priceDescription,
+      tone: "blue",
+    },
+    {
+      key: "trust",
+      icon: ShieldCheck,
+      title: t.trustTitle,
+      description: t.trustDescription,
+      tone: "duo",
+    },
+  ];
+}
 
 const TONE_STYLES: Record<
   AdvantageTone,
@@ -121,10 +127,16 @@ const TONE_STYLES: Record<
   },
 };
 
-export default function HeroAdvantageCards() {
+export default function HeroAdvantageCards({
+  locale = DEFAULT_LOCALE,
+}: {
+  locale?: Locale;
+} = {}) {
+  const dict = getDictionary(locale).home.advantages;
+  const advantages = buildAdvantages(locale);
   return (
     <section
-      aria-label="Neden bizi tercih etmelisiniz"
+      aria-label={dict.sectionAriaLabel}
       className="relative pt-10 pb-14 md:pt-14 md:pb-20"
     >
       {/* 🛡️ Component-scoped animasyonlar — globals.css'e DOKUNULMADI.
@@ -160,7 +172,7 @@ export default function HeroAdvantageCards() {
             role="list"
             className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-7"
           >
-            {ADVANTAGES.map((item, i) => {
+            {advantages.map((item, i) => {
               const tone = TONE_STYLES[item.tone];
               const Icon = item.icon;
               return (

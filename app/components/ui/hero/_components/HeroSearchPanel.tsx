@@ -10,6 +10,13 @@ import { loadHeroFilters } from "./hero-filters.action";
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { tr } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
+import { de as deLocale } from "date-fns/locale";
+/* 🛡️ PHASE 11 — panel metinleri ve takvim locale'i dile göre. Arama
+   state'i, `buildHeroSearchParams` ve `router.push` hedefi DEĞİŞMEDİ. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 
 import MobileKbSafeInput from "@/app/components/ui/datepicker/MobileKbSafeInput";
 
@@ -28,6 +35,10 @@ import { buildHeroDateLabel } from "../_helpers/date-label";
 import type { FilterOption } from "../_types/hero";
 
 registerLocale("tr", tr);
+/* 🛡️ PHASE 11 — EN/DE takvim locale'leri de module-level kaydedilir;
+   `registerLocale("tr", tr)` çağrısı DEĞİŞMEDİ. */
+registerLocale("en", enUS);
+registerLocale("de", deLocale);
 
 /* ===============================================================
    🛡️ FAZ 4 — HeroSearchPanel (CLIENT — STATEFUL)
@@ -87,7 +98,12 @@ registerLocale("tr", tr);
        (Header/Hero CTA ile aynı teknik, TopBar shimmer'ı DEĞİL).
    =============================================================== */
 
-export default function HeroSearchPanel() {
+export default function HeroSearchPanel({
+  locale = DEFAULT_LOCALE,
+}: {
+  locale?: Locale;
+} = {}) {
+  const dict = getDictionary(locale).home.search;
   const router = useRouter();
 
   const [categories, setCategories] = useState<string[]>([]);
@@ -173,7 +189,7 @@ export default function HeroSearchPanel() {
     router.push(`/arama?${query}`);
   };
 
-  const dateLabel = buildHeroDateLabel(startDate, endDate);
+  const dateLabel = buildHeroDateLabel(startDate, endDate, locale);
 
   return (
     /* ═══════════════════════════════════════════════════════
@@ -240,7 +256,7 @@ export default function HeroSearchPanel() {
         </span>
         <div className="min-w-0 flex-1">
           <div className="text-[10.5px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-500)]">
-            Tarih
+            {dict.dateLabel}
           </div>
           <DatePicker
             selected={startDate}
@@ -253,12 +269,16 @@ export default function HeroSearchPanel() {
             startDate={startDate}
             endDate={endDate}
             selectsRange
-            locale="tr"
+            locale={locale}
             dateFormat="dd.MM.yyyy"
             minDate={new Date()}
-            placeholderText="Tarih seç"
+            placeholderText={dict.datePlaceholder}
             className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none w-full text-[14px] font-medium !text-[var(--color-stone-900)] placeholder-[var(--color-stone-400)] cursor-pointer"
-            value={dateLabel === "Tarih seç" ? "" : dateLabel}
+            /* 🛡️ PHASE 11 — sentinel string karşılaştırması yerine
+               DOĞRUDAN state kontrolü: `buildHeroDateLabel` sentinel'i
+               TAM OLARAK `!startDate` iken döndürür → davranış birebir
+               aynı, ama locale'e bağımlı değil. */
+            value={startDate ? dateLabel : ""}
             popperPlacement="bottom-start"
             popperClassName="!z-[60]"
             portalId="hero-datepicker-portal"
@@ -288,7 +308,7 @@ export default function HeroSearchPanel() {
         </span>
         <div className="min-w-0">
           <div className="text-[10.5px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-500)]">
-            Kişi
+            {dict.guestsLabel}
           </div>
           <select
             value={guests}
@@ -336,12 +356,14 @@ export default function HeroSearchPanel() {
           </span>
           <div className="min-w-0 flex-1">
             <div className="text-[10.5px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-500)]">
-              Tip
+              {dict.typeLabel}
             </div>
             <div className="text-[14px] font-medium text-[var(--color-stone-900)] truncate">
               {categories.length
-                ? `${categories.length} villa tipi seçildi`
-                : "Villa tipi"}
+                ? formatDictionaryString(dict.typesSelected, {
+                    n: categories.length,
+                  })
+                : dict.villaType}
             </div>
           </div>
           <ChevronDown
@@ -356,7 +378,7 @@ export default function HeroSearchPanel() {
           <div className="absolute top-full mt-2 left-0 w-full md:w-72 min-w-[16rem] max-w-[calc(100vw-2.5rem)] bg-white border border-[var(--color-stone-100)] rounded-2xl shadow-[0_24px_48px_-16px_rgb(27_26_23/0.18)] p-2 z-[60] max-h-72 overflow-auto">
             {categoryOptions.length === 0 && (
               <div className="text-sm text-[var(--color-stone-400)] p-3">
-                Yükleniyor…
+                {dict.optionsLoading}
               </div>
             )}
             {categoryOptions.map((item) => {
@@ -418,12 +440,14 @@ export default function HeroSearchPanel() {
           </span>
           <div className="min-w-0 flex-1">
             <div className="text-[10.5px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-500)]">
-              Bölge
+              {dict.regionLabel}
             </div>
             <div className="text-[14px] font-medium text-[var(--color-stone-900)] truncate">
               {regions.length
-                ? `${regions.length} bölge seçildi`
-                : "Tüm bölgeler"}
+                ? formatDictionaryString(dict.regionsSelected, {
+                    n: regions.length,
+                  })
+                : dict.allRegions}
             </div>
           </div>
           <ChevronDown
@@ -438,7 +462,7 @@ export default function HeroSearchPanel() {
           <div className="absolute top-full mt-2 left-0 md:left-auto md:right-0 w-full md:w-72 min-w-[16rem] max-w-[calc(100vw-2.5rem)] bg-white border border-[var(--color-stone-100)] rounded-2xl shadow-[0_24px_48px_-16px_rgb(27_26_23/0.18)] p-2 z-[60] max-h-72 overflow-auto">
             {regionOptions.length === 0 && (
               <div className="text-sm text-[var(--color-stone-400)] p-3">
-                Yükleniyor…
+                {dict.optionsLoading}
               </div>
             )}
             {regionOptions.map((item) => {
@@ -512,7 +536,7 @@ export default function HeroSearchPanel() {
           "
           aria-hidden
         />
-        <span className="relative z-10">Villa bul</span>
+        <span className="relative z-10">{dict.submit}</span>
       </button>
 
       </div>
@@ -539,7 +563,7 @@ export default function HeroSearchPanel() {
             }
             aria-hidden
           />
-          Gelişmiş Arama
+          {dict.advanced}
         </button>
 
         {advOpen && (
@@ -553,7 +577,7 @@ export default function HeroSearchPanel() {
                 style={{ accentColor: "#ED7926" }}
               />
               <span className="text-[13px] leading-snug text-[var(--color-stone-700)]">
-                Sonuçlarda 3 gün önceki ve sonraki villaları da göster
+                {dict.flexibleHint}
               </span>
             </label>
           </div>

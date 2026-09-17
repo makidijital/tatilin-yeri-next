@@ -23,8 +23,8 @@ import {
      • `parentId` DIŞARIDAN GELMEZ — settings satırının id'si burada,
        server tarafında çözülür (`findSingletonId`). Böylece çağıran
        keyfi bir `settings_id` enjekte EDEMEZ.
-     • Alan whitelist'i `SETTINGS_TRANSLATABLE_FIELDS` (3 alan) —
-       input'tan gelen obje HİÇBİR ZAMAN spread edilmez; 3 alan tek
+     • Alan whitelist'i `SETTINGS_TRANSLATABLE_FIELDS` (8 alan) —
+       input'tan gelen obje HİÇBİR ZAMAN spread edilmez; 8 alan tek
        tek okunur.
 
    ⚠️ BU SERVİS `public.settings` TABLOSUNA YAZMAZ. Mevcut settings
@@ -37,6 +37,11 @@ export type SettingsTranslationInput = {
   footer_copyright?: string | null;
   default_meta_title?: string | null;
   default_meta_description?: string | null;
+  hero_title?: string | null;
+  hero_subtitle?: string | null;
+  hero_badge_text?: string | null;
+  hero_primary_cta_text?: string | null;
+  hero_secondary_cta_text?: string | null;
 };
 
 export type SettingsTranslationSaveResult =
@@ -57,6 +62,11 @@ const FIELD_LABELS: Record<(typeof SETTINGS_TRANSLATABLE_FIELDS)[number], string
   footer_copyright: "Footer telif metni",
   default_meta_title: "Varsayılan meta başlık",
   default_meta_description: "Varsayılan meta açıklama",
+  hero_title: "Hero başlığı",
+  hero_subtitle: "Hero alt başlık",
+  hero_badge_text: "Hero rozet metni",
+  hero_primary_cta_text: "Birincil buton metni",
+  hero_secondary_cta_text: "İkincil buton metni",
 };
 
 /** Singleton settings satırının id'si. Yok/hata → null. */
@@ -75,7 +85,7 @@ async function resolveSettingsId(): Promise<string | null> {
  * Tüm EN/DE çevirileri `{ en: {...}, de: {...} }` şeklinde döner.
  * Satır yoksa o locale HİÇ bulunmaz (→ TR canonical fallback).
  *
- * 🛡️ Yalnız 3 çevrilebilir alan payload'a girer — `id`, `settings_id`,
+ * 🛡️ Yalnız 8 çevrilebilir alan payload'a girer — `id`, `settings_id`,
  * `created_at`, `updated_at` KASITLI OLARAK DIŞARI ÇIKMAZ
  * (`pickSettingsTranslationValues`). Bu payload public tarafta
  * client'a kadar gidebilir; bu yüzden minimum yüzey.
@@ -130,7 +140,7 @@ export async function getPublicSettingsTranslations(
  *
  * DOĞRULAMA SIRASI:
  *   1) locale whitelist ("en" | "de") — "tr" REDDEDİLİR
- *   2) alan whitelist — input'tan YALNIZ 3 alan okunur (spread YOK)
+ *   2) alan whitelist — input'tan YALNIZ 8 alan okunur (spread YOK)
  *   3) trim + boş → null
  *   4) uzunluk limitleri
  *   5) settings satırı var mı
@@ -153,6 +163,11 @@ export async function upsertSettingsTranslation(
     footer_copyright: normalize(input.footer_copyright),
     default_meta_title: normalize(input.default_meta_title),
     default_meta_description: normalize(input.default_meta_description),
+    hero_title: normalize(input.hero_title),
+    hero_subtitle: normalize(input.hero_subtitle),
+    hero_badge_text: normalize(input.hero_badge_text),
+    hero_primary_cta_text: normalize(input.hero_primary_cta_text),
+    hero_secondary_cta_text: normalize(input.hero_secondary_cta_text),
   };
 
   for (const field of SETTINGS_TRANSLATABLE_FIELDS) {

@@ -13,20 +13,31 @@
        `value === "Tarih seç" ? "" : ...` kontrolü için).
    =============================================================== */
 
+import {
+  DEFAULT_LOCALE,
+  LOCALE_BCP47,
+  type Locale,
+} from "@/lib/i18n/config";
+
 export function buildHeroDateLabel(
   startDate: Date | null,
-  endDate: Date | null
+  endDate: Date | null,
+  /* 🛡️ PHASE 11 — opsiyonel; verilmezse "tr" → çıktı BİT-BİRE ESKİSİ
+     GİBİ. Yalnız `Intl` etiketi değişir (LOCALE_BCP47, Phase 10B);
+     format seçenekleri, " – " ayıracı ve sentinel AYNEN korunur. */
+  locale: Locale = DEFAULT_LOCALE
 ): string {
+  const tag = LOCALE_BCP47[locale];
   return startDate && endDate
-    ? `${startDate.toLocaleDateString("tr-TR", {
+    ? `${startDate.toLocaleDateString(tag, {
         day: "numeric",
         month: "short",
-      })} – ${endDate.toLocaleDateString("tr-TR", {
+      })} – ${endDate.toLocaleDateString(tag, {
         day: "numeric",
         month: "short",
       })}`
     : startDate
-    ? startDate.toLocaleDateString("tr-TR", {
+    ? startDate.toLocaleDateString(tag, {
         day: "numeric",
         month: "short",
       })

@@ -2,33 +2,35 @@ import type { Metadata } from "next";
 
 import { requirePublicLocaleEnabled } from "@/lib/i18n/public-locale-gate.server";
 import { setRequestLocale } from "@/lib/i18n/request-locale.server";
-import LocaleRouteComingSoon from "@/app/components/i18n/LocaleRouteComingSoon";
+import HomePageBody from "@/app/components/home/HomePageBody";
+import { buildHomeMetadata } from "@/app/components/home/home-metadata";
 
 /* ===============================================================
-   🛡️ /en — PHASE 4A KALIBI (Public Locale Routing Core)
+   🛡️ /en — ANA SAYFA (PHASE 11)
    ===============================================================
-   TR karşılığı: app/(public)/page.tsx (DEĞİŞMEDİ). Anasayfa
-   mantığı/içeriği bu fazda BURAYA taşınmadı/kopyalanmadı — yalnız
-   routing altyapısı, diğer 8 /en/*, /de/* route'uyla (arama,
-   kiralik-villalar, kiralik-villa/[slug], rezervasyon/[slug])
-   BİREBİR AYNI kalıp. `multilingual_enabled=false` olduğu sürece
-   (bugün production) notFound() → 404.
+   ÖNCEKİ DURUM: `LocaleRouteComingSoon` placeholder + koşulsuz
+   `robots: { index:false }` (Phase 4A/10C).
 
-   🛡️ PHASE 10C — Header dil değiştiricisinin "/" → "/en" → "/de"
-   hedefinin 404 üretmemesi için eklendi (bkz. lib/i18n/seo-alternates.ts
-   `buildLocaleAlternates` zaten "/" path'ini destekliyordu; eksik olan
-   yalnız bu route dosyasının kendisiydi). `setRequestLocale(locale)`
-   — bu request için locale'i işaretler (lib/i18n/request-locale.server.ts,
-   React `cache()` request-scoped store). Diğer 8 route'un ÜSTYAZISIYLA
-   AYNI davranış: PHASE 4A gate + placeholder DEĞİŞMEDİ.
+   ŞİMDİ: TR ile AYNI gövde (`HomePageBody`) — üç ayrı component
+   kopyası YOKTUR, yalnız `locale` prop'u farklıdır.
+
+   KORUNAN PHASE 4A/4B DAVRANIŞI:
+     • `setRequestLocale("en")` — request-scoped locale işareti.
+     • `await requirePublicLocaleEnabled()` — `multilingual_enabled`
+       kapalıyken notFound() → 404 (bugünkü production davranışı
+       DEĞİŞMEDİ).
+
+   ROBOTS: Placeholder'a özel koşulsuz `noindex` KALDIRILDI — sayfa
+   artık gerçek içerik. Index politikası root layout'taki
+   `settings.robots_index/robots_follow` ayarından miras alınır.
    =============================================================== */
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return buildHomeMetadata("en");
+}
 
 export default async function EnHomePage() {
   setRequestLocale("en");
   await requirePublicLocaleEnabled();
-  return <LocaleRouteComingSoon locale="en" />;
+  return <HomePageBody locale="en" />;
 }

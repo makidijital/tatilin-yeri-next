@@ -37,11 +37,21 @@ const TRANSLATIONS: SettingsTranslationsByLocale = {
     footer_copyright: EN_COPYRIGHT,
     default_meta_title: "Luxury Villa Rentals",
     default_meta_description: "Handpicked villas on the Mediterranean coast.",
+    hero_title: null,
+    hero_subtitle: null,
+    hero_badge_text: null,
+    hero_primary_cta_text: null,
+    hero_secondary_cta_text: null,
   },
   de: {
     footer_copyright: DE_COPYRIGHT,
     default_meta_title: "Luxus-Villen mieten",
     default_meta_description: "Ausgewählte Villen an der Mittelmeerküste.",
+    hero_title: null,
+    hero_subtitle: null,
+    hero_badge_text: null,
+    hero_primary_cta_text: null,
+    hero_secondary_cta_text: null,
   },
 };
 
@@ -111,7 +121,12 @@ describe("resolveSettingsText — §6 fallback zinciri", () => {
         footer_copyright: null,
         default_meta_title: null,
         default_meta_description: null,
-      },
+        hero_title: null,
+    hero_subtitle: null,
+    hero_badge_text: null,
+    hero_primary_cta_text: null,
+    hero_secondary_cta_text: null,
+  },
     };
     expect(
       resolveSettingsText(TR_COPYRIGHT, partial, "en", "footer_copyright")
@@ -125,7 +140,12 @@ describe("resolveSettingsText — §6 fallback zinciri", () => {
           footer_copyright: empty,
           default_meta_title: null,
           default_meta_description: null,
-        },
+          hero_title: null,
+    hero_subtitle: null,
+    hero_badge_text: null,
+    hero_primary_cta_text: null,
+    hero_secondary_cta_text: null,
+    },
       };
       expect(
         resolveSettingsText(TR_COPYRIGHT, partial, "en", "footer_copyright")
@@ -139,7 +159,12 @@ describe("resolveSettingsText — §6 fallback zinciri", () => {
         footer_copyright: EN_COPYRIGHT,
         default_meta_title: "Luxury Villa Rentals",
         default_meta_description: "",
-      },
+        hero_title: null,
+    hero_subtitle: null,
+    hero_badge_text: null,
+    hero_primary_cta_text: null,
+    hero_secondary_cta_text: null,
+  },
     };
     expect(
       resolveSettingsText(TR_COPYRIGHT, partial, "en", "footer_copyright")

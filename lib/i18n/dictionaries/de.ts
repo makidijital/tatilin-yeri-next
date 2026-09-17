@@ -334,4 +334,107 @@ export const de: Dictionary = {
     flexibleTitle: "Flexibles Datumsangebot",
     flexibleSubtitle: "Verfügbar innerhalb von ±3 Tagen",
   },
+  home: {
+    hero: {
+      badge: "Mittelmeer Collection",
+      title: "Leise\naußergewöhnlich.",
+      subtitle:
+        "Privatpools, Meerblick und Boutique-Komfort in den schönsten Villen am Mittelmeer. Jedes Detail ist darauf ausgelegt, mehr als nur einen Aufenthalt zu bieten.",
+      primaryCtaText: "Kurzurlaub-Angebote",
+      secondaryCtaText: "Häufig gestellte Fragen",
+      imageAlt: "Villa am Mittelmeer",
+    },
+    search: {
+      dateLabel: "Datum",
+      datePlaceholder: "Datum wählen",
+      typeLabel: "Typ",
+      villaType: "Villentyp",
+      typesSelected: "{n} Villentypen ausgewählt",
+      regionLabel: "Region",
+      allRegions: "Alle Regionen",
+      regionsSelected: "{n} Regionen ausgewählt",
+      guestsLabel: "Gäste",
+      optionsLoading: "Wird geladen…",
+      advanced: "Erweiterte Suche",
+      flexibleHint: "Auch Villen 3 Tage davor und danach in den Ergebnissen anzeigen",
+      submit: "Villa finden",
+    },
+    advantages: {
+      sectionAriaLabel: "Warum Sie uns wählen sollten",
+      experienceTitle: "14 Jahre Erfahrung",
+      experienceDescription:
+        "Planen Sie Ihren Urlaub sicher — mit 14 Jahren Branchenerfahrung.",
+      priceTitle: "Bestpreis-Garantie",
+      priceDescription:
+        "Die richtige Villa zum besten Preis. Treffen Sie die beste Wahl für Ihren Urlaub.",
+      trustTitle: "Sichere Buchung",
+      trustDescription:
+        "Schließen Sie Ihre Buchung einfach ab — zuverlässig und transparent.",
+    },
+    discount: {
+      title: "Villen mit Rabatt",
+      carouselAriaLabel: "Villen mit Rabatt",
+    },
+    villaTypes: {
+      sectionAriaLabel: "Villentypen",
+      title: "Entdecken Sie die Villentypen",
+      subtitle:
+        "Starten Sie Ihre Suche mit der Villenkategorie, die zu Ihnen passt.",
+      carouselAriaLabel: "Villentypen",
+      countBadge: "{count} Villen",
+    },
+    villas: {
+      title: "Unsere Auswahl für Sie",
+      ctaAll: "Alle Villen ansehen",
+      emptyEyebrow: "Kollektion",
+      emptyTitle: "Bald verfügbar.",
+      emptyBody:
+        "Wir stellen die schönsten Villen am Mittelmeer für Sie zusammen. Die Kollektion ist in Kürze verfügbar.",
+    },
+    regions: {
+      sectionAriaLabel: "Regionen",
+      title: "Regionen für Villenmiete",
+      subtitle: "Sorgfältig ausgewählte Regionen",
+      carouselAriaLabel: "Regionen für Villenmiete",
+      ctaAll: "Alle Regionen",
+    },
+    shortGaps: {
+      title: "Kurzurlaub-Angebote",
+      subtitle:
+        "Entdecken Sie günstige Kurztrips in den kleinen Lücken des Kalenders.",
+      carouselAriaLabel: "Kurzurlaub-Angebote",
+      badge: "Last-Minute-Angebot",
+      nightsLabel: "Villen für {n} Nächte",
+    },
+    faq: {
+      eyebrow: "Häufig gefragt",
+      title: "Häufig gestellte Fragen",
+      subtitle: "Die Fragen, die unsere Gäste am häufigsten stellen.",
+    },
+    reviews: {
+      sectionAriaLabel: "Gästeerlebnisse",
+      eyebrow: "Das Erlebnis unserer Gäste",
+      title: "Was sagen unsere Gäste?",
+      subtitle:
+        "Mittelmeer-Erlebnisse in den Worten der Gäste, die bei uns übernachtet haben.",
+    },
+    seo: {
+      websiteDescription:
+        "Privatpools, Meerblick und Boutique-Komfort in den schönsten Villen am Mittelmeer.",
+    },
+    months: {
+      1: "Januar",
+      2: "Februar",
+      3: "März",
+      4: "April",
+      5: "Mai",
+      6: "Juni",
+      7: "Juli",
+      8: "August",
+      9: "September",
+      10: "Oktober",
+      11: "November",
+      12: "Dezember",
+    },
+  },
 };

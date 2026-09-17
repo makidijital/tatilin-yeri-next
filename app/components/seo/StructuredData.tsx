@@ -90,16 +90,22 @@ export function buildBreadcrumb(
 /* ---------------------------------------------
    🔥 WebSite (homepage)
 ---------------------------------------------- */
-export function buildWebsite(opts: {
-  name: string;
-  description?: string;
-}) {
+export function buildWebsite(
+  opts: {
+    name: string;
+    description?: string;
+  },
+  /** 🛡️ PHASE 11 — opsiyonel (buildBreadcrumb ile AYNI desen). Verilirse
+   *  `inLanguage` eklenir; verilmezse çıktı ÖNCEKİYLE BİREBİR AYNI. */
+  locale?: Locale
+) {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: opts.name,
     url: abs("/"),
     ...(opts.description ? { description: opts.description } : {}),
+    ...(locale ? { inLanguage: SCHEMA_IN_LANGUAGE[locale] } : {}),
     potentialAction: {
       "@type": "SearchAction",
       target: {
@@ -305,11 +311,16 @@ export function buildVacationRental(v: VacationRentalInput) {
    Caller'da: if (faqs.length > 0) <JsonLd data={buildFaqJsonLd(faqs)} />
 ---------------------------------------------- */
 export function buildFaqJsonLd(
-  faqs: { question: string; answer: string }[]
+  faqs: { question: string; answer: string }[],
+  /** 🛡️ PHASE 11 — opsiyonel; verilirse `inLanguage` eklenir. Soru/cevap
+   *  METİNLERİ zaten çağıran tarafta locale'e göre çözülmüş gelir
+   *  (faq_translations). Verilmezse çıktı ÖNCEKİYLE BİREBİR AYNI. */
+  locale?: Locale
 ) {
   return {
     "@context": "https://schema.org",
     "@type": "FAQPage",
+    ...(locale ? { inLanguage: SCHEMA_IN_LANGUAGE[locale] } : {}),
     mainEntity: faqs.map((f) => ({
       "@type": "Question",
       name: f.question,

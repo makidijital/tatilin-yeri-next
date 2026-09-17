@@ -37,10 +37,10 @@ export function isSettingsTranslationLocale(
 
 /* ---------------- ALAN WHITELIST'İ (TEK DOĞRULUK KAYNAĞI) ---------------- */
 
-/** 🛡️ Çeviri kapsamındaki TAM 3 alan. Migration 083 + 084 sonrası
+/** 🛡️ Çeviri kapsamındaki TAM 8 alan. Migration 083 + 084 + 085 sonrası
  *  `settings_translations` kolonlarıyla BİREBİR. Buraya eklenmeyen
  *  hiçbir settings alanı çeviri yoluyla yazılamaz/okunamaz (servis
- *  katmanı bu listeyi kullanır; DB şeması da zaten yalnız bu 3 kolona
+ *  katmanı bu listeyi kullanır; DB şeması da zaten yalnız bu 8 kolona
  *  sahiptir → çift kilit).
  *
  *  🛡️ PHASE 10M — bakım modu mesajı çeviri kapsamından ÇIKARILDI
@@ -55,6 +55,13 @@ export const SETTINGS_TRANSLATABLE_FIELDS = [
   "footer_copyright",
   "default_meta_title",
   "default_meta_description",
+  /* 🛡️ PHASE 11 — ana sayfa Hero (migration 085). CTA HREF'leri ve hero
+     görseli DİL BAĞIMSIZ olduğu için BURADA YOK. */
+  "hero_title",
+  "hero_subtitle",
+  "hero_badge_text",
+  "hero_primary_cta_text",
+  "hero_secondary_cta_text",
 ] as const;
 
 export type SettingsTranslatableField =
@@ -79,6 +86,12 @@ export const SETTINGS_TRANSLATION_MAX_LEN: Record<
   footer_copyright: 300,
   default_meta_title: 120,
   default_meta_description: 300,
+  /* Hero limitleri admin Settings > Genel'deki alanlarla uyumlu tutuldu. */
+  hero_title: 200,
+  hero_subtitle: 600,
+  hero_badge_text: 80,
+  hero_primary_cta_text: 60,
+  hero_secondary_cta_text: 60,
 };
 
 /* ---------------- Satır / payload tipleri ---------------- */
@@ -91,11 +104,16 @@ export type SettingsTranslationRow = {
   footer_copyright: string | null;
   default_meta_title: string | null;
   default_meta_description: string | null;
+  hero_title: string | null;
+  hero_subtitle: string | null;
+  hero_badge_text: string | null;
+  hero_primary_cta_text: string | null;
+  hero_secondary_cta_text: string | null;
   created_at: string;
   updated_at: string;
 };
 
-/** Yalnız çevrilebilir 3 alan (id/locale/timestamp YOK). Boş değer
+/** Yalnız çevrilebilir 8 alan (id/locale/timestamp YOK). Boş değer
  *  `null` ile temsil edilir → public tarafta TR canonical'e düşer. */
 export type SettingsTranslationValues = Record<
   SettingsTranslatableField,
@@ -115,10 +133,15 @@ export function emptySettingsTranslationValues(): SettingsTranslationValues {
     footer_copyright: null,
     default_meta_title: null,
     default_meta_description: null,
+    hero_title: null,
+    hero_subtitle: null,
+    hero_badge_text: null,
+    hero_primary_cta_text: null,
+    hero_secondary_cta_text: null,
   };
 }
 
-/** Bir satırdan YALNIZ 3 çevrilebilir alanı ayıklar (id/settings_id/
+/** Bir satırdan YALNIZ 8 çevrilebilir alanı ayıklar (id/settings_id/
  *  timestamp public payload'a HİÇ girmez). */
 export function pickSettingsTranslationValues(
   row: Pick<SettingsTranslationRow, SettingsTranslatableField>
@@ -127,5 +150,10 @@ export function pickSettingsTranslationValues(
     footer_copyright: row.footer_copyright ?? null,
     default_meta_title: row.default_meta_title ?? null,
     default_meta_description: row.default_meta_description ?? null,
+    hero_title: row.hero_title ?? null,
+    hero_subtitle: row.hero_subtitle ?? null,
+    hero_badge_text: row.hero_badge_text ?? null,
+    hero_primary_cta_text: row.hero_primary_cta_text ?? null,
+    hero_secondary_cta_text: row.hero_secondary_cta_text ?? null,
   };
 }

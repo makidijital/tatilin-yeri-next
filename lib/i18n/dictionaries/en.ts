@@ -334,4 +334,106 @@ export const en: Dictionary = {
     flexibleTitle: "Flexible Date Deal",
     flexibleSubtitle: "Available within ±3 days",
   },
+  home: {
+    hero: {
+      badge: "Mediterranean Collection",
+      title: "Quietly\nextraordinary.",
+      subtitle:
+        "Private pools, sea views and boutique comfort in the Mediterranean's finest villas. Every detail is designed to offer more than a stay.",
+      primaryCtaText: "Short Stay Deals",
+      secondaryCtaText: "Frequently Asked Questions",
+      imageAlt: "Mediterranean villa",
+    },
+    search: {
+      dateLabel: "Dates",
+      datePlaceholder: "Select dates",
+      typeLabel: "Type",
+      villaType: "Villa type",
+      typesSelected: "{n} villa types selected",
+      regionLabel: "Region",
+      allRegions: "All regions",
+      regionsSelected: "{n} regions selected",
+      guestsLabel: "Guests",
+      optionsLoading: "Loading…",
+      advanced: "Advanced Search",
+      flexibleHint: "Also show villas 3 days before and after in the results",
+      submit: "Find a villa",
+    },
+    advantages: {
+      sectionAriaLabel: "Why choose us",
+      experienceTitle: "14 Years of Experience",
+      experienceDescription:
+        "Plan your holiday with confidence, backed by 14 years in the industry.",
+      priceTitle: "Best Price Guarantee",
+      priceDescription:
+        "The right villa at the best rate. Make the smartest choice for your holiday.",
+      trustTitle: "Secure Booking",
+      trustDescription:
+        "Complete your booking easily with a reliable and transparent service.",
+    },
+    discount: {
+      title: "Discounted Villa Rentals",
+      carouselAriaLabel: "Discounted villa rentals",
+    },
+    villaTypes: {
+      sectionAriaLabel: "Villa Types",
+      title: "Discover Villa Types",
+      subtitle: "Start your search by picking the villa category that suits you.",
+      carouselAriaLabel: "Villa types",
+      countBadge: "{count} Villas",
+    },
+    villas: {
+      title: "Our picks for you",
+      ctaAll: "View All Villas",
+      emptyEyebrow: "Collection",
+      emptyTitle: "Coming soon.",
+      emptyBody:
+        "We are curating the Mediterranean's finest villas for you. The collection will be ready to explore shortly.",
+    },
+    regions: {
+      sectionAriaLabel: "Regions",
+      title: "Villa Rental Regions",
+      subtitle: "Carefully selected regions",
+      carouselAriaLabel: "Villa rental regions",
+      ctaAll: "All regions",
+    },
+    shortGaps: {
+      title: "Short Stay Deals",
+      subtitle:
+        "Discover great-value short breaks in the small gaps of the calendar.",
+      carouselAriaLabel: "Short stay deals",
+      badge: "Last Minute Deal",
+      nightsLabel: "{n}-night villas",
+    },
+    faq: {
+      eyebrow: "Frequently Asked",
+      title: "Frequently Asked Questions",
+      subtitle: "The questions our guests ask most.",
+    },
+    reviews: {
+      sectionAriaLabel: "Guest Experiences",
+      eyebrow: "Our Guests' Experience",
+      title: "What do our guests say?",
+      subtitle:
+        "Mediterranean experiences in the words of the guests who stayed with us.",
+    },
+    seo: {
+      websiteDescription:
+        "Private pools, sea views and boutique comfort in the Mediterranean's finest villas.",
+    },
+    months: {
+      1: "January",
+      2: "February",
+      3: "March",
+      4: "April",
+      5: "May",
+      6: "June",
+      7: "July",
+      8: "August",
+      9: "September",
+      10: "October",
+      11: "November",
+      12: "December",
+    },
+  },
 };

@@ -11,6 +11,11 @@ import {
 } from "@/lib/storage.helpers";
 
 import HorizontalCarousel from "./HorizontalCarousel";
+/* 🛡️ PHASE 11 — YALNIZ section metinleri çevrilir. BÖLGE ADLARI her
+   dilde CANONICAL kalır: bölge adları özel isimdir ve bölge çeviri
+   sistemi Phase 10I'de bilinçli olarak KALDIRILDI. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 /* ===============================================================
    🛡️ LOCATION SHOWCASE — homepage "circular avatar" carousel
@@ -78,7 +83,12 @@ type Item = {
   token: string;
 };
 
-export default async function LocationCollection() {
+export default async function LocationCollection({
+  locale = DEFAULT_LOCALE,
+}: {
+  locale?: Locale;
+} = {}) {
+  const dict = getDictionary(locale).home.regions;
   const [locations, counts] = await Promise.all([
     getCachedVillaLocations(),
     getCachedLocationVillaCounts(),
@@ -161,17 +171,17 @@ export default async function LocationCollection() {
 
   return (
     <section
-      aria-label="Bölgeler"
+      aria-label={dict.sectionAriaLabel}
       className="px-5 md:px-10 lg:px-16 pt-14 md:pt-20 pb-4 md:pb-10"
     >
       <div className="max-w-[1280px] mx-auto">
         {/* 🛡️ FAZ 39M — Normalized section header (CategoryCollection parity). */}
         <div className="text-center mb-8 md:mb-12">
           <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] leading-tight tracking-[-0.02em]">
-            Villa Kiralama Bölgeleri
+            {dict.title}
           </h2>
           <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-stone-500)] max-w-md mx-auto">
-            Özenle seçilmiş bölgeler
+            {dict.subtitle}
           </p>
         </div>
 
@@ -182,7 +192,7 @@ export default async function LocationCollection() {
             tersine. */}
         <HorizontalCarousel
           showArrows
-          ariaLabel="Villa kiralama bölgeleri"
+          ariaLabel={dict.carouselAriaLabel}
           className="pb-1"
         >
           <ul role="list" className="flex flex-nowrap min-w-max gap-7 md:gap-8 lg:gap-9">
@@ -209,7 +219,7 @@ export default async function LocationCollection() {
               transition-colors motion-reduce:transition-none
             "
           >
-            <span>Tüm bölgeler</span>
+            <span>{dict.ctaAll}</span>
             <span
               aria-hidden="true"
               className="text-[var(--color-stone-500)] group-hover:text-[var(--brand-coral)]"

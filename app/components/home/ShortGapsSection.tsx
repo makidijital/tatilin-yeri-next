@@ -5,9 +5,18 @@ import { shortGapsRepository } from "@/lib/db/short-gaps.repository";
 import HorizontalCarousel from "../villa/HorizontalCarousel";
 import {
   SHORT_GAP_NIGHTS,
-  bucketMonthLabelTr,
+  bucketMonthLabel,
   bucketMonthToSlug,
 } from "@/lib/short-gaps.helpers";
+/* 🛡️ PHASE 11 — ay adları artık hardcoded TR dizisinden DEĞİL,
+   dictionary'den (`home.months`) geliyor. TR değerleri
+   `lib/short-gaps.helpers.ts > MONTH_NAMES_TR` ile BİREBİR aynı →
+   TR etiketleri ("Ocak 2026") DEĞİŞMEZ. Link yapısı (ASCII ay slug'ı)
+   DİL BAĞIMSIZ kalır — `bucketMonthToSlug` DEĞİŞMEDİ. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import type { MonthNumber } from "@/lib/i18n/dictionaries/types";
 
 /* ===============================================================
    🛡️ KISA SÜRELİ TARİHLER — ANA SAYFA SECTION (server component)
@@ -34,7 +43,14 @@ type MonthGroup = {
   counts: Map<number, number>; // gap_nights → villa_count
 };
 
-export default async function ShortGapsSection() {
+export default async function ShortGapsSection({
+  locale = DEFAULT_LOCALE,
+}: {
+  locale?: Locale;
+} = {}) {
+  const dict = getDictionary(locale).home.shortGaps;
+  const months_ = getDictionary(locale).home.months;
+  const monthName = (m: number) => months_[m as MonthNumber] ?? "";
   const { data, error } = await shortGapsRepository.getShortGapCounts();
   if (error || !Array.isArray(data) || data.length === 0) return null;
 
@@ -50,7 +66,7 @@ export default async function ShortGapsSection() {
     if (!group) {
       group = {
         bucketMonth: bm,
-        label: bucketMonthLabelTr(bm),
+        label: bucketMonthLabel(bm, monthName),
         slug: bucketMonthToSlug(bm),
         counts: new Map(),
       };
@@ -99,16 +115,16 @@ export default async function ShortGapsSection() {
       <div className="max-w-[1280px] mx-auto">
         <div className="text-center mb-8 md:mb-12">
           <h2 className="font-display font-medium text-[22px] md:text-[26px] text-[var(--color-stone-900)] leading-tight tracking-[-0.02em]">
-            Kısa Süreli Fırsatlar
+            {dict.title}
           </h2>
           <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-stone-500)] max-w-md mx-auto">
-            Takvimdeki kısa boşluklarda avantajlı kaçamak fırsatlarını keşfedin.
+            {dict.subtitle}
           </p>
         </div>
 
         <HorizontalCarousel
           showArrows
-          ariaLabel="Kısa süreli fırsatlar"
+          ariaLabel={dict.carouselAriaLabel}
           className="pb-1"
         >
           <ul role="list" className="flex flex-nowrap min-w-max gap-5 md:gap-6">
@@ -134,7 +150,7 @@ export default async function ShortGapsSection() {
                     <div className="min-w-0">
                       <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-coral)]">
                         <Sparkles size={11} strokeWidth={2.2} aria-hidden />
-                        Son Dakika Fırsatı
+                        {dict.badge}
                       </span>
                       <h3 className="mt-1.5 font-display font-medium text-[24px] md:text-[26px] text-white leading-[1.05] tracking-[-0.02em] truncate">
                         {m.label}
@@ -163,7 +179,9 @@ export default async function ShortGapsSection() {
                             className="group/row flex items-center justify-between rounded-xl px-3 py-2.5 -mx-1 hover:bg-white/[0.06] transition-colors motion-reduce:transition-none"
                           >
                             <span className="text-[13.5px] text-white/75 group-hover/row:text-white transition-colors motion-reduce:transition-none">
-                              {nights} gecelik villalar
+                              {formatDictionaryString(dict.nightsLabel, {
+                                n: nights,
+                              })}
                             </span>
                             <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold tabular-nums">
                               <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ED7926]/20 to-[#0973BA]/20 text-white ring-1 ring-white/10 leading-none">
