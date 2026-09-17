@@ -115,6 +115,19 @@ export type FaqTranslationRow = {
   updated_at: string;
 };
 
+/** 🛡️ MIGRATION 086 — dinamik menü etiketleri (`/maki-admin/menu`).
+ *  Parent tablo `public.menu`; çevrilebilir TEK kolon `name`.
+ *  ⚠️ `href` / `source_type` / `source_id` ÇEVRİLMEZ — menü linki
+ *  canonical kalır, yalnız GÖRÜNEN ad locale'e göre çözülür. */
+export type MenuTranslationRow = {
+  id: string;
+  menu_id: string;
+  locale: Locale;
+  name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 /* ---------- Entity registry (repository'nin de kullandığı tek kaynak) ---------- */
 
 export type TranslationEntity =
@@ -126,7 +139,10 @@ export type TranslationEntity =
   | "price_include_item"
   | "villa_distance"
   | "page"
-  | "faq";
+  | "faq"
+  /* 🛡️ MIGRATION 086 — migration 082'nin 9 tablosundan SONRA eklendi;
+     şema (parent_id + locale + çevrilebilir alan) BİREBİR aynı. */
+  | "menu";
 
 export type TranslationRowFor<E extends TranslationEntity> = E extends "villa"
   ? VillaTranslationRow
@@ -144,7 +160,9 @@ export type TranslationRowFor<E extends TranslationEntity> = E extends "villa"
                 ? PageTranslationRow
                 : E extends "faq"
                   ? FaqTranslationRow
-                  : never;
+                  : E extends "menu"
+                    ? MenuTranslationRow
+                    : never;
 
 export type TranslationEntityConfig = {
   /** migration 082 tablo adı. */
@@ -186,4 +204,6 @@ export const TRANSLATION_ENTITY_CONFIG: Record<
   },
   page: { table: "page_translations", parentIdColumn: "page_id" },
   faq: { table: "faq_translations", parentIdColumn: "faq_id" },
+  /* 🛡️ MIGRATION 086 — dinamik menü etiketleri. */
+  menu: { table: "menu_translations", parentIdColumn: "menu_id" },
 };

@@ -97,7 +97,7 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   const payload = { name, href, source_type, source_id, is_active };
 
-  const { error } = await menuServerRepository.insert(payload);
+  const { data: inserted, error } = await menuServerRepository.insert(payload);
   if (error) {
     console.error("[admin.menu.insert] FAILED", error.message);
     return NextResponse.json(
@@ -124,7 +124,10 @@ export async function POST(req: Request): Promise<NextResponse> {
     }
   }
 
-  return NextResponse.json({ ok: true });
+  /* 🛡️ MIGRATION 086 — yeni satırın id'si döner; admin "Menü ekle"
+     formu EN/DE ad çevirilerini bu id ile `menu_translations`'a yazar.
+     Mevcut `{ ok: true }` sözleşmesi KORUNDU (alan yalnız EKLENDİ). */
+  return NextResponse.json({ ok: true, id: inserted?.id ?? null });
 }
 
 /* PATCH — menu satırı order/parent_id güncellemesi (drag/drop persist).

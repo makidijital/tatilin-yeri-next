@@ -40,7 +40,13 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
    =============================================================== */
 
 export const menuServerRepository = {
-  /** Insert — tekil satır array-wrap (.insert([payload])). */
+  /** Insert — tekil satır array-wrap (.insert([payload])).
+   *  🛡️ MIGRATION 086 — `.select("id").single()` EKLENDİ: yeni menü
+   *  satırının id'si, EN/DE ad çevirilerini (`menu_translations`)
+   *  aynı akışta yazabilmek için caller'a döner. Yazılan satır,
+   *  kolonlar ve `{ data, error }` zarfı DEĞİŞMEDİ — yalnız dönen
+   *  `data` artık `null` yerine `{ id }`. Aynı desen zaten projede
+   *  kanıtlı (external-calendar-source.repository.ts > insert). */
   async insert(payload: {
     name: string;
     href: string;
@@ -48,7 +54,11 @@ export const menuServerRepository = {
     source_id: string | null;
     is_active: boolean;
   }) {
-    return await dbAdmin.from("menu").insert([payload]);
+    return await dbAdmin
+      .from<{ id: string }>("menu")
+      .insert([payload])
+      .select("id")
+      .single();
   },
 
   /** Update by id — order/parent_id drag-drop persist. */

@@ -27,7 +27,17 @@ import {
   Tag,
   MapPin,
   AlertCircle,
+  Languages,
 } from "lucide-react";
+
+/* 🛡️ MIGRATION 086 — menü adı EN/DE çeviri paneli. Satır tasarımı,
+   drag-drop sözleşmesi ve mevcut CRUD DEĞİŞMEDİ; panel yalnız
+   satırın ALTINDA, istendiğinde açılan ek bir blok olarak render
+   edilir. `kind="page-auto"` satırlarda GÖSTERİLMEZ (onların adı
+   `pages.title`'dan gelir ve çevirisi Sayfalar ekranında
+   `page_translations` ile yönetilir — ikinci bir kaynak
+   yaratılmaz). */
+import MenuTranslationsPanel from "./MenuTranslationsPanel";
 import {
   useNotify,
   useConfirm,
@@ -121,6 +131,11 @@ export default function MenuPage() {
   const toast = useNotify();
   const confirm = useConfirm();
   const [items, setItems] = useState<RowItem[]>([]);
+  /* 🛡️ MIGRATION 086 — aynı anda TEK satırın çeviri paneli açık
+     (accordion). Mevcut list/drag/delete state'lerinden TAMAMEN AYRI. */
+  const [openTranslationsId, setOpenTranslationsId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     fetchAll();
@@ -550,6 +565,12 @@ export default function MenuPage() {
                   item={item}
                   items={items}
                   onDelete={deleteItem}
+                  translationsOpen={openTranslationsId === item.id}
+                  onToggleTranslations={(id) =>
+                    setOpenTranslationsId((prev) =>
+                      prev === id ? null : id
+                    )
+                  }
                 />
               ))}
             </div>
@@ -575,10 +596,15 @@ function SortableItem({
   item,
   items,
   onDelete,
+  translationsOpen,
+  onToggleTranslations,
 }: {
   item: RowItem;
   items: RowItem[];
   onDelete: (i: RowItem) => void;
+  /** 🛡️ MIGRATION 086 — çeviri panelinin açık/kapalı durumu. */
+  translationsOpen: boolean;
+  onToggleTranslations: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
@@ -622,7 +648,7 @@ function SortableItem({
         opacity: isDragging ? 0.55 : 1,
       }}
       className={
-        "card-premium p-4 flex justify-between items-center gap-3 relative " +
+        "card-premium p-4 relative " +
         (isPageAuto ? "bg-[var(--color-sand-50)]/60 " : "") +
         (isOrphan ? "border-amber-200 bg-amber-50/40 " : "") +
         (isChild
@@ -630,6 +656,7 @@ function SortableItem({
           : "")
       }
     >
+    <div className="flex justify-between items-center gap-3">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <button
           {...attributes}
@@ -687,15 +714,43 @@ function SortableItem({
             Sayfalar&apos;dan yönet →
           </Link>
         ) : (
-          <button
-            onClick={() => onDelete(item)}
-            className="inline-flex items-center gap-1.5 text-[12px] text-red-600 hover:text-red-700 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition"
-          >
-            <Trash2 size={12} />
-            Sil
-          </button>
+          <>
+            {/* 🛡️ MIGRATION 086 — menü adı çevirileri (EN/DE). Yalnız
+                `menu` tablosundaki satırlarda; silme butonunun SOLUNDA,
+                mevcut aksiyon dili korunarak. */}
+            <button
+              type="button"
+              onClick={() => onToggleTranslations(item.id)}
+              aria-expanded={translationsOpen}
+              className={
+                "inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1.5 rounded-lg transition " +
+                (translationsOpen
+                  ? "text-[var(--color-stone-900)] bg-[var(--color-sand-100)]"
+                  : "text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] hover:bg-white")
+              }
+            >
+              <Languages size={12} />
+              Çeviriler
+            </button>
+            <button
+              onClick={() => onDelete(item)}
+              className="inline-flex items-center gap-1.5 text-[12px] text-red-600 hover:text-red-700 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition"
+            >
+              <Trash2 size={12} />
+              Sil
+            </button>
+          </>
         )}
       </div>
+    </div>
+
+      {/* Çeviri paneli — satırın ALTINDA, drag handle'ın dışında.
+          Kapalıyken hiçbir DOM/istek üretmez (lazy mount). */}
+      {translationsOpen && !isPageAuto && (
+        <div className="mt-3">
+          <MenuTranslationsPanel menuId={item.id} menuName={item.name} />
+        </div>
+      )}
     </div>
   );
 }

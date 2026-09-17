@@ -475,17 +475,35 @@ describe("HeaderWrapper — multilingual gate + ağaç birleştirme", () => {
     ]);
     render(await HeaderWrapper());
     expect(screen.getAllByText("Luxury Villa").length).toBeGreaterThan(0);
-    /* locale başına 1 sorgu → toplam 2 (N+1 YOK) */
-    expect(findManyForLocaleMock).toHaveBeenCalledTimes(2);
+    /* 🛡️ MIGRATION 086 — villa tipi çevirisi locale başına 1 sorgu
+       (entity "villa_type"); ek olarak menü etiketi çevirisi de
+       locale başına 1 sorgu (entity "menu"). Öğe/kayıt başına sorgu
+       YOK — N+1 kilidi entity BAZINDA doğrulanır. */
+    const typeCalls = findManyForLocaleMock.mock.calls.filter(
+      (call) => call[0] === "villa_type"
+    );
+    expect(typeCalls).toHaveLength(2);
+    const menuCalls = findManyForLocaleMock.mock.calls.filter(
+      (call) => call[0] === "menu"
+    );
+    expect(menuCalls).toHaveLength(2);
   });
 
-  it("33) menüde kategori öğesi yoksa çeviri sorgusu atılmaz", async () => {
+  it("33) menüde kategori öğesi yoksa VİLLA TİPİ çeviri sorgusu atılmaz", async () => {
     getPublicSettingsMock.mockResolvedValue({ multilingual_enabled: true });
     getMenuMock.mockResolvedValue([
       { id: "m2", name: "Hakkımızda", href: "/p/hakkimizda", source_type: "page", source_id: "p1" },
     ]);
     render(await HeaderWrapper());
-    expect(findManyForLocaleMock).not.toHaveBeenCalled();
+    expect(
+      findManyForLocaleMock.mock.calls.filter((c) => c[0] === "villa_type")
+    ).toHaveLength(0);
+    /* 🛡️ MIGRATION 086 — menü satırının KENDİ etiket çevirisi
+       (entity "menu") her durumda okunur; bu, villa tipi sorgusundan
+       BAĞIMSIZ ve yine locale başına TEK sorgudur. */
+    expect(
+      findManyForLocaleMock.mock.calls.filter((c) => c[0] === "menu")
+    ).toHaveLength(2);
   });
 
   it("34) çeviri okuması patlarsa header ÇÖKMEZ, TR adına düşer", async () => {

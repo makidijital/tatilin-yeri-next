@@ -3,10 +3,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { adminFetch } from "@/lib/admin-fetch";
 import { useRouter } from "next/navigation";
-import { Save, Link2, FileText, Tag, MapPin } from "lucide-react";
+import { Save, Link2, FileText, Tag, MapPin, Languages } from "lucide-react";
 import { useNotify } from "@/app/components/admin/notifications/NotificationProvider";
 import type { MenuSourceType } from "@/lib/menu-resolver";
 import { revalidateMenu } from "@/app/services/revalidate.actions";
+/* 🛡️ MIGRATION 086 — menü adının EN/DE karşılıkları. Kayıt, menü
+   satırı oluşturulduktan SONRA dönen `id` ile `menu_translations`'a
+   yazılır (aynı server action, `/maki-admin/menu` listesindeki
+   panelle PAYLAŞILIR — ikinci bir yazma yolu yaratılmadı). */
+import { saveMenuTranslationAction } from "../menu-translations.action";
+import {
+  MENU_LOCALE_LABELS,
+  MENU_TRANSLATION_MAX_LEN,
+} from "../MenuTranslationsPanel";
 
 /* ===============================================================
    🛡️ MENU EKLE — DYNAMIC NAVIGATION SOURCE PICKER
@@ -41,6 +50,13 @@ export default function NewMenu() {
 
   // source-bound selection
   const [selectedSourceId, setSelectedSourceId] = useState<string>("");
+
+  /* 🛡️ MIGRATION 086 — menü adı çevirileri (OPSİYONEL). Boş bırakılırsa
+     hiç yazılmaz; public tarafta TR adı gösterilir. Kaynağa bağlı
+     türlerde de geçerlidir — bu alan menünün GÖRÜNEN ETİKETİDİR,
+     kaynak kaydın kendi çevirisini değiştirmez. */
+  const [nameEn, setNameEn] = useState("");
+  const [nameDe, setNameDe] = useState("");
 
   // option lists
   const [pageOptions, setPageOptions] = useState<
@@ -199,7 +215,7 @@ export default function NewMenu() {
        behavior BYTE-IDENTICAL: page source ise pages.show_in_menu=true
        sync'i route içinde yapılıyor; best-effort, sync hatası insert'i
        BOZMAZ). */
-    let resJson: { ok?: boolean; error?: string } = {};
+    let resJson: { ok?: boolean; error?: string; id?: string | null } = {};
     try {
       const res = await adminFetch("/api/admin/menu", {
         method: "POST",
@@ -209,6 +225,7 @@ export default function NewMenu() {
       resJson = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         error?: string;
+        id?: string | null;
       };
       if (!res.ok || !resJson.ok) {
         setLoading(false);
@@ -226,6 +243,32 @@ export default function NewMenu() {
       });
       return;
     }
+    /* 🛡️ MIGRATION 086 — çeviriler best-effort: menü satırı ZATEN
+       oluştu; çeviri yazımı başarısız olsa bile kayıt BOZULMAZ
+       (kullanıcı listeden "Çeviriler" paneliyle tekrar deneyebilir).
+       Boş alanlar için istek HİÇ atılmaz. */
+    const newMenuId = (resJson.id ?? "").toString().trim();
+    if (newMenuId) {
+      const pending: Array<{ locale: "en" | "de"; name: string }> = [];
+      if (nameEn.trim()) pending.push({ locale: "en", name: nameEn });
+      if (nameDe.trim()) pending.push({ locale: "de", name: nameDe });
+
+      for (const t of pending) {
+        const tr = await saveMenuTranslationAction({
+          menuId: newMenuId,
+          locale: t.locale,
+          name: t.name,
+        });
+        if (!tr.ok) {
+          toast.error("Çeviri kaydedilemedi", {
+            id: "menu-create-translation",
+            description: tr.error,
+          });
+          break;
+        }
+      }
+    }
+
     setLoading(false);
 
     toast.success("Menü eklendi", { id: "menu-create" });
@@ -395,7 +438,53 @@ export default function NewMenu() {
           />
         )}
 
-        {/* ============ 3) URL preview ============ */}
+        {/* ============ 3) Menü adı çevirileri (opsiyonel) ============
+            🛡️ MIGRATION 086 — mevcut form tasarım dili (uppercase
+            label + `input` class) korunarak eklendi. Türkçe ad
+            yukarıdaki alanlardan/kaynaktan gelir; burada YALNIZ
+            görünen etiketin EN/DE karşılıkları girilir. */}
+        <div className="space-y-5 pt-5 border-t border-[var(--color-stone-100)]">
+          <div className="flex items-center gap-1.5">
+            <Languages size={13} className="text-[var(--color-champagne-700)]" />
+            <p className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)]">
+              Menü adı çevirileri
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
+              {MENU_LOCALE_LABELS.en}
+            </label>
+            <input
+              aria-label={MENU_LOCALE_LABELS.en}
+              placeholder="Örn: Rental Villas"
+              className="input"
+              maxLength={MENU_TRANSLATION_MAX_LEN}
+              value={nameEn}
+              onChange={(e) => setNameEn(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
+              {MENU_LOCALE_LABELS.de}
+            </label>
+            <input
+              aria-label={MENU_LOCALE_LABELS.de}
+              placeholder="Örn: Mietvillen"
+              className="input"
+              maxLength={MENU_TRANSLATION_MAX_LEN}
+              value={nameDe}
+              onChange={(e) => setNameDe(e.target.value)}
+            />
+            <p className="text-xs text-[var(--color-stone-400)]">
+              Boş bırakılan dilde Türkçe menü adı gösterilir. Bağlantı
+              adresi çevrilmez.
+            </p>
+          </div>
+        </div>
+
+        {/* ============ 4) URL preview ============ */}
         {(preview.name || preview.href) && (
           <div className="rounded-xl border border-[var(--color-stone-100)] bg-[var(--color-sand-50)]/50 px-4 py-3">
             <p className="text-[10px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-500)]">

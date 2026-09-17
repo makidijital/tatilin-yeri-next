@@ -34,7 +34,10 @@ import {
    TABLOSU migration 082'de DURUYOR (migration geçmişi değiştirilmedi) —
    bu yüzden `tests/unit/translation-schema.test.ts` (migration SQL'ini
    doğrular) DEĞİŞMEDİ; burada test edilen şey KOD REGISTRY'sidir. */
-describe("TRANSLATION_ENTITY_CONFIG — 8 tablo, doğru table/parentIdColumn", () => {
+/* 🛡️ MIGRATION 086 — 8 → 9 entity. `menu` EKLENDİ: `/maki-admin/menu`
+   üzerinden girilen dinamik menü etiketleri (menu.name) çevrilebilir.
+   Şema migration 082'nin desenini birebir izler (menu_id + locale + name). */
+describe("TRANSLATION_ENTITY_CONFIG — 9 tablo, doğru table/parentIdColumn", () => {
   const expected: Record<
     TranslationEntity,
     { table: string; parentIdColumn: string }
@@ -62,10 +65,11 @@ describe("TRANSLATION_ENTITY_CONFIG — 8 tablo, doğru table/parentIdColumn", (
     },
     page: { table: "page_translations", parentIdColumn: "page_id" },
     faq: { table: "faq_translations", parentIdColumn: "faq_id" },
+    menu: { table: "menu_translations", parentIdColumn: "menu_id" },
   };
 
-  it("tam olarak 8 entity içeriyor", () => {
-    expect(Object.keys(TRANSLATION_ENTITY_CONFIG)).toHaveLength(8);
+  it("tam olarak 9 entity içeriyor", () => {
+    expect(Object.keys(TRANSLATION_ENTITY_CONFIG)).toHaveLength(9);
   });
 
   /* 🛡️ PHASE 10I — REGRESYON KİLİDİ: bölge çevirisi geri gelmesin. */
