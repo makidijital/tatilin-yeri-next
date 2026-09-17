@@ -15,6 +15,11 @@ import {
 import SearchBottomSheet from "@/app/components/layout/SearchBottomSheet";
 /* 🛡️ PHASE 11 — locale prefix'ini soymak için (Phase 7B helper'ı). */
 import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
+/* 🛡️ PHASE 11 — locale, Header (9A) / Footer (9B) ile AYNI şekilde
+   ZATEN VAR OLAN `pathname`'den türetilir. Layout'a (server) dokunulmadı;
+   `headers()`/`cookies()` KULLANILMADI. */
+import { localeFromPathname } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 /* ===============================================================
    🛡️ BOTTOM NAVIGATION — MOBİL (iOS/Airbnb kalitesi, premium)
@@ -67,6 +72,12 @@ export default function BottomNav({
      `basePath === pathname` olduğu için davranış BİREBİR AYNI kalır. */
   const basePath = buildLocaleAlternates(pathname || "/", "tr").languages.tr;
 
+  /* 🛡️ PHASE 11 — locale AYRI bir türetme; yukarıdaki `basePath`
+     (P0'da eklenen prefix-soyma) mantığına DOKUNULMADI. */
+  const locale = localeFromPathname(pathname);
+  const dict = getDictionary(locale);
+  const navDict = dict.layout.bottomNav;
+
   // Villa detay → tek alt bar (MobileBookingCta) kalsın; nav gizle.
   if (basePath.startsWith("/kiralik-villa/")) return null;
 
@@ -82,7 +93,7 @@ export default function BottomNav({
       />
 
       <nav
-        aria-label="Alt gezinme"
+        aria-label={navDict.ariaLabel}
         className="
           md:hidden
           fixed inset-x-0 bottom-0 z-40
@@ -95,7 +106,12 @@ export default function BottomNav({
       >
         <ul className="grid grid-cols-5">
           <li>
-            <InternalItem href="/" label="Anasayfa" Icon={Home} active={isActive("/")} />
+            <InternalItem
+              href="/"
+              label={dict.header.home}
+              Icon={Home}
+              active={isActive("/")}
+            />
           </li>
 
           {/* 🔎 Arama — route DEĞİL, premium bottom sheet açar. */}
@@ -103,7 +119,7 @@ export default function BottomNav({
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              aria-label="Villa ara"
+              aria-label={navDict.searchAriaLabel}
               aria-haspopup="dialog"
               aria-expanded={searchOpen}
               className={
@@ -120,14 +136,14 @@ export default function BottomNav({
                 className="transition-transform duration-150 group-active:scale-105"
                 aria-hidden
               />
-              <span className={LABEL_CLASS}>Arama</span>
+              <span className={LABEL_CLASS}>{navDict.search}</span>
             </button>
           </li>
 
           <li>
             <InternalItem
               href="/teklif-al"
-              label="Öneri Al"
+              label={navDict.offer}
               Icon={Sparkles}
               active={isActive("/teklif-al")}
             />
@@ -148,7 +164,7 @@ export default function BottomNav({
           <li>
             <ActionItem
               href={phoneHref}
-              label="Telefon"
+              label={dict.footer.phone}
               Icon={Phone}
               iconClass="text-[var(--brand-coral)]"
             />
@@ -160,6 +176,7 @@ export default function BottomNav({
       <SearchBottomSheet
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
+        locale={locale}
       />
     </>
   );

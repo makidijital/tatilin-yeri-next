@@ -320,7 +320,8 @@ export default function Header({
 
               {/* SEARCH — paylaşılan VillaSearchBox. Artık anasayfa dahil
                  tüm sayfalarda görünür. */}
-              <VillaSearchBox variant="desktop" />
+              {/* 🛡️ PHASE 11 — arama kutusu metinleri locale'e göre. */}
+              <VillaSearchBox variant="desktop" locale={locale} />
 
               {/* Favorites shortcut (FAZ 36).
                  🛡️ FAZ 39C: variant prop kaldırıldı (dead). */}

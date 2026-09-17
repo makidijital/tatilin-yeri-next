@@ -571,4 +571,58 @@ export type Dictionary = {
      *  `lib/short-gaps.helpers.ts > MONTH_NAMES_TR` ile TR'de BİREBİR. */
     months: Record<MonthNumber, string>;
   };
+  /* ===============================================================
+     🛡️ PHASE 11 — PUBLIC LAYOUT KABUĞU (app/(public)/layout.tsx)
+     ===============================================================
+     BottomNav · SearchBottomSheet · VillaSearchBox · CookieConsent ·
+     ScrollToTopButton · FloatingSocial metinleri.
+
+     ⚠️ Bu componentler LAYOUT'tan render edilir; layout bir server
+     component olduğu ve request locale'ini okuyamadığı için (Phase 7E)
+     locale, Header/Footer ile AYNI şekilde client tarafında
+     `usePathname()` + `localeFromPathname()` ile türetilir.
+
+     REUSE (yeni key AÇILMADI): "Anasayfa" → `header.home`,
+     "Telefon" → `footer.phone`, "Kapat" → `common.close`.
+     =============================================================== */
+  layout: {
+    bottomNav: {
+      ariaLabel: string;
+      search: string;
+      searchAriaLabel: string;
+      /** ⚠️ `header.offer` ("Teklif Al") ile BİLEREK BİRLEŞTİRİLMEDİ —
+       *  alt gezinmedeki mevcut TR metni "Öneri Al" (ürün kararı). */
+      offer: string;
+    };
+    search: {
+      sheetTitle: string;
+      dialogAriaLabel: string;
+      closeBackdropAriaLabel: string;
+      /** `VillaSearchBox` varsayılan placeholder'ı. */
+      placeholder: string;
+      /** Bottom-sheet variant'ının daha uzun placeholder'ı. */
+      sheetPlaceholder: string;
+      emptyTitle: string;
+      emptyBody: string;
+      noResultsTitle: string;
+      noResultsBody: string;
+      noResultsCompactTitle: string;
+      noResultsCompactBody: string;
+    };
+    cookie: {
+      ariaLabel: string;
+      message: string;
+      details: string;
+      accept: string;
+    };
+    scrollTop: {
+      label: string;
+      ariaLabel: string;
+    };
+    floatingSocial: {
+      ariaLabel: string;
+      call: string;
+      whatsapp: string;
+    };
+  };
 };

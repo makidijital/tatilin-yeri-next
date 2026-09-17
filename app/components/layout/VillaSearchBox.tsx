@@ -9,6 +9,10 @@ import { Search } from "lucide-react";
    @/lib/db client bundle'a girmez); aynı SELECT/filter/ilike/limit. */
 import { searchVillas } from "./villa-search.action";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+/* 🛡️ PHASE 11 — YALNIZ UI metinleri locale-aware. Arama action'ı,
+   debounce, sonuç mantığı ve `variant` sistemi DEĞİŞMEDİ. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 /* ===============================================================
    🛡️ VILLA SEARCH BOX — paylaşılan canlı arama (header + hero)
@@ -36,13 +40,20 @@ type Variant = "desktop" | "mobile" | "hero" | "sticky" | "sheet";
 
 export default function VillaSearchBox({
   variant = "desktop",
-  placeholder = "Villa ara...",
+  placeholder,
   onResultNavigate,
+  locale = DEFAULT_LOCALE,
 }: {
   variant?: Variant;
+  /** 🛡️ GERİYE DÖNÜK UYUM: verilirse AYNEN kullanılır; verilmezse
+   *  locale'e göre `layout.search.placeholder`'a düşer (TR'de eski
+   *  varsayılan "Villa ara..." ile BİREBİR aynı metin). */
   placeholder?: string;
   onResultNavigate?: () => void;
+  locale?: Locale;
 }) {
+  const searchDict = getDictionary(locale).layout.search;
+  const placeholderText = placeholder ?? searchDict.placeholder;
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -190,7 +201,7 @@ export default function VillaSearchBox({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onFocus={() => setOpenSearch(true)}
-            placeholder={placeholder}
+            placeholder={placeholderText}
             className="!bg-transparent !border-0 !shadow-none outline-none w-full text-[15px] !text-[var(--color-stone-900)] placeholder:text-[var(--color-stone-400)]"
           />
         </div>
@@ -202,10 +213,10 @@ export default function VillaSearchBox({
                 <Search size={20} strokeWidth={2} aria-hidden />
               </span>
               <p className="mt-3 text-[14px] font-medium text-[var(--color-stone-700)]">
-                Villa adı ile arama yapın
+                {searchDict.emptyTitle}
               </p>
               <p className="mt-1 text-[12.5px] text-[var(--color-stone-400)] leading-relaxed">
-                Aradığınız villanın adını yazın, anında listeleyelim.
+                {searchDict.emptyBody}
               </p>
             </div>
           )}
@@ -223,10 +234,10 @@ export default function VillaSearchBox({
                 <Search size={20} strokeWidth={2} aria-hidden />
               </span>
               <p className="mt-3 text-[14px] font-medium text-[var(--color-stone-700)]">
-                Villa bulunamadı
+                {searchDict.noResultsTitle}
               </p>
               <p className="mt-1 text-[12.5px] text-[var(--color-stone-400)] leading-relaxed">
-                Farklı bir villa adı deneyin.
+                {searchDict.noResultsBody}
               </p>
             </div>
           )}
@@ -263,7 +274,7 @@ export default function VillaSearchBox({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         onFocus={() => setOpenSearch(true)}
-        placeholder={placeholder}
+        placeholder={placeholderText}
         className={inputClass}
       />
 
@@ -279,10 +290,10 @@ export default function VillaSearchBox({
           {!loading && results.length === 0 && (
             <div className="p-5 text-center text-sm text-[var(--color-stone-400)]">
               <p className="font-medium text-[var(--color-stone-600)]">
-                Sonuç bulunamadı
+                {searchDict.noResultsCompactTitle}
               </p>
               <p className="text-xs mt-1">
-                Farklı bir arama denemeye ne dersin?
+                {searchDict.noResultsCompactBody}
               </p>
             </div>
           )}

@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { ChevronUp } from "lucide-react";
+
+/* 🛡️ PHASE 11 — locale, Header/Footer ile AYNI desenle pathname'den.
+   scrollY/visibility/scrollToTop davranışına DOKUNULMADI. */
+import { localeFromPathname } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 /* ===============================================================
    🛡️ SCROLL TO TOP — floating "sayfanın başına dön" butonu
@@ -28,6 +34,8 @@ import { ChevronUp } from "lucide-react";
 const SCROLL_THRESHOLD = 400;
 
 export default function ScrollToTopButton() {
+  const pathname = usePathname();
+  const dict = getDictionary(localeFromPathname(pathname)).layout.scrollTop;
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -67,13 +75,13 @@ export default function ScrollToTopButton() {
           }
         `}
       >
-        Yukarı Çık
+        {dict.label}
       </span>
 
       <button
         type="button"
         onClick={scrollToTop}
-        aria-label="Sayfanın başına dön"
+        aria-label={dict.ariaLabel}
         className={`
           w-12 h-12 rounded-full
           flex items-center justify-center

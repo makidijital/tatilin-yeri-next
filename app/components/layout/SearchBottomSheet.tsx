@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 
 import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
+/* 🛡️ PHASE 11 — locale BottomNav'dan prop ile gelir (ekstra hook YOK). */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 /* ===============================================================
    🛡️ SEARCH BOTTOM SHEET — MOBİL villa-adı arama (Apple/Airbnb kalitesi)
@@ -31,10 +34,14 @@ import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
 export default function SearchBottomSheet({
   open,
   onClose,
+  locale = DEFAULT_LOCALE,
 }: {
   open: boolean;
   onClose: () => void;
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
+  const searchDict = dict.layout.search;
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const [kbOffset, setKbOffset] = useState(0);
 
@@ -123,7 +130,7 @@ export default function SearchBottomSheet({
       {/* Backdrop — koyu + hafif blur; tıklayınca kapanır. */}
       <button
         type="button"
-        aria-label="Aramayı kapat"
+        aria-label={searchDict.closeBackdropAriaLabel}
         tabIndex={open ? 0 : -1}
         onClick={onClose}
         className={
@@ -138,7 +145,7 @@ export default function SearchBottomSheet({
         ref={sheetRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Villa ara"
+        aria-label={searchDict.dialogAriaLabel}
         style={{
           transform: open
             ? `translateY(-${kbOffset}px)`
@@ -160,12 +167,12 @@ export default function SearchBottomSheet({
           <div className="mx-auto h-1 w-10 rounded-full bg-[var(--color-stone-200)]" />
           <div className="mt-3 mb-1 flex items-center justify-between">
             <h2 className="text-[15px] font-semibold text-[var(--color-stone-900)] tracking-tight">
-              Villa Ara
+              {searchDict.sheetTitle}
             </h2>
             <button
               type="button"
               onClick={onClose}
-              aria-label="Kapat"
+              aria-label={dict.common.close}
               className="inline-flex items-center justify-center h-9 w-9 rounded-full text-[var(--color-stone-500)] hover:bg-[var(--color-sand-50)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/40 transition-colors"
             >
               <X size={18} strokeWidth={2} aria-hidden />
@@ -179,8 +186,9 @@ export default function SearchBottomSheet({
         <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-2 pb-4">
           <VillaSearchBox
             variant="sheet"
-            placeholder="Villa adı ile ara..."
+            placeholder={searchDict.sheetPlaceholder}
             onResultNavigate={onClose}
+            locale={locale}
           />
         </div>
       </div>

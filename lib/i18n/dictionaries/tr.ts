@@ -458,4 +458,41 @@ export const tr: Dictionary = {
       12: "Aralık",
     },
   },
+  layout: {
+    bottomNav: {
+      ariaLabel: "Alt gezinme",
+      search: "Arama",
+      searchAriaLabel: "Villa ara",
+      offer: "Öneri Al",
+    },
+    search: {
+      sheetTitle: "Villa Ara",
+      dialogAriaLabel: "Villa ara",
+      closeBackdropAriaLabel: "Aramayı kapat",
+      placeholder: "Villa ara...",
+      sheetPlaceholder: "Villa adı ile ara...",
+      emptyTitle: "Villa adı ile arama yapın",
+      emptyBody: "Aradığınız villanın adını yazın, anında listeleyelim.",
+      noResultsTitle: "Villa bulunamadı",
+      noResultsBody: "Farklı bir villa adı deneyin.",
+      noResultsCompactTitle: "Sonuç bulunamadı",
+      noResultsCompactBody: "Farklı bir arama denemeye ne dersin?",
+    },
+    cookie: {
+      ariaLabel: "Çerez bilgilendirmesi",
+      message:
+        "Bu site deneyiminizi geliştirmek için çerezler kullanmaktadır.",
+      details: "Detaylar",
+      accept: "Kabul Et",
+    },
+    scrollTop: {
+      label: "Yukarı Çık",
+      ariaLabel: "Sayfanın başına dön",
+    },
+    floatingSocial: {
+      ariaLabel: "Hızlı iletişim",
+      call: "Hemen Ara",
+      whatsapp: "WhatsApp'tan Yaz",
+    },
+  },
 };

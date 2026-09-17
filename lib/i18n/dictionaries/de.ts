@@ -446,4 +446,42 @@ export const de: Dictionary = {
       12: "Dezember",
     },
   },
+  layout: {
+    bottomNav: {
+      ariaLabel: "Untere Navigation",
+      search: "Suche",
+      searchAriaLabel: "Villen suchen",
+      offer: "Vorschlag erhalten",
+    },
+    search: {
+      sheetTitle: "Villen suchen",
+      dialogAriaLabel: "Villen suchen",
+      closeBackdropAriaLabel: "Suche schließen",
+      placeholder: "Villen suchen...",
+      sheetPlaceholder: "Nach Villenname suchen...",
+      emptyTitle: "Nach Villenname suchen",
+      emptyBody:
+        "Geben Sie den Villennamen ein — wir listen sofort auf.",
+      noResultsTitle: "Keine Villen gefunden",
+      noResultsBody: "Versuchen Sie einen anderen Villennamen.",
+      noResultsCompactTitle: "Keine Ergebnisse",
+      noResultsCompactBody: "Wie wäre es mit einer anderen Suche?",
+    },
+    cookie: {
+      ariaLabel: "Cookie-Hinweis",
+      message:
+        "Diese Website verwendet Cookies, um Ihr Erlebnis zu verbessern.",
+      details: "Details",
+      accept: "Akzeptieren",
+    },
+    scrollTop: {
+      label: "Nach oben",
+      ariaLabel: "Zum Seitenanfang",
+    },
+    floatingSocial: {
+      ariaLabel: "Schnellkontakt",
+      call: "Jetzt anrufen",
+      whatsapp: "Per WhatsApp schreiben",
+    },
+  },
 };

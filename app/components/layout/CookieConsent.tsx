@@ -16,10 +16,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+/* 🛡️ PHASE 11 — locale, Header/Footer ile AYNI desenle pathname'den
+   türetilir. Consent/localStorage davranışına DOKUNULMADI. */
+import { localeFromPathname } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 const STORAGE_KEY = "cookie_consent";
 
 export default function CookieConsent() {
+  const pathname = usePathname();
+  const dict = getDictionary(localeFromPathname(pathname)).layout.cookie;
   const [visible, setVisible] = useState(false);
 
   /* Mount sonrası: consent yoksa göster. try/catch fail-safe. */
@@ -53,7 +61,7 @@ export default function CookieConsent() {
   return (
     <div
       role="region"
-      aria-label="Çerez bilgilendirmesi"
+      aria-label={dict.ariaLabel}
       className="
         fixed inset-x-0 bottom-0 z-50
         px-4 pb-4 pointer-events-none
@@ -71,7 +79,7 @@ export default function CookieConsent() {
         "
       >
         <p className="text-[13px] leading-relaxed text-[var(--color-stone-700,#44403c)] flex-1">
-          Bu site deneyiminizi geliştirmek için çerezler kullanmaktadır.
+          {dict.message}
         </p>
         <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
           <Link
@@ -86,7 +94,7 @@ export default function CookieConsent() {
               transition-colors motion-reduce:transition-none
             "
           >
-            Detaylar
+            {dict.details}
           </Link>
           <button
             type="button"
@@ -103,7 +111,7 @@ export default function CookieConsent() {
               flex-1 sm:flex-none
             "
           >
-            Kabul Et
+            {dict.accept}
           </button>
         </div>
       </div>

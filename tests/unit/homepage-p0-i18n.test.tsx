@@ -212,7 +212,7 @@ describe("3) home.reviews — buton + accessibility metinleri", () => {
       "app/components/home/HomepageReviewsSection.tsx",
       "utf-8"
     );
-    expect(src).toMatch(/<ReviewsCarousel[^>]*locale=\{locale\}/s);
+    expect(src).toMatch(/<ReviewsCarousel[\s\S]*?locale=\{locale\}/);
   });
 });
 
