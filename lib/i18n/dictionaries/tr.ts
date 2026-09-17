@@ -41,6 +41,10 @@ export const tr: Dictionary = {
     support: "Destek",
     menuOpen: "Menüyü aç",
     menuClose: "Menüyü kapat",
+    /* 🛡️ TopBar — TR değerleri ESKİ hardcoded metinlerin BİREBİR
+       kopyasıdır; render çıktısı byte-identical. */
+    supportBadge: "7/24 Destek",
+    agencyCredential: "TURSAB A Grubu Acenta · Belge No: {no}",
   },
   footer: {
     explore: "Keşfet",

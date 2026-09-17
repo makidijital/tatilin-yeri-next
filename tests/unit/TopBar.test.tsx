@@ -24,6 +24,12 @@
    =============================================================== */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
+
+import { tr } from "@/lib/i18n/dictionaries/tr";
+import { en } from "@/lib/i18n/dictionaries/en";
+import { de } from "@/lib/i18n/dictionaries/de";
 import {
   render,
   screen,
@@ -441,5 +447,243 @@ describe("TopBar — Phase 10C dil değiştirici", () => {
       "href",
       "/en/kiralik-villa/test"
     );
+  });
+
+  /* ═══════════════════════════════════════════════════════════════
+     29-40) STATİK METİN ÇOKLU DİLİ (TR/EN/DE)
+     ═══════════════════════════════════════════════════════════════
+     TopBar'ın hardcoded TR metinleri MEVCUT `header` namespace'ine
+     taşındı (yeni namespace/provider/hook YOK). Marka adı "Costeralla
+     Travel" ÖZEL İSİM olduğu için ÇEVRİLMEZ; sosyal medya etiketleri
+     (Instagram/Facebook/...) de marka adıdır. */
+
+  /** Belirtilen path + multilingual bayrağı ile TopBar'ı mount eder. */
+  async function mountAt(pathname: string, multilingual = true) {
+    usePathnameMock.mockReturnValue(pathname);
+    getPublicSettingsMock.mockResolvedValue(
+      settingsWith({ multilingual_enabled: multilingual })
+    );
+    render(<TopBar />);
+    await screen.findByText("Costeralla Travel");
+  }
+
+  it("29) TR ('/') → '7/24 Destek' ve TR belge satırı BİREBİR (regresyon)", async () => {
+    await mountAt("/");
+    expect(screen.getByText("7/24 Destek")).toBeInTheDocument();
+    expect(
+      screen.getByText("TURSAB A Grubu Acenta · Belge No: 13303")
+    ).toBeInTheDocument();
+  });
+
+  it("29b) TR alt sayfada da ('/kiralik-villalar') TR metinler", async () => {
+    await mountAt("/kiralik-villalar");
+    expect(screen.getByText("7/24 Destek")).toBeInTheDocument();
+  });
+
+  it("30) EN ('/en') → '24/7 Support' + EN belge satırı", async () => {
+    await mountAt("/en");
+    expect(screen.getByText("24/7 Support")).toBeInTheDocument();
+    expect(
+      screen.getByText("TURSAB Group A Agency · License No: 13303")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("7/24 Destek")).not.toBeInTheDocument();
+  });
+
+  it("31) DE ('/de') → '24/7 Support' + DE belge satırı", async () => {
+    await mountAt("/de");
+    expect(screen.getByText("24/7 Support")).toBeInTheDocument();
+    expect(
+      screen.getByText("TURSAB Agentur der Gruppe A · Lizenznr.: 13303")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("7/24 Destek")).not.toBeInTheDocument();
+  });
+
+  it("32) EN/DE alt sayfalarda da locale'e göre çözülür", async () => {
+    await mountAt("/en/kiralik-villa/test");
+    expect(screen.getByText("24/7 Support")).toBeInTheDocument();
+    cleanup();
+    await mountAt("/de/arama");
+    expect(
+      screen.getByText("TURSAB Agentur der Gruppe A · Lizenznr.: 13303")
+    ).toBeInTheDocument();
+  });
+
+  it("33) MARKA ADI hiçbir dilde çevrilmez (özel isim)", async () => {
+    for (const p of ["/", "/en", "/de"]) {
+      await mountAt(p);
+      expect(screen.getByText("Costeralla Travel")).toBeInTheDocument();
+      cleanup();
+    }
+  });
+
+  it("34) SOSYAL MEDYA etiketleri marka adıdır — çevrilmez", async () => {
+    await mountAt("/de");
+    for (const label of ["Instagram", "Facebook", "WhatsApp", "YouTube"]) {
+      expect(screen.getByLabelText(label)).toBeInTheDocument();
+    }
+  });
+
+  it("35) multilingual KAPALI + TR → metinler BİREBİR eskisi gibi", async () => {
+    await mountAt("/", false);
+    expect(screen.getByText("7/24 Destek")).toBeInTheDocument();
+    expect(
+      screen.getByText("TURSAB A Grubu Acenta · Belge No: 13303")
+    ).toBeInTheDocument();
+    /* Dil değiştirici görünmez (mevcut davranış DEĞİŞMEDİ). */
+    expect(screen.queryByLabelText(LANGUAGE_LABEL.tr)).not.toBeInTheDocument();
+  });
+
+  it("36) belge NUMARASI üç dilde de AYNI (yalnız etiket çevrilir)", async () => {
+    for (const p of ["/", "/en", "/de"]) {
+      await mountAt(p);
+      expect(screen.getByText(/13303/)).toBeInTheDocument();
+      expect(screen.getByText(/TURSAB/)).toBeInTheDocument();
+      cleanup();
+    }
+  });
+
+  it("37) EN metinleri ile locale switch query koruması BİRLİKTE çalışır", async () => {
+    usePathnameMock.mockReturnValue("/en/arama");
+    useSearchParamsMock.mockReturnValue(new URLSearchParams(ARAMA_QUERY));
+    getPublicSettingsMock.mockResolvedValue(
+      settingsWith({ multilingual_enabled: true })
+    );
+    render(<TopBar />);
+    await screen.findByText("24/7 Support");
+    fireEvent.click(screen.getByLabelText(LANGUAGE_LABEL.en));
+    expect(screen.getByRole("option", { name: "DE" })).toHaveAttribute(
+      "href",
+      `/de/arama?${ARAMA_QUERY}`
+    );
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   38-42) DICTIONARY BÜTÜNLÜĞÜ + SOURCE-LOCK
+   ═══════════════════════════════════════════════════════════════ */
+describe("TopBar — dictionary bütünlüğü ve source-lock", () => {
+  const TOPBAR_SRC = "app/components/layout/TopBar.tsx";
+
+  /** Yorumları temizler — source-lock YALNIZ koda bakmalı. */
+  function stripComments(src: string): string {
+    const out: string[] = [];
+    let i = 0;
+    const n = src.length;
+    let state: "code" | "block" | "line" = "code";
+    while (i < n) {
+      const ch = src[i];
+      if (state === "code") {
+        if (src.startsWith("/*", i)) {
+          state = "block";
+          i += 2;
+          continue;
+        }
+        if (src.startsWith("//", i)) {
+          state = "line";
+          i += 2;
+          continue;
+        }
+        if (ch === '"' || ch === "'" || ch === "`") {
+          const q = ch;
+          out.push(ch);
+          i += 1;
+          while (i < n) {
+            if (src[i] === "\\") {
+              out.push(src[i]);
+              if (i + 1 < n) out.push(src[i + 1]);
+              i += 2;
+              continue;
+            }
+            out.push(src[i]);
+            if (src[i] === q) {
+              i += 1;
+              break;
+            }
+            i += 1;
+          }
+          continue;
+        }
+        out.push(ch);
+        i += 1;
+        continue;
+      }
+      if (state === "block") {
+        if (src.startsWith("*/", i)) {
+          state = "code";
+          i += 2;
+          continue;
+        }
+        out.push(ch === "\n" ? "\n" : " ");
+        i += 1;
+        continue;
+      }
+      if (ch === "\n") {
+        state = "code";
+        out.push("\n");
+        i += 1;
+        continue;
+      }
+      out.push(" ");
+      i += 1;
+    }
+    return out.join("");
+  }
+
+  const code = stripComments(
+    fs.readFileSync(path.join(process.cwd(), TOPBAR_SRC), "utf-8")
+  );
+
+  it("38) TR değerleri ESKİ hardcoded metinlerle BİREBİR", () => {
+    expect(tr.header.supportBadge).toBe("7/24 Destek");
+    expect(tr.header.agencyCredential).toBe(
+      "TURSAB A Grubu Acenta · Belge No: {no}"
+    );
+  });
+
+  it("39) yeni key'ler TR/EN/DE'de MEVCUT ve dolu", () => {
+    for (const [name, d] of [
+      ["tr", tr],
+      ["en", en],
+      ["de", de],
+    ] as const) {
+      for (const k of ["supportBadge", "agencyCredential"] as const) {
+        expect(typeof d.header[k], `${name}.${k}`).toBe("string");
+        expect(d.header[k].trim().length, `${name}.${k}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("40) `{no}` placeholder üç dilde de KORUNUYOR", () => {
+    for (const d of [tr, en, de]) {
+      expect(d.header.agencyCredential).toContain("{no}");
+      /* Numara çeviri metnine GÖMÜLMEZ (tek kaynak component'te). */
+      expect(d.header.agencyCredential).not.toContain("13303");
+    }
+  });
+
+  it("41) EN'de Türkçe karakter yok; DE'de Türkçeye ÖZGÜ karakter yok", () => {
+    for (const k of ["supportBadge", "agencyCredential"] as const) {
+      expect(/[çÇğĞıİöÖşŞüÜ]/.test(en.header[k]), `en.${k}`).toBe(false);
+      expect(/[çÇğĞıİşŞ]/.test(de.header[k]), `de.${k}`).toBe(false);
+    }
+  });
+
+  it("42) SOURCE-LOCK — TopBar kodunda hardcoded TR metin KALMADI", () => {
+    for (const s of [
+      "7/24 Destek",
+      "TURSAB A Grubu Acenta",
+      "Belge No",
+      "Destek",
+    ]) {
+      expect(code.includes(s), s).toBe(false);
+    }
+    /* Dictionary üzerinden okunuyor. */
+    expect(code.includes("dictionary.header.supportBadge")).toBe(true);
+    expect(code.includes("dictionary.header.agencyCredential")).toBe(true);
+  });
+
+  it("43) marka adı ve belge numarası KODDA kalır (çeviri kapsamı dışı)", () => {
+    expect(code.includes("Costeralla Travel")).toBe(true);
+    expect(code.includes("13303")).toBe(true);
   });
 });

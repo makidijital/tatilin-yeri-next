@@ -38,6 +38,9 @@ export const en: Dictionary = {
     support: "Support",
     menuOpen: "Open menu",
     menuClose: "Close menu",
+    /* 🛡️ TopBar statik metinleri. */
+    supportBadge: "24/7 Support",
+    agencyCredential: "TURSAB Group A Agency · License No: {no}",
   },
   footer: {
     explore: "Explore",

@@ -94,6 +94,16 @@ export type Dictionary = {
     support: string;
     menuOpen: string;
     menuClose: string;
+    /* 🛡️ TopBar (app/components/layout/TopBar.tsx) statik metinleri.
+       TopBar header alanının bir parçası olduğu için AYRI bir namespace
+       AÇILMADI — mevcut `header` genişletildi. */
+    /** SOL blok rozeti — "7/24 Destek" (md+ görünür). */
+    supportBadge: string;
+    /** ORTA blok 2. satır — `formatDictionaryString` ile `{no}`
+     *  (belge numarası component'te sabit; TURSAB ÖZEL İSİM, çevrilmez).
+     *  ⚠️ Marka adı "Costeralla Travel" ÖZEL İSİMDİR ve dictionary'ye
+     *  ALINMADI — hiçbir dilde çevrilmez. */
+    agencyCredential: string;
   };
   footer: {
     explore: string;

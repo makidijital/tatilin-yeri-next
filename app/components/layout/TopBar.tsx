@@ -38,10 +38,19 @@ import {
   type Locale,
 } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+/* 🛡️ TopBar statik metinleri — `{no}` gibi token'lar MEVCUT helper ile
+   doldurulur (yeni bir i18n mekanizması EKLENMEDİ). */
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import { getLocaleSwitchTargets } from "@/lib/i18n/locale-switch.helper";
 
 /* 🛡️ Para birimi seçenekleri — bayraklar LOCAL SVG asset (public/flags).
    Emoji yerine OS-bağımsız render (Windows'ta da görünür). DEĞİŞMEDİ. */
+/* 🛡️ TURSAB belge numarası — ÖNCEDEN de bu dosyada HARDCODED'di
+   (settings şemasına dokunulmadı). Çeviri metninden AYRI tutulur ki
+   numara üç dilde tekrarlanmasın; `header.agencyCredential`'ın `{no}`
+   token'ına enjekte edilir. */
+const TURSAB_LICENSE_NO = "13303";
+
 const CURRENCY_OPTIONS: { code: string; flag: string }[] = [
   { code: "TRY", flag: "/flags/tr.svg" },
   { code: "USD", flag: "/flags/us.svg" },
@@ -361,7 +370,7 @@ export default function TopBar() {
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#ED7926]" />
           </span>
           <span className="font-medium tracking-[0.14em] uppercase text-[11.5px] whitespace-nowrap">
-            7/24 Destek
+            {dictionary.header.supportBadge}
           </span>
         </div>
 
@@ -429,7 +438,9 @@ export default function TopBar() {
               mt-0.5
             "
           >
-            TURSAB A Grubu Acenta · Belge No: 13303
+            {formatDictionaryString(dictionary.header.agencyCredential, {
+              no: TURSAB_LICENSE_NO,
+            })}
           </span>
 
           {/* Işıltı — çok hafif, yavaş (4s) ışık geçişi. Mevcut globals.css
