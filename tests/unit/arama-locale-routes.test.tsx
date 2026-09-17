@@ -25,6 +25,7 @@ import { en } from "@/lib/i18n/dictionaries/en";
 import { de } from "@/lib/i18n/dictionaries/de";
 import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
 import { PUBLIC_SORT_LABELS } from "@/lib/pagination";
+import { resolveTaxonomyName } from "@/lib/i18n/taxonomy-name.helper";
 
 /* ---------------- mock katmanı ---------------- */
 const requirePublicLocaleEnabledMock = vi.fn();
@@ -50,6 +51,19 @@ import AramaPageBody from "@/app/components/search/AramaPageBody";
 import FilterSidebar from "@/app/(public)/arama/FilterSidebar";
 
 /* ---------------- helpers ---------------- */
+/** `clickPanelButton`'ın describe-dışı ikizi (aynı ayırt etme kuralı). */
+function clickPanelButtonGlobal(label: string) {
+  const btn = screen
+    .getAllByText(label)
+    .map((el) => el.closest("button"))
+    .find(
+      (b): b is HTMLButtonElement =>
+        !!b && b.getAttribute("aria-haspopup") !== "dialog"
+    );
+  expect(btn, `panel button: ${label}`).toBeTruthy();
+  fireEvent.click(btn!);
+}
+
 function readSrc(rel: string): string {
   return fs.readFileSync(path.join(process.cwd(), rel), "utf-8");
 }
@@ -506,6 +520,86 @@ describe("Phase 13 — FilterSidebar locale", () => {
 });
 
 /* ===============================================================
+   E2) VİLLA TİPİ ADI — LOCALE-AWARE LABEL
+   =============================================================== */
+describe("Villa tipi adı locale-aware", () => {
+  const OPTS = [
+    { id: "r1", name: "Kalkan", slug: "kalkan", show_in_filter: true },
+  ];
+  const INITIAL = {
+    regions: [] as string[],
+    categories: [] as string[],
+    start: null,
+    end: null,
+    guests: 1,
+  };
+
+  it("32) resolveTaxonomyName: TR canonical · EN/DE çeviri · eksikte TR fallback", () => {
+    const canonical = "Müstakil Villa";
+    const byLocale = { en: "Detached Villa", de: "Freistehende Villa" };
+
+    expect(resolveTaxonomyName(canonical, byLocale, "tr")).toBe(canonical);
+    expect(resolveTaxonomyName(canonical, byLocale, "en")).toBe(
+      "Detached Villa"
+    );
+    expect(resolveTaxonomyName(canonical, byLocale, "de")).toBe(
+      "Freistehende Villa"
+    );
+    /* DE çevirisi yoksa → canonical TR */
+    expect(resolveTaxonomyName(canonical, { en: "Detached Villa" }, "de")).toBe(
+      canonical
+    );
+    /* Boş/whitespace çeviri → canonical TR */
+    expect(resolveTaxonomyName(canonical, { en: "   " }, "en")).toBe(canonical);
+    /* TR'de harita dolu olsa bile ASLA çevrilmez */
+    expect(resolveTaxonomyName(canonical, byLocale, "tr")).toBe(canonical);
+  });
+
+  it.each([
+    ["tr", "Müstakil Villa"],
+    ["en", "Detached Villa"],
+    ["de", "Freistehende Villa"],
+  ] as const)(
+    "33) FilterSidebar /%s → çözülmüş tip adını gösterir",
+    (loc, expected) => {
+      /* Server tarafı `sidebarCategoryOptions`'ı çözüp geçirir; burada
+         sidebar'ın verilen `name`'i AYNEN gösterdiği doğrulanır. */
+      render(
+        <FilterSidebar
+          regionOptions={OPTS}
+          categoryOptions={[{ id: "t1", name: expected, slug: "mustakil" }]}
+          initial={INITIAL}
+          locale={loc}
+          basePath={loc === "tr" ? "/arama" : `/${loc}/arama`}
+        />
+      );
+      expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
+    }
+  );
+
+  it("34) tip SLUG'ı çevrilmez — seçim/URL canonical kalır", async () => {
+    render(
+      <FilterSidebar
+        regionOptions={OPTS}
+        categoryOptions={[
+          { id: "t1", name: "Detached Villa", slug: "mustakil-villa" },
+        ]}
+        initial={INITIAL}
+        locale="en"
+        basePath="/en/arama"
+      />
+    );
+    fireEvent.click(screen.getAllByText("Detached Villa")[0]);
+    clickPanelButtonGlobal(en.search.filters.apply);
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    /* Görünen ad EN, ama URL token canonical TR slug'ı. */
+    expect(pushMock.mock.calls[0][0]).toBe(
+      "/en/arama?villa-turleri=mustakil-villa"
+    );
+  });
+});
+
+/* ===============================================================
    F) SOURCE-LOCK
    =============================================================== */
 describe("Phase 13 — source-lock", () => {
@@ -591,6 +685,19 @@ describe("Phase 13 — source-lock", () => {
     ]) {
       expect(body.includes(token), token).toBe(true);
     }
+  });
+
+  it("30b) villa tipi adı MEVCUT iki helper ile çözülüyor (yeni sistem YOK)", () => {
+    const body = stripComments(readSrc(BODY_SRC));
+    expect(body).toContain("getVillaTypeNamesByLocale");
+    expect(body).toContain("resolveTaxonomyName");
+    /* TR'de çeviri sorgusu atılmaz. */
+    expect(body).toContain("locale !== DEFAULT_LOCALE");
+    /* Sidebar AYRI kopyayı alır; canonical dizi filtre mantığında kalır. */
+    expect(body).toContain("categoryOptions={sidebarCategoryOptions}");
+    expect(body).toContain("resolveTokens(categoryTokensRaw, categoryOptions)");
+    /* Bölge adları çevrilmez (Phase 10I). */
+    expect(body).toContain("regionOptions={regionOptions}");
   });
 
   it("31) VillaCard'a locale geçiliyor", () => {

@@ -29,6 +29,14 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
 import type { Dictionary } from "@/lib/i18n/dictionaries/types";
+/* 🛡️ VİLLA TİPİ ADI (EN/DE) — `loadHeroFilters` (Phase 11 P0) ve
+   `VillaTypeCarousel` ile AYNI, ZATEN VAR OLAN iki helper. Yeni
+   translation sistemi / DB katmanı YAZILMADI. */
+import { getVillaTypeNamesByLocale } from "@/lib/i18n/get-villa-type-translations.server";
+import {
+  resolveTaxonomyName,
+  type TaxonomyNameByLocale,
+} from "@/lib/i18n/taxonomy-name.helper";
 
 type SearchDictionary = Dictionary["search"];
 
@@ -875,6 +883,38 @@ export default async function AramaPageBody({
         )
       : null;
 
+  /* ===============================================================
+     🛡️ VİLLA TİPİ ADI — SIDEBAR GÖRÜNÜMÜ İÇİN LOCALE-AWARE
+     ===============================================================
+     `loadHeroFilters` ile BİREBİR AYNI desen:
+       • locale === "tr" → çeviri sorgusu HİÇ atılmaz; TR davranışı
+         ve sorgu sayısı BİREBİR eskisi gibi.
+       • EN/DE → `getVillaTypeNamesByLocale` (TEK batch `.in()`
+         sorgusu, N+1 YOK) + `resolveTaxonomyName` (çeviri yoksa
+         canonical TR adına düşer). Hata → `{}` → TR fallback.
+
+     ⚠️ YALNIZ GÖRÜNEN `name` değişir. Canonical `categoryOptions`
+     dizisine DOKUNULMAZ — `resolveTokens` (slug→id), URL token
+     üretimi, `.in("type_id", …)` filtresi, sıralama ve seçim
+     davranışı DEĞİŞMEZ; sidebar'a ayrı bir kopya geçer.
+     ⚠️ BÖLGELER çevrilmez (Phase 10I: özel isim → canonical).
+     =============================================================== */
+  let sidebarCategoryOptions = categoryOptions;
+  if (locale !== DEFAULT_LOCALE && categoryOptions.length > 0) {
+    const typeNameByLocale: Record<string, TaxonomyNameByLocale> =
+      await getVillaTypeNamesByLocale(
+        categoryOptions.map((t) => String(t.id))
+      ).catch(() => ({}));
+    sidebarCategoryOptions = categoryOptions.map((t) => ({
+      ...t,
+      name: resolveTaxonomyName(
+        t.name,
+        typeNameByLocale[String(t.id)],
+        locale
+      ),
+    }));
+  }
+
   /* Sidebar initial state — server'dan client'a tek seferde geçer.
      Çocuk Sayısı UI breakdown'u client'ta yapılır (URL semantic'i
      `guests` tek bir toplamı tutar — yeni source yaratılmaz). */
@@ -990,7 +1030,7 @@ export default async function AramaPageBody({
           {/* SIDEBAR — client island (URL = source-of-truth) */}
           <FilterSidebar
             regionOptions={regionOptions}
-            categoryOptions={categoryOptions}
+            categoryOptions={sidebarCategoryOptions}
             initial={sidebarInitial}
             resultCount={total}
             /* 🛡️ PHASE 13 — locale + hedef path. `mode` default
