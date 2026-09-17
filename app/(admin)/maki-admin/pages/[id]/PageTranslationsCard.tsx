@@ -224,30 +224,64 @@ export default function PageTranslationsCard({ pageId, pageTitle }: Props) {
         </div>
       ) : (
         <div className="space-y-5">
-          <div>
-            <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              Başlık
-            </label>
-            <input
-              aria-label={`${LOCALE_LABELS[activeLocale]} başlık`}
-              className="input"
-              maxLength={200}
-              value={form.title}
-              onChange={(e) => setField("title", e.target.value)}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
+                Başlık
+              </label>
+              <input
+                aria-label={`${LOCALE_LABELS[activeLocale]} başlık`}
+                className="input"
+                maxLength={200}
+                value={form.title}
+                onChange={(e) => setField("title", e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
+                SEO Başlık
+              </label>
+              <input
+                aria-label={`${LOCALE_LABELS[activeLocale]} SEO başlık`}
+                className="input"
+                maxLength={120}
+                value={form.seoTitle}
+                onChange={(e) => setField("seoTitle", e.target.value)}
+              />
+              <p className="mt-1 text-xs text-[var(--color-stone-400)]">
+                Önerilen: 60 karakter
+              </p>
+            </div>
           </div>
 
-          <div>
-            <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              Kısa açıklama (excerpt)
-            </label>
-            <textarea
-              aria-label={`${LOCALE_LABELS[activeLocale]} kısa açıklama`}
-              className="input !rounded-2xl !p-4 min-h-[90px] resize-none"
-              maxLength={300}
-              value={form.excerpt}
-              onChange={(e) => setField("excerpt", e.target.value)}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
+                Kısa açıklama (excerpt)
+              </label>
+              <textarea
+                aria-label={`${LOCALE_LABELS[activeLocale]} kısa açıklama`}
+                className="input !rounded-2xl !p-4 min-h-[90px] resize-none"
+                maxLength={300}
+                value={form.excerpt}
+                onChange={(e) => setField("excerpt", e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
+                SEO Açıklama
+              </label>
+              <textarea
+                aria-label={`${LOCALE_LABELS[activeLocale]} SEO açıklama`}
+                className="input !rounded-2xl !p-4 min-h-[90px] resize-none"
+                maxLength={300}
+                value={form.seoDescription}
+                onChange={(e) => setField("seoDescription", e.target.value)}
+              />
+              <p className="mt-1 text-xs text-[var(--color-stone-400)]">
+                Önerilen: 160 karakter
+              </p>
+            </div>
           </div>
 
           <div>
@@ -261,38 +295,6 @@ export default function PageTranslationsCard({ pageId, pageTitle }: Props) {
               value={form.body}
               onChange={(e) => setField("body", e.target.value)}
             />
-          </div>
-
-          <div>
-            <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              SEO Başlık
-            </label>
-            <input
-              aria-label={`${LOCALE_LABELS[activeLocale]} SEO başlık`}
-              className="input"
-              maxLength={120}
-              value={form.seoTitle}
-              onChange={(e) => setField("seoTitle", e.target.value)}
-            />
-            <p className="mt-1 text-xs text-[var(--color-stone-400)]">
-              Önerilen: 60 karakter
-            </p>
-          </div>
-
-          <div>
-            <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              SEO Açıklama
-            </label>
-            <textarea
-              aria-label={`${LOCALE_LABELS[activeLocale]} SEO açıklama`}
-              className="input !rounded-2xl !p-4 min-h-[90px] resize-none"
-              maxLength={300}
-              value={form.seoDescription}
-              onChange={(e) => setField("seoDescription", e.target.value)}
-            />
-            <p className="mt-1 text-xs text-[var(--color-stone-400)]">
-              Önerilen: 160 karakter
-            </p>
           </div>
 
           <button

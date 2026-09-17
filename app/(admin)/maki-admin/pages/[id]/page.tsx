@@ -347,7 +347,7 @@ export default function EditPagePage() {
   const coverUrl = getPageCoverPublicUrl(coverPath);
 
   return (
-    <div className="space-y-6 max-w-3xl w-full">
+    <div className="space-y-6 w-full">
       <Link
         href="/maki-admin/pages"
         className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)]"
@@ -384,39 +384,40 @@ export default function EditPagePage() {
       >
         {/* BASIC */}
         <div className="card-premium p-6 md:p-7 space-y-5">
-          <div className="space-y-1.5">
-            <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              {pagesDict.form.fieldTitle}
-            </label>
-            <input
-              className="input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={loading}
-              placeholder={pagesDict.form.titlePlaceholder}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              {pagesDict.form.fieldSlug}
-            </label>
-            <input
-              className="input font-mono text-sm"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              disabled={loading}
-            />
-            <p className="text-xs text-[var(--color-stone-400)]">
-              URL: <span className="font-mono">/p/{slug || "slug"}</span>
-            </p>
-            {slugChanged && (
-              <p className="text-xs text-amber-600">
-                {formatDictionaryString(pagesDict.form.slugChangedWarning, {
-                  url: `/p/${originalSlug}`,
-                })}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
+                {pagesDict.form.fieldTitle}
+              </label>
+              <input
+                className="input"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={loading}
+                placeholder={pagesDict.form.titlePlaceholder}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
+                {pagesDict.form.fieldSlug}
+              </label>
+              <input
+                className="input font-mono text-sm"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                disabled={loading}
+              />
+              <p className="text-xs text-[var(--color-stone-400)]">
+                URL: <span className="font-mono">/p/{slug || "slug"}</span>
               </p>
-            )}
+              {slugChanged && (
+                <p className="text-xs text-amber-600">
+                  {formatDictionaryString(pagesDict.form.slugChangedWarning, {
+                    url: `/p/${originalSlug}`,
+                  })}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -516,27 +517,29 @@ export default function EditPagePage() {
           <p className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)]">
             SEO
           </p>
-          <div className="space-y-1.5">
-            <label className="text-[12px] text-[var(--color-stone-500)] block">
-              {pagesDict.form.seoTitleLabel}
-            </label>
-            <input
-              className="input text-sm"
-              value={seoTitle}
-              onChange={(e) => setSeoTitle(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[12px] text-[var(--color-stone-500)] block">
-              {pagesDict.form.seoDescriptionLabel}
-            </label>
-            <textarea
-              className="input !rounded-2xl !p-4 h-20 resize-none leading-relaxed text-sm"
-              value={seoDescription}
-              onChange={(e) => setSeoDescription(e.target.value)}
-              disabled={loading}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <label className="text-[12px] text-[var(--color-stone-500)] block">
+                {pagesDict.form.seoTitleLabel}
+              </label>
+              <input
+                className="input text-sm"
+                value={seoTitle}
+                onChange={(e) => setSeoTitle(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[12px] text-[var(--color-stone-500)] block">
+                {pagesDict.form.seoDescriptionLabel}
+              </label>
+              <textarea
+                className="input !rounded-2xl !p-4 h-20 resize-none leading-relaxed text-sm"
+                value={seoDescription}
+                onChange={(e) => setSeoDescription(e.target.value)}
+                disabled={loading}
+              />
+            </div>
           </div>
           <label className="flex items-center gap-2 text-sm text-[var(--color-stone-700)]">
             <input
@@ -555,43 +558,44 @@ export default function EditPagePage() {
             {pagesDict.publish.heading}
           </p>
 
-          <label className="flex items-start gap-3 text-sm text-[var(--color-stone-700)]">
-            <input
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              disabled={loading}
-              className="mt-1"
-            />
-            <span>
-              <strong className="font-medium">{pagesDict.publish.published}</strong>
-              <br />
-              <span className="text-[12px] text-[var(--color-stone-500)]">
-                {formatDictionaryString(pagesDict.publish.hint, {
-                  url: `/p/${slug || "slug"}`,
-                })}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <label className="flex items-start gap-3 text-sm text-[var(--color-stone-700)]">
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                disabled={loading}
+                className="mt-1"
+              />
+              <span>
+                <strong className="font-medium">{pagesDict.publish.published}</strong>
+                <br />
+                <span className="text-[12px] text-[var(--color-stone-500)]">
+                  {formatDictionaryString(pagesDict.publish.hint, {
+                    url: `/p/${slug || "slug"}`,
+                  })}
+                </span>
               </span>
-            </span>
-          </label>
-
-          <label className="flex items-start gap-3 text-sm text-[var(--color-stone-700)]">
-            <input
-              type="checkbox"
-              checked={showInMenu}
-              onChange={(e) => setShowInMenu(e.target.checked)}
-              disabled={loading}
-              className="mt-1"
-            />
-            <span>
-              <strong className="font-medium">{pagesDict.publish.showInTopMenu}</strong>
-              <br />
-              <span className="text-[12px] text-[var(--color-stone-500)]">
-                {formatDictionaryString(pagesDict.publish.showInMenuHint, {
-                  url: `/p/${slug || "slug"}`,
-                })}
+            </label>
+            <label className="flex items-start gap-3 text-sm text-[var(--color-stone-700)]">
+              <input
+                type="checkbox"
+                checked={showInMenu}
+                onChange={(e) => setShowInMenu(e.target.checked)}
+                disabled={loading}
+                className="mt-1"
+              />
+              <span>
+                <strong className="font-medium">{pagesDict.publish.showInTopMenu}</strong>
+                <br />
+                <span className="text-[12px] text-[var(--color-stone-500)]">
+                  {formatDictionaryString(pagesDict.publish.showInMenuHint, {
+                    url: `/p/${slug || "slug"}`,
+                  })}
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
+          </div>
         </div>
 
         <div className="flex justify-end pt-2">

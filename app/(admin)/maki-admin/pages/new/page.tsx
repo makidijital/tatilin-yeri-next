@@ -419,7 +419,7 @@ export default function NewPagePage() {
   const coverUrl = getPageCoverPublicUrl(coverPath);
 
   return (
-    <div className="space-y-8 w-full max-w-4xl">
+    <div className="space-y-8 w-full">
       {/* HEADER */}
       <div>
         <p className="eyebrow">{pagesDict.list.eyebrow}</p>
@@ -434,34 +434,35 @@ export default function NewPagePage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* BASIC */}
         <div className="card-premium p-6 md:p-7 space-y-5">
-          <div className="space-y-1.5">
-            <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              {pagesDict.form.fieldTitle}
-            </label>
-            <input
-              placeholder={pagesDict.form.titlePlaceholder}
-              className="input"
-              value={title}
-              onChange={(e) => onTitleChange(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              {pagesDict.form.fieldSlug}
-            </label>
-            <input
-              placeholder={pagesDict.form.slugPlaceholder}
-              className="input font-mono text-sm"
-              value={slug}
-              onChange={(e) => {
-                setSlug(e.target.value);
-                setSlugTouched(true);
-              }}
-            />
-            <p className="text-xs text-[var(--color-stone-400)]">
-              URL: <span className="font-mono">/p/{slug || "slug"}</span>
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
+                {pagesDict.form.fieldTitle}
+              </label>
+              <input
+                placeholder={pagesDict.form.titlePlaceholder}
+                className="input"
+                value={title}
+                onChange={(e) => onTitleChange(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
+                {pagesDict.form.fieldSlug}
+              </label>
+              <input
+                placeholder={pagesDict.form.slugPlaceholder}
+                className="input font-mono text-sm"
+                value={slug}
+                onChange={(e) => {
+                  setSlug(e.target.value);
+                  setSlugTouched(true);
+                }}
+              />
+              <p className="text-xs text-[var(--color-stone-400)]">
+                URL: <span className="font-mono">/p/{slug || "slug"}</span>
+              </p>
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -747,25 +748,27 @@ export default function NewPagePage() {
           <p className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)]">
             {pagesDict.form.seoHeading}
           </p>
-          <div className="space-y-1.5">
-            <label className="text-[12px] text-[var(--color-stone-500)] block">
-              {pagesDict.form.seoTitleLabel}
-            </label>
-            <input
-              className="input text-sm"
-              value={seoTitle}
-              onChange={(e) => setSeoTitle(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[12px] text-[var(--color-stone-500)] block">
-              {pagesDict.form.seoDescriptionLabel}
-            </label>
-            <textarea
-              className="input !rounded-2xl !p-4 h-20 resize-none leading-relaxed text-sm"
-              value={seoDescription}
-              onChange={(e) => setSeoDescription(e.target.value)}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <label className="text-[12px] text-[var(--color-stone-500)] block">
+                {pagesDict.form.seoTitleLabel}
+              </label>
+              <input
+                className="input text-sm"
+                value={seoTitle}
+                onChange={(e) => setSeoTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[12px] text-[var(--color-stone-500)] block">
+                {pagesDict.form.seoDescriptionLabel}
+              </label>
+              <textarea
+                className="input !rounded-2xl !p-4 h-20 resize-none leading-relaxed text-sm"
+                value={seoDescription}
+                onChange={(e) => setSeoDescription(e.target.value)}
+              />
+            </div>
           </div>
           <label className="flex items-center gap-2 text-sm text-[var(--color-stone-700)]">
             <input
