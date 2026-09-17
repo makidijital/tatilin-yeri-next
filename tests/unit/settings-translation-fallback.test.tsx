@@ -42,6 +42,7 @@ const TRANSLATIONS: SettingsTranslationsByLocale = {
     hero_badge_text: null,
     hero_primary_cta_text: null,
     hero_secondary_cta_text: null,
+    business_hours: null,
   },
   de: {
     footer_copyright: DE_COPYRIGHT,
@@ -52,6 +53,7 @@ const TRANSLATIONS: SettingsTranslationsByLocale = {
     hero_badge_text: null,
     hero_primary_cta_text: null,
     hero_secondary_cta_text: null,
+    business_hours: null,
   },
 };
 
@@ -126,6 +128,7 @@ describe("resolveSettingsText — §6 fallback zinciri", () => {
     hero_badge_text: null,
     hero_primary_cta_text: null,
     hero_secondary_cta_text: null,
+    business_hours: null,
   },
     };
     expect(
@@ -145,6 +148,7 @@ describe("resolveSettingsText — §6 fallback zinciri", () => {
     hero_badge_text: null,
     hero_primary_cta_text: null,
     hero_secondary_cta_text: null,
+    business_hours: null,
     },
       };
       expect(
@@ -164,6 +168,7 @@ describe("resolveSettingsText — §6 fallback zinciri", () => {
     hero_badge_text: null,
     hero_primary_cta_text: null,
     hero_secondary_cta_text: null,
+    business_hours: null,
   },
     };
     expect(

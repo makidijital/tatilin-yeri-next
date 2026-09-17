@@ -37,7 +37,7 @@ export function isSettingsTranslationLocale(
 
 /* ---------------- ALAN WHITELIST'İ (TEK DOĞRULUK KAYNAĞI) ---------------- */
 
-/** 🛡️ Çeviri kapsamındaki TAM 8 alan. Migration 083 + 084 + 085 sonrası
+/** 🛡️ Çeviri kapsamındaki TAM 9 alan (migration 087 ile 8 → 9). Migration 083 + 084 + 085 sonrası
  *  `settings_translations` kolonlarıyla BİREBİR. Buraya eklenmeyen
  *  hiçbir settings alanı çeviri yoluyla yazılamaz/okunamaz (servis
  *  katmanı bu listeyi kullanır; DB şeması da zaten yalnız bu 8 kolona
@@ -49,8 +49,9 @@ export function isSettingsTranslationLocale(
  *  gösterir; o canonical alan KORUNDU ve hâlâ aktif kullanılıyor
  *  (public bakım ekranı + /maki-admin/settings/gelismis).
  *
- *  ⚠️ KAPSAM DIŞI (bilinçli): bakım modu mesajı, hero_*,
- *  business_hours, address ve TÜM canonical/teknik/secret alanlar. */
+ *  ⚠️ KAPSAM DIŞI (bilinçli): bakım modu mesajı, address ve TÜM
+ *  canonical/teknik/secret alanlar (telefon, e-posta, WhatsApp,
+ *  sosyal medya bağlantıları — bunlar VERİdir, her dilde aynıdır). */
 export const SETTINGS_TRANSLATABLE_FIELDS = [
   "footer_copyright",
   "default_meta_title",
@@ -62,6 +63,10 @@ export const SETTINGS_TRANSLATABLE_FIELDS = [
   "hero_badge_text",
   "hero_primary_cta_text",
   "hero_secondary_cta_text",
+  /* 🛡️ MIGRATION 087 — /iletisim EN/DE sürümü için "Çalışma Saatleri"
+     serbest metni. TR canonical `settings.business_hours` AYNEN kalır;
+     boş/whitespace çeviri `resolveSettingsText` ile TR'ye düşer. */
+  "business_hours",
 ] as const;
 
 export type SettingsTranslatableField =
@@ -92,6 +97,8 @@ export const SETTINGS_TRANSLATION_MAX_LEN: Record<
   hero_badge_text: 80,
   hero_primary_cta_text: 60,
   hero_secondary_cta_text: 60,
+  /* Admin Settings > İletişim'deki canonical alanla uyumlu. */
+  business_hours: 300,
 };
 
 /* ---------------- Satır / payload tipleri ---------------- */
@@ -109,6 +116,7 @@ export type SettingsTranslationRow = {
   hero_badge_text: string | null;
   hero_primary_cta_text: string | null;
   hero_secondary_cta_text: string | null;
+  business_hours: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -138,6 +146,7 @@ export function emptySettingsTranslationValues(): SettingsTranslationValues {
     hero_badge_text: null,
     hero_primary_cta_text: null,
     hero_secondary_cta_text: null,
+    business_hours: null,
   };
 }
 
@@ -155,5 +164,6 @@ export function pickSettingsTranslationValues(
     hero_badge_text: row.hero_badge_text ?? null,
     hero_primary_cta_text: row.hero_primary_cta_text ?? null,
     hero_secondary_cta_text: row.hero_secondary_cta_text ?? null,
+    business_hours: row.business_hours ?? null,
   };
 }

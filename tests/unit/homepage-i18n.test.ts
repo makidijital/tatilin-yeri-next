@@ -134,6 +134,7 @@ const HERO_SETTINGS = {
   hero_primary_cta_text: "TR Birincil",
   hero_primary_cta_href: "#kisa-sureli-firsatlar",
   hero_secondary_cta_text: "TR İkincil",
+  business_hours: null,
   hero_secondary_cta_href: "#sss",
   hero_background_image: "https://cdn.example/hero.webp",
 };
@@ -148,6 +149,7 @@ const EN_HERO: SettingsTranslationsByLocale = {
     hero_badge_text: "EN Badge",
     hero_primary_cta_text: "EN Primary",
     hero_secondary_cta_text: "EN Secondary",
+    business_hours: null,
   },
 };
 
@@ -198,6 +200,7 @@ describe("B) resolveHeroContent — locale fallback", () => {
           hero_badge_text: null,
           hero_primary_cta_text: "",
           hero_secondary_cta_text: null,
+          business_hours: null,
         },
       },
     });
@@ -455,6 +458,7 @@ describe("H) buildHomeMetadata", () => {
           hero_badge_text: null,
           hero_primary_cta_text: null,
           hero_secondary_cta_text: null,
+          business_hours: null,
         },
       },
     });

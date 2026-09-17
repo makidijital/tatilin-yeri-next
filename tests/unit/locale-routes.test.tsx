@@ -387,6 +387,40 @@ describe.each(ARCHIVE_GATE_ROUTES)("%s", (modulePath, locale, pageProps) => {
   });
 });
 
+/* 🛡️ İletişim route'ları (/iletisim): gate sözleşmesi AYNEN, içerik
+   assertion'ı ortak `ContactPageBody` + locale prop'u. Sayfa prop
+   ALMAZ (searchParams yok). */
+const CONTACT_GATE_ROUTES: Array<[string, "en" | "de"]> = [
+  ["@/app/(public)/en/iletisim/page", "en"],
+  ["@/app/(public)/de/iletisim/page", "de"],
+];
+
+describe.each(CONTACT_GATE_ROUTES)("%s", (modulePath, locale) => {
+  it(`gate geçtiğinde ortak ContactPageBody'yi locale="${locale}" ile render eder`, async () => {
+    requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
+
+    const { default: Page } = await import(modulePath);
+    const { default: ContactPageBody } = await import(
+      "@/app/components/contact/ContactPageBody"
+    );
+    const element = await Page();
+
+    expect(requirePublicLocaleEnabledMock).toHaveBeenCalledTimes(1);
+    expect(element.type).toBe(ContactPageBody);
+    expect(element.props.locale).toBe(locale);
+  });
+
+  it("gate notFound() fırlattığında sayfa bunu YUTMAZ (aynen propagate eder)", async () => {
+    requirePublicLocaleEnabledMock.mockRejectedValue(
+      new Error("NEXT_NOT_FOUND")
+    );
+
+    const { default: Page } = await import(modulePath);
+
+    await expect(Page()).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+});
+
 /* 🛡️ PHASE 10B, Section 9 — villa detay artık ComingSoon'un YERİNE
    gerçek Gallery/PriceList/AvailabilityInlineCalendar/BookingSidebar/
    MobileBookingCta render ediyor (PHASE 10B IMPLEMENTATION talimatının

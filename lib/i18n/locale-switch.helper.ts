@@ -19,7 +19,8 @@
    dosyalarını yansıtır (bkz. `app/(public)/en|de/*`):
      - "/"                  → app/(public)/en|de/page.tsx (Phase 10C stub)
      - "/arama"             → app/(public)/en|de/arama/page.tsx (ComingSoon)
-     - "/kiralik-villalar"  → app/(public)/en|de/kiralik-villalar/page.tsx (ComingSoon)
+     - "/kiralik-villalar"  → app/(public)/en|de/kiralik-villalar/page.tsx (GERÇEK içerik)
+     - "/iletisim"          → app/(public)/en|de/iletisim/page.tsx (GERÇEK içerik)
      - "/kiralik-villa/*"   → app/(public)/en|de/kiralik-villa/[slug]/page.tsx (Phase 10B, GERÇEK içerik)
      - "/rezervasyon/*"     → app/(public)/en|de/rezervasyon/[slug]/page.tsx (Phase 10B, GERÇEK içerik)
      - "/p/*"               → app/(public)/en|de/p/[slug]/page.tsx (Phase 12D, GERÇEK içerik)
@@ -41,6 +42,10 @@ const EXACT_LOCALE_ROUTED_PATHS: readonly string[] = [
   "/",
   "/arama",
   "/kiralik-villalar",
+  /* 🛡️ app/(public)/en|de/iletisim/page.tsx (GERÇEK içerik, ortak
+     `ContactPageBody`). Dosya başındaki bakım kuralı: "Yeni bir
+     /en//de route eklendiğinde bu liste GÜNCELLENMELİ". */
+  "/iletisim",
 ];
 
 /** Dinamik segment taşıyan (ör. `[slug]`) route'ların base prefix'leri.

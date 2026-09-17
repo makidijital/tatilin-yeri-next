@@ -121,7 +121,10 @@ beforeEach(() => {
 /* ================= 1) TİP/REGİSTRY ================= */
 
 describe("settings-translations.types — whitelist", () => {
-  it("1) TAM OLARAK 8 çevrilebilir alan (10M: bakım mesajı YOK · 11: hero VAR)", () => {
+  /* 🛡️ MIGRATION 087 — 8 → 9 alan. `business_hours` EKLENDİ:
+     `/iletisim` EN/DE sürümü devreye alındı, "Çalışma Saatleri"
+     serbest metni artık dile göre çözülüyor. */
+  it("1) TAM OLARAK 9 çevrilebilir alan (10M: bakım mesajı YOK · 11: hero VAR · 087: business_hours VAR)", () => {
     expect([...SETTINGS_TRANSLATABLE_FIELDS]).toEqual([
       "footer_copyright",
       "default_meta_title",
@@ -131,7 +134,16 @@ describe("settings-translations.types — whitelist", () => {
       "hero_badge_text",
       "hero_primary_cta_text",
       "hero_secondary_cta_text",
+      "business_hours",
     ]);
+  });
+
+  it("1c) `business_hours` whitelist'te; adres/telefon/e-posta ASLA girmez", () => {
+    expect(isSettingsTranslatableField("business_hours")).toBe(true);
+    /* VERİ alanları — her dilde aynı kalır. */
+    for (const field of ["address", "phone", "email", "whatsapp_link", "instagram"]) {
+      expect(isSettingsTranslatableField(field)).toBe(false);
+    }
   });
 
   it("1b) DİL BAĞIMSIZ hero alanları whitelist'e ASLA girmez", () => {
@@ -155,7 +167,8 @@ describe("settings-translations.types — whitelist", () => {
          alanları ve teknik hero ayarları HÂLÂ kapsam DIŞI. */
       "hero_primary_cta_href",
       "hero_background_image",
-      "business_hours",
+      /* 🛡️ MIGRATION 087 — `business_hours` ARTIK kapsam İÇİNDE
+         (bkz. test 1c); bu listeden çıkarıldı. */
       "address",
       "site_name",
       "resend_api_key",
@@ -189,7 +202,7 @@ describe("settingsTranslationRepository — query wiring", () => {
     expect(fromMock).toHaveBeenCalledWith("settings_translations");
   });
 
-  it("6) upsertOne payload'ı TAM OLARAK 10 anahtar taşır (keyfi kolon İMKÂNSIZ)", async () => {
+  it("6) upsertOne payload'ı TAM OLARAK 11 anahtar taşır (keyfi kolon İMKÂNSIZ)", async () => {
     await settingsTranslationRepository.upsertOne("settings-1", "en", {
       footer_copyright: "A",
       default_meta_title: "C",
@@ -199,6 +212,7 @@ describe("settingsTranslationRepository — query wiring", () => {
       hero_badge_text: "B",
       hero_primary_cta_text: "P",
       hero_secondary_cta_text: "Q",
+      business_hours: null,
     });
 
     const [payload, options] = upsertMock.mock.calls[0] as [
@@ -217,6 +231,7 @@ describe("settingsTranslationRepository — query wiring", () => {
         "hero_badge_text",
         "hero_primary_cta_text",
         "hero_secondary_cta_text",
+        "business_hours",
       ].sort()
     );
     expect(options).toEqual({ onConflict: "settings_id,locale" });
@@ -287,7 +302,6 @@ describe("upsertSettingsTranslation — alan whitelist ve normalizasyon", () => 
       resend_api_key: "SECRET",
       site_name: "HACK",
       hero_background_image: "https://evil.example/x.png",
-      business_hours: "09-18",
       id: "another-settings-row",
       settings_id: "attacker-controlled",
     });
@@ -297,7 +311,6 @@ describe("upsertSettingsTranslation — alan whitelist ve normalizasyon", () => 
     expect(payload).not.toHaveProperty("resend_api_key");
     expect(payload).not.toHaveProperty("site_name");
     expect(payload).not.toHaveProperty("hero_background_image");
-    expect(payload).not.toHaveProperty("business_hours");
     expect(payload).not.toHaveProperty("id");
   });
 

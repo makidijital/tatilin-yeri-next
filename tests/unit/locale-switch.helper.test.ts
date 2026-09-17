@@ -56,8 +56,10 @@ describe("hasLocaleRoute", () => {
     expect(hasLocaleRoute("/favoriler")).toBe(false);
   });
 
-  it("11) '/iletisim' → false", () => {
-    expect(hasLocaleRoute("/iletisim")).toBe(false);
+  /* 🛡️ `/en|de/iletisim` GERÇEK route dosyaları eklendi (ortak
+     `ContactPageBody`) → allowlist'e girdi; artık fallback DEĞİL. */
+  it("11) '/iletisim' → true (EN/DE route'ları var)", () => {
+    expect(hasLocaleRoute("/iletisim")).toBe(true);
   });
 
   it("12) '/liste' → false", () => {

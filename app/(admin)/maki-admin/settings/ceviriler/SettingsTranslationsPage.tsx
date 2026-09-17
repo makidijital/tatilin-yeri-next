@@ -27,7 +27,7 @@ import { SaveButton } from "../_components/SettingsField";
    🛡️ PHASE 11 — KAYIT AKTİF (8 alan):
      footer_copyright · default_meta_title · default_meta_description ·
      hero_title · hero_subtitle · hero_badge_text ·
-     hero_primary_cta_text · hero_secondary_cta_text
+     hero_primary_cta_text · hero_secondary_cta_text · business_hours
 
    🛡️ PHASE 10M — "Bakım Modu" ve "İletişim · Adres" bölümleri
    KALDIRILDI. Bakım mesajı artık ÇEVRİLMEZ (çeviri kolonu migration
@@ -87,6 +87,7 @@ function emptyDraft(): DraftValues {
     hero_badge_text: "",
     hero_primary_cta_text: "",
     hero_secondary_cta_text: "",
+    business_hours: "",
   };
 }
 
@@ -193,6 +194,7 @@ export default function SettingsTranslationsPage({
       hero_badge_text: current.hero_badge_text,
       hero_primary_cta_text: current.hero_primary_cta_text,
       hero_secondary_cta_text: current.hero_secondary_cta_text,
+      business_hours: current.business_hours,
     }).catch(() => ({ ok: false as const, error: "Çeviri kaydedilemedi" }));
 
     setSaving(false);
@@ -218,6 +220,7 @@ export default function SettingsTranslationsPage({
         hero_badge_text: result.values.hero_badge_text ?? "",
         hero_primary_cta_text: result.values.hero_primary_cta_text ?? "",
         hero_secondary_cta_text: result.values.hero_secondary_cta_text ?? "",
+        business_hours: result.values.business_hours ?? "",
       },
     }));
     setSaved(true);
@@ -255,7 +258,7 @@ export default function SettingsTranslationsPage({
         </p>
       </div>
 
-      {/* ══════════ KAYDEDİLEBİLİR GRUPLAR (8 alan) ══════════ */}
+      {/* ══════════ KAYDEDİLEBİLİR GRUPLAR (9 alan) ══════════ */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* ── 1) FOOTER ── */}
         <TranslationSection
@@ -349,34 +352,35 @@ export default function SettingsTranslationsPage({
           />
         </TranslationSection>
 
+        {/* ── 4) İLETİŞİM · ÇALIŞMA SAATLERİ ──
+            🛡️ MIGRATION 087 — `/iletisim` EN/DE sürümü devreye alındı;
+            bu grup artık salt-okunur DEĞİL, kaydedilebilir. */}
+        <TranslationSection
+          title="İletişim · Çalışma Saatleri"
+          description="İletişim sayfasında gösterilen çalışma saatleri metni."
+          status={statusOf(["business_hours"])}
+          note="Boş bırakılırsa o dilde Türkçe canonical metin gösterilir. Telefon, e-posta, adres ve sosyal medya bağlantıları VERİdir; her dilde aynı kalır ve çevrilmez."
+        >
+          <TranslationField
+            label="Çalışma saatleri"
+            locale={locale}
+            canonicalValue={canonical.business_hours}
+            multiline
+            rows={3}
+            {...editableProps("business_hours")}
+          />
+        </TranslationSection>
+
         {/* ── KAYDET — yalnız EN/DE sekmesinde ── */}
         {writableLocale && (
           <div className="flex items-center justify-end gap-4">
             <p className="text-[12px] text-[var(--color-stone-500)]">
-              Yukarıdaki üç grup birlikte, yalnız seçili dil için kaydedilir.
+              Yukarıdaki dört grup birlikte, yalnız seçili dil için kaydedilir.
             </p>
             <SaveButton loading={saving} saved={saved} />
           </div>
         )}
       </form>
-
-      {/* ══════════ KAPSAM DIŞI GRUP — salt okunur ══════════ */}
-
-      {/* ── İLETİŞİM · ÇALIŞMA SAATLERİ ── */}
-      <TranslationSection
-        title="İletişim · Çalışma Saatleri"
-        description="İletişim sayfasında gösterilen çalışma saatleri metni."
-        status="planned"
-        note="Bu alan bugün yalnız Türkçe iletişim sayfasında (/iletisim) render ediliyor. EN/DE iletişim sayfası aktif olduğunda kullanılacak."
-      >
-        <TranslationField
-          label="Çalışma saatleri"
-          locale={locale}
-          canonicalValue={canonical.business_hours}
-          multiline
-          rows={3}
-        />
-      </TranslationSection>
 
       {/* ── KAPSAM DIŞI AÇIKLAMASI ── */}
       <TranslationInfo

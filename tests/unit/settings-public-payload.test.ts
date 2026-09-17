@@ -97,7 +97,9 @@ describe("getPublicSettings — §5 çeviri payload'ı", () => {
     expect(result?.translations?.de).toBeUndefined();
   });
 
-  it("4) çeviri payload'ı YALNIZ 8 alan taşır — id/settings_id/timestamp YOK", async () => {
+  /* 🛡️ MIGRATION 087 — 8 → 9 alan (`business_hours` eklendi;
+     /iletisim EN/DE sürümü "Çalışma Saatleri" metnini çözer). */
+  it("4) çeviri payload'ı YALNIZ 9 alan taşır — id/settings_id/timestamp YOK", async () => {
     findPublicViaRpcMock.mockResolvedValue({
       data: { id: "settings-1", multilingual_enabled: true },
       error: null,
@@ -114,6 +116,7 @@ describe("getPublicSettings — §5 çeviri payload'ı", () => {
         "hero_badge_text",
         "hero_primary_cta_text",
         "hero_secondary_cta_text",
+        "business_hours",
       ].sort()
     );
   });

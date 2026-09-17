@@ -3,6 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Send, Check, AlertCircle } from "lucide-react";
 
+/* 🛡️ PUBLIC İLETİŞİM ÇOKLU DİL — statik metinler MEVCUT public
+   dictionary'den (`contact.form`). Validation KURALLARI, honeypot,
+   time-trap, submit akışı ve API sözleşmesi DEĞİŞMEDİ. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+
 /* 🛡️ Submit artık doğrudan anon Supabase insert yerine sunucu
    route'una (/api/public/contact) gider: applyRateLimit + honeypot/
    time-trap + service-role insert. UX/validation davranışı aynen. */
@@ -31,7 +38,13 @@ const MIN_MESSAGE_LEN = 10;
 
 type UiState = "idle" | "pending" | "success" | "error";
 
-export default function ContactForm() {
+export default function ContactForm({
+  locale = DEFAULT_LOCALE,
+}: {
+  /** Opsiyonel — verilmezse "tr" → TR çıktısı BİREBİR eskisi gibi. */
+  locale?: Locale;
+}) {
+  const dict = getDictionary(locale).contact.form;
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -73,21 +86,21 @@ export default function ContactForm() {
     const messageTrim = message.trim();
 
     if (nameTrim.length === 0) {
-      setErrorMsg("Lütfen adınızı yazın.");
+      setErrorMsg(dict.validation.nameRequired);
       setStatus("error");
       return;
     }
     if (messageTrim.length < MIN_MESSAGE_LEN) {
       setErrorMsg(
-        `Mesajınız en az ${MIN_MESSAGE_LEN} karakter olmalı.`
+        formatDictionaryString(dict.validation.messageMinLength, {
+          n: MIN_MESSAGE_LEN,
+        })
       );
       setStatus("error");
       return;
     }
     if (phoneTrim.length === 0 && emailTrim.length === 0) {
-      setErrorMsg(
-        "Telefon veya e-posta — en az biri gerekli."
-      );
+      setErrorMsg(dict.validation.phoneOrEmailRequired);
       setStatus("error");
       return;
     }
@@ -114,13 +127,19 @@ export default function ContactForm() {
       const result = await res.json().catch(() => null);
 
       if (!res.ok || !result?.ok) {
-        setErrorMsg(result?.error || "Mesaj iletilemedi.");
+        /* 🛡️ SUNUCU HATA METNİ KULLANICIYA BASILMAZ. Route'un TR
+           mesajları ve `applyRateLimit`'in İngilizce
+           "Too many requests" gövdesi locale dışıdır; ikisi de UI'a
+           SIZMAMALI. API sözleşmesi DEĞİŞMEDİ — yalnız gösterim
+           locale-aware generic metne çevrildi. Teknik ayrıntı zaten
+           sunucuda loglanıyor. */
+        setErrorMsg(dict.errorGeneric);
         setStatus("error");
         return;
       }
       setStatus("success");
     } catch {
-      setErrorMsg("Mesaj iletilemedi.");
+      setErrorMsg(dict.errorGeneric);
       setStatus("error");
     }
   }
@@ -149,39 +168,39 @@ export default function ContactForm() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field
-          label="Ad Soyad"
+          label={dict.nameLabel}
           name="name"
-          placeholder="Adınız"
+          placeholder={dict.namePlaceholder}
           value={name}
           onChange={setName}
           disabled={disabled}
         />
         <Field
-          label="Telefon"
+          label={dict.phoneLabel}
           name="phone"
           type="tel"
-          placeholder="+90 5xx xxx xx xx"
+          placeholder={dict.phonePlaceholder}
           value={phone}
           onChange={setPhone}
           disabled={disabled}
         />
       </div>
       <Field
-        label="E-posta"
+        label={dict.emailLabel}
         name="email"
         type="email"
-        placeholder="ornek@email.com"
+        placeholder={dict.emailPlaceholder}
         value={email}
         onChange={setEmail}
         disabled={disabled}
       />
       <div className="space-y-2">
         <label className="text-[11px] tracking-[0.18em] uppercase font-medium text-[var(--color-stone-500)] block">
-          Mesajınız
+          {dict.messageLabel}
         </label>
         <textarea
           name="message"
-          placeholder="Tarihler, kişi sayısı, beklentileriniz…"
+          placeholder={dict.messagePlaceholder}
           rows={5}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -203,9 +222,7 @@ export default function ContactForm() {
             size={15}
             className="mt-0.5 shrink-0 text-[var(--color-champagne-700)]"
           />
-          <span>
-            Mesajınız iletildi. Ekibimiz en kısa sürede dönüş yapacak.
-          </span>
+          <span>{dict.success}</span>
         </div>
       )}
 
@@ -217,19 +234,18 @@ export default function ContactForm() {
         >
           {status === "success" ? (
             <>
-              <Check size={15} /> Gönderildi
+              <Check size={15} /> {dict.submitted}
             </>
           ) : status === "pending" ? (
-            <>Gönderiliyor…</>
+            <>{dict.submitting}</>
           ) : (
             <>
-              <Send size={14} /> Gönder
+              <Send size={14} /> {dict.submit}
             </>
           )}
         </button>
         <p className="text-[11.5px] text-[var(--color-stone-400)] mt-4 leading-relaxed">
-          Genellikle 1 iş günü içinde dönüş yapıyoruz. Gizlilik
-          politikası kapsamında bilgilerinizi koruyoruz.
+          {dict.privacy}
         </p>
       </div>
     </form>

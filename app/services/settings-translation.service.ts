@@ -23,7 +23,7 @@ import {
      • `parentId` DIŞARIDAN GELMEZ — settings satırının id'si burada,
        server tarafında çözülür (`findSingletonId`). Böylece çağıran
        keyfi bir `settings_id` enjekte EDEMEZ.
-     • Alan whitelist'i `SETTINGS_TRANSLATABLE_FIELDS` (8 alan) —
+     • Alan whitelist'i `SETTINGS_TRANSLATABLE_FIELDS` (9 alan) —
        input'tan gelen obje HİÇBİR ZAMAN spread edilmez; 8 alan tek
        tek okunur.
 
@@ -42,6 +42,8 @@ export type SettingsTranslationInput = {
   hero_badge_text?: string | null;
   hero_primary_cta_text?: string | null;
   hero_secondary_cta_text?: string | null;
+  /* 🛡️ MIGRATION 087 — /iletisim çalışma saatleri (EN/DE). */
+  business_hours?: string | null;
 };
 
 export type SettingsTranslationSaveResult =
@@ -67,6 +69,7 @@ const FIELD_LABELS: Record<(typeof SETTINGS_TRANSLATABLE_FIELDS)[number], string
   hero_badge_text: "Hero rozet metni",
   hero_primary_cta_text: "Birincil buton metni",
   hero_secondary_cta_text: "İkincil buton metni",
+  business_hours: "Çalışma saatleri",
 };
 
 /** Singleton settings satırının id'si. Yok/hata → null. */
@@ -168,6 +171,7 @@ export async function upsertSettingsTranslation(
     hero_badge_text: normalize(input.hero_badge_text),
     hero_primary_cta_text: normalize(input.hero_primary_cta_text),
     hero_secondary_cta_text: normalize(input.hero_secondary_cta_text),
+    business_hours: normalize(input.business_hours),
   };
 
   for (const field of SETTINGS_TRANSLATABLE_FIELDS) {

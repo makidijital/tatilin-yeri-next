@@ -566,6 +566,94 @@ export const de: Dictionary = {
     },
   },
 
+  /* 🛡️ /de/iletisim statik UI metinleri. */
+  contact: {
+    meta: {
+      title: "Kontakt · {brand}",
+      description:
+        "Kontaktieren Sie uns für Informationen zu unseren mediterranen Villen, für Buchungen und individuelle Angebote.",
+      ogTitle: "Kontakt · {brand}",
+      ogDescription:
+        "Kontaktieren Sie uns für Informationen zu unseren mediterranen Villen und für Ihre Buchung.",
+    },
+    hero: {
+      eyebrow: "Kontakt",
+      title: "Kontakt & Support",
+      description:
+        "Melden Sie sich mit Ihren Fragen, Anregungen oder Buchungsanfragen. Wir helfen Ihnen gerne so schnell wie möglich weiter.",
+    },
+    info: {
+      title: "Direkt erreichen",
+      socialMedia: "Soziale Medien",
+      phone: "Telefon",
+      email: "E-Mail",
+      businessHours: "Öffnungszeiten",
+      location: "Standort",
+    },
+    form: {
+      eyebrow: "Nachricht",
+      title: "Hinterlassen Sie uns eine Nachricht.",
+      description:
+        "Füllen Sie das Formular aus; wir melden uns schnellstmöglich bei Ihnen.",
+      nameLabel: "Vor- und Nachname",
+      namePlaceholder: "Ihr Name",
+      phoneLabel: "Telefon",
+      phonePlaceholder: "+90 5xx xxx xx xx",
+      emailLabel: "E-Mail",
+      emailPlaceholder: "beispiel@email.com",
+      messageLabel: "Ihre Nachricht",
+      messagePlaceholder: "Termine, Personenzahl, Ihre Wünsche…",
+      submit: "Senden",
+      submitting: "Wird gesendet…",
+      submitted: "Gesendet",
+      success:
+        "Ihre Nachricht wurde übermittelt. Unser Team meldet sich schnellstmöglich bei Ihnen.",
+      errorGeneric: "Die Nachricht konnte nicht gesendet werden.",
+      validation: {
+        nameRequired: "Bitte geben Sie Ihren Namen ein.",
+        messageMinLength: "Ihre Nachricht muss mindestens {n} Zeichen lang sein.",
+        phoneOrEmailRequired:
+          "Telefon oder E-Mail — mindestens eines ist erforderlich.",
+      },
+      privacy:
+        "In der Regel antworten wir innerhalb eines Werktags. Ihre Daten schützen wir gemäß unserer Datenschutzerklärung.",
+    },
+    map: {
+      eyebrow: "Karte",
+      title: "An den Buchten des Mittelmeers.",
+      iframeTitle: "Standortkarte",
+    },
+    faq: {
+      eyebrow: "Häufige Fragen",
+      title: "Antworten, klar und knapp.",
+      items: {
+        responseTime: {
+          question: "Wie schnell antworten Sie?",
+          answer:
+            "Ihre Anfragen werden am selben Tag beantwortet, spätestens innerhalb eines Werktags. Für kurzfristige Buchungen empfehlen wir WhatsApp.",
+        },
+        dates: {
+          question: "An welchen Terminen kann ich anreisen?",
+          answer:
+            "Sie können Termine direkt über die Villenkarten auf der Startseite wählen und freie Zeiträume im Verfügbarkeitskalender sehen.",
+        },
+        customOffer: {
+          question: "Erhalte ich ein individuelles Angebot für Sonderwünsche?",
+          answer:
+            "Ja. Senden Sie uns Termine, Personenzahl und Ihre Wünsche als Nachricht; unsere Kuratoren stellen Ihnen eine Auswahl zusammen.",
+        },
+      },
+    },
+    cta: {
+      eyebrow: "Kollektion",
+      titleLead: "Finden wir gemeinsam",
+      titleAccent: "Ihre Traumvilla.",
+      description:
+        "Entdecken Sie hier die erlesensten Villen des Mittelmeers.",
+      button: "Alle Villen ansehen",
+    },
+  },
+
   /* 🛡️ PUBLIC ARŞİV (/de/kiralik-villalar) statik UI metinleri. */
   villasArchive: {
     metaTitle: "Mietvillen — {brand}",

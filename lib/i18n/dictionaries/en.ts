@@ -563,6 +563,91 @@ export const en: Dictionary = {
     },
   },
 
+  /* 🛡️ /en/iletisim statik UI metinleri. */
+  contact: {
+    meta: {
+      title: "Contact · {brand}",
+      description:
+        "Get in touch for information about our Mediterranean villas, reservations and tailored offers.",
+      ogTitle: "Contact · {brand}",
+      ogDescription:
+        "Get in touch for information about our Mediterranean villas and to make a reservation.",
+    },
+    hero: {
+      eyebrow: "Contact",
+      title: "Contact & Support",
+      description:
+        "Reach out with your questions, feedback or reservation requests. We will be glad to help you as soon as possible.",
+    },
+    info: {
+      title: "Reach us directly",
+      socialMedia: "Social Media",
+      phone: "Phone",
+      email: "Email",
+      businessHours: "Opening Hours",
+      location: "Location",
+    },
+    form: {
+      eyebrow: "Message",
+      title: "Leave us a note.",
+      description: "Fill in the form and we will get back to you shortly.",
+      nameLabel: "Full Name",
+      namePlaceholder: "Your name",
+      phoneLabel: "Phone",
+      phonePlaceholder: "+90 5xx xxx xx xx",
+      emailLabel: "Email",
+      emailPlaceholder: "example@email.com",
+      messageLabel: "Your Message",
+      messagePlaceholder: "Dates, number of guests, what you have in mind…",
+      submit: "Send",
+      submitting: "Sending…",
+      submitted: "Sent",
+      success: "Your message has been sent. Our team will get back to you shortly.",
+      errorGeneric: "Your message could not be sent.",
+      validation: {
+        nameRequired: "Please enter your name.",
+        messageMinLength: "Your message must be at least {n} characters.",
+        phoneOrEmailRequired: "Phone or email — at least one is required.",
+      },
+      privacy:
+        "We usually reply within one business day. Your information is protected under our privacy policy.",
+    },
+    map: {
+      eyebrow: "Map",
+      title: "On the Mediterranean coast.",
+      iframeTitle: "Location map",
+    },
+    faq: {
+      eyebrow: "Frequently Asked",
+      title: "Answers, simply put.",
+      items: {
+        responseTime: {
+          question: "How quickly do you reply?",
+          answer:
+            "Your requests are answered the same day, and within one business day at the latest. For urgent bookings we recommend WhatsApp.",
+        },
+        dates: {
+          question: "Which dates can I visit?",
+          answer:
+            "You can pick dates directly from the villa cards on the homepage and see available periods on the availability calendar.",
+        },
+        customOffer: {
+          question: "Can I get a tailored offer for special requests?",
+          answer:
+            "Yes. Send us your dates, number of guests and what you have in mind; our curators will put together a selection for you.",
+        },
+      },
+    },
+    cta: {
+      eyebrow: "Collection",
+      titleLead: "Let's find the villa",
+      titleAccent: "of your dreams.",
+      description:
+        "Start exploring the finest villas of the Mediterranean right here.",
+      button: "View all villas",
+    },
+  },
+
   /* 🛡️ PUBLIC ARŞİV (/en/kiralik-villalar) statik UI metinleri. */
   villasArchive: {
     metaTitle: "Villas for Rent — {brand}",

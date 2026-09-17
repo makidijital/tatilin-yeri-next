@@ -581,6 +581,92 @@ export const tr: Dictionary = {
     },
   },
 
+  /* 🛡️ /iletisim statik UI metinleri. TR değerleri ESKİ hardcoded
+     metinlerin BİREBİR kopyasıdır; render çıktısı byte-identical. */
+  contact: {
+    meta: {
+      title: "İletişim · {brand}",
+      description:
+        "Akdeniz villalarımız hakkında bilgi almak, rezervasyon ve özel tekliflerimiz için bizimle iletişime geçin.",
+      ogTitle: "İletişim · {brand}",
+      ogDescription:
+        "Akdeniz villalarımız hakkında bilgi almak ve rezervasyon için bizimle iletişime geçin.",
+    },
+    hero: {
+      eyebrow: "İletişim",
+      title: "İletişim & Destek",
+      description:
+        "Sorularınız, görüşleriniz veya rezervasyon talepleriniz için bize ulaşın. Size en kısa sürede yardımcı olmaktan memnuniyet duyarız.",
+    },
+    info: {
+      title: "Doğrudan ulaşın",
+      socialMedia: "Sosyal Medya",
+      phone: "Telefon",
+      email: "E-posta",
+      businessHours: "Çalışma Saatleri",
+      location: "Lokasyon",
+    },
+    form: {
+      eyebrow: "Mesaj",
+      title: "Bir not bırakın.",
+      description: "Formu doldurun; en kısa sürede size dönelim.",
+      nameLabel: "Ad Soyad",
+      namePlaceholder: "Adınız",
+      phoneLabel: "Telefon",
+      phonePlaceholder: "+90 5xx xxx xx xx",
+      emailLabel: "E-posta",
+      emailPlaceholder: "ornek@email.com",
+      messageLabel: "Mesajınız",
+      messagePlaceholder: "Tarihler, kişi sayısı, beklentileriniz…",
+      submit: "Gönder",
+      submitting: "Gönderiliyor…",
+      submitted: "Gönderildi",
+      success: "Mesajınız iletildi. Ekibimiz en kısa sürede dönüş yapacak.",
+      errorGeneric: "Mesaj iletilemedi.",
+      validation: {
+        nameRequired: "Lütfen adınızı yazın.",
+        messageMinLength: "Mesajınız en az {n} karakter olmalı.",
+        phoneOrEmailRequired: "Telefon veya e-posta — en az biri gerekli.",
+      },
+      privacy:
+        "Genellikle 1 iş günü içinde dönüş yapıyoruz. Gizlilik politikası kapsamında bilgilerinizi koruyoruz.",
+    },
+    map: {
+      eyebrow: "Harita",
+      title: "Akdeniz koylarında.",
+      iframeTitle: "Lokasyon haritası",
+    },
+    faq: {
+      eyebrow: "Sık Sorulanlar",
+      title: "Yanıtlar, sade.",
+      items: {
+        responseTime: {
+          question: "Dönüş süreniz nedir?",
+          answer:
+            "Talepleriniz aynı gün içinde, en geç bir iş günü içinde yanıtlanır. Acil rezervasyonlar için WhatsApp önerilir.",
+        },
+        dates: {
+          question: "Hangi tarihlerde gezebilirim?",
+          answer:
+            "Anasayfadaki villa kartlarından doğrudan tarih seçebilir; uygunluk takvimi ile boş dönemleri görebilirsiniz.",
+        },
+        customOffer: {
+          question: "Özel taleplerim için kişiye özel teklif alabilir miyim?",
+          answer:
+            "Evet. Tarih, kişi sayısı ve beklenti detaylarınızı mesaj olarak iletin; küratörlüğümüzle koleksiyon önerisi hazırlarız.",
+        },
+      },
+    },
+    cta: {
+      eyebrow: "Koleksiyon",
+      titleLead: "Hayalinizdeki villayı",
+      titleAccent: "birlikte bulalım.",
+      description:
+        "Akdeniz'in seçkin villalarını keşfetmeye buradan başlayın.",
+      button: "Tüm villaları gör",
+    },
+  },
+
   /* 🛡️ PUBLIC ARŞİV (/kiralik-villalar) statik UI metinleri. TR
      değerleri `app/(public)/kiralik-villalar/page.tsx`'teki ESKİ
      hardcoded metinlerin BİREBİR kopyasıdır; hiçbiri değiştirilmedi. */

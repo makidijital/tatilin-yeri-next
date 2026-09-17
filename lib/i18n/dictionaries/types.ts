@@ -745,6 +745,103 @@ export type Dictionary = {
   };
 
   /* ===============================================================
+     🛡️ /iletisim — PUBLIC İLETİŞİM SAYFASI STATİK UI METİNLERİ
+     ===============================================================
+     `app/components/contact/ContactPageBody.tsx` + `ContactForm.tsx`
+     içindeki hardcoded TR metinler.
+
+     ⚠️ KAPSAM DIŞI (bilinçli — VERİ, çevrilmez):
+       telefon · e-posta · adres · WhatsApp bağlantısı · sosyal medya
+       URL'leri ve handle'ları · marka adları (Instagram/Facebook/
+       YouTube/TikTok/WhatsApp). Bunlar `settings` tablosundan gelir
+       ve her dilde AYNI kalır.
+
+     ⚠️ `business_hours` DEĞERİ buraya GİRMEZ — o admin'in girdiği
+     dinamik bir metindir; çevirisi `settings_translations`
+     (migration 087) + `resolveSettingsText` ile çözülür. Buradaki
+     `info.businessHours` yalnız ETİKETtir.
+
+     ⚠️ `faq` bloğu bu sayfaya ÖZEL 3 statik soru/cevaptır — anasayfadaki
+     DB tabanlı SSS sistemiyle (`faqs` / `faq_translations`) İLGİSİ
+     YOKTUR ve o sisteme bağlanmaz. */
+  contact: {
+    meta: {
+      /** `formatDictionaryString` — `{brand}`. */
+      title: string;
+      description: string;
+      /** `formatDictionaryString` — `{brand}`. */
+      ogTitle: string;
+      ogDescription: string;
+    };
+    hero: {
+      eyebrow: string;
+      title: string;
+      description: string;
+    };
+    info: {
+      /** "Doğrudan ulaşın" — iletişim kartları başlığı. */
+      title: string;
+      socialMedia: string;
+      /* Kart ETİKETLERİ (değerler settings'ten gelir, çevrilmez). */
+      phone: string;
+      email: string;
+      businessHours: string;
+      location: string;
+    };
+    form: {
+      eyebrow: string;
+      title: string;
+      description: string;
+      nameLabel: string;
+      namePlaceholder: string;
+      phoneLabel: string;
+      phonePlaceholder: string;
+      emailLabel: string;
+      emailPlaceholder: string;
+      messageLabel: string;
+      messagePlaceholder: string;
+      submit: string;
+      submitting: string;
+      submitted: string;
+      success: string;
+      /** Sunucudan gelen HAM hata mesajı kullanıcıya BASILMAZ; bu
+       *  generic metin gösterilir (locale dışı "Too many requests" /
+       *  TR server mesajlarının UI'a sızmasını engeller). */
+      errorGeneric: string;
+      validation: {
+        nameRequired: string;
+        /** `formatDictionaryString` — `{n}`. */
+        messageMinLength: string;
+        phoneOrEmailRequired: string;
+      };
+      privacy: string;
+    };
+    map: {
+      eyebrow: string;
+      title: string;
+      /** `<iframe title>` — ekran okuyucu için. */
+      iframeTitle: string;
+    };
+    faq: {
+      eyebrow: string;
+      title: string;
+      items: {
+        responseTime: { question: string; answer: string };
+        dates: { question: string; answer: string };
+        customOffer: { question: string; answer: string };
+      };
+    };
+    cta: {
+      eyebrow: string;
+      /** Başlık 2 satır: lead + (gri) accent — `<br />` ile ayrılır. */
+      titleLead: string;
+      titleAccent: string;
+      description: string;
+      button: string;
+    };
+  };
+
+  /* ===============================================================
      🛡️ PUBLIC ARŞİV SAYFASI (/kiralik-villalar) STATİK UI METİNLERİ
      ===============================================================
      `app/components/search/KiralikVillalarPageBody.tsx` içindeki

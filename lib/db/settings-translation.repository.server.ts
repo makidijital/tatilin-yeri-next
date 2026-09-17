@@ -61,7 +61,7 @@ export const settingsTranslationRepository = {
 
   /**
    * UPSERT — `UNIQUE (settings_id, locale)` (migration 083) onConflict
-   * hedefi. Payload 8 alanın TAMAMINI yazar: çağıran (servis) her
+   * hedefi. Payload 9 alanın TAMAMINI yazar: çağıran (servis) her
    * zaman o locale'in TAM durumunu gönderir, böylece kısmi bir kayıt
    * diğer alanları sessizce null'lamaz.
    *
@@ -87,6 +87,7 @@ export const settingsTranslationRepository = {
           hero_badge_text: values.hero_badge_text,
           hero_primary_cta_text: values.hero_primary_cta_text,
           hero_secondary_cta_text: values.hero_secondary_cta_text,
+          business_hours: values.business_hours,
         },
         { onConflict: "settings_id,locale" }
       )
