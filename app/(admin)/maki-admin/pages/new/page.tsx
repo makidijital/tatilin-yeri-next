@@ -28,6 +28,14 @@ import {
 } from "@/lib/storage.helpers";
 import { convertImageToWebP } from "@/lib/image.helpers";
 import { slugifyTr } from "@/lib/slug";
+/* 🛡️ PHASE 12 — ADMIN I18N (Seçenek A: admin'de locale KAYNAĞI YOK).
+   `getDictionary` / `formatDictionaryString` saf fonksiyonlardır →
+   client component içinde güvenle çağrılır. Bu fazda bilinçli olarak
+   DEFAULT_LOCALE sabit; render çıktısı BYTE-IDENTICAL kalır. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import type { Dictionary } from "@/lib/i18n/dictionaries/types";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import type {
   PageSection,
   PageSectionType,
@@ -51,6 +59,12 @@ import type {
 export default function NewPagePage() {
   const router = useRouter();
   const toast = useNotify();
+
+  /* `common.save` ("Kaydet") admin metniyle BİREBİR aynı → public
+     namespace'ten yeniden kullanılır; duplicate key açılmadı. */
+  const dictionary = getDictionary(DEFAULT_LOCALE);
+  const adminDict = dictionary.admin;
+  const pagesDict = adminDict.pages;
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -87,7 +101,7 @@ export default function NewPagePage() {
   async function handleCoverUpload(file: File) {
     const s = slug.trim();
     if (!s) {
-      toast.error("Önce slug girin", { id: "page-cover" });
+      toast.error(pagesDict.form.slugRequiredFirst, { id: "page-cover" });
       return;
     }
     setCoverUploading(true);
@@ -107,14 +121,14 @@ export default function NewPagePage() {
         }
       );
       if (!upRes.ok) {
-        toast.error("Görsel yüklenemedi", {
+        toast.error(pagesDict.toast.imageUploadFailed, {
           id: "page-cover",
           description: upRes.error,
         });
         return;
       }
       setCoverPath(path);
-      toast.success("Kapak yüklendi", { id: "page-cover" });
+      toast.success(pagesDict.toast.coverUploaded, { id: "page-cover" });
     } finally {
       setCoverUploading(false);
       if (coverInputRef.current) coverInputRef.current.value = "";
@@ -158,7 +172,9 @@ export default function NewPagePage() {
   async function handleSectionImageUpload(idx: number, file: File) {
     const s = slug.trim();
     if (!s) {
-      toast.error("Önce slug girin", { id: `page-section-img-${idx}` });
+      toast.error(pagesDict.form.slugRequiredFirst, {
+        id: `page-section-img-${idx}`,
+      });
       return;
     }
     setSectionImageUploadingIdx(idx);
@@ -180,14 +196,16 @@ export default function NewPagePage() {
         }
       );
       if (!upRes.ok) {
-        toast.error("Görsel yüklenemedi", {
+        toast.error(pagesDict.toast.imageUploadFailed, {
           id: `page-section-img-${idx}`,
           description: upRes.error,
         });
         return;
       }
       updateSection(idx, { path } as Partial<PageSection>);
-      toast.success("Görsel eklendi", { id: `page-section-img-${idx}` });
+      toast.success(pagesDict.toast.imageAdded, {
+        id: `page-section-img-${idx}`,
+      });
     } finally {
       setSectionImageUploadingIdx(null);
       const inp = sectionImageInputRefs.current[idx];
@@ -199,7 +217,7 @@ export default function NewPagePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim() || !slug.trim()) {
-      toast.error("Başlık ve slug zorunlu", { id: "page-create" });
+      toast.error(pagesDict.toast.titleSlugRequired, { id: "page-create" });
       return;
     }
     setLoading(true);
@@ -314,16 +332,20 @@ export default function NewPagePage() {
         const desc = [
           e.message,
           e.details ? `Detay: ${e.details}` : null,
-          e.hint ? `İpucu: ${e.hint}` : null,
+          e.hint
+            ? formatDictionaryString(adminDict.common.hintPrefix, {
+                hint: e.hint,
+              })
+            : null,
           e.code ? `Kod: ${e.code}` : null,
           status ? `HTTP: ${status}` : null,
         ]
           .filter(Boolean)
           .join(" · ");
-        toast.error("Sayfa kaydedilemedi", {
+        toast.error(pagesDict.toast.saveFailed, {
           id: "page-create",
           description:
-            desc || "Bilinmeyen hata — Network tab'a bakın.",
+            desc || adminDict.common.unknownErrorCheckNetwork,
         });
         return;
       }
@@ -332,7 +354,7 @@ export default function NewPagePage() {
         "[pages.insert] INSERTED DATA JSON",
         JSON.stringify(data, null, 2)
       );
-      toast.success("Sayfa oluşturuldu", { id: "page-create" });
+      toast.success(pagesDict.toast.created, { id: "page-create" });
 
       /* 🛡️ FAZ 55H — AUDIT LOG (fail-safe).
          after_data: insert response data; before_data yok (CREATE).
@@ -382,11 +404,11 @@ export default function NewPagePage() {
       console.log("[pages.insert] THROWN RAW", thrown);
       console.dir(thrown);
       console.error("[pages.insert] THROWN", thrown);
-      toast.error("Sayfa kaydedilemedi (runtime)", {
+      toast.error(pagesDict.toast.saveFailedRuntime, {
         id: "page-create",
         description:
           (thrown as Error)?.message ||
-          "Network veya runtime hatası — DevTools Network tab'a bakın.",
+          adminDict.common.networkOrRuntimeError,
       });
     } finally {
       setLoading(false);
@@ -400,12 +422,12 @@ export default function NewPagePage() {
     <div className="space-y-8 w-full max-w-4xl">
       {/* HEADER */}
       <div>
-        <p className="eyebrow">İçerik</p>
+        <p className="eyebrow">{pagesDict.list.eyebrow}</p>
         <h1 className="font-display text-3xl md:text-4xl text-[var(--color-stone-900)] mt-2 tracking-[-0.02em]">
-          Yeni sayfa
+          {pagesDict.form.newTitle}
         </h1>
         <p className="text-sm text-[var(--color-stone-500)] mt-2">
-          Premium editorial CMS — hero, içerik, sections.
+          {pagesDict.form.newSubtitle}
         </p>
       </div>
 
@@ -414,10 +436,10 @@ export default function NewPagePage() {
         <div className="card-premium p-6 md:p-7 space-y-5">
           <div className="space-y-1.5">
             <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              Başlık
+              {pagesDict.form.fieldTitle}
             </label>
             <input
-              placeholder="Örn: Hakkımızda"
+              placeholder={pagesDict.form.titlePlaceholder}
               className="input"
               value={title}
               onChange={(e) => onTitleChange(e.target.value)}
@@ -426,10 +448,10 @@ export default function NewPagePage() {
 
           <div className="space-y-1.5">
             <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              Slug
+              {pagesDict.form.fieldSlug}
             </label>
             <input
-              placeholder="hakkimizda"
+              placeholder={pagesDict.form.slugPlaceholder}
               className="input font-mono text-sm"
               value={slug}
               onChange={(e) => {
@@ -444,10 +466,10 @@ export default function NewPagePage() {
 
           <div className="space-y-1.5">
             <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              Kısa açıklama (excerpt)
+              {pagesDict.form.fieldExcerpt}
             </label>
             <textarea
-              placeholder="Hero altında küçük açıklama metni…"
+              placeholder={pagesDict.form.excerptPlaceholder}
               className="input !rounded-2xl !p-4 h-24 resize-none leading-relaxed"
               value={excerpt}
               onChange={(e) => setExcerpt(e.target.value)}
@@ -458,7 +480,7 @@ export default function NewPagePage() {
         {/* COVER */}
         <div className="card-premium p-6 md:p-7">
           <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block mb-3">
-            Kapak görseli (opsiyonel)
+            {pagesDict.form.fieldCover}
           </label>
           <div className="flex items-center gap-4">
             <button
@@ -466,7 +488,11 @@ export default function NewPagePage() {
               onClick={() => coverInputRef.current?.click()}
               disabled={coverUploading || !slug.trim()}
               className="relative w-32 h-20 rounded-2xl overflow-hidden bg-[var(--color-sand-50)] border border-[var(--color-stone-200)] hover:border-[var(--color-champagne-500)] transition disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!slug.trim() ? "Önce slug girin" : "Görsel yükle/değiştir"}
+              title={
+                !slug.trim()
+                  ? pagesDict.form.slugRequiredFirst
+                  : pagesDict.form.uploadOrReplaceImage
+              }
             >
               {coverUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
@@ -482,7 +508,7 @@ export default function NewPagePage() {
               )}
               {coverUploading && (
                 <span className="absolute inset-0 flex items-center justify-center bg-white/70 text-[10px] font-medium text-[var(--color-stone-700)]">
-                  Yükleniyor…
+                  {adminDict.common.loadingEllipsis}
                 </span>
               )}
             </button>
@@ -502,11 +528,11 @@ export default function NewPagePage() {
                 onClick={() => setCoverPath(null)}
                 className="text-[13px] text-red-600 hover:text-red-700"
               >
-                Kapağı kaldır
+                {pagesDict.form.removeCover}
               </button>
             )}
             <p className="text-xs text-[var(--color-stone-400)] ml-auto max-w-xs">
-              Otomatik WebP, max 1920px. Aynı slug için overwrite.
+              {pagesDict.form.coverHint}
             </p>
           </div>
         </div>
@@ -514,17 +540,16 @@ export default function NewPagePage() {
         {/* BODY (sections boşsa kullanılır) */}
         <div className="card-premium p-6 md:p-7 space-y-1.5">
           <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-            İçerik (sade — paragraph'lar boş satırla ayrılır)
+            {pagesDict.form.fieldBody}
           </label>
           <textarea
-            placeholder="Sayfa metni…"
+            placeholder={pagesDict.form.bodyPlaceholder}
             className="input !rounded-2xl !p-4 h-48 resize-none leading-relaxed"
             value={body}
             onChange={(e) => setBody(e.target.value)}
           />
           <p className="text-xs text-[var(--color-stone-400)]">
-            Aşağıda section ekleyebilirsiniz. Section eklenmişse bu alan
-            gizlenir; sadece sections render edilir.
+            {pagesDict.form.bodyHint}
           </p>
         </div>
 
@@ -532,7 +557,7 @@ export default function NewPagePage() {
         <div className="card-premium p-6 md:p-7 space-y-4">
           <div className="flex items-center justify-between gap-3">
             <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              Bölümler (opsiyonel, sıralı)
+              {pagesDict.sections.label}
             </label>
             <div className="flex gap-2">
               <button
@@ -540,28 +565,28 @@ export default function NewPagePage() {
                 onClick={() => addSection("richtext")}
                 className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--color-stone-700)] px-3 py-1.5 rounded-lg border border-[var(--color-stone-200)] hover:border-[var(--color-champagne-500)] hover:bg-[var(--color-sand-50)]"
               >
-                <Type size={12} /> Metin
+                <Type size={12} /> {pagesDict.sections.typeRichtext}
               </button>
               <button
                 type="button"
                 onClick={() => addSection("image")}
                 className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--color-stone-700)] px-3 py-1.5 rounded-lg border border-[var(--color-stone-200)] hover:border-[var(--color-champagne-500)] hover:bg-[var(--color-sand-50)]"
               >
-                <ImageIcon size={12} /> Görsel
+                <ImageIcon size={12} /> {pagesDict.sections.typeImage}
               </button>
               <button
                 type="button"
                 onClick={() => addSection("quote")}
                 className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--color-stone-700)] px-3 py-1.5 rounded-lg border border-[var(--color-stone-200)] hover:border-[var(--color-champagne-500)] hover:bg-[var(--color-sand-50)]"
               >
-                <Quote size={12} /> Alıntı
+                <Quote size={12} /> {pagesDict.sections.typeQuote}
               </button>
             </div>
           </div>
 
           {sections.length === 0 ? (
             <p className="text-sm text-[var(--color-stone-400)] italic">
-              Henüz bölüm yok. Yukarıdan ekleyin.
+              {pagesDict.sections.empty}
             </p>
           ) : (
             <ul className="space-y-3">
@@ -572,7 +597,7 @@ export default function NewPagePage() {
                 >
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <span className="text-[10px] tracking-[0.16em] uppercase font-semibold text-[var(--color-stone-500)]">
-                      #{idx + 1} · {sectionLabel(s.type)}
+                      #{idx + 1} · {sectionLabel(s.type, pagesDict.sections)}
                     </span>
                     <div className="flex items-center gap-1">
                       <button
@@ -580,17 +605,17 @@ export default function NewPagePage() {
                         onClick={() => moveSection(idx, -1)}
                         disabled={idx === 0}
                         className="p-1 text-[var(--color-stone-400)] hover:text-[var(--color-stone-700)] disabled:opacity-30"
-                        title="Yukarı"
+                        title={adminDict.common.moveUp}
                       >
                         <GripVertical size={14} />
-                        <span className="sr-only">Yukarı</span>↑
+                        <span className="sr-only">{adminDict.common.moveUp}</span>↑
                       </button>
                       <button
                         type="button"
                         onClick={() => moveSection(idx, 1)}
                         disabled={idx === sections.length - 1}
                         className="p-1 text-[var(--color-stone-400)] hover:text-[var(--color-stone-700)] disabled:opacity-30"
-                        title="Aşağı"
+                        title={adminDict.common.moveDown}
                       >
                         ↓
                       </button>
@@ -598,7 +623,7 @@ export default function NewPagePage() {
                         type="button"
                         onClick={() => removeSection(idx)}
                         className="p-1 text-red-500 hover:text-red-700"
-                        title="Sil"
+                        title={adminDict.common.delete}
                       >
                         <Trash2 size={13} />
                       </button>
@@ -607,7 +632,7 @@ export default function NewPagePage() {
 
                   {s.type === "richtext" && (
                     <textarea
-                      placeholder="Metin… (paragraph'lar boş satırla)"
+                      placeholder={pagesDict.sections.richtextPlaceholder}
                       className="input !rounded-xl !p-3 h-32 resize-none leading-relaxed text-[14px]"
                       value={s.content}
                       onChange={(e) =>
@@ -665,11 +690,11 @@ export default function NewPagePage() {
                           }}
                         />
                         <p className="text-xs text-[var(--color-stone-400)]">
-                          WebP, max 1920px. Section başına deterministik path.
+                          {pagesDict.sections.imageHint}
                         </p>
                       </div>
                       <input
-                        placeholder="Alt metin (SEO + erişilebilirlik)"
+                        placeholder={pagesDict.sections.altTextPlaceholder}
                         className="input text-sm"
                         value={s.alt || ""}
                         onChange={(e) =>
@@ -686,7 +711,7 @@ export default function NewPagePage() {
                   {s.type === "quote" && (
                     <div className="space-y-2">
                       <textarea
-                        placeholder="Alıntı metni…"
+                        placeholder={pagesDict.sections.quoteTextPlaceholder}
                         className="input !rounded-xl !p-3 h-20 resize-none leading-relaxed text-[14px]"
                         value={s.text}
                         onChange={(e) =>
@@ -698,7 +723,7 @@ export default function NewPagePage() {
                         }
                       />
                       <input
-                        placeholder="Yazar (opsiyonel)"
+                        placeholder={pagesDict.sections.quoteAuthorPlaceholder}
                         className="input text-sm"
                         value={s.author || ""}
                         onChange={(e) =>
@@ -720,11 +745,11 @@ export default function NewPagePage() {
         {/* SEO */}
         <div className="card-premium p-6 md:p-7 space-y-5">
           <p className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)]">
-            SEO
+            {pagesDict.form.seoHeading}
           </p>
           <div className="space-y-1.5">
             <label className="text-[12px] text-[var(--color-stone-500)] block">
-              SEO Title (boş → sayfa başlığı)
+              {pagesDict.form.seoTitleLabel}
             </label>
             <input
               className="input text-sm"
@@ -734,7 +759,7 @@ export default function NewPagePage() {
           </div>
           <div className="space-y-1.5">
             <label className="text-[12px] text-[var(--color-stone-500)] block">
-              SEO Description
+              {pagesDict.form.seoDescriptionLabel}
             </label>
             <textarea
               className="input !rounded-2xl !p-4 h-20 resize-none leading-relaxed text-sm"
@@ -748,7 +773,7 @@ export default function NewPagePage() {
               checked={noindex}
               onChange={(e) => setNoindex(e.target.checked)}
             />
-            <span>noindex (arama motorlarına gösterme)</span>
+            <span>{pagesDict.form.noindexLabel}</span>
           </label>
           {/* 🛡️ Menüde Göster — default kapalı. Açılırsa header menüsünde
              görünür; kapalıyken sayfa yine /p/{slug} ile erişilebilir. */}
@@ -758,14 +783,16 @@ export default function NewPagePage() {
               checked={showInMenu}
               onChange={(e) => setShowInMenu(e.target.checked)}
             />
-            <span>Menüde Göster (üst menüye ekle)</span>
+            <span>{pagesDict.form.showInMenuLabel}</span>
           </label>
         </div>
 
         <div className="flex justify-end pt-2">
           <button type="submit" disabled={loading} className="btn-primary">
             <Save size={15} />
-            {loading ? "Kaydediliyor…" : "Kaydet"}
+            {loading
+              ? adminDict.common.saving
+              : dictionary.common.save}
           </button>
         </div>
       </form>
@@ -773,13 +800,16 @@ export default function NewPagePage() {
   );
 }
 
-function sectionLabel(t: PageSectionType): string {
+function sectionLabel(
+  t: PageSectionType,
+  dict: Dictionary["admin"]["pages"]["sections"]
+): string {
   switch (t) {
     case "richtext":
-      return "Metin";
+      return dict.typeRichtext;
     case "image":
-      return "Görsel";
+      return dict.typeImage;
     case "quote":
-      return "Alıntı";
+      return dict.typeQuote;
   }
 }

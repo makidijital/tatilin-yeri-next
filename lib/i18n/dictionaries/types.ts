@@ -625,4 +625,145 @@ export type Dictionary = {
       whatsapp: string;
     };
   };
+
+  /* ===============================================================
+     🛡️ PHASE 12 — MAKI ADMIN / PAGES (Seçenek A: locale kaynağı YOK)
+     ===============================================================
+     Admin panelinin İLK i18n namespace'i. Bu fazda admin tarafında
+     locale KAYNAĞI EKLENMEDİ (cookie / localStorage / middleware /
+     DB alanı YOK) — call-site'lar bilinçli olarak
+     `getDictionary(DEFAULT_LOCALE)` çağırır. Yani render çıktısı TR
+     ve Phase 12 öncesiyle BYTE-IDENTICAL'dir.
+
+     EN/DE değerleri burada HAZIR ve `Dictionary` exhaustiveness'i
+     ile compile-time kilitlidir; ileride tek bir admin locale
+     kaynağı bağlandığında call-site'larda yalnız `DEFAULT_LOCALE`
+     argümanı değişir (yeni mekanizma gerekmez).
+
+     `common.*` (public namespace) BİLEREK kirletilmedi. Tek yeniden
+     kullanım `common.save` ("Kaydet" — admin metniyle birebir aynı).
+     `common.loading` ("Yükleniyor") admin'deki "Yükleniyor…"
+     varyantıyla BYTE-IDENTICAL DEĞİL → `admin.common.loadingEllipsis`
+     AYRI key olarak tutuldu (public TR regresyonu riski sıfır). */
+  admin: {
+    /** Admin genelinde tekrar eden mikro metinler. Phase 13+'te
+     *  `admin.blog` / `admin.villas` eklendiğinde yeniden kullanılır. */
+    common: {
+      /** ⚠️ `common.loading` ("Yükleniyor") DEĞİL — admin varyantı
+       *  U+2026 ellipsis içerir. */
+      loadingEllipsis: string;
+      saving: string;
+      deleting: string;
+      delete: string;
+      edit: string;
+      moveUp: string;
+      moveDown: string;
+      networkError: string;
+      requestFailed: string;
+      updateFailed: string;
+      saveFailed: string;
+      unknownError: string;
+      unknownErrorCheckNetwork: string;
+      networkOrRuntimeError: string;
+      /** `formatDictionaryString` — `{hint}` parametreli. */
+      hintPrefix: string;
+    };
+    pages: {
+      list: {
+        eyebrow: string;
+        title: string;
+        subtitle: string;
+        newPageCta: string;
+        emptyTitle: string;
+        emptyDescription: string;
+        view: string;
+        inMenu: string;
+        addToMenu: string;
+        removeFromMenu: string;
+        addToTopMenu: string;
+      };
+      form: {
+        newTitle: string;
+        newSubtitle: string;
+        editTitle: string;
+        editSubtitle: string;
+        viewPage: string;
+        backToList: string;
+        fieldTitle: string;
+        titlePlaceholder: string;
+        fieldSlug: string;
+        slugPlaceholder: string;
+        /** `formatDictionaryString` — `{url}` parametreli. */
+        slugChangedWarning: string;
+        fieldExcerpt: string;
+        excerptPlaceholder: string;
+        fieldCover: string;
+        slugRequiredFirst: string;
+        uploadOrReplaceImage: string;
+        removeCover: string;
+        coverHint: string;
+        fieldBody: string;
+        bodyPlaceholder: string;
+        bodyHint: string;
+        editBodyHint: string;
+        seoHeading: string;
+        seoTitleLabel: string;
+        seoDescriptionLabel: string;
+        noindexLabel: string;
+        showInMenuLabel: string;
+      };
+      sections: {
+        label: string;
+        typeRichtext: string;
+        typeImage: string;
+        typeQuote: string;
+        empty: string;
+        richtextPlaceholder: string;
+        imageHint: string;
+        altTextPlaceholder: string;
+        quoteTextPlaceholder: string;
+        quoteAuthorPlaceholder: string;
+      };
+      publish: {
+        heading: string;
+        published: string;
+        draft: string;
+        publishTitle: string;
+        unpublishTitle: string;
+        /** `formatDictionaryString` — `{url}` parametreli. */
+        hint: string;
+        showInTopMenu: string;
+        /** `formatDictionaryString` — `{url}` parametreli. */
+        showInMenuHint: string;
+      };
+      toast: {
+        listFailed: string;
+        publishFailed: string;
+        published: string;
+        drafted: string;
+        deleteFailed: string;
+        deleted: string;
+        menuAdded: string;
+        menuRemoved: string;
+        imageUploadFailed: string;
+        coverUploaded: string;
+        imageAdded: string;
+        titleSlugRequired: string;
+        saveFailed: string;
+        saveFailedRuntime: string;
+        created: string;
+        loadFailed: string;
+        updated: string;
+      };
+      confirm: {
+        deleteTitle: string;
+        deleteDescription: string;
+        deleteLabel: string;
+      };
+      notFound: {
+        title: string;
+        description: string;
+      };
+    };
+  };
 };

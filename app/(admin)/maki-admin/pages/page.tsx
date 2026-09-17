@@ -12,6 +12,15 @@ import {
 } from "@/app/components/admin/notifications/NotificationProvider";
 import { revalidateMenu } from "@/app/services/revalidate.actions";
 import { logActivity } from "@/lib/activity-log.client";
+/* 🛡️ PHASE 12 — ADMIN I18N (Seçenek A: admin'de locale KAYNAĞI YOK).
+   `getDictionary` saf/senkron bir fonksiyondur (Phase 2) → client
+   component içinde güvenle çağrılır, server/client sınırı bozulmaz.
+   Bu fazda cookie/localStorage/middleware/DB locale alanı EKLENMEDİ;
+   bilinçli olarak DEFAULT_LOCALE sabit kullanılır → render çıktısı
+   Phase 12 öncesiyle BYTE-IDENTICAL. İleride tek bir admin locale
+   kaynağı bağlandığında yalnız bu argüman değişir. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
 
 /* ===============================================================
    🛡️ ADMIN > SAYFALAR — UNIFIED CONFIRM DIALOG (Faz: confirm parity)
@@ -51,6 +60,9 @@ export default function AdminPages() {
   const toast = useNotify();
   const confirm = useConfirm();
 
+  const adminDict = getDictionary(DEFAULT_LOCALE).admin;
+  const pagesDict = adminDict.pages;
+
   const [pages, setPages] = useState<PageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -75,7 +87,7 @@ export default function AdminPages() {
         };
         if (cancelled) return;
         if (!res.ok || !json.ok) {
-          toast.error("Sayfa listesi yüklenemedi", {
+          toast.error(pagesDict.toast.listFailed, {
             id: "pages-list",
             description: json.error || `HTTP ${res.status}`,
           });
@@ -85,8 +97,8 @@ export default function AdminPages() {
         }
       } catch (err) {
         if (cancelled) return;
-        const msg = err instanceof Error ? err.message : "Network hatası";
-        toast.error("Sayfa listesi yüklenemedi", {
+        const msg = err instanceof Error ? err.message : adminDict.common.networkError;
+        toast.error(pagesDict.toast.listFailed, {
           id: "pages-list",
           description: msg,
         });
@@ -136,7 +148,7 @@ export default function AdminPages() {
         updErr = json.error || `HTTP ${res.status}`;
       }
     } catch (err) {
-      updErr = err instanceof Error ? err.message : "İstek başarısız";
+      updErr = err instanceof Error ? err.message : adminDict.common.requestFailed;
     }
     setPublishTogglingId(null);
     if (updErr) {
@@ -145,15 +157,18 @@ export default function AdminPages() {
           p.id === page.id ? { ...p, is_active: !next } : p
         )
       );
-      toast.error("Yayın durumu güncellenemedi", {
+      toast.error(pagesDict.toast.publishFailed, {
         id: `page-publish-${page.id}`,
         description: updErr,
       });
       return;
     }
-    toast.success(next ? "Yayına alındı" : "Taslağa alındı", {
-      id: `page-publish-${page.id}`,
-    });
+    toast.success(
+      next ? pagesDict.toast.published : pagesDict.toast.drafted,
+      {
+        id: `page-publish-${page.id}`,
+      }
+    );
     logActivity({
       action: "page.updated",
       entity_type: "page",
@@ -167,10 +182,9 @@ export default function AdminPages() {
 
   async function handleDelete(page: PageRow) {
     const ok = await confirm({
-      title: "Sayfa silinsin mi?",
-      description:
-        "Bu işlem geri alınamaz. Sayfa yayından kaldırılır ve menü bağlantıları etkilenebilir.",
-      confirmLabel: "Sayfayı Sil",
+      title: pagesDict.confirm.deleteTitle,
+      description: pagesDict.confirm.deleteDescription,
+      confirmLabel: pagesDict.confirm.deleteLabel,
       variant: "danger",
     });
     if (!ok) return;
@@ -194,12 +208,12 @@ export default function AdminPages() {
         delErr = json.error || `HTTP ${res.status}`;
       }
     } catch (err) {
-      delErr = err instanceof Error ? err.message : "İstek başarısız";
+      delErr = err instanceof Error ? err.message : adminDict.common.requestFailed;
     }
     setDeletingId(null);
 
     if (delErr) {
-      toast.error("Sayfa silinemedi", {
+      toast.error(pagesDict.toast.deleteFailed, {
         id: `page-delete-${page.id}`,
         description: delErr,
       });
@@ -210,7 +224,7 @@ export default function AdminPages() {
        invalidation (header menu, kiralık-villalar arşivi vs. türev
        kaynakları taze versiyon görsün). */
     setPages((prev) => prev.filter((p) => p.id !== page.id));
-    toast.success("Sayfa silindi", { id: `page-delete-${page.id}` });
+    toast.success(pagesDict.toast.deleted, { id: `page-delete-${page.id}` });
 
     /* 🛡️ FAZ 55H — AUDIT LOG (fail-safe).
        before_data: silinen page snapshot; admin page listesinde
@@ -264,7 +278,7 @@ export default function AdminPages() {
         updErr = json.error || `HTTP ${res.status}`;
       }
     } catch (err) {
-      updErr = err instanceof Error ? err.message : "İstek başarısız";
+      updErr = err instanceof Error ? err.message : adminDict.common.requestFailed;
     }
     setTogglingId(null);
     if (updErr) {
@@ -274,15 +288,18 @@ export default function AdminPages() {
           p.id === page.id ? { ...p, show_in_menu: !next } : p
         )
       );
-      toast.error("Güncellenemedi", {
+      toast.error(adminDict.common.updateFailed, {
         id: `page-menu-${page.id}`,
         description: updErr,
       });
       return;
     }
-    toast.success(next ? "Menüye eklendi" : "Menüden kaldırıldı", {
-      id: `page-menu-${page.id}`,
-    });
+    toast.success(
+      next ? pagesDict.toast.menuAdded : pagesDict.toast.menuRemoved,
+      {
+        id: `page-menu-${page.id}`,
+      }
+    );
     revalidateMenu().catch(() => {});
     router.refresh();
   }
@@ -291,12 +308,12 @@ export default function AdminPages() {
     <div className="space-y-8 w-full">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">İçerik</p>
+          <p className="eyebrow">{pagesDict.list.eyebrow}</p>
           <h1 className="font-display text-3xl md:text-4xl text-[var(--color-stone-900)] mt-2 tracking-[-0.02em]">
-            Sayfalar
+            {pagesDict.list.title}
           </h1>
           <p className="text-sm text-[var(--color-stone-500)] mt-2">
-            Hakkımızda, Gizlilik gibi statik sayfaları yönet.
+            {pagesDict.list.subtitle}
           </p>
         </div>
 
@@ -305,13 +322,15 @@ export default function AdminPages() {
           className="btn-primary self-start"
         >
           <Plus size={15} />
-          Yeni Sayfa
+          {pagesDict.list.newPageCta}
         </Link>
       </div>
 
       {loading ? (
         <div className="card-premium p-10 text-center">
-          <p className="text-sm text-[var(--color-stone-500)]">Yükleniyor…</p>
+          <p className="text-sm text-[var(--color-stone-500)]">
+            {adminDict.common.loadingEllipsis}
+          </p>
         </div>
       ) : pages.length === 0 ? (
         <div className="card-premium p-10 text-center">
@@ -319,10 +338,10 @@ export default function AdminPages() {
             <FileText size={16} className="text-[var(--color-champagne-700)]" />
           </div>
           <h3 className="font-display text-xl text-[var(--color-stone-900)] mt-4">
-            Henüz sayfa yok
+            {pagesDict.list.emptyTitle}
           </h3>
           <p className="text-sm text-[var(--color-stone-500)] mt-2">
-            İlk sayfanı eklemek için yukarıdaki butonu kullan.
+            {pagesDict.list.emptyDescription}
           </p>
         </div>
       ) : (
@@ -363,7 +382,7 @@ export default function AdminPages() {
                     className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-stone-700)] hover:text-[var(--color-stone-900)] px-3 py-1.5 rounded-lg hover:bg-[var(--color-sand-50)] transition"
                   >
                     <Eye size={13} />
-                    Gör
+                    {pagesDict.list.view}
                   </Link>
 
                   <Link
@@ -371,7 +390,7 @@ export default function AdminPages() {
                     className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-stone-700)] hover:text-[var(--color-stone-900)] px-3 py-1.5 rounded-lg hover:bg-[var(--color-sand-50)] transition"
                   >
                     <Pencil size={13} />
-                    Düzenle
+                    {adminDict.common.edit}
                   </Link>
 
                   {/* 🛡️ YAYIN DURUMU toggle — taslak ⇄ yayında. */}
@@ -379,14 +398,20 @@ export default function AdminPages() {
                     type="button"
                     onClick={() => handleTogglePublish(page)}
                     disabled={isPublishing}
-                    title={isPublished ? "Yayından kaldır (taslak)" : "Yayına al"}
+                    title={
+                      isPublished
+                        ? pagesDict.publish.unpublishTitle
+                        : pagesDict.publish.publishTitle
+                    }
                     className={`inline-flex items-center gap-1.5 text-[13px] font-medium px-3 py-1.5 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed ${
                       isPublished
                         ? "text-emerald-700 hover:bg-emerald-50"
                         : "text-amber-700 hover:bg-amber-50"
                     }`}
                   >
-                    {isPublished ? "Yayında" : "Taslakta"}
+                    {isPublished
+                      ? pagesDict.publish.published
+                      : pagesDict.publish.draft}
                   </button>
 
                   {/* 🛡️ Menüde Göster toggle — aktif yeşil; kapalı nötr.
@@ -397,8 +422,8 @@ export default function AdminPages() {
                     disabled={togglingId === page.id}
                     title={
                       page.show_in_menu
-                        ? "Menüden kaldır"
-                        : "Üst menüye ekle"
+                        ? pagesDict.list.removeFromMenu
+                        : pagesDict.list.addToTopMenu
                     }
                     className={`inline-flex items-center gap-1.5 text-[13px] font-medium px-3 py-1.5 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed ${
                       page.show_in_menu
@@ -407,7 +432,9 @@ export default function AdminPages() {
                     }`}
                   >
                     <Check size={13} />
-                    {page.show_in_menu ? "Menüde" : "Menüye Ekle"}
+                    {page.show_in_menu
+                      ? pagesDict.list.inMenu
+                      : pagesDict.list.addToMenu}
                   </button>
 
                   <button
@@ -417,7 +444,9 @@ export default function AdminPages() {
                     className="inline-flex items-center gap-1.5 text-[13px] text-red-600 hover:text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <Trash2 size={13} />
-                    {isDeleting ? "Siliniyor…" : "Sil"}
+                    {isDeleting
+                      ? adminDict.common.deleting
+                      : adminDict.common.delete}
                   </button>
                 </div>
               </div>

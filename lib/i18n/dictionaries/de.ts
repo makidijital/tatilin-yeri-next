@@ -484,4 +484,134 @@ export const de: Dictionary = {
       whatsapp: "Per WhatsApp schreiben",
     },
   },
+
+  /* 🛡️ PHASE 12 — MAKI ADMIN / PAGES. Bu fazda admin'de locale
+     kaynağı YOK; bu değerler `Dictionary` exhaustiveness'i için
+     hazır tutulur ve henüz hiçbir call-site tarafından RENDER
+     EDİLMEZ (call-site'lar `DEFAULT_LOCALE` kullanır). */
+  admin: {
+    common: {
+      loadingEllipsis: "Wird geladen…",
+      saving: "Wird gespeichert…",
+      deleting: "Wird gelöscht…",
+      delete: "Löschen",
+      edit: "Bearbeiten",
+      moveUp: "Nach oben",
+      moveDown: "Nach unten",
+      networkError: "Netzwerkfehler",
+      requestFailed: "Anfrage fehlgeschlagen",
+      updateFailed: "Aktualisierung fehlgeschlagen",
+      saveFailed: "Speichern fehlgeschlagen",
+      unknownError: "Unbekannter Fehler",
+      unknownErrorCheckNetwork:
+        "Unbekannter Fehler — prüfen Sie den Netzwerk-Tab.",
+      networkOrRuntimeError:
+        "Netzwerk- oder Runtime-Fehler — prüfen Sie den DevTools-Netzwerk-Tab.",
+      hintPrefix: "Hinweis: {hint}",
+    },
+    pages: {
+      list: {
+        eyebrow: "Inhalt",
+        title: "Seiten",
+        subtitle:
+          "Statische Seiten wie Über uns und Datenschutz verwalten.",
+        newPageCta: "Neue Seite",
+        emptyTitle: "Noch keine Seiten",
+        emptyDescription:
+          "Nutzen Sie die Schaltfläche oben, um Ihre erste Seite anzulegen.",
+        view: "Ansehen",
+        inMenu: "Im Menü",
+        addToMenu: "Zum Menü",
+        removeFromMenu: "Aus Menü entfernen",
+        addToTopMenu: "Zum Hauptmenü hinzufügen",
+      },
+      form: {
+        newTitle: "Neue Seite",
+        newSubtitle: "Premium-Editorial-CMS — Hero, Inhalt, Sections.",
+        editTitle: "Seite bearbeiten",
+        editSubtitle: "Titel, Inhalt, SEO und Veröffentlichungsstatus.",
+        viewPage: "Seite ansehen",
+        backToList: "Zurück zur Seitenliste",
+        fieldTitle: "Titel",
+        titlePlaceholder: "z. B. Über uns",
+        fieldSlug: "Slug",
+        slugPlaceholder: "ueber-uns",
+        slugChangedWarning:
+          "Slug geändert — die alte URL ({url}) funktioniert nicht mehr.",
+        fieldExcerpt: "Kurzbeschreibung (Excerpt)",
+        excerptPlaceholder: "Kurzer Beschreibungstext unter dem Hero…",
+        fieldCover: "Titelbild (optional)",
+        slugRequiredFirst: "Zuerst einen Slug eingeben",
+        uploadOrReplaceImage: "Bild hochladen/ersetzen",
+        removeCover: "Titelbild entfernen",
+        coverHint:
+          "Automatisch WebP, max. 1920px. Überschreibt bei gleichem Slug.",
+        fieldBody: "Inhalt (einfach — Absätze durch Leerzeilen getrennt)",
+        bodyPlaceholder: "Seitentext…",
+        bodyHint:
+          "Unten können Sie Sections hinzufügen. Wenn Sections vorhanden sind, wird dieses Feld ausgeblendet und nur die Sections werden gerendert.",
+        editBodyHint:
+          "Wenn dieser Seite zuvor Sections hinzugefügt wurden, bleiben sie erhalten und öffentlich sichtbar; hier wird nur das Haupttextfeld bearbeitet.",
+        seoHeading: "SEO",
+        seoTitleLabel: "SEO-Titel (leer → Seitentitel)",
+        seoDescriptionLabel: "SEO-Beschreibung",
+        noindexLabel: "noindex (nicht für Suchmaschinen anzeigen)",
+        showInMenuLabel: "Im Menü anzeigen (zum Hauptmenü hinzufügen)",
+      },
+      sections: {
+        label: "Sections (optional, sortiert)",
+        typeRichtext: "Text",
+        typeImage: "Bild",
+        typeQuote: "Zitat",
+        empty: "Noch keine Sections. Oben hinzufügen.",
+        richtextPlaceholder: "Text… (Absätze durch Leerzeilen)",
+        imageHint: "WebP, max. 1920px. Deterministischer Pfad je Section.",
+        altTextPlaceholder: "Alt-Text (SEO + Barrierefreiheit)",
+        quoteTextPlaceholder: "Zitattext…",
+        quoteAuthorPlaceholder: "Autor (optional)",
+      },
+      publish: {
+        heading: "Veröffentlichung",
+        published: "Veröffentlicht",
+        draft: "Entwurf",
+        publishTitle: "Veröffentlichen",
+        unpublishTitle: "Veröffentlichung aufheben (Entwurf)",
+        hint: "Wenn deaktiviert, liefert {url} 404 und fällt aus dem SEO-Index. Inhalte werden nicht gelöscht.",
+        showInTopMenu: "Im Hauptmenü anzeigen",
+        showInMenuHint:
+          "Im Header-Menü sichtbar. Wenn aus, bleibt die Seite unter {url} direkt erreichbar.",
+      },
+      toast: {
+        listFailed: "Seitenliste konnte nicht geladen werden",
+        publishFailed:
+          "Veröffentlichungsstatus konnte nicht aktualisiert werden",
+        published: "Veröffentlicht",
+        drafted: "In Entwurf verschoben",
+        deleteFailed: "Seite konnte nicht gelöscht werden",
+        deleted: "Seite gelöscht",
+        menuAdded: "Zum Menü hinzugefügt",
+        menuRemoved: "Aus Menü entfernt",
+        imageUploadFailed: "Bild-Upload fehlgeschlagen",
+        coverUploaded: "Titelbild hochgeladen",
+        imageAdded: "Bild hinzugefügt",
+        titleSlugRequired: "Titel und Slug sind erforderlich",
+        saveFailed: "Seite konnte nicht gespeichert werden",
+        saveFailedRuntime: "Seite konnte nicht gespeichert werden (Runtime)",
+        created: "Seite erstellt",
+        loadFailed: "Seite konnte nicht geladen werden",
+        updated: "Seite aktualisiert",
+      },
+      confirm: {
+        deleteTitle: "Diese Seite löschen?",
+        deleteDescription:
+          "Dies kann nicht rückgängig gemacht werden. Die Seite wird depubliziert und Menülinks können betroffen sein.",
+        deleteLabel: "Seite löschen",
+      },
+      notFound: {
+        title: "Seite nicht gefunden",
+        description:
+          "Diese Seite wurde möglicherweise gelöscht oder der Link ist ungültig.",
+      },
+    },
+  },
 };

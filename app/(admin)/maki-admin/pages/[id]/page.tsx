@@ -18,6 +18,13 @@ import {
   SITE_ASSETS_BUCKET_NAME,
 } from "@/lib/storage.helpers";
 import { convertImageToWebP } from "@/lib/image.helpers";
+/* 🛡️ PHASE 12 — ADMIN I18N (Seçenek A: admin'de locale KAYNAĞI YOK).
+   `getDictionary` / `formatDictionaryString` saf fonksiyonlardır →
+   client component içinde güvenle çağrılır. Bu fazda bilinçli olarak
+   DEFAULT_LOCALE sabit; render çıktısı BYTE-IDENTICAL kalır. */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 
 /* ===============================================================
    🛡️ ADMIN > SAYFA DÜZENLE — minimal-risk CMS edit
@@ -71,6 +78,12 @@ export default function EditPagePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const toast = useNotify();
+
+  /* `common.save` ("Kaydet") admin metniyle BİREBİR aynı → public
+     namespace'ten yeniden kullanılır; duplicate key açılmadı. */
+  const dictionary = getDictionary(DEFAULT_LOCALE);
+  const adminDict = dictionary.admin;
+  const pagesDict = adminDict.pages;
 
   const id = params?.id || "";
 
@@ -131,8 +144,8 @@ export default function EditPagePage() {
         setCoverPath(p.cover_image ?? null);
       } catch (err) {
         if (cancelled) return;
-        const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
-        toast.error("Sayfa yüklenemedi", {
+        const msg = err instanceof Error ? err.message : adminDict.common.unknownError;
+        toast.error(pagesDict.toast.loadFailed, {
           id: `page-load-${id}`,
           description: msg,
         });
@@ -165,7 +178,7 @@ export default function EditPagePage() {
   async function handleCoverUpload(file: File) {
     const s = slug.trim();
     if (!s) {
-      toast.error("Önce slug girin", { id: "page-cover" });
+      toast.error(pagesDict.form.slugRequiredFirst, { id: "page-cover" });
       return;
     }
     setCoverUploading(true);
@@ -184,14 +197,14 @@ export default function EditPagePage() {
         }
       );
       if (!upRes.ok) {
-        toast.error("Görsel yüklenemedi", {
+        toast.error(pagesDict.toast.imageUploadFailed, {
           id: "page-cover",
           description: upRes.error,
         });
         return;
       }
       setCoverPath(path);
-      toast.success("Kapak yüklendi", { id: "page-cover" });
+      toast.success(pagesDict.toast.coverUploaded, { id: "page-cover" });
     } finally {
       setCoverUploading(false);
       if (coverInputRef.current) coverInputRef.current.value = "";
@@ -201,7 +214,7 @@ export default function EditPagePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim() || !slug.trim()) {
-      toast.error("Başlık ve slug zorunlu", { id: `page-save-${id}` });
+      toast.error(pagesDict.toast.titleSlugRequired, { id: `page-save-${id}` });
       return;
     }
     setSaving(true);
@@ -237,14 +250,14 @@ export default function EditPagePage() {
         error?: string;
       };
       if (!res.ok || !json.ok) {
-        toast.error("Kaydedilemedi", {
+        toast.error(adminDict.common.saveFailed, {
           id: `page-save-${id}`,
           description: json.error || `HTTP ${res.status}`,
         });
         return;
       }
 
-      toast.success("Sayfa güncellendi", { id: `page-save-${id}` });
+      toast.success(pagesDict.toast.updated, { id: `page-save-${id}` });
 
       /* 🛡️ Audit log (fail-safe). */
       logActivity({
@@ -272,8 +285,8 @@ export default function EditPagePage() {
       revalidateMenu().catch(() => {});
       router.push("/maki-admin/pages");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Network hatası";
-      toast.error("Kaydedilemedi", {
+      const msg = err instanceof Error ? err.message : adminDict.common.networkError;
+      toast.error(adminDict.common.saveFailed, {
         id: `page-save-${id}`,
         description: msg,
       });
@@ -289,14 +302,14 @@ export default function EditPagePage() {
           href="/maki-admin/pages"
           className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)]"
         >
-          <ArrowLeft size={13} /> Sayfa listesine dön
+          <ArrowLeft size={13} /> {pagesDict.form.backToList}
         </Link>
         <div className="card-premium p-10 text-center">
           <h1 className="font-display text-2xl text-[var(--color-stone-900)]">
-            Sayfa bulunamadı
+            {pagesDict.notFound.title}
           </h1>
           <p className="text-sm text-[var(--color-stone-500)] mt-2">
-            Bu sayfa silinmiş ya da geçersiz bir bağlantı kullanılmış olabilir.
+            {pagesDict.notFound.description}
           </p>
         </div>
       </div>
@@ -312,17 +325,17 @@ export default function EditPagePage() {
         href="/maki-admin/pages"
         className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)]"
       >
-        <ArrowLeft size={13} /> Sayfa listesine dön
+        <ArrowLeft size={13} /> {pagesDict.form.backToList}
       </Link>
 
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
         <div>
-          <p className="eyebrow">İçerik</p>
+          <p className="eyebrow">{pagesDict.list.eyebrow}</p>
           <h1 className="font-display text-3xl md:text-4xl text-[var(--color-stone-900)] mt-2 tracking-[-0.02em]">
-            Sayfayı düzenle
+            {pagesDict.form.editTitle}
           </h1>
           <p className="text-sm text-[var(--color-stone-500)] mt-2">
-            Başlık, içerik, SEO ve yayın durumu.
+            {pagesDict.form.editSubtitle}
           </p>
         </div>
         {!loading && originalSlug && isActive && (
@@ -332,7 +345,7 @@ export default function EditPagePage() {
             rel="noreferrer"
             className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-stone-700)] hover:text-[var(--color-stone-900)] px-3 py-1.5 rounded-lg hover:bg-[var(--color-sand-50)] transition self-start"
           >
-            <Eye size={13} /> Sayfayı görüntüle
+            <Eye size={13} /> {pagesDict.form.viewPage}
           </Link>
         )}
       </div>
@@ -346,20 +359,20 @@ export default function EditPagePage() {
         <div className="card-premium p-6 md:p-7 space-y-5">
           <div className="space-y-1.5">
             <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              Başlık
+              {pagesDict.form.fieldTitle}
             </label>
             <input
               className="input"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={loading}
-              placeholder="Örn: Hakkımızda"
+              placeholder={pagesDict.form.titlePlaceholder}
             />
           </div>
 
           <div className="space-y-1.5">
             <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              Slug
+              {pagesDict.form.fieldSlug}
             </label>
             <input
               className="input font-mono text-sm"
@@ -372,21 +385,23 @@ export default function EditPagePage() {
             </p>
             {slugChanged && (
               <p className="text-xs text-amber-600">
-                Slug değişti — eski URL (/p/{originalSlug}) artık çalışmayacak.
+                {formatDictionaryString(pagesDict.form.slugChangedWarning, {
+                  url: `/p/${originalSlug}`,
+                })}
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
             <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-              Kısa açıklama (excerpt)
+              {pagesDict.form.fieldExcerpt}
             </label>
             <textarea
               className="input !rounded-2xl !p-4 h-24 resize-none leading-relaxed"
               value={excerpt}
               onChange={(e) => setExcerpt(e.target.value)}
               disabled={loading}
-              placeholder="Hero altında küçük açıklama metni…"
+              placeholder={pagesDict.form.excerptPlaceholder}
             />
           </div>
         </div>
@@ -394,18 +409,17 @@ export default function EditPagePage() {
         {/* BODY */}
         <div className="card-premium p-6 md:p-7 space-y-1.5">
           <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block">
-            İçerik (sade — paragraph'lar boş satırla ayrılır)
+            {pagesDict.form.fieldBody}
           </label>
           <textarea
             className="input !rounded-2xl !p-4 h-64 resize-none leading-relaxed"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             disabled={loading}
-            placeholder="Sayfa metni…"
+            placeholder={pagesDict.form.bodyPlaceholder}
           />
           <p className="text-xs text-[var(--color-stone-400)]">
-            Bu sayfaya daha önce bölüm (section) eklenmişse içerik korunur ve
-            herkese görünür kalır; buradan yalnız ana metin alanı düzenlenir.
+            {pagesDict.form.editBodyHint}
           </p>
         </div>
 
@@ -413,7 +427,7 @@ export default function EditPagePage() {
             önizlemesi + değiştir + kaldır. */}
         <div className="card-premium p-6 md:p-7">
           <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block mb-3">
-            Kapak görseli (opsiyonel)
+            {pagesDict.form.fieldCover}
           </label>
           <div className="flex items-center gap-4">
             <button
@@ -421,7 +435,11 @@ export default function EditPagePage() {
               onClick={() => coverInputRef.current?.click()}
               disabled={coverUploading || !slug.trim()}
               className="relative w-32 h-20 rounded-2xl overflow-hidden bg-[var(--color-sand-50)] border border-[var(--color-stone-200)] hover:border-[var(--color-champagne-500)] transition disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!slug.trim() ? "Önce slug girin" : "Görsel yükle/değiştir"}
+              title={
+                !slug.trim()
+                  ? pagesDict.form.slugRequiredFirst
+                  : pagesDict.form.uploadOrReplaceImage
+              }
             >
               {coverUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
@@ -437,7 +455,7 @@ export default function EditPagePage() {
               )}
               {coverUploading && (
                 <span className="absolute inset-0 flex items-center justify-center bg-white/70 text-[10px] font-medium text-[var(--color-stone-700)]">
-                  Yükleniyor…
+                  {adminDict.common.loadingEllipsis}
                 </span>
               )}
             </button>
@@ -457,11 +475,11 @@ export default function EditPagePage() {
                 onClick={() => setCoverPath(null)}
                 className="text-[13px] text-red-600 hover:text-red-700"
               >
-                Kapağı kaldır
+                {pagesDict.form.removeCover}
               </button>
             )}
             <p className="text-xs text-[var(--color-stone-400)] ml-auto max-w-xs">
-              Otomatik WebP, max 1920px. Aynı slug için overwrite.
+              {pagesDict.form.coverHint}
             </p>
           </div>
         </div>
@@ -473,7 +491,7 @@ export default function EditPagePage() {
           </p>
           <div className="space-y-1.5">
             <label className="text-[12px] text-[var(--color-stone-500)] block">
-              SEO Title (boş → sayfa başlığı)
+              {pagesDict.form.seoTitleLabel}
             </label>
             <input
               className="input text-sm"
@@ -484,7 +502,7 @@ export default function EditPagePage() {
           </div>
           <div className="space-y-1.5">
             <label className="text-[12px] text-[var(--color-stone-500)] block">
-              SEO Description
+              {pagesDict.form.seoDescriptionLabel}
             </label>
             <textarea
               className="input !rounded-2xl !p-4 h-20 resize-none leading-relaxed text-sm"
@@ -500,14 +518,14 @@ export default function EditPagePage() {
               onChange={(e) => setNoindex(e.target.checked)}
               disabled={loading}
             />
-            <span>noindex (arama motorlarına gösterme)</span>
+            <span>{pagesDict.form.noindexLabel}</span>
           </label>
         </div>
 
         {/* YAYIN DURUMU */}
         <div className="card-premium p-6 md:p-7 space-y-4">
           <p className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)]">
-            Yayın
+            {pagesDict.publish.heading}
           </p>
 
           <label className="flex items-start gap-3 text-sm text-[var(--color-stone-700)]">
@@ -519,11 +537,12 @@ export default function EditPagePage() {
               className="mt-1"
             />
             <span>
-              <strong className="font-medium">Yayında</strong>
+              <strong className="font-medium">{pagesDict.publish.published}</strong>
               <br />
               <span className="text-[12px] text-[var(--color-stone-500)]">
-                Kapatılırsa /p/{slug || "slug"} 404 döner; SEO indexinden
-                düşer. İçerik silinmez.
+                {formatDictionaryString(pagesDict.publish.hint, {
+                  url: `/p/${slug || "slug"}`,
+                })}
               </span>
             </span>
           </label>
@@ -537,11 +556,12 @@ export default function EditPagePage() {
               className="mt-1"
             />
             <span>
-              <strong className="font-medium">Üst menüde göster</strong>
+              <strong className="font-medium">{pagesDict.publish.showInTopMenu}</strong>
               <br />
               <span className="text-[12px] text-[var(--color-stone-500)]">
-                Header menüsünde görünür. Kapalıyken sayfa /p/{slug || "slug"}
-                {" "}üzerinden direkt erişilebilir.
+                {formatDictionaryString(pagesDict.publish.showInMenuHint, {
+                  url: `/p/${slug || "slug"}`,
+                })}
               </span>
             </span>
           </label>
@@ -554,7 +574,7 @@ export default function EditPagePage() {
             className="btn-primary"
           >
             <Save size={15} />
-            {saving ? "Kaydediliyor…" : "Kaydet"}
+            {saving ? adminDict.common.saving : dictionary.common.save}
           </button>
         </div>
       </form>
