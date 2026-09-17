@@ -496,6 +496,87 @@ export const tr: Dictionary = {
     },
   },
 
+  /* 🛡️ PHASE 13 — PUBLIC ARAMA. TR değerleri `AramaPageBody` /
+     `FilterSidebar` içindeki ESKİ hardcoded metinlerin BİREBİR
+     kopyasıdır (U+2026 "…", U+2013 "–", "±" dahil). */
+  search: {
+    breadcrumbHome: "Ana sayfa",
+    breadcrumbVillas: "Villalar",
+    heroEyebrow: "Kiralık Villalar",
+    heroTitleFound: "kiralık villa ve yazlık bulundu",
+    heroTitleIdleLead: "Aradığını",
+    heroTitleIdleAccent: "bulalım.",
+    heroFlexibleFound: "alternatif villa daha bulundu",
+    pillRegions: "{n} Bölge",
+    pillTypes: "{n} Tip",
+    pillGuests: "{n}+ Kişi",
+    errorEyebrow: "Hata",
+    errorTitle: "Arama yüklenemedi.",
+    errorBody:
+      "Geçici bir sorun oluştu. Lütfen sayfayı yenile veya birkaç dakika sonra tekrar dene.",
+    errorRetry: "Tekrar dene",
+    showAllVillas: "Tüm villaları göster",
+    emptyEyebrow: "Sonuç",
+    emptyTitleLead: "Uygun villa",
+    emptyTitleAccent: "bulunamadı.",
+    emptyBody:
+      "Seçtiğiniz tarih veya filtrelere uygun aktif villa bulunamadı. Tarih aralığını genişletmeyi veya filtreleri temizlemeyi deneyin.",
+    emptyClearFilters: "Filtreleri temizle",
+    sortLabel: "Sırala",
+    sortAriaLabel: "Villa sıralaması",
+    sortOptions: {
+      smart: "Akıllı Sıralama",
+      priceAsc: "Fiyat (Düşükten Yükseğe)",
+      priceDesc: "Fiyat (Yüksekten Düşüğe)",
+      capacityAsc: "Kapasite (Küçükten Büyüğe)",
+      capacityDesc: "Kapasite (Büyükten Küçüğe)",
+    },
+    pageSizeLabel: "Sayfa başına",
+    pageSizeAriaLabel: "Sayfa başına villa sayısı",
+    paginationAriaLabel: "Sayfalar",
+    paginationPrev: "Önceki",
+    paginationNext: "Sonraki",
+    flexibleEyebrow: "Alternatif Müsaitlik",
+    flexibleTitle: "Esnek Tarih Fırsatları",
+    flexibleBody:
+      "Seçtiğiniz tarihlerde müsait olmayan ancak ±3 gün içinde alternatif müsaitlik bulunan villalar.",
+    flexibleCountSuffix: "alternatif villa",
+    filters: {
+      title: "Filtrele ve Tarih Seç",
+      closeAriaLabel: "Filtreleri kapat",
+      dateLabel: "Tarih",
+      dateSummaryEmpty: "Tarih seç",
+      datePlaceholder: "Giriş – Çıkış",
+      guestsLabel: "Kişi Sayısı",
+      guestsSummary: "{n} kişi",
+      guestsCounterLabel: "Kişi",
+      guestsCounterHint: "Toplam kapasite",
+      guestsHint: "+ kişi kapasitesi olan villalar gösterilir.",
+      regionLabel: "Bölge",
+      regionAll: "Tüm bölgeler",
+      regionEmpty: "Bölge yok.",
+      selectedCount: "{n} seçili",
+      regionGroupAll: "Tüm {group}",
+      typeLabel: "Villa Tipi",
+      typeAll: "Tümü",
+      typeEmpty: "Tip yok.",
+      advancedTitle: "Gelişmiş Arama",
+      advancedCheckbox:
+        "Sonuçlarda 3 gün önceki ve sonraki villaları da göster",
+      advancedHint:
+        "Seçtiğiniz tarihlerde uygun olmayan, ancak ±3 gün içinde müsait olan villaları da gösterir.",
+      reset: "Temizle",
+      apply: "Filtrele",
+      applying: "Aranıyor…",
+      findVillas: "Villa Bul",
+      showResults: "{n} sonucu göster",
+      mobileTriggerEyebrow: "Filtrele",
+      mobileTriggerLabel: "Bölge, tarih, kişi…",
+      increaseAriaLabel: "{label} arttır",
+      decreaseAriaLabel: "{label} azalt",
+    },
+  },
+
   /* 🛡️ PHASE 12E — PUBLIC CMS statik UI metinleri. TR değerleri
      `CmsPageBody.tsx`'teki ESKİ hardcoded metinlerin BİREBİR
      kopyasıdır; hiçbiri değiştirilmedi. */

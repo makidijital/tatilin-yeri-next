@@ -314,10 +314,30 @@ const COMING_SOON_ROUTES: Array<
 > = [
   ["@/app/(public)/en/kiralik-villalar/page", "en", undefined],
   ["@/app/(public)/de/kiralik-villalar/page", "de", undefined],
-  ["@/app/(public)/en/arama/page", "en", undefined],
-  ["@/app/(public)/de/arama/page", "de", undefined],
+  /* 🛡️ PHASE 13 — `/en|de/arama` ARTIK ComingSoon DEĞİL; gerçek
+     `AramaPageBody`'yi render ediyor. Gate davranışı (gate çağrısı +
+     notFound propagate) AYNI kaldığı için, villa detayda uygulanan
+     AYNI desenle AYRI bir gruba taşındı (bkz. SEARCH_GATE_ROUTES). */
   ["@/app/(public)/en/rezervasyon/[slug]/page", "en", undefined],
   ["@/app/(public)/de/rezervasyon/[slug]/page", "de", undefined],
+];
+
+/* 🛡️ PHASE 13 — arama route'ları: gate sözleşmesi AYNEN, içerik
+   assertion'ı ComingSoon yerine ortak `AramaPageBody` + locale prop'u.
+   `searchParams` Promise'i sayfaya AYNEN geçirilir (URL kontratı). */
+const SEARCH_GATE_ROUTES: Array<
+  [string, "en" | "de", Record<string, unknown>]
+> = [
+  [
+    "@/app/(public)/en/arama/page",
+    "en",
+    { searchParams: Promise.resolve({}) },
+  ],
+  [
+    "@/app/(public)/de/arama/page",
+    "de",
+    { searchParams: Promise.resolve({}) },
+  ],
 ];
 
 /* 🛡️ PHASE 10B, Section 9 — villa detay artık ComingSoon'un YERİNE
@@ -349,6 +369,34 @@ describe.each(COMING_SOON_ROUTES)("%s", (modulePath, locale, pageProps) => {
         ? screen.getByText(/this page isn't translated yet/i)
         : screen.getByText(/diese seite ist noch nicht übersetzt/i)
     ).toBeInTheDocument();
+  });
+
+  it("gate notFound() fırlattığında sayfa bunu YUTMAZ (aynen propagate eder)", async () => {
+    requirePublicLocaleEnabledMock.mockRejectedValue(
+      new Error("NEXT_NOT_FOUND")
+    );
+
+    const { default: Page } = await import(modulePath);
+
+    await expect(Page(pageProps)).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+});
+
+describe.each(SEARCH_GATE_ROUTES)("%s", (modulePath, locale, pageProps) => {
+  it(`gate geçtiğinde ortak AramaPageBody'yi locale="${locale}" ile render eder`, async () => {
+    requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
+
+    const { default: Page } = await import(modulePath);
+    const { default: AramaPageBody } = await import(
+      "@/app/components/search/AramaPageBody"
+    );
+    const element = await Page(pageProps);
+
+    expect(requirePublicLocaleEnabledMock).toHaveBeenCalledTimes(1);
+    expect(element.type).toBe(AramaPageBody);
+    expect(element.props.locale).toBe(locale);
+    /* searchParams AYNEN aktarılır — URL query kontratı değişmedi. */
+    expect(element.props.searchParams).toBe(pageProps.searchParams);
   });
 
   it("gate notFound() fırlattığında sayfa bunu YUTMAZ (aynen propagate eder)", async () => {

@@ -42,9 +42,26 @@ import "react-datepicker/dist/react-datepicker.css";
    uyumlu. Yalnız mobilde popper'ı kenarlardan padding kadar uzak tutmak
    için kullanılır (attachment + üçgen korunur). */
 import { shift } from "@floating-ui/react";
-import { tr } from "date-fns/locale";
+/* 🛡️ PHASE 13 — TR/EN/DE takvim locale'leri. `react-datepicker` v9
+   ve mevcut `registerLocale` mekanizması DEĞİŞMEDİ; yalnız iki locale
+   daha kaydedildi. Yeni kütüphane EKLENMEDİ. */
+import { tr, enUS, de } from "date-fns/locale";
 
 import MobileKbSafeInput from "@/app/components/ui/datepicker/MobileKbSafeInput";
+
+/* 🛡️ PHASE 13 — statik panel metinleri MEVCUT public dictionary'den.
+   `getDictionary` saf/senkron statik lookup (Phase 2) → client
+   component'te güvenle çağrılır; yeni provider/context/fallback YOK. */
+import {
+  DEFAULT_LOCALE,
+  LOCALE_BCP47,
+  type Locale,
+} from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import type { Dictionary } from "@/lib/i18n/dictionaries/types";
+
+type FiltersDictionary = Dictionary["search"]["filters"];
 
 import {
   Calendar,
@@ -61,6 +78,8 @@ import {
 } from "lucide-react";
 
 registerLocale("tr", tr);
+registerLocale("en", enUS);
+registerLocale("de", de);
 
 /* ---------------- Types ---------------- */
 
@@ -119,6 +138,13 @@ type Props = {
   resultCount?: number;
   /** Default "search". Detay için "MODE CONTRACT" bloğuna bak. */
   mode?: FilterSidebarMode;
+  /** 🛡️ PHASE 13 — panel metinleri + takvim locale'i. OPSİYONEL;
+   *  verilmezse "tr" → mevcut çıktı BYTE-IDENTICAL. */
+  locale?: Locale;
+  /** 🛡️ PHASE 13 — "Filtrele"/"Temizle" hedefi. OPSİYONEL; verilmezse
+   *  "/arama" → `/kiralik-villalar` (mode="redirect") dahil mevcut
+   *  davranış BİREBİR korunur. Yeni routing sistemi YOK. */
+  basePath?: string;
 };
 
 /* ---------------- Helpers ---------------- */
@@ -134,8 +160,15 @@ const formatDateForUrl = (date: Date): string => {
      - name === group               → "Tüm {group}"  (üst bölge)
      - name "X / Y" formatında ise  → "/" sonrası ("Y")
      - aksi halde                   → name */
-const regionShortLabel = (name: string, group: string): string => {
-  if (name === group) return `Tüm ${group}`;
+const regionShortLabel = (
+  name: string,
+  group: string,
+  dict: FiltersDictionary
+): string => {
+  /* ⚠️ Bölge ADI çevrilmez (DB canonical, özel isim); yalnız
+     "Tüm …" ön eki locale-aware. */
+  if (name === group)
+    return formatDictionaryString(dict.regionGroupAll, { group });
   if (name.includes("/")) {
     const tail = name.split("/").pop()?.trim();
     if (tail) return tail;
@@ -161,7 +194,10 @@ export default function FilterSidebar({
   initial,
   resultCount = 0,
   mode = "search",
+  locale = DEFAULT_LOCALE,
+  basePath = "/arama",
 }: Props) {
+  const dict: FiltersDictionary = getDictionary(locale).search.filters;
   const router = useRouter();
   /* 🛡️ pageSize URL state — filter Uygula sonrası KORUNUR.
      `buildHref` her seferinde URLSearchParams'ı sıfırdan inşa
@@ -357,7 +393,9 @@ export default function FilterSidebar({
       params.set("flexible", "3");
     }
     const qs = params.toString();
-    return qs ? `/arama?${qs}` : "/arama";
+    /* 🛡️ PHASE 13 — hedef locale-aware (`basePath`). Parametre seti,
+       canonical isimler ve default'ların yazılmaması DEĞİŞMEDİ. */
+    return qs ? `${basePath}?${qs}` : basePath;
   };
 
   const applyFilters = () => {
@@ -382,7 +420,7 @@ export default function FilterSidebar({
       return;
     }
     startTransition(() => {
-      router.push("/arama");
+      router.push(basePath);
     });
   };
 
@@ -455,7 +493,7 @@ export default function FilterSidebar({
       <div className="flex items-start justify-between gap-4 pb-6 border-b border-[var(--color-stone-100)]">
         <div>
           <h2 className="font-display text-[26px] md:text-[28px] text-[var(--color-stone-900)] tracking-[-0.025em] leading-tight">
-            Filtrele ve Tarih Seç
+            {dict.title}
           </h2>
         </div>
 
@@ -463,7 +501,7 @@ export default function FilterSidebar({
         <button
           type="button"
           onClick={() => setMobileOpen(false)}
-          aria-label="Filtreleri kapat"
+          aria-label={dict.closeAriaLabel}
           className="md:hidden -mr-1 w-10 h-10 rounded-full flex items-center justify-center text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)] transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
         >
           <X size={18} />
@@ -493,22 +531,22 @@ export default function FilterSidebar({
               className="text-[var(--color-champagne-500)]"
             />
           }
-          label="Tarih"
+          label={dict.dateLabel}
           summary={
             startDate && endDate
-              ? `${startDate.toLocaleDateString("tr-TR", {
+              ? `${startDate.toLocaleDateString(LOCALE_BCP47[locale], {
                   day: "numeric",
                   month: "short",
-                })} – ${endDate.toLocaleDateString("tr-TR", {
+                })} – ${endDate.toLocaleDateString(LOCALE_BCP47[locale], {
                   day: "numeric",
                   month: "short",
                 })}`
               : startDate
-              ? startDate.toLocaleDateString("tr-TR", {
+              ? startDate.toLocaleDateString(LOCALE_BCP47[locale], {
                   day: "numeric",
                   month: "short",
                 })
-              : "Tarih seç"
+              : dict.dateSummaryEmpty
           }
         >
           <div
@@ -526,10 +564,10 @@ export default function FilterSidebar({
               startDate={startDate}
               endDate={endDate}
               selectsRange
-              locale="tr"
+              locale={locale}
               dateFormat="dd.MM.yyyy"
               minDate={new Date()}
-              placeholderText="Giriş – Çıkış"
+              placeholderText={dict.datePlaceholder}
               /* 🛡️ Mobilde input altında ORTALI aç (bottom); desktop mevcut
                  default (bottom-start) aynen kalır. Popper attachment + üçgen
                  korunur → takvim inputa bağlı kalır, yalnız yatay hiza
@@ -597,23 +635,24 @@ export default function FilterSidebar({
           icon={
             <Users size={14} className="text-[var(--color-champagne-500)]" />
           }
-          label="Kişi Sayısı"
-          summary={
-            guestCount > 1 ? `${guestCount} kişi` : "1 kişi"
-          }
+          label={dict.guestsLabel}
+          summary={formatDictionaryString(dict.guestsSummary, {
+            n: guestCount > 1 ? guestCount : 1,
+          })}
         >
           <div className="space-y-3">
             <CounterRow
-              label="Kişi"
-              hint="Toplam kapasite"
+              label={dict.guestsCounterLabel}
+              hint={dict.guestsCounterHint}
+              dict={dict}
               value={guestCount}
               min={1}
               max={20}
               onChange={setGuestCount}
             />
             <p className="text-[11px] tracking-[0.04em] text-[var(--color-stone-400)] pt-1 leading-relaxed">
-              <span className="tabular-nums">{guestCount}</span>+ kişi
-              kapasitesi olan villalar gösterilir.
+              <span className="tabular-nums">{guestCount}</span>
+              {dict.guestsHint}
             </p>
           </div>
         </FilterGroup>
@@ -621,16 +660,18 @@ export default function FilterSidebar({
         {/* ============ 3) BÖLGE ============ */}
         <FilterGroup
           icon={<MapPin size={14} className="text-[var(--color-champagne-500)]" />}
-          label="Bölge"
+          label={dict.regionLabel}
           summary={
             regions.length === 0
-              ? "Tüm bölgeler"
-              : `${regions.length} seçili`
+              ? dict.regionAll
+              : formatDictionaryString(dict.selectedCount, {
+                  n: regions.length,
+                })
           }
         >
           {regionGroups.length === 0 ? (
             <p className="text-[13px] text-[var(--color-stone-400)]">
-              Bölge yok.
+              {dict.regionEmpty}
             </p>
           ) : (
             <div className="space-y-1.5">
@@ -668,7 +709,9 @@ export default function FilterSidebar({
                       </span>
                       {selectedCount > 0 && (
                         <span className="text-[11px] tabular-nums text-[var(--color-stone-400)] shrink-0">
-                          {selectedCount} seçili
+                          {formatDictionaryString(dict.selectedCount, {
+                            n: selectedCount,
+                          })}
                         </span>
                       )}
                     </button>
@@ -692,7 +735,7 @@ export default function FilterSidebar({
                                   className="!w-4 !h-4 accent-[var(--color-champagne-500)] !rounded"
                                 />
                                 <span className="truncate">
-                                  {regionShortLabel(opt.name, g.group)}
+                                  {regionShortLabel(opt.name, g.group, dict)}
                                 </span>
                               </label>
                             </li>
@@ -710,16 +753,18 @@ export default function FilterSidebar({
         {/* ============ 4) VİLLA TİPİ ============ */}
         <FilterGroup
           icon={<Tag size={14} className="text-[var(--color-champagne-500)]" />}
-          label="Villa Tipi"
+          label={dict.typeLabel}
           summary={
             categories.length === 0
-              ? "Tümü"
-              : `${categories.length} seçili`
+              ? dict.typeAll
+              : formatDictionaryString(dict.selectedCount, {
+                  n: categories.length,
+                })
           }
         >
           {categoryOptions.length === 0 ? (
             <p className="text-[13px] text-[var(--color-stone-400)]">
-              Tip yok.
+              {dict.typeEmpty}
             </p>
           ) : (
             <ul className="space-y-1">
@@ -757,7 +802,7 @@ export default function FilterSidebar({
             filtre/sonuç mantığı DEĞİŞMEZ. */}
         <div className="pt-1">
           <p className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-stone-500)]">
-            Gelişmiş Arama
+            {dict.advancedTitle}
           </p>
           <label className="flex items-start gap-3 rounded-xl bg-[var(--color-sand-50)]/60 px-3 py-3 text-[14px] cursor-pointer transition-colors motion-reduce:transition-none hover:bg-[var(--color-sand-50)]">
             <input
@@ -767,10 +812,9 @@ export default function FilterSidebar({
               className="mt-0.5 shrink-0 !w-4 !h-4 accent-[var(--color-champagne-500)] !rounded"
             />
             <span className="leading-snug text-[var(--color-stone-700)]">
-              Sonuçlarda 3 gün önceki ve sonraki villaları da göster
+              {dict.advancedCheckbox}
               <span className="mt-1 block text-[12px] text-[var(--color-stone-400)]">
-                Seçtiğiniz tarihlerde uygun olmayan, ancak ±3 gün içinde
-                müsait olan villaları da gösterir.
+                {dict.advancedHint}
               </span>
             </span>
           </label>
@@ -786,7 +830,7 @@ export default function FilterSidebar({
           className="inline-flex items-center gap-2 px-4 py-3 rounded-full border border-[var(--color-stone-200)] text-[13px] font-medium text-[var(--color-stone-700)] hover:border-[var(--color-stone-300)] hover:text-[var(--color-stone-900)] transition-colors motion-reduce:transition-none disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
         >
           <RotateCcw size={13} />
-          Temizle
+          {dict.reset}
         </button>
         <button
           type="button"
@@ -797,12 +841,12 @@ export default function FilterSidebar({
           <Search size={14} />
           <span>
             {isPending
-              ? "Aranıyor…"
+              ? dict.applying
               : isRedirect
-              ? "Villa Bul"
+              ? dict.findVillas
               : mobileOpen
-              ? `${resultCount} sonucu göster`
-              : "Filtrele"}
+              ? formatDictionaryString(dict.showResults, { n: resultCount })
+              : dict.apply}
           </span>
         </button>
       </div>
@@ -831,10 +875,10 @@ export default function FilterSidebar({
             </span>
             <span>
               <span className="block text-[11px] tracking-[0.18em] uppercase font-medium text-[var(--color-stone-500)]">
-                Filtrele
+                {dict.mobileTriggerEyebrow}
               </span>
               <span className="block text-[14px] font-medium text-[var(--color-stone-900)] mt-0.5">
-                Bölge, tarih, kişi…
+                {dict.mobileTriggerLabel}
               </span>
             </span>
           </span>
@@ -942,6 +986,7 @@ function CounterRow({
   min,
   max,
   onChange,
+  dict,
 }: {
   label: string;
   hint: string;
@@ -949,6 +994,8 @@ function CounterRow({
   min: number;
   max: number;
   onChange: (n: number) => void;
+  /* 🛡️ PHASE 13 — yalnız aria-label şablonları için. */
+  dict: FiltersDictionary;
 }) {
   const canDec = value > min;
   const canInc = value < max;
@@ -967,7 +1014,9 @@ function CounterRow({
           type="button"
           onClick={() => canDec && onChange(value - 1)}
           disabled={!canDec}
-          aria-label={`${label} azalt`}
+          aria-label={formatDictionaryString(dict.decreaseAriaLabel, {
+            label,
+          })}
           className="w-8 h-8 rounded-full border border-[var(--color-stone-200)] text-[var(--color-stone-700)] flex items-center justify-center hover:border-[var(--color-stone-300)] hover:text-[var(--color-stone-900)] transition-colors motion-reduce:transition-none disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
         >
           <Minus size={13} />
@@ -979,7 +1028,9 @@ function CounterRow({
           type="button"
           onClick={() => canInc && onChange(value + 1)}
           disabled={!canInc}
-          aria-label={`${label} arttır`}
+          aria-label={formatDictionaryString(dict.increaseAriaLabel, {
+            label,
+          })}
           className="w-8 h-8 rounded-full border border-[var(--color-stone-200)] text-[var(--color-stone-700)] flex items-center justify-center hover:border-[var(--color-stone-300)] hover:text-[var(--color-stone-900)] transition-colors motion-reduce:transition-none disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
         >
           <Plus size={13} />

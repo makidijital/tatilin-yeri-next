@@ -1,30 +1,36 @@
-import type { Metadata } from "next";
-
+import AramaPageBody, {
+  type AramaSearchParams,
+} from "@/app/components/search/AramaPageBody";
 import { requirePublicLocaleEnabled } from "@/lib/i18n/public-locale-gate.server";
 import { setRequestLocale } from "@/lib/i18n/request-locale.server";
-import LocaleRouteComingSoon from "@/app/components/i18n/LocaleRouteComingSoon";
 
 /* ===============================================================
-   🛡️ /de/arama — PHASE 4A (Public Locale Routing Core)
+   🛡️ /de/arama — SEARCH RESULTS (DE) — PHASE 13
    ===============================================================
-   TR karşılığı: app/(public)/arama/page.tsx (DEĞİŞMEDİ). Arama/filtre
-   mantığı bu fazda BURAYA taşınmadı/kopyalanmadı — yalnız routing
-   altyapısı. `multilingual_enabled=false` olduğu sürece (bugün
-   production) notFound() → 404.
+   ÖNCEKİ DURUM: `LocaleRouteComingSoon` placeholder (Phase 4A).
+   ŞİMDİ: TR ile AYNI gövde (`AramaPageBody`) — tek fark `locale`
+   prop'u. Arama pipeline'ı, URL query kontratı, availability,
+   fiyat/sıralama/pagination semantiği BİREBİR aynı.
 
-   🛡️ PHASE 4B EKLEMESİ: `setRequestLocale(locale)` — bu request için
-   locale'i işaretler (lib/i18n/request-locale.server.ts, React `cache()`
-   request-scoped store). TR route'ları bu store'u hiç yazmadığından
-   onlar için `DEFAULT_LOCALE` ("tr") otomatik kalır. Bu satır dışında
-   PHASE 4A davranışı (gate + placeholder) DEĞİŞMEDİ.
+   KORUNAN PHASE 4A/4B DAVRANIŞI:
+     • `setRequestLocale("de")` — request-scoped locale işareti.
+     • `await requirePublicLocaleEnabled()` — `multilingual_enabled`
+       kapalıyken notFound() → 404 (bugünkü production davranışı).
+
+   SEO: `/arama` faceted-search olduğu için `robots.ts` Disallow +
+   sitemap hariç tutma kararı GEÇERLİ; bu fazda metadata/hreflang
+   EKLENMEDİ. Placeholder'a özel koşulsuz `noindex` metadata'sı
+   KALDIRILDI — indexing politikası zaten robots.ts'te merkezî.
    =============================================================== */
+export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
-
-export default async function DeSearchPage() {
+export default async function DeSearchPage({
+  searchParams,
+}: {
+  searchParams: AramaSearchParams;
+}) {
   setRequestLocale("de");
   await requirePublicLocaleEnabled();
-  return <LocaleRouteComingSoon locale="de" />;
+
+  return <AramaPageBody locale="de" searchParams={searchParams} />;
 }

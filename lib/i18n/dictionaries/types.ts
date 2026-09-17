@@ -627,6 +627,114 @@ export type Dictionary = {
   };
 
   /* ===============================================================
+     🛡️ PHASE 13 — PUBLIC ARAMA (/arama · /en/arama · /de/arama)
+     ===============================================================
+     `app/components/search/AramaPageBody.tsx` + `app/(public)/arama/
+     FilterSidebar.tsx` içindeki KULLANICIYA GÖRÜNEN sabit metinler.
+
+     KAPSAM DIŞI (bilinçli):
+       • URL query parametreleri (`villa-turleri`, `bolgeler`, `start`,
+         `end`, `guests`, `page`, `pageSize`, `sort`, `flexible`) ve
+         legacy `categories`/`regions` — ÇEVRİLMEZ, URL kontratı sabit.
+       • `lib/pagination.ts` (`PUBLIC_SORT_LABELS` dahil) — DOKUNULMADI;
+         locale-aware etiketler aşağıdaki `sortOptions` üzerinden gelir,
+         TR değerleri o dosyayla BİREBİR aynıdır.
+       • Villa adı / bölge adı / tip adı — DB canonical, çevrilmez.
+
+     Fallback: mevcut public i18n davranışı — `getDictionary(locale)`
+     saf statik lookup; eksik key DERLEME HATASI (Dictionary exhaustive).
+     Yeni provider/context/fallback mekanizması EKLENMEDİ. */
+  search: {
+    breadcrumbHome: string;
+    breadcrumbVillas: string;
+    heroEyebrow: string;
+    /** Sayı AYRI `<span class="tabular-nums">` içinde kalır. */
+    heroTitleFound: string;
+    heroTitleIdleLead: string;
+    heroTitleIdleAccent: string;
+    /** Sayı AYRI span'de; bu yalnız takip eden metin. */
+    heroFlexibleFound: string;
+    /** `formatDictionaryString` — `{n}`. */
+    pillRegions: string;
+    /** `formatDictionaryString` — `{n}`. */
+    pillTypes: string;
+    /** `formatDictionaryString` — `{n}`. */
+    pillGuests: string;
+    errorEyebrow: string;
+    errorTitle: string;
+    errorBody: string;
+    errorRetry: string;
+    showAllVillas: string;
+    emptyEyebrow: string;
+    emptyTitleLead: string;
+    emptyTitleAccent: string;
+    emptyBody: string;
+    emptyClearFilters: string;
+    sortLabel: string;
+    sortAriaLabel: string;
+    /** `PublicSort` allow-list'inin locale-aware etiketleri.
+     *  TR değerleri `lib/pagination.ts > PUBLIC_SORT_LABELS` ile BİREBİR. */
+    sortOptions: {
+      smart: string;
+      priceAsc: string;
+      priceDesc: string;
+      capacityAsc: string;
+      capacityDesc: string;
+    };
+    pageSizeLabel: string;
+    pageSizeAriaLabel: string;
+    paginationAriaLabel: string;
+    paginationPrev: string;
+    paginationNext: string;
+    flexibleEyebrow: string;
+    flexibleTitle: string;
+    flexibleBody: string;
+    /** Sayı AYRI span'de; bu yalnız takip eden metin. */
+    flexibleCountSuffix: string;
+    /** FilterSidebar (client island) — `/arama` ve `/kiralik-villalar`
+     *  tarafından PAYLAŞILAN panel. */
+    filters: {
+      title: string;
+      closeAriaLabel: string;
+      dateLabel: string;
+      dateSummaryEmpty: string;
+      datePlaceholder: string;
+      guestsLabel: string;
+      /** `formatDictionaryString` — `{n}`. */
+      guestsSummary: string;
+      guestsCounterLabel: string;
+      guestsCounterHint: string;
+      /** Sayı AYRI span'de; bu yalnız takip eden metin. */
+      guestsHint: string;
+      regionLabel: string;
+      regionAll: string;
+      regionEmpty: string;
+      /** `formatDictionaryString` — `{n}`. */
+      selectedCount: string;
+      /** `formatDictionaryString` — `{group}` (bölge adı ÇEVRİLMEZ). */
+      regionGroupAll: string;
+      typeLabel: string;
+      typeAll: string;
+      typeEmpty: string;
+      advancedTitle: string;
+      advancedCheckbox: string;
+      advancedHint: string;
+      reset: string;
+      apply: string;
+      applying: string;
+      findVillas: string;
+      /** `formatDictionaryString` — `{n}`. */
+      showResults: string;
+      mobileTriggerEyebrow: string;
+      mobileTriggerLabel: string;
+      /** `formatDictionaryString` — `{label}`. */
+      increaseAriaLabel: string;
+      /** `formatDictionaryString` — `{label}`. */
+      decreaseAriaLabel: string;
+    };
+  };
+
+  /* ===============================================================
      🛡️ PHASE 12E — PUBLIC CMS SAYFASI (/p/[slug]) STATİK UI METİNLERİ
      ===============================================================
      `app/components/cms/CmsPageBody.tsx` içindeki hardcoded TR
