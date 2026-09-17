@@ -307,20 +307,57 @@ function openVillaTab(
   fireEvent.click(screen.getByRole("button", { name: dict.villaTabs[tab] }));
 }
 
-/* [modül yolu, beklenen locale, page prop'ları] — 6 route (villa detay
-   AYRI gruba taşındı, bkz. VILLA_DETAIL_GATE_ROUTES). */
-const COMING_SOON_ROUTES: Array<
-  [string, "en" | "de", Record<string, unknown> | undefined]
+/* 🛡️ ComingSoon placeholder'ı KALAN public locale route'u YOK —
+   `/en|de/kiralik-villalar` (ARCHIVE_GATE_ROUTES), `/en|de/arama`
+   (SEARCH_GATE_ROUTES), `/en|de/iletisim` (CONTACT_GATE_ROUTES),
+   `/en|de/kiralik-villa/[slug]` (VILLA_DETAIL_GATE_ROUTES) ve
+   `/en|de/rezervasyon/*` (RESERVATION_GATE_ROUTES /
+   RESERVATION_SUCCESS_GATE_ROUTES) gerçek gövdeleri render ediyor.
+   Gate sözleşmesi (gate çağrısı + notFound propagate) HEPSİNDE AYNI.
+   `LocaleRouteComingSoon` component'inin kendi testi
+   `tests/unit/LocaleRouteComingSoon.test.tsx` içinde DURUYOR. */
+
+/* 🛡️ Rezervasyon route'ları (/rezervasyon/[slug]): gate sözleşmesi
+   AYNEN, içerik assertion'ı ortak `ReservationPageBody` + locale
+   prop'u. `params` ve `searchParams` Promise'leri sayfaya AYNEN
+   geçirilir (URL/slug kontratı DEĞİŞMEDİ). */
+const RESERVATION_GATE_ROUTES: Array<
+  [string, "en" | "de", Record<string, unknown>]
 > = [
-  /* 🛡️ `/en|de/kiralik-villalar` ARTIK ComingSoon DEĞİL; gerçek
-     `KiralikVillalarPageBody`'yi render ediyor. Gate sözleşmesi AYNI
-     kaldığı için AYRI gruba taşındı (bkz. ARCHIVE_GATE_ROUTES). */
-  /* 🛡️ PHASE 13 — `/en|de/arama` ARTIK ComingSoon DEĞİL; gerçek
-     `AramaPageBody`'yi render ediyor. Gate davranışı (gate çağrısı +
-     notFound propagate) AYNI kaldığı için, villa detayda uygulanan
-     AYNI desenle AYRI bir gruba taşındı (bkz. SEARCH_GATE_ROUTES). */
-  ["@/app/(public)/en/rezervasyon/[slug]/page", "en", undefined],
-  ["@/app/(public)/de/rezervasyon/[slug]/page", "de", undefined],
+  [
+    "@/app/(public)/en/rezervasyon/[slug]/page",
+    "en",
+    {
+      params: Promise.resolve({ slug: "test-villa" }),
+      searchParams: Promise.resolve({}),
+    },
+  ],
+  [
+    "@/app/(public)/de/rezervasyon/[slug]/page",
+    "de",
+    {
+      params: Promise.resolve({ slug: "test-villa" }),
+      searchParams: Promise.resolve({}),
+    },
+  ],
+];
+
+/* 🛡️ Rezervasyon başarılı route'ları (/rezervasyon/basarili): gate
+   sözleşmesi AYNEN, içerik assertion'ı ortak `ReservationSuccessBody`
+   + locale prop'u. `searchParams` (ref/villa) AYNEN geçirilir. */
+const RESERVATION_SUCCESS_GATE_ROUTES: Array<
+  [string, "en" | "de", Record<string, unknown>]
+> = [
+  [
+    "@/app/(public)/en/rezervasyon/basarili/page",
+    "en",
+    { searchParams: Promise.resolve({}) },
+  ],
+  [
+    "@/app/(public)/de/rezervasyon/basarili/page",
+    "de",
+    { searchParams: Promise.resolve({}) },
+  ],
 ];
 
 /* 🛡️ PHASE 13 — arama route'ları: gate sözleşmesi AYNEN, içerik
@@ -436,32 +473,66 @@ const VILLA_DETAIL_GATE_ROUTES: Array<
   ["@/app/(public)/de/kiralik-villa/[slug]/page", "de", VILLA_PAGE_PROPS],
 ];
 
-describe.each(COMING_SOON_ROUTES)("%s", (modulePath, locale, pageProps) => {
-  it(`gate geçtiğinde (multilingual_enabled=true) locale="${locale}" ile render eder`, async () => {
-    requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
+describe.each(RESERVATION_GATE_ROUTES)(
+  "%s",
+  (modulePath, locale, pageProps) => {
+    it(`gate geçtiğinde ortak ReservationPageBody'yi locale="${locale}" ile render eder`, async () => {
+      requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
 
-    const { default: Page } = await import(modulePath);
-    const element = await Page(pageProps);
-    render(element);
+      const { default: Page } = await import(modulePath);
+      const { default: ReservationPageBody } = await import(
+        "@/app/components/reservation/ReservationPageBody"
+      );
+      const element = await Page(pageProps);
 
-    expect(requirePublicLocaleEnabledMock).toHaveBeenCalledTimes(1);
-    expect(
-      locale === "en"
-        ? screen.getByText(/this page isn't translated yet/i)
-        : screen.getByText(/diese seite ist noch nicht übersetzt/i)
-    ).toBeInTheDocument();
-  });
+      expect(requirePublicLocaleEnabledMock).toHaveBeenCalledTimes(1);
+      expect(element.type).toBe(ReservationPageBody);
+      expect(element.props.locale).toBe(locale);
+      expect(element.props.params).toBe(pageProps.params);
+      expect(element.props.searchParams).toBe(pageProps.searchParams);
+    });
 
-  it("gate notFound() fırlattığında sayfa bunu YUTMAZ (aynen propagate eder)", async () => {
-    requirePublicLocaleEnabledMock.mockRejectedValue(
-      new Error("NEXT_NOT_FOUND")
-    );
+    it("gate notFound() fırlattığında sayfa bunu YUTMAZ (aynen propagate eder)", async () => {
+      requirePublicLocaleEnabledMock.mockRejectedValue(
+        new Error("NEXT_NOT_FOUND")
+      );
 
-    const { default: Page } = await import(modulePath);
+      const { default: Page } = await import(modulePath);
 
-    await expect(Page(pageProps)).rejects.toThrow("NEXT_NOT_FOUND");
-  });
-});
+      await expect(Page(pageProps)).rejects.toThrow("NEXT_NOT_FOUND");
+    });
+  }
+);
+
+describe.each(RESERVATION_SUCCESS_GATE_ROUTES)(
+  "%s",
+  (modulePath, locale, pageProps) => {
+    it(`gate geçtiğinde ortak ReservationSuccessBody'yi locale="${locale}" ile render eder`, async () => {
+      requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
+
+      const { default: Page } = await import(modulePath);
+      const { default: ReservationSuccessBody } = await import(
+        "@/app/components/reservation/ReservationSuccessBody"
+      );
+      const element = await Page(pageProps);
+
+      expect(requirePublicLocaleEnabledMock).toHaveBeenCalledTimes(1);
+      expect(element.type).toBe(ReservationSuccessBody);
+      expect(element.props.locale).toBe(locale);
+      expect(element.props.searchParams).toBe(pageProps.searchParams);
+    });
+
+    it("gate notFound() fırlattığında sayfa bunu YUTMAZ (aynen propagate eder)", async () => {
+      requirePublicLocaleEnabledMock.mockRejectedValue(
+        new Error("NEXT_NOT_FOUND")
+      );
+
+      const { default: Page } = await import(modulePath);
+
+      await expect(Page(pageProps)).rejects.toThrow("NEXT_NOT_FOUND");
+    });
+  }
+);
 
 describe.each(SEARCH_GATE_ROUTES)("%s", (modulePath, locale, pageProps) => {
   it(`gate geçtiğinde ortak AramaPageBody'yi locale="${locale}" ile render eder`, async () => {

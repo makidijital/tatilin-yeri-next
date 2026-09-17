@@ -566,6 +566,96 @@ export const de: Dictionary = {
     },
   },
 
+  /* 🛡️ /de/rezervasyon statik UI metinleri. */
+  reservation: {
+    page: {
+      breadcrumbCurrent: "Buchung",
+      title: "Geben Sie Ihre persönlichen Daten ein",
+      description:
+        "Sobald wir Ihre Buchungsanfrage erhalten haben, meldet sich unser Team bei Ihnen.",
+      badgeEyebrow: "Buchung",
+      badgeLine1: "Sichere Zahlung",
+      badgeLine2: "Schnelle Bestätigung",
+      badgeLine3: "Support-Team",
+      invalidUrl: "Ungültige URL",
+      notFoundEyebrow: "404",
+      notFoundTitle: "Villa nicht gefunden",
+    },
+    summary: {
+      eyebrow: "Aufenthalt",
+      guestsCount: "{n} Gäste",
+      nightsCount: "{n} Nächte",
+      payNowAll: "Jetzt fällig (Gesamtbetrag)",
+    },
+    form: {
+      step1Eyebrow: "Schritt 1",
+      step1Title: "Kontaktdaten",
+      step1Subtitle:
+        "Teilen Sie uns die Daten mit, unter denen wir Sie erreichen können.",
+      step2Eyebrow: "Schritt 2",
+      step2Title: "Adressdaten",
+      step2Subtitle: "Wird für Rechnung und Verifizierung verwendet.",
+      step3Eyebrow: "Schritt 3",
+      step3Title: "Gäste",
+      step3Subtitle: "Wer wird bei diesem Aufenthalt dabei sein?",
+      step4Eyebrow: "Schritt 4",
+      step4Title: "Zahlungsmethode",
+      step4Subtitle: "Wählen Sie Ihre bevorzugte Zahlungsmethode.",
+      step5Eyebrow: "Schritt 5",
+      step5Title: "Zahlungspräferenz",
+      step5Subtitle:
+        "Möchten Sie jetzt nur die Anzahlung leisten oder den Gesamtbetrag zahlen?",
+      namePlaceholder: "Vor- und Nachname",
+      emailPlaceholder: "E-Mail",
+      phonePlaceholder: "Telefon",
+      identityPlaceholder: "Ausweis / Reisepass",
+      addressPlaceholder: "Adresse",
+      notePlaceholder: "Notiz (optional)",
+      countrySelect: "Land wählen",
+      citySelect: "Stadt wählen",
+      citySelectDisabled: "Zuerst Land wählen",
+      totalGuestsLabel: "Gäste gesamt",
+      guestsPersonCount: "{n} Personen",
+      otherGuests: "Weitere Gäste",
+      guestNamePlaceholder: "Gast {n} Vor- und Nachname",
+      noPaymentMethod: "Keine Zahlungsmethode gefunden",
+      prepaymentOption: "Anzahlung",
+      prepaymentHint: "{rate}% Anzahlung",
+      fullPaymentOption: "Ich möchte den Gesamtbetrag zahlen",
+      fullPaymentHint: "Der gesamte Betrag",
+      submit: "Buchung senden",
+      submitting: "Wird gesendet…",
+      errorDismissAriaLabel: "Fehlermeldung schließen",
+      errorGeneric:
+        "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
+      errorDatesUnavailable: "Diese Termine sind belegt",
+    },
+    validation: {
+      nameRequired: "Name ist erforderlich",
+      phoneRequired: "Telefon ist erforderlich",
+      phoneInvalid: "Geben Sie eine gültige Telefonnummer ein",
+      emailRequired: "E-Mail ist erforderlich",
+      emailInvalid: "Geben Sie eine gültige E-Mail ein",
+      identityRequired: "Ausweisnummer ist erforderlich",
+      identityInvalid: "Geben Sie eine 11-stellige Ausweisnummer ein",
+      paymentMethodRequired: "Zahlungsmethode wählen",
+      dateRequired: "Bitte Termine auswählen",
+    },
+    success: {
+      metaTitle: "Ihre Buchungsanfrage ist eingegangen",
+      eyebrow: "Anfrage erhalten",
+      title: "Ihre Buchungsanfrage ist eingegangen",
+      description:
+        "Ihre Anfrage hat uns erfolgreich erreicht. Unser Team meldet sich in Kürze bei Ihnen, um die Details Ihrer Buchung zu klären. Bei dringenden Anliegen erreichen Sie uns auch über WhatsApp.",
+      referenceLabel: "Referenznummer",
+      referenceHint:
+        "Wenn Sie diese Nummer angeben, beschleunigt das den Vorgang.",
+      whatsappCta: "Kontakt über WhatsApp",
+      homeCta: "Zurück zur Startseite",
+      villaCta: "Zurück zu den Villendetails",
+    },
+  },
+
   /* 🛡️ /de/iletisim statik UI metinleri. */
   contact: {
     meta: {

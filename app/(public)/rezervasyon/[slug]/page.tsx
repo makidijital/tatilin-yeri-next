@@ -1,11 +1,22 @@
-import { getVillaBySlug } from "@/app/services/villa.service";
-import { getVillaPrices } from "@/app/services/villa-price.service";
-import { getVillaDiscounts } from "@/app/services/villa-discount.service";
-import { getVillaImages } from "@/app/services/villa-image/villa-image.read";
-import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+import ReservationPageBody from "@/app/components/reservation/ReservationPageBody";
 
-import ReservationForm from "@/app/components/reservation/ReservationForm";
-import PageHero from "@/app/components/ui/PageHero";
+/* ===============================================================
+   🛡️ /rezervasyon/[slug] — PUBLIC REZERVASYON (TR)
+   ===============================================================
+   Sayfa gövdesi `app/components/reservation/ReservationPageBody.tsx`'e
+   TAŞINDI (DOM/CSS/veri akışı/servis çağrıları DEĞİŞTİRİLMEDEN) —
+   `/en/rezervasyon/[slug]` ve `/de/rezervasyon/[slug]` AYNI gövdeyi
+   render eder; kodun ikinci/üçüncü kopyası YOKTUR.
+
+   TR DAVRANIŞI DEĞİŞMEDİ:
+     • URL `/rezervasyon/[slug]` aynı.
+     • `locale="tr"` → dictionary TR değerleri eski hardcoded
+       metinlerle BİREBİR.
+     • Route segment config (`dynamic`/`revalidate`) EKLENMEDİ.
+     • `generateMetadata` YOK (eskiden de yoktu) — robots.ts zaten
+       `/rezervasyon/` segmentini Disallow ediyor (DEĞİŞTİRİLMEDİ).
+     • TR'de locale gate (`requirePublicLocaleEnabled`) ÇAĞRILMAZ.
+   =============================================================== */
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -14,94 +25,16 @@ type Props = {
     end?: string | string[];
     adults?: string | string[];
     children?: string | string[];
-    // 🛡️ HAVUZ ISITMA — 6. adım. useBookingEngine.handleReservation
-    // hard-navigation (window.location.href) URL'ine ekliyor; burada
-    // parse edilip ReservationForm'a prop olarak geçiyor.
     poolHeating?: string | string[];
   }>;
 };
 
-export default async function ReservationPage({
-  params,
-  searchParams,
-}: Props) {
-  const { slug } = await params;
-  const sp = await searchParams;
-
-  if (!slug) {
-    return (
-      <section className="section-narrow py-32 text-center">
-        <h2 className="font-display text-3xl text-[var(--color-stone-900)]">
-          Geçersiz URL
-        </h2>
-      </section>
-    );
-  }
-
-  const villa = await getVillaBySlug(slug);
-
-  if (!villa) {
-    return (
-      <section className="section-narrow py-32 text-center">
-        <p className="eyebrow !text-[var(--color-stone-400)]">404</p>
-        <h2 className="font-display text-3xl text-[var(--color-stone-900)] mt-3">
-          Villa bulunamadı
-        </h2>
-      </section>
-    );
-  }
-
-  const prices = await getVillaPrices(villa.id);
-  const discounts = await getVillaDiscounts(villa.id);
-  const images = await getVillaImages(villa.id);
-  /* 🛡️ Bucket-fix — resolveVillaImageUrl: villa-images bucket'ından URL
-     üretir. Legacy FULL URL pass-through, Phase B path → URL. */
-  const coverImage = resolveVillaImageUrl(images?.[0]?.image_url);
-
-  const getParam = (param?: string | string[]) => {
-    if (!param) return undefined;
-    return Array.isArray(param) ? param[0] : param;
-  };
-
-  const start = getParam(sp.start);
-  const end = getParam(sp.end);
-  const adults = getParam(sp.adults);
-  const children = getParam(sp.children);
-  const poolHeating = getParam(sp.poolHeating);
-
+export default async function ReservationPage({ params, searchParams }: Props) {
   return (
-    <>
-      {/* HERO — paylaşılan premium PageHero (kompakt editorial band) */}
-      <PageHero
-        breadcrumb={[
-          { name: "Ana sayfa", href: "/" },
-          { name: "Kiralık Villalar", href: "/kiralik-villalar" },
-          { name: "Rezervasyon" },
-        ]}
-        title="Kişisel Bilgilerinizi Girin"
-        description="Rezervasyon talebini aldıktan sonra ekibimiz seninle iletişime geçecek."
-        badge={{
-          eyebrow: "Rezervasyon",
-          lines: ["Güvenli Ödeme", "Hızlı Onay", "Destek Ekibi"],
-        }}
-      />
-
-      <div className="section-narrow pt-12 md:pt-16 pb-20">
-        <ReservationForm
-          villa={villa}
-          prices={prices}
-          discounts={discounts}
-          start={start}
-          end={end}
-          image={coverImage}
-          adults={adults}
-          poolHeatingSelected={poolHeating === "1"}
-          /* 🛡️ false-positive: `children` burada misafir sayısı
-             (rezervasyon domain prop'u), React.children DEĞİL. */
-          // eslint-disable-next-line react/no-children-prop
-          children={children}
-        />
-      </div>
-    </>
+    <ReservationPageBody
+      params={params}
+      searchParams={searchParams}
+      locale="tr"
+    />
   );
 }

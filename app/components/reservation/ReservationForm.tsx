@@ -44,6 +44,14 @@ import { dispatchPublicReservationRequestMail } from "./_helpers/dispatchPublicR
    SuccessModal componenti silinmedi (gelecekte kullanılabilir). */
 import { useRouter } from "next/navigation";
 
+/* 🛡️ REZERVASYON ÇOKLU DİL — statik metinler MEVCUT public
+   dictionary'den (`reservation.*` + REUSE edilen `booking.*`).
+   Fiyat hesaplama, snapshot, ödeme, havuz ısıtma, payload, API
+   endpoint, mail dispatch ve validation KURALLARI DEĞİŞMEDİ. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+
 export default function ReservationForm({
   villa,
   prices,
@@ -58,8 +66,16 @@ export default function ReservationForm({
   // useBookingEngine'in hard-navigation URL'i üzerinden taşınıyor
   // (bkz. useBookingEngine.ts handleReservation).
   poolHeatingSelected,
+  /* 🛡️ Opsiyonel — verilmezse "tr" → TR çıktısı BİREBİR eskisi gibi. */
+  locale = DEFAULT_LOCALE,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }: any) {
+  const activeLocale: Locale = locale;
+  const dictionary = getDictionary(activeLocale);
+  const dict = dictionary.reservation;
+  /* 🛡️ Fiyat özeti etiketleri `booking` namespace'inden REUSE edilir —
+     ikinci bir kopya üretilmedi (TR değerleri BİREBİR aynı). */
+  const bookingDict = dictionary.booking;
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [prepaymentRate, setPrepaymentRate] = useState(20);
@@ -409,7 +425,10 @@ export default function ReservationForm({
 
   const handleSubmit = async () => {
     /* 🛡️ FAZ 2 — validation helper-driven; mesaj + regex'ler birebir. */
-    const newErrors = validatePublicReservationForm({ form, start, end });
+    const newErrors = validatePublicReservationForm(
+      { form, start, end },
+      activeLocale
+    );
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -461,7 +480,19 @@ export default function ReservationForm({
         | null;
 
       if (!res.ok || !json?.ok) {
-        throw new Error(json?.error || "Rezervasyon oluşturulamadı");
+        /* 🛡️ SUNUCU HATA METNİ KULLANICIYA BASILMAZ. Route'un TR
+           mesajları, `applyRateLimit`'in İngilizce "Too many requests"
+           gövdesi ve `create.service.ts`'ten gelebilen HAM DB hata
+           metni locale dışıdır ve UI'a SIZMAMALI. API sözleşmesi,
+           rate-limit, Sentry ve create akışı DEĞİŞMEDİ — yalnız
+           GÖSTERİM locale-aware dictionary metnine çevrildi.
+           TEK İSTİSNA: HTTP 409 = "tarihler dolu" — kullanıcı için
+           anlamlı olduğundan kendi dictionary mesajını alır. */
+        throw new Error(
+          res.status === 409
+            ? dict.form.errorDatesUnavailable
+            : dict.form.errorGeneric
+        );
       }
 
       /* 🛡️ RESERVATION REQUEST MAIL — fire-and-forget (helper-driven).
@@ -489,7 +520,14 @@ export default function ReservationForm({
       const qs: string[] = [];
       if (refParam) qs.push(`ref=${refParam}`);
       if (villaParam) qs.push(`villa=${villaParam}`);
-      const url = `/rezervasyon/basarili${qs.length ? `?${qs.join("&")}` : ""}`;
+      /* 🛡️ LOCALE-AWARE SUCCESS REDIRECT. Query parametreleri (`ref`,
+         `villa`) ve `encodeURIComponent` davranışı AYNEN korunur;
+         yalnız path'e locale prefix'i eklenir. TR'de URL BYTE-IDENTICAL. */
+      const successBase =
+        activeLocale === DEFAULT_LOCALE
+          ? "/rezervasyon/basarili"
+          : `/${activeLocale}/rezervasyon/basarili`;
+      const url = `${successBase}${qs.length ? `?${qs.join("&")}` : ""}`;
       router.push(url);
 
     } catch (err: unknown) {
@@ -497,9 +535,7 @@ export default function ReservationForm({
       console.error(err);
 
       const msg =
-        err instanceof Error
-          ? err.message
-          : "İşlem sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.";
+        err instanceof Error ? err.message : dict.form.errorGeneric;
       /* 🛡️ Modern error — alert() yerine inline banner state. */
       setSubmitError(msg);
 
@@ -537,7 +573,7 @@ export default function ReservationForm({
 
           <div className="md:col-span-3 p-6 space-y-5">
             <div>
-              <p className="eyebrow">Konaklama</p>
+              <p className="eyebrow">{dict.summary.eyebrow}</p>
               <h3 className="font-display text-xl text-[var(--color-stone-900)] mt-1.5 leading-snug">
                 {villa.title}
               </h3>
@@ -564,7 +600,9 @@ export default function ReservationForm({
                     timeZone: "Europe/Istanbul",
                   })}
                   <span className="text-[var(--color-stone-400)] ml-2">
-                    {getNights()} gece
+                    {formatDictionaryString(dict.summary.nightsCount, {
+                      n: getNights(),
+                    })}
                   </span>
                 </span>
               </div>
@@ -576,7 +614,11 @@ export default function ReservationForm({
                   size={16}
                   className="text-[var(--color-champagne-500)]"
                 />
-                <span>{form.guests} misafir</span>
+                <span>
+                  {formatDictionaryString(dict.summary.guestsCount, {
+                    n: form.guests,
+                  })}
+                </span>
               </div>
             )}
 
@@ -604,7 +646,12 @@ export default function ReservationForm({
                   indirim yoksa görünüm BİREBİR ESKİSİ gibi. */}
               {hasActiveStayDiscount ? (
                 <div className="flex items-start justify-between gap-3 text-[var(--color-stone-600)]">
-                  <span>Konaklama Tutarı ({getNights()} Gece)</span>
+                  <span>
+                    {formatDictionaryString(
+                      bookingDict.accommodationAmountLabel,
+                      { n: getNights() }
+                    )}
+                  </span>
                   <div className="text-right">
                     <span className="block text-[11px] text-[var(--color-stone-400)] line-through tabular-nums">
                       {formatCurrency(resultWithoutDiscount?.stay || 0, currency)}
@@ -613,13 +660,18 @@ export default function ReservationForm({
                       {formatCurrency(result?.stay || 0, currency)}
                     </span>
                     <span className="mt-1 inline-block rounded-full bg-[#0973BA] px-2.5 py-0.5 text-[10px] font-semibold text-white text-center whitespace-nowrap">
-                      İndirimli Tutar
+                      {bookingDict.discountedTotal}
                     </span>
                   </div>
                 </div>
               ) : (
                 <div className="flex justify-between text-[var(--color-stone-600)]">
-                  <span>Konaklama Tutarı ({getNights()} Gece)</span>
+                  <span>
+                    {formatDictionaryString(
+                      bookingDict.accommodationAmountLabel,
+                      { n: getNights() }
+                    )}
+                  </span>
                   <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
                     {formatCurrency(result?.stay || 0, currency)}
                   </span>
@@ -632,7 +684,7 @@ export default function ReservationForm({
                   result.cleaning değeri DEĞİŞMEDİ. */}
               {(result?.cleaning || 0) > 0 && (
                 <div className="flex justify-between text-[var(--color-stone-600)]">
-                  <span>Kısa Süreli Konaklama Ücreti</span>
+                  <span>{bookingDict.shortStayFeeLabel}</span>
                   <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
                     {formatCurrency((result as any).cleaning || 0, currency)}
                   </span>
@@ -647,7 +699,7 @@ export default function ReservationForm({
               {(result?.poolHeating || 0) > 0 && (
                 <div>
                   <div className="flex justify-between text-[var(--color-stone-600)]">
-                    <span>Havuz Isıtma Ücreti</span>
+                    <span>{bookingDict.poolHeatingFeeLabel}</span>
                     <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
                       {formatCurrency((result as any).poolHeating || 0, currency)}
                     </span>
@@ -659,7 +711,11 @@ export default function ReservationForm({
                           villa.pool_heating_fee,
                           villa.pool_heating_currency || "TRY"
                         )}{" "}
-                        / gece × {getNights()} gece
+                        {bookingDict.poolHeatingPerNightSuffix}{" "}
+                        {formatDictionaryString(
+                          bookingDict.poolHeatingNightsMultiplier,
+                          { n: getNights() }
+                        )}
                       </p>
                     )}
                 </div>
@@ -669,7 +725,9 @@ export default function ReservationForm({
                   zeminli, vurgulu satır. totalPrice DEĞİŞMEDİ. */}
               <div className="border-t border-[var(--color-sand-100)] pt-3">
                 <div className="flex items-center justify-between rounded-xl bg-green-50/70 px-3 py-2.5">
-                  <span className="font-semibold text-green-800">Toplam Tutar</span>
+                  <span className="font-semibold text-green-800">
+                    {bookingDict.total}
+                  </span>
                   <span className="font-display text-lg font-bold text-green-700 tabular-nums">
                     {formatCurrency(totalPrice, currency)}
                   </span>
@@ -686,7 +744,7 @@ export default function ReservationForm({
                   <>
                     <div className="rounded-xl border border-purple-100 bg-purple-50/60 px-3 py-2">
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-purple-500">
-                        Şimdi ödenecek (Tüm tutar)
+                        {dict.summary.payNowAll}
                       </p>
                       <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
                         {formatCurrency(totalPrice, currency)}
@@ -694,7 +752,7 @@ export default function ReservationForm({
                     </div>
                     <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
-                        Girişte ödenecek
+                        {bookingDict.dueAtCheckinLabel}
                       </p>
                       <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
                         {formatCurrency(0, currency)}
@@ -705,7 +763,10 @@ export default function ReservationForm({
                   <>
                     <div className="rounded-xl border border-purple-100 bg-purple-50/60 px-3 py-2">
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-purple-500">
-                        Ön ödeme (%{prepaymentRate})
+                        {formatDictionaryString(
+                          bookingDict.prepaymentAmountLabel,
+                          { rate: prepaymentRate }
+                        )}
                       </p>
                       <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
                         {formatCurrency(prepayment, currency)}
@@ -713,7 +774,7 @@ export default function ReservationForm({
                     </div>
                     <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
-                        Girişte ödenecek
+                        {bookingDict.dueAtCheckinLabel}
                       </p>
                       <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
                         {formatCurrency(totalPrice - prepayment, currency)}
@@ -750,7 +811,7 @@ export default function ReservationForm({
             <button
               type="button"
               onClick={() => setSubmitError(null)}
-              aria-label="Hata mesajını kapat"
+              aria-label={dict.form.errorDismissAriaLabel}
               className="text-red-500 hover:text-red-700 transition-colors shrink-0"
             >
               ✕
@@ -759,16 +820,16 @@ export default function ReservationForm({
         )}
         {/* CONTACT SECTION */}
         <Section
-          eyebrow="Adım 1"
-          title="İletişim bilgileri"
-          subtitle="Rezervasyon için ulaşılabileceğimiz bilgileri paylaş."
+          eyebrow={dict.form.step1Eyebrow}
+          title={dict.form.step1Title}
+          subtitle={dict.form.step1Subtitle}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
-              { key: "name", placeholder: "İsim Soyisim" },
-              { key: "email", placeholder: "E-posta" },
-              { key: "phone", placeholder: "Telefon" },
-              { key: "identity", placeholder: "TC / Pasaport" },
+              { key: "name", placeholder: dict.form.namePlaceholder },
+              { key: "email", placeholder: dict.form.emailPlaceholder },
+              { key: "phone", placeholder: dict.form.phonePlaceholder },
+              { key: "identity", placeholder: dict.form.identityPlaceholder },
             ].map((field) => (
               <div key={field.key}>
                 <input
@@ -796,9 +857,9 @@ export default function ReservationForm({
 
         {/* ADDRESS SECTION */}
         <Section
-          eyebrow="Adım 2"
-          title="Adres bilgisi"
-          subtitle="Fatura ve doğrulama için kullanılacak."
+          eyebrow={dict.form.step2Eyebrow}
+          title={dict.form.step2Title}
+          subtitle={dict.form.step2Subtitle}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <select
@@ -806,7 +867,7 @@ export default function ReservationForm({
               onChange={(e) => handleCountryChange(e.target.value)}
               className={`${inputBase} ${inputOk}`}
             >
-              <option value="">Ülke seç</option>
+              <option value="">{dict.form.countrySelect}</option>
               {countries.map((c) => (
                 <option key={c.isoCode} value={c.isoCode}>
                   {/* 🌍 Display override: TR → "Türkiye". Option value
@@ -824,7 +885,9 @@ export default function ReservationForm({
               className={`${inputBase} ${inputOk} disabled:opacity-60`}
             >
               <option value="">
-                {form.country ? "Şehir seç" : "Önce ülke seç"}
+                {form.country
+                  ? dict.form.citySelect
+                  : dict.form.citySelectDisabled}
               </option>
               {cities.map((c) => (
                 <option key={c.isoCode} value={c.name}>
@@ -835,7 +898,7 @@ export default function ReservationForm({
 
             <input
               value={form.address}
-              placeholder="Adres"
+              placeholder={dict.form.addressPlaceholder}
               className={`md:col-span-2 ${inputBase} ${inputOk}`}
               onChange={(e) =>
                 setForm({ ...form, address: e.target.value })
@@ -844,7 +907,7 @@ export default function ReservationForm({
 
             <input
               value={form.note}
-              placeholder="Not (isteğe bağlı)"
+              placeholder={dict.form.notePlaceholder}
               onChange={(e) => setForm({ ...form, note: e.target.value })}
               className={`md:col-span-2 ${inputBase} ${inputOk}`}
             />
@@ -853,19 +916,26 @@ export default function ReservationForm({
 
         {/* GUESTS SECTION */}
         <Section
-          eyebrow="Adım 3"
-          title="Misafirler"
-          subtitle="Bu konaklamada kimler olacak?"
+          eyebrow={dict.form.step3Eyebrow}
+          title={dict.form.step3Title}
+          subtitle={dict.form.step3Subtitle}
         >
           <div className="bg-[var(--color-sand-50)] border border-[var(--color-sand-100)] rounded-xl px-4 py-3 text-sm flex justify-between items-center mb-4">
             <span className="font-medium text-[var(--color-stone-700)]">
-              Toplam misafir
+              {dict.form.totalGuestsLabel}
             </span>
             <span className="text-[var(--color-stone-900)] font-semibold">
-              {form.guests || 1} kişi
+              {formatDictionaryString(dict.form.guestsPersonCount, {
+                n: form.guests || 1,
+              })}
               {(adults || children) && (
                 <span className="text-[var(--color-stone-500)] ml-2 font-normal">
-                  ({adults || 0} yetişkin · {children || 0} çocuk)
+                  (
+                  {formatDictionaryString(bookingDict.guestsSummary, {
+                    adults: adults || 0,
+                    children: children || 0,
+                  })}
+                  )
                 </span>
               )}
             </span>
@@ -874,14 +944,17 @@ export default function ReservationForm({
           {guestNames.length > 0 && (
             <div className="space-y-2.5">
               <p className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)]">
-                Diğer misafirler
+                {dict.form.otherGuests}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {guestNames.map((g, i) => (
                   <input
                     key={i}
                     value={g}
-                    placeholder={`Misafir ${i + 2} Ad Soyad`}
+                    placeholder={formatDictionaryString(
+                      dict.form.guestNamePlaceholder,
+                      { n: i + 2 }
+                    )}
                     onChange={(e) => {
                       const updated = [...guestNames];
                       updated[i] = e.target.value;
@@ -897,14 +970,14 @@ export default function ReservationForm({
 
         {/* PAYMENT */}
         <Section
-          eyebrow="Adım 4"
-          title="Ödeme yöntemi"
-          subtitle="Tercih ettiğin ödeme yöntemini seç."
+          eyebrow={dict.form.step4Eyebrow}
+          title={dict.form.step4Title}
+          subtitle={dict.form.step4Subtitle}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {paymentMethods.length === 0 && (
               <p className="text-sm text-[var(--color-stone-400)] italic">
-                Ödeme yöntemi bulunamadı
+                {dict.form.noPaymentMethod}
               </p>
             )}
             {paymentMethods.map((p) => {
@@ -949,21 +1022,23 @@ export default function ReservationForm({
 
         {/* PAYMENT PREFERENCE */}
         <Section
-          eyebrow="Adım 5"
-          title="Ödeme Tercihi"
-          subtitle="Şimdi sadece ön ödeme mi yapacaksın, yoksa tamamını mı ödemek istersin?"
+          eyebrow={dict.form.step5Eyebrow}
+          title={dict.form.step5Title}
+          subtitle={dict.form.step5Subtitle}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
               {
                 value: "prepayment" as PaymentPreference,
-                label: "Ön Ödeme",
-                hint: `%${prepaymentRate} ön ödeme`,
+                label: dict.form.prepaymentOption,
+                hint: formatDictionaryString(dict.form.prepaymentHint, {
+                  rate: prepaymentRate,
+                }),
               },
               {
                 value: "full_payment" as PaymentPreference,
-                label: "Tamamını Ödemek İstiyorum",
-                hint: "Toplam tutarın tamamı",
+                label: dict.form.fullPaymentOption,
+                hint: dict.form.fullPaymentHint,
               },
             ].map((opt) => {
               const checked = form.payment_preference === opt.value;
@@ -1018,12 +1093,12 @@ export default function ReservationForm({
           {loading ? (
             <>
               <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-              Gönderiliyor…
+              {dict.form.submitting}
             </>
           ) : (
             <>
               <CheckCircle2 size={17} />
-              Rezervasyon Gönder
+              {dict.form.submit}
             </>
           )}
         </button>

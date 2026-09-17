@@ -581,6 +581,96 @@ export const tr: Dictionary = {
     },
   },
 
+  /* 🛡️ /rezervasyon statik UI metinleri. TR değerleri ESKİ hardcoded
+     metinlerin BİREBİR kopyasıdır; render çıktısı byte-identical. */
+  reservation: {
+    page: {
+      breadcrumbCurrent: "Rezervasyon",
+      title: "Kişisel Bilgilerinizi Girin",
+      description:
+        "Rezervasyon talebini aldıktan sonra ekibimiz seninle iletişime geçecek.",
+      badgeEyebrow: "Rezervasyon",
+      badgeLine1: "Güvenli Ödeme",
+      badgeLine2: "Hızlı Onay",
+      badgeLine3: "Destek Ekibi",
+      invalidUrl: "Geçersiz URL",
+      notFoundEyebrow: "404",
+      notFoundTitle: "Villa bulunamadı",
+    },
+    summary: {
+      eyebrow: "Konaklama",
+      guestsCount: "{n} misafir",
+      nightsCount: "{n} gece",
+      payNowAll: "Şimdi ödenecek (Tüm tutar)",
+    },
+    form: {
+      step1Eyebrow: "Adım 1",
+      step1Title: "İletişim bilgileri",
+      step1Subtitle: "Rezervasyon için ulaşılabileceğimiz bilgileri paylaş.",
+      step2Eyebrow: "Adım 2",
+      step2Title: "Adres bilgisi",
+      step2Subtitle: "Fatura ve doğrulama için kullanılacak.",
+      step3Eyebrow: "Adım 3",
+      step3Title: "Misafirler",
+      step3Subtitle: "Bu konaklamada kimler olacak?",
+      step4Eyebrow: "Adım 4",
+      step4Title: "Ödeme yöntemi",
+      step4Subtitle: "Tercih ettiğin ödeme yöntemini seç.",
+      step5Eyebrow: "Adım 5",
+      step5Title: "Ödeme Tercihi",
+      step5Subtitle:
+        "Şimdi sadece ön ödeme mi yapacaksın, yoksa tamamını mı ödemek istersin?",
+      namePlaceholder: "İsim Soyisim",
+      emailPlaceholder: "E-posta",
+      phonePlaceholder: "Telefon",
+      identityPlaceholder: "TC / Pasaport",
+      addressPlaceholder: "Adres",
+      notePlaceholder: "Not (isteğe bağlı)",
+      countrySelect: "Ülke seç",
+      citySelect: "Şehir seç",
+      citySelectDisabled: "Önce ülke seç",
+      totalGuestsLabel: "Toplam misafir",
+      guestsPersonCount: "{n} kişi",
+      otherGuests: "Diğer misafirler",
+      guestNamePlaceholder: "Misafir {n} Ad Soyad",
+      noPaymentMethod: "Ödeme yöntemi bulunamadı",
+      prepaymentOption: "Ön Ödeme",
+      prepaymentHint: "%{rate} ön ödeme",
+      fullPaymentOption: "Tamamını Ödemek İstiyorum",
+      fullPaymentHint: "Toplam tutarın tamamı",
+      submit: "Rezervasyon Gönder",
+      submitting: "Gönderiliyor…",
+      errorDismissAriaLabel: "Hata mesajını kapat",
+      errorGeneric:
+        "İşlem sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.",
+      errorDatesUnavailable: "Bu tarihler dolu",
+    },
+    validation: {
+      nameRequired: "Ad zorunlu",
+      phoneRequired: "Telefon zorunlu",
+      phoneInvalid: "Geçerli telefon gir",
+      emailRequired: "Email zorunlu",
+      emailInvalid: "Geçerli email gir",
+      identityRequired: "TC zorunlu",
+      identityInvalid: "11 haneli TC gir",
+      paymentMethodRequired: "Ödeme yöntemi seç",
+      dateRequired: "Tarih seçmelisin",
+    },
+    success: {
+      metaTitle: "Rezervasyon Talebiniz Alındı",
+      eyebrow: "Talep Alındı",
+      title: "Rezervasyon Talebiniz Alındı",
+      description:
+        "Talebiniz başarıyla tarafımıza ulaştı. Ekibimiz en kısa sürede sizinle iletişime geçerek rezervasyon detaylarınızı netleştirecektir. Acil bir konuda yardıma ihtiyacınız varsa WhatsApp üzerinden de ulaşabilirsiniz.",
+      referenceLabel: "Referans Numarası",
+      referenceHint:
+        "Görüşmelerde bu numarayı belirtmeniz işlemleri hızlandırır.",
+      whatsappCta: "WhatsApp ile İletişim",
+      homeCta: "Ana Sayfaya Dön",
+      villaCta: "Villa Detayına Dön",
+    },
+  },
+
   /* 🛡️ /iletisim statik UI metinleri. TR değerleri ESKİ hardcoded
      metinlerin BİREBİR kopyasıdır; render çıktısı byte-identical. */
   contact: {

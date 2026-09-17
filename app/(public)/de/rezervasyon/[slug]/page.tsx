@@ -1,36 +1,56 @@
 import type { Metadata } from "next";
 
+import ReservationPageBody from "@/app/components/reservation/ReservationPageBody";
 import { requirePublicLocaleEnabled } from "@/lib/i18n/public-locale-gate.server";
 import { setRequestLocale } from "@/lib/i18n/request-locale.server";
-import LocaleRouteComingSoon from "@/app/components/i18n/LocaleRouteComingSoon";
 
 /* ===============================================================
-   🛡️ /de/rezervasyon/[slug] — PHASE 4A (Public Locale Routing Core)
+   🛡️ /de/rezervasyon/[slug] — PUBLIC REZERVASYON (DE)
    ===============================================================
-   TR karşılığı: app/(public)/rezervasyon/[slug]/page.tsx (DEĞİŞMEDİ).
-   Rezervasyon formu/fiyat hesaplama akışı bu fazda BURAYA
-   kopyalanmadı/refactor edilmedi — price engine ve reservation
-   hesaplamalarına KESİNLİKLE dokunulmadı. `params` bu fazda
-   kullanılmıyor. `multilingual_enabled=false` olduğu sürece (bugün
-   production) notFound() → 404 — TR rezervasyon akışı ETKİLENMEZ.
+   TR ile AYNI gövde (`ReservationPageBody`) — tek fark `locale`
+   prop'u. Servis çağrıları, fiyat/snapshot/ödeme/pool heating
+   mantığı, API payload'ı ve rezervasyon oluşturma akışı BİREBİR
+   aynıdır; bu fazda hiçbiri değiştirilmedi.
 
-   NOT: `/rezervasyon-kontrol`, `/rezervasyon/basarili` gibi diğer
-   rezervasyon alt-route'ları bu fazın istenen URL listesinde
-   YOKTU; kapsamı kendiliğinden genişletmemek için mirror'lanmadı.
+   PHASE 4A/4B'den KORUNAN DAVRANIŞ:
+     • `setRequestLocale("de")` — request-scoped locale işareti.
+     • `await requirePublicLocaleEnabled()` — `multilingual_enabled`
+       kapalıyken notFound() → 404 (bugünkü production davranışı).
+     • `robots: { index: false, follow: false }` — PHASE 4A'dan
+       DEVRALINDI. `/rezervasyon/` TR tarafında robots.ts ile zaten
+       Disallow; robots.ts/sitemap.ts'ye DOKUNULMADI.
 
-   🛡️ PHASE 4B EKLEMESİ: `setRequestLocale(locale)` — bu request için
-   locale'i işaretler (lib/i18n/request-locale.server.ts, React `cache()`
-   request-scoped store). TR route'ları bu store'u hiç yazmadığından
-   onlar için `DEFAULT_LOCALE` ("tr") otomatik kalır. Bu satır dışında
-   PHASE 4A davranışı (gate + placeholder) DEĞİŞMEDİ.
+   Not: `LocaleRouteComingSoon` placeholder'ı yerini gerçek gövdeye
+   bıraktı.
    =============================================================== */
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function DeReservationPage() {
+type Props = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{
+    start?: string | string[];
+    end?: string | string[];
+    adults?: string | string[];
+    children?: string | string[];
+    poolHeating?: string | string[];
+  }>;
+};
+
+export default async function DeReservationPage({
+  params,
+  searchParams,
+}: Props) {
   setRequestLocale("de");
   await requirePublicLocaleEnabled();
-  return <LocaleRouteComingSoon locale="de" />;
+
+  return (
+    <ReservationPageBody
+      params={params}
+      searchParams={searchParams}
+      locale="de"
+    />
+  );
 }

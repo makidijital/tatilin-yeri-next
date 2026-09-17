@@ -745,6 +745,119 @@ export type Dictionary = {
   };
 
   /* ===============================================================
+     🛡️ /rezervasyon/[slug] + /rezervasyon/basarili STATİK UI METİNLERİ
+     ===============================================================
+     `app/components/reservation/ReservationPageBody.tsx`,
+     `ReservationForm.tsx`, `ReservationSuccessBody.tsx` ve
+     `_helpers/validatePublicReservationForm.ts` içindeki hardcoded
+     TR metinler.
+
+     ⚠️ BİLİNÇLİ REUSE — burada TEKRARLANMADI (mevcut `booking`
+     namespace'i BİREBİR aynı metinleri taşıyor):
+       accommodation · nights · guests · accommodationAmountLabel ·
+       discountedTotal · shortStayFeeLabel · poolHeatingFeeLabel ·
+       total · dueAtCheckinLabel · prepaymentAmountLabel ·
+       guestsSummary · reservation
+     Ayrıca `search.breadcrumbHome` ve `villasArchive.breadcrumbCurrent`.
+
+     ⚠️ KAPSAM DIŞI (bilinçli — VERİ, çevrilmez):
+       villa adı (özel isim) · fiyatlar · para birimi biçimi ·
+       tarih biçimi · ödeme yöntemi adı (`payment_methods.name`) ·
+       ülke/şehir adları · referans numarası · WhatsApp bağlantısı. */
+  reservation: {
+    page: {
+      breadcrumbCurrent: string;
+      title: string;
+      description: string;
+      badgeEyebrow: string;
+      badgeLine1: string;
+      badgeLine2: string;
+      badgeLine3: string;
+      invalidUrl: string;
+      notFoundEyebrow: string;
+      notFoundTitle: string;
+    };
+    summary: {
+      eyebrow: string;
+      /** `formatDictionaryString` — `{n}`. */
+      guestsCount: string;
+      /** `formatDictionaryString` — `{n}`. */
+      nightsCount: string;
+      payNowAll: string;
+    };
+    form: {
+      step1Eyebrow: string;
+      step1Title: string;
+      step1Subtitle: string;
+      step2Eyebrow: string;
+      step2Title: string;
+      step2Subtitle: string;
+      step3Eyebrow: string;
+      step3Title: string;
+      step3Subtitle: string;
+      step4Eyebrow: string;
+      step4Title: string;
+      step4Subtitle: string;
+      step5Eyebrow: string;
+      step5Title: string;
+      step5Subtitle: string;
+      namePlaceholder: string;
+      emailPlaceholder: string;
+      phonePlaceholder: string;
+      identityPlaceholder: string;
+      addressPlaceholder: string;
+      notePlaceholder: string;
+      countrySelect: string;
+      citySelect: string;
+      citySelectDisabled: string;
+      totalGuestsLabel: string;
+      /** `formatDictionaryString` — `{n}`. */
+      guestsPersonCount: string;
+      otherGuests: string;
+      /** `formatDictionaryString` — `{n}`. */
+      guestNamePlaceholder: string;
+      noPaymentMethod: string;
+      prepaymentOption: string;
+      /** `formatDictionaryString` — `{rate}`. */
+      prepaymentHint: string;
+      fullPaymentOption: string;
+      fullPaymentHint: string;
+      submit: string;
+      submitting: string;
+      errorDismissAriaLabel: string;
+      /** Sunucudan gelen HAM hata mesajı kullanıcıya BASILMAZ; bu
+       *  generic metin gösterilir (locale dışı "Too many requests",
+       *  TR server mesajları ve ham DB hatalarının UI'a sızmasını
+       *  engeller). */
+      errorGeneric: string;
+      /** HTTP 409 — kullanıcı için anlamlı tek server durumu. */
+      errorDatesUnavailable: string;
+    };
+    validation: {
+      nameRequired: string;
+      phoneRequired: string;
+      phoneInvalid: string;
+      emailRequired: string;
+      emailInvalid: string;
+      identityRequired: string;
+      identityInvalid: string;
+      paymentMethodRequired: string;
+      dateRequired: string;
+    };
+    success: {
+      metaTitle: string;
+      eyebrow: string;
+      title: string;
+      description: string;
+      referenceLabel: string;
+      referenceHint: string;
+      whatsappCta: string;
+      homeCta: string;
+      villaCta: string;
+    };
+  };
+
+  /* ===============================================================
      🛡️ /iletisim — PUBLIC İLETİŞİM SAYFASI STATİK UI METİNLERİ
      ===============================================================
      `app/components/contact/ContactPageBody.tsx` + `ContactForm.tsx`

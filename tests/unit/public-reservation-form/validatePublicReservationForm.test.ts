@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import { validatePublicReservationForm } from "@/app/components/reservation/_helpers/validatePublicReservationForm";
 import { initialPublicReservationFormData } from "@/app/components/reservation/_types/reservation-form-data";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 /* ===============================================================
    🛡️ FAZ 4 — validatePublicReservationForm UNIT TESTS
@@ -252,5 +253,126 @@ describe("validatePublicReservationForm — accumulated errors", () => {
       "payment_method_id",
       "phone",
     ].sort());
+  });
+});
+
+/* ===============================================================
+   🛡️ REZERVASYON ÇOKLU DİL — locale-aware validation mesajları
+   ===============================================================
+   `locale` OPSİYONEL 2. parametredir. Verilmezse "tr" → yukarıdaki
+   22 test (mevcut TR sözleşmesi) BİREBİR geçerli kalır.
+
+   Kural/regex/alan-adı DEĞİŞMEDİ — yalnız mesaj metni dictionary'den
+   (`reservation.validation`) gelir.
+=============================================================== */
+
+describe("validatePublicReservationForm — locale (TR/EN/DE)", () => {
+  const allInvalid = () => ({
+    form: {
+      ...initialPublicReservationFormData(),
+      name: "",
+      phone: "",
+      email: "",
+      identity: "",
+      payment_method_id: null,
+    },
+    start: null as string | null,
+    end: null as string | null,
+  });
+
+  it("locale verilmezse TR mesajları (backward compatibility)", () => {
+    const errors = validatePublicReservationForm(allInvalid());
+    expect(errors.name).toBe("Ad zorunlu");
+    expect(errors.phone).toBe("Telefon zorunlu");
+    expect(errors.email).toBe("Email zorunlu");
+    expect(errors.identity).toBe("TC zorunlu");
+    expect(errors.payment_method_id).toBe("Ödeme yöntemi seç");
+    expect(errors.date).toBe("Tarih seçmelisin");
+  });
+
+  it('locale="tr" açıkça verildiğinde de AYNI TR mesajları', () => {
+    expect(validatePublicReservationForm(allInvalid(), "tr")).toEqual(
+      validatePublicReservationForm(allInvalid())
+    );
+  });
+
+  it('locale="en" → mesajlar dictionary EN değerleri', () => {
+    const dict = getDictionary("en").reservation.validation;
+    const errors = validatePublicReservationForm(allInvalid(), "en");
+    expect(errors.name).toBe(dict.nameRequired);
+    expect(errors.phone).toBe(dict.phoneRequired);
+    expect(errors.email).toBe(dict.emailRequired);
+    expect(errors.identity).toBe(dict.identityRequired);
+    expect(errors.payment_method_id).toBe(dict.paymentMethodRequired);
+    expect(errors.date).toBe(dict.dateRequired);
+  });
+
+  it('locale="de" → mesajlar dictionary DE değerleri', () => {
+    const dict = getDictionary("de").reservation.validation;
+    const errors = validatePublicReservationForm(allInvalid(), "de");
+    expect(errors.name).toBe(dict.nameRequired);
+    expect(errors.phone).toBe(dict.phoneRequired);
+    expect(errors.email).toBe(dict.emailRequired);
+    expect(errors.identity).toBe(dict.identityRequired);
+    expect(errors.payment_method_id).toBe(dict.paymentMethodRequired);
+    expect(errors.date).toBe(dict.dateRequired);
+  });
+
+  it("EN/DE mesajları TR ile AYNI DEĞİL (gerçekten çevrilmiş)", () => {
+    const tr = validatePublicReservationForm(allInvalid(), "tr");
+    const en = validatePublicReservationForm(allInvalid(), "en");
+    const de = validatePublicReservationForm(allInvalid(), "de");
+    for (const key of ["name", "phone", "email", "identity", "date"] as const) {
+      expect(en[key]).not.toBe(tr[key]);
+      expect(de[key]).not.toBe(tr[key]);
+      expect(en[key]).not.toBe(de[key]);
+    }
+  });
+
+  it("format hataları (regex) da locale-aware — EN", () => {
+    const dict = getDictionary("en").reservation.validation;
+    const errors = validatePublicReservationForm(
+      {
+        form: {
+          ...initialPublicReservationFormData(),
+          name: "John Doe",
+          phone: "123",
+          email: "not-an-email",
+          identity: "42",
+          payment_method_id: "pm-1",
+        },
+        start: "2026-06-01",
+        end: "2026-06-08",
+      },
+      "en"
+    );
+    expect(errors.phone).toBe(dict.phoneInvalid);
+    expect(errors.email).toBe(dict.emailInvalid);
+    expect(errors.identity).toBe(dict.identityInvalid);
+  });
+
+  it("locale hata ALANLARINI (key set) DEĞİŞTİRMEZ — sadece metni", () => {
+    const keys = (l?: "tr" | "en" | "de") =>
+      Object.keys(validatePublicReservationForm(allInvalid(), l)).sort();
+    expect(keys("en")).toEqual(keys());
+    expect(keys("de")).toEqual(keys());
+  });
+
+  it("geçerli form her locale'de {} döner (kural değişmedi)", () => {
+    const input = {
+      form: {
+        ...initialPublicReservationFormData(),
+        name: "Ahmet Yılmaz",
+        phone: "05551112233",
+        email: "test@example.com",
+        identity: "12345678901",
+        payment_method_id: "pm-1",
+      },
+      start: "2026-06-01",
+      end: "2026-06-08",
+    };
+    expect(validatePublicReservationForm(input, "tr")).toEqual({});
+    expect(validatePublicReservationForm(input, "en")).toEqual({});
+    expect(validatePublicReservationForm(input, "de")).toEqual({});
   });
 });
