@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Suspense,
   useEffect,
   useRef,
   useState,
@@ -8,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, Phone, Mail } from "lucide-react";
 
 import {
@@ -159,6 +160,74 @@ function SocialLink({
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   🛡️ DİL SEÇİCİ SEÇENEK LİSTESİ — query string KORUMALI
+   ═══════════════════════════════════════════════════════════════
+   Dropdown'un `<ul role="listbox">` içeriği BİREBİR aynı (DOM/class/
+   ARIA değişmedi); yalnız ayrı bir component'e taşındı. GEREKÇE:
+   hedef URL'lerin mevcut query string'i (ör. `/arama?villa-turleri=
+   ...&flexible=3`) koruyabilmesi için `useSearchParams()` gerekli —
+   `usePathname()` query TAŞIMAZ. `useSearchParams()` statik
+   prerender'da en yakın Suspense sınırına kadar client-render
+   zorladığı için bu component ÇAĞRI YERİNDE `<Suspense>` ile
+   sarmalanır; böylece TopBar'ın geri kalanı (ve public layout'taki
+   tüm sayfalar) statik render davranışını AYNEN korur.
+   `searchParams.toString()` çıktısı uygulamanın kendi URL üreticileriyle
+   (FilterSidebar `buildHref`, AramaPageBody `buildAramaSearchHref` —
+   ikisi de `URLSearchParams.toString()`) AYNI encoding'i kullanır. */
+function LocaleSwitchOptions({
+  locale,
+  pathname,
+  label,
+  onSelect,
+}: {
+  locale: Locale;
+  pathname: string | null;
+  label: string;
+  onSelect: () => void;
+}) {
+  const searchParams = useSearchParams();
+  const localeSwitchTargets = getLocaleSwitchTargets(
+    pathname,
+    searchParams.toString()
+  );
+
+  return (
+    <ul
+      role="listbox"
+      aria-label={label}
+      className="absolute right-0 mt-2 z-50 min-w-[90px] bg-white rounded-xl border border-[var(--color-stone-100)] shadow-[0_16px_36px_-14px_rgb(11_31_58/0.35)] overflow-hidden py-1"
+    >
+      {SUPPORTED_LOCALES.map((l: Locale) =>
+        l === locale ? (
+          <li key={l}>
+            <span
+              role="option"
+              aria-selected="true"
+              aria-current="true"
+              className="w-full flex items-center px-3 py-1.5 text-[14px] font-medium text-left bg-gradient-to-r from-[#ED7926]/10 to-[#0973BA]/10 text-[var(--color-stone-900)]"
+            >
+              {l.toUpperCase()}
+            </span>
+          </li>
+        ) : (
+          <li key={l}>
+            <Link
+              href={localeSwitchTargets[l]}
+              role="option"
+              aria-selected="false"
+              onClick={onSelect}
+              className="w-full flex items-center px-3 py-1.5 text-[14px] font-medium text-left text-[var(--color-stone-700)] hover:bg-[var(--color-stone-50)] transition-colors"
+            >
+              {l.toUpperCase()}
+            </Link>
+          </li>
+        )
+      )}
+    </ul>
+  );
+}
+
 export default function TopBar() {
   /* 🛡️ Faz 9 hardening: `useState<any>` → `Settings | null`. DEĞİŞMEDİ. */
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -227,9 +296,6 @@ export default function TopBar() {
      `getLocaleSwitchTargets` yalnız switcher görünürken hesaplanır
      (gereksiz iş yok). */
   const multilingualEnabled = isMultilingualEnabled(settings);
-  const localeSwitchTargets = multilingualEnabled
-    ? getLocaleSwitchTargets(pathname)
-    : null;
 
   /* 🛡️ İLETİŞİM HREF TÜRETME — mevcut projede zaten kullanılan
      pattern'lerin AYNISI (yeni mantık YOK, sadece TopBar'a taşındı):
@@ -500,7 +566,7 @@ export default function TopBar() {
             stili. State/ref TAMAMEN AYRI (`langOpen`/`langRef`).
             Yalnız `multilingualEnabled` iken render edilir — kapalı/
             null/hata durumunda hiçbir DOM eklenmez (fail-safe). */}
-        {multilingualEnabled && localeSwitchTargets && (
+        {multilingualEnabled && (
           <div className="relative shrink-0" ref={langRef}>
             <button
               type="button"
@@ -525,38 +591,14 @@ export default function TopBar() {
             </button>
 
             {langOpen && (
-              <ul
-                role="listbox"
-                aria-label={dictionary.common.language}
-                className="absolute right-0 mt-2 z-50 min-w-[90px] bg-white rounded-xl border border-[var(--color-stone-100)] shadow-[0_16px_36px_-14px_rgb(11_31_58/0.35)] overflow-hidden py-1"
-              >
-                {SUPPORTED_LOCALES.map((l: Locale) =>
-                  l === locale ? (
-                    <li key={l}>
-                      <span
-                        role="option"
-                        aria-selected="true"
-                        aria-current="true"
-                        className="w-full flex items-center px-3 py-1.5 text-[14px] font-medium text-left bg-gradient-to-r from-[#ED7926]/10 to-[#0973BA]/10 text-[var(--color-stone-900)]"
-                      >
-                        {l.toUpperCase()}
-                      </span>
-                    </li>
-                  ) : (
-                    <li key={l}>
-                      <Link
-                        href={localeSwitchTargets[l]}
-                        role="option"
-                        aria-selected="false"
-                        onClick={() => setLangOpen(false)}
-                        className="w-full flex items-center px-3 py-1.5 text-[14px] font-medium text-left text-[var(--color-stone-700)] hover:bg-[var(--color-stone-50)] transition-colors"
-                      >
-                        {l.toUpperCase()}
-                      </Link>
-                    </li>
-                  )
-                )}
-              </ul>
+              <Suspense fallback={null}>
+                <LocaleSwitchOptions
+                  locale={locale}
+                  pathname={pathname}
+                  label={dictionary.common.language}
+                  onSelect={() => setLangOpen(false)}
+                />
+              </Suspense>
             )}
           </div>
         )}

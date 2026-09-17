@@ -216,3 +216,139 @@ describe("getLocaleSwitchTargets", () => {
     });
   });
 });
+
+/* ═══════════════════════════════════════════════════════════════
+   🛡️ QUERY STRING KORUMA — `/arama` dil değiştirme düzeltmesi
+   ═══════════════════════════════════════════════════════════════
+   BEKLENEN DAVRANIŞ: locale değişirken YALNIZ locale route segmenti
+   değişir; mevcut query string eksiksiz ve AYNEN korunur —
+     - parametre adları yeniden adlandırılmaz,
+     - değerler locale'e göre ÇEVRİLMEZ (`villa-turleri` canonical
+       slug/token olarak kalır),
+     - URL encoding bozulmaz,
+     - parametre sırası korunur.
+   Allowlist kararı HÂLÂ yalnız PATH üzerinden verilir; query
+   `hasLocaleRoute` sonucunu ETKİLEMEZ. */
+describe("getLocaleSwitchTargets — query string koruma", () => {
+  /** Kullanıcının bildirdiği gerçek örnek query — birebir. */
+  const Q = "villa-turleri=2027-kiralik-villalar%2Cmuhafazakar-villalar&flexible=3";
+
+  it("Q1) '/arama' + query → '/en/arama' + AYNI query", () => {
+    expect(getLocaleSwitchTargets("/arama", Q)).toEqual({
+      tr: `/arama?${Q}`,
+      en: `/en/arama?${Q}`,
+      de: `/de/arama?${Q}`,
+    });
+  });
+
+  it("Q2) '/en/arama' + query → '/de/arama' + AYNI query", () => {
+    expect(getLocaleSwitchTargets("/en/arama", Q)).toEqual({
+      tr: `/arama?${Q}`,
+      en: `/en/arama?${Q}`,
+      de: `/de/arama?${Q}`,
+    });
+  });
+
+  it("Q3) '/de/arama' + query → '/arama' + AYNI query (kullanıcı senaryosu)", () => {
+    expect(getLocaleSwitchTargets("/de/arama", Q)).toEqual({
+      tr: `/arama?${Q}`,
+      en: `/en/arama?${Q}`,
+      de: `/de/arama?${Q}`,
+    });
+  });
+
+  it("Q4) birden fazla parametre — adları/değerleri/SIRASI korunur", () => {
+    const multi = "regions=fethiye&guests=6&start=2026-07-01&end=2026-07-08&page=2&sort=price-asc";
+    const t = getLocaleSwitchTargets("/arama", multi);
+    expect(t.en).toBe(`/en/arama?${multi}`);
+    expect(t.de).toBe(`/de/arama?${multi}`);
+    expect(t.tr).toBe(`/arama?${multi}`);
+  });
+
+  it("Q5) `villa-turleri` virgüllü değerleri canonical slug olarak kalır (çeviri YOK)", () => {
+    const q = "villa-turleri=2027-kiralik-villalar%2Cmuhafazakar-villalar";
+    const t = getLocaleSwitchTargets("/de/arama", q);
+    expect(t.en).toBe(`/en/arama?${q}`);
+    expect(t.en).toContain("2027-kiralik-villalar%2Cmuhafazakar-villalar");
+    /* Slug'lar hiçbir locale'de değişmez — 3 hedefte de AYNI token. */
+    expect(t.tr.endsWith(q)).toBe(true);
+    expect(t.de.endsWith(q)).toBe(true);
+  });
+
+  it("Q6) `flexible` parametresi korunur", () => {
+    expect(getLocaleSwitchTargets("/arama", "flexible=3")).toEqual({
+      tr: "/arama?flexible=3",
+      en: "/en/arama?flexible=3",
+      de: "/de/arama?flexible=3",
+    });
+  });
+
+  it("Q7) query YOK (undefined / '' / '?') → MEVCUT davranış birebir (soru işareti eklenmez)", () => {
+    const expected = { tr: "/arama", en: "/en/arama", de: "/de/arama" };
+    expect(getLocaleSwitchTargets("/arama")).toEqual(expected);
+    expect(getLocaleSwitchTargets("/arama", "")).toEqual(expected);
+    expect(getLocaleSwitchTargets("/arama", "?")).toEqual(expected);
+    expect(getLocaleSwitchTargets("/arama", null)).toEqual(expected);
+  });
+
+  it("Q8) URL encoding BOZULMAZ — percent-encoded değerler decode/re-encode edilmez", () => {
+    const q = "regions=k%C3%B6ycegiz%2Csarigerme&q=deniz%20manzara";
+    const t = getLocaleSwitchTargets("/arama", q);
+    expect(t.en).toBe(`/en/arama?${q}`);
+    expect(t.en).toContain("k%C3%B6ycegiz%2Csarigerme");
+    expect(t.en).toContain("deniz%20manzara");
+    expect(t.en).not.toContain("köycegiz");
+  });
+
+  it("Q9) DİĞER locale route'ları etkilenmez", () => {
+    /* (a) fallback (locale karşılığı yok) → query EKLENMEZ, kökler aynen */
+    expect(getLocaleSwitchTargets("/teklif-al", "foo=bar")).toEqual({
+      tr: "/",
+      en: "/en",
+      de: "/de",
+    });
+    expect(getLocaleSwitchTargets("/de/blog", "x=1")).toEqual({
+      tr: "/",
+      en: "/en",
+      de: "/de",
+    });
+
+    /* (b) query'siz çağrılar — Phase 10C çıktısı BİREBİR aynı */
+    expect(getLocaleSwitchTargets("/")).toEqual({ tr: "/", en: "/en", de: "/de" });
+    expect(getLocaleSwitchTargets("/kiralik-villa/test-villa")).toEqual({
+      tr: "/kiralik-villa/test-villa",
+      en: "/en/kiralik-villa/test-villa",
+      de: "/de/kiralik-villa/test-villa",
+    });
+
+    /* (c) query'li diğer allowlist route'ları da aynı kuralı izler */
+    expect(getLocaleSwitchTargets("/kiralik-villa/test-villa", "guests=4").en).toBe(
+      "/en/kiralik-villa/test-villa?guests=4"
+    );
+    expect(getLocaleSwitchTargets("/p/hakkimizda", "utm=x").de).toBe(
+      "/de/p/hakkimizda?utm=x"
+    );
+  });
+
+  it("Q10) '?' önekli ve öneksiz search AYNI sonucu verir", () => {
+    expect(getLocaleSwitchTargets("/arama", `?${Q}`)).toEqual(
+      getLocaleSwitchTargets("/arama", Q)
+    );
+  });
+
+  it("Q11) pathname içine gömülü query — allowlist eşleşmesi BOZULMAZ (savunmacı)", () => {
+    expect(getLocaleSwitchTargets("/arama?flexible=3")).toEqual({
+      tr: "/arama?flexible=3",
+      en: "/en/arama?flexible=3",
+      de: "/de/arama?flexible=3",
+    });
+    expect(getLocaleSwitchTargets("/de/arama?flexible=3").tr).toBe("/arama?flexible=3");
+  });
+
+  it("Q12) `hasLocaleRoute` query'den ETKİLENMEZ (yalnız path allowlist'i)", () => {
+    expect(hasLocaleRoute("/arama")).toBe(true);
+    /* Ham query'li string allowlist'te YOK — helper'ın path'i ayırması
+       bu yüzden zorunlu (Q11 bunu davranış seviyesinde doğruluyor). */
+    expect(hasLocaleRoute("/arama?flexible=3")).toBe(false);
+  });
+});

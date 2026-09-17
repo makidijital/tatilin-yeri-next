@@ -68,6 +68,25 @@ export function hasLocaleRoute(basePath: string): boolean {
   );
 }
 
+/* 🛡️ QUERY STRING KORUMA — `/arama` dil değiştirme düzeltmesi.
+   SORUN: `/de/arama?villa-turleri=...&flexible=3` üzerindeyken EN'e
+   geçilince `/en/arama` üretiliyor, mevcut filtre query'si KAYBOLUYORDU
+   (`usePathname()` query taşımaz; helper da yalnız pathname alıyordu).
+   ÇÖZÜM (minimal): opsiyonel `search` parametresi. Query string OPAK
+   bir string olarak taşınır — parametre adları/değerleri/sırası/URL
+   encoding'i AYNEN korunur, hiçbir değer locale'e göre çevrilmez
+   (`villa-turleri` değerleri canonical slug/token olarak kalır).
+   Allowlist kontrolü HÂLÂ yalnız PATH üzerinde yapılır — query,
+   `hasLocaleRoute` kararını ETKİLEMEZ. */
+
+/** `"?a=1"` / `"a=1"` / `""` / null → `"?a=1"` veya `""`. Girdi
+ *  AYNEN taşınır; decode/re-encode/normalize YAPILMAZ. */
+function normalizeSearchSuffix(search: string | null | undefined): string {
+  if (!search) return "";
+  const raw = search.startsWith("?") ? search.slice(1) : search;
+  return raw.length > 0 ? `?${raw}` : "";
+}
+
 /**
  * Mevcut pathname için her locale'in hedef URL'ini üretir — TopBar'ın
  * dil değiştirici linkleri için. `buildLocaleAlternates` (Phase 7B)
@@ -75,15 +94,40 @@ export function hasLocaleRoute(basePath: string): boolean {
  * locale route'u varsa (`hasLocaleRoute`) o route'un 3 locale
  * varyantını, YOKSA (fallback) her locale'in kök sayfasını döner
  * (`/`, `/en`, `/de`) — ASLA 404/broken URL üretmez.
+ *
+ * `search` (opsiyonel): mevcut query string (`?a=1` veya `a=1`).
+ * Verilirse — ve yalnız gerçek bir locale route'u olan path'lerde —
+ * üretilen 3 hedefin SONUNA aynen eklenir. Fallback (locale karşılığı
+ * olmayan path) durumunda query EKLENMEZ: hedef, o sayfanın değil
+ * locale KÖKÜ olduğu için oraya taşınan filtre parametreleri anlamsız
+ * olurdu — mevcut fallback davranışı BİREBİR korunur.
  */
 export function getLocaleSwitchTargets(
-  pathname: string | null | undefined
+  pathname: string | null | undefined,
+  search?: string | null
 ): Record<Locale, string> {
-  const { languages } = buildLocaleAlternates(pathname || "/", "tr");
+  /* `usePathname()` normalde query taşımaz; yine de savunmacı olarak
+     path ile query ayrıştırılır (ör. testler/çağıranlar tam URL
+     verirse allowlist eşleşmesi bozulmasın). */
+  const rawPath = pathname || "/";
+  const queryIndex = rawPath.indexOf("?");
+  const pathOnly = queryIndex === -1 ? rawPath : rawPath.slice(0, queryIndex);
+  const inlineSearch =
+    queryIndex === -1 ? "" : rawPath.slice(queryIndex + 1);
+
+  /* Açıkça verilen `search` önceliklidir (`??` — boş string DE bilinçli
+     bir "query yok" bildirimidir, inline'a düşmez). */
+  const suffix = normalizeSearchSuffix(search ?? inlineSearch);
+
+  const { languages } = buildLocaleAlternates(pathOnly || "/", "tr");
   const basePath = languages.tr;
 
   if (hasLocaleRoute(basePath)) {
-    return { tr: languages.tr, en: languages.en, de: languages.de };
+    return {
+      tr: `${languages.tr}${suffix}`,
+      en: `${languages.en}${suffix}`,
+      de: `${languages.de}${suffix}`,
+    };
   }
 
   return { tr: "/", en: "/en", de: "/de" };

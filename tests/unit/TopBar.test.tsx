@@ -24,11 +24,23 @@
    =============================================================== */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 
 const usePathnameMock = vi.fn();
+/* 🛡️ QUERY KORUMA FAZI — dil değiştirici artık `useSearchParams()`
+   de okuyor (hedef URL'lerde mevcut query string korunsun diye).
+   Mock, Next'in `ReadonlyURLSearchParams` yerine düz `URLSearchParams`
+   döner — component yalnız `.toString()` çağırır. */
+const useSearchParamsMock = vi.fn();
 vi.mock("next/navigation", () => ({
   usePathname: () => usePathnameMock(),
+  useSearchParams: () => useSearchParamsMock(),
 }));
 
 const getPublicSettingsMock = vi.fn();
@@ -76,9 +88,11 @@ function settingsWith(
 describe("TopBar — Phase 10C dil değiştirici", () => {
   beforeEach(() => {
     usePathnameMock.mockReset();
+    useSearchParamsMock.mockReset();
     getPublicSettingsMock.mockReset();
     setCurrencyMock.mockReset();
     usePathnameMock.mockReturnValue("/");
+    useSearchParamsMock.mockReturnValue(new URLSearchParams(""));
   });
 
   /* --- 1-3) GÖRÜNÜRLÜK --- */
@@ -305,5 +319,127 @@ describe("TopBar — Phase 10C dil değiştirici", () => {
     expect(activeOption).not.toHaveAttribute("href");
     expect(screen.getByRole("option", { name: "TR" }).tagName).toBe("A");
     expect(screen.getByRole("option", { name: "DE" }).tagName).toBe("A");
+  });
+
+  /* ═══════════════════════════════════════════════════════════════
+     20-28) QUERY STRING KORUMA (/arama dil değiştirme düzeltmesi)
+     ═══════════════════════════════════════════════════════════════
+     SORUN: `/de/arama?villa-turleri=...&flexible=3` üzerindeyken EN'e
+     geçince `/en/arama` üretiliyor, query KAYBOLUYORDU.
+     BEKLENEN: yalnız locale segmenti değişir; query string EKSİKSİZ,
+     AYNEN (parametre adı/değeri/sırası/encoding) korunur. */
+
+  /** Kullanıcının bildirdiği GERÇEK örnek query — birebir. */
+  const ARAMA_QUERY =
+    "villa-turleri=2027-kiralik-villalar%2Cmuhafazakar-villalar&flexible=3";
+
+  /** Verilen pathname + query ile switcher'ı açar. */
+  async function openSwitcher(pathname: string, query: string, label: string) {
+    usePathnameMock.mockReturnValue(pathname);
+    useSearchParamsMock.mockReturnValue(new URLSearchParams(query));
+    getPublicSettingsMock.mockResolvedValue(
+      settingsWith({ multilingual_enabled: true })
+    );
+    render(<TopBar />);
+    await screen.findByLabelText(label);
+    fireEvent.click(screen.getByLabelText(label));
+  }
+
+  it("20) '/arama' + query → EN/DE hedefleri AYNI query'yi korur", async () => {
+    await openSwitcher("/arama", ARAMA_QUERY, LANGUAGE_LABEL.tr);
+    expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute(
+      "href",
+      `/en/arama?${ARAMA_QUERY}`
+    );
+    expect(screen.getByRole("option", { name: "DE" })).toHaveAttribute(
+      "href",
+      `/de/arama?${ARAMA_QUERY}`
+    );
+  });
+
+  it("21) '/en/arama' + query → DE hedefi AYNI query'yi korur", async () => {
+    await openSwitcher("/en/arama", ARAMA_QUERY, LANGUAGE_LABEL.en);
+    expect(screen.getByRole("option", { name: "DE" })).toHaveAttribute(
+      "href",
+      `/de/arama?${ARAMA_QUERY}`
+    );
+    expect(screen.getByRole("option", { name: "TR" })).toHaveAttribute(
+      "href",
+      `/arama?${ARAMA_QUERY}`
+    );
+  });
+
+  it("22) '/de/arama' + query → TR hedefi AYNI query'yi korur (kullanıcı senaryosu)", async () => {
+    await openSwitcher("/de/arama", ARAMA_QUERY, LANGUAGE_LABEL.de);
+    expect(screen.getByRole("option", { name: "TR" })).toHaveAttribute(
+      "href",
+      `/arama?${ARAMA_QUERY}`
+    );
+    expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute(
+      "href",
+      `/en/arama?${ARAMA_QUERY}`
+    );
+  });
+
+  it("23) BİRDEN FAZLA parametre (sıra dahil) korunur", async () => {
+    const q = "regions=fethiye&guests=6&start=2026-07-01&end=2026-07-08&page=2";
+    await openSwitcher("/arama", q, LANGUAGE_LABEL.tr);
+    expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute(
+      "href",
+      `/en/arama?${q}`
+    );
+  });
+
+  it("24) `villa-turleri` VİRGÜLLÜ değerleri canonical slug olarak korunur (çevrilmez)", async () => {
+    const q = "villa-turleri=2027-kiralik-villalar%2Cmuhafazakar-villalar";
+    await openSwitcher("/de/arama", q, LANGUAGE_LABEL.de);
+    const en = screen.getByRole("option", { name: "EN" });
+    expect(en).toHaveAttribute("href", `/en/arama?${q}`);
+    expect(en.getAttribute("href")).toContain(
+      "2027-kiralik-villalar%2Cmuhafazakar-villalar"
+    );
+  });
+
+  it("25) `flexible` parametresi korunur", async () => {
+    await openSwitcher("/arama", "flexible=3", LANGUAGE_LABEL.tr);
+    expect(screen.getByRole("option", { name: "DE" })).toHaveAttribute(
+      "href",
+      "/de/arama?flexible=3"
+    );
+  });
+
+  it("26) query YOKSA mevcut davranış BİREBİR korunur (soru işareti eklenmez)", async () => {
+    await openSwitcher("/arama", "", LANGUAGE_LABEL.tr);
+    expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute(
+      "href",
+      "/en/arama"
+    );
+    expect(screen.getByRole("option", { name: "DE" })).toHaveAttribute(
+      "href",
+      "/de/arama"
+    );
+  });
+
+  it("27) URL encoding BOZULMAZ (percent-encoded değerler aynen taşınır)", async () => {
+    const q = "regions=k%C3%B6ycegiz%2Csarigerme&villa-turleri=a%2Cb";
+    await openSwitcher("/arama", q, LANGUAGE_LABEL.tr);
+    const href = screen.getByRole("option", { name: "EN" })!.getAttribute("href");
+    expect(href).toBe(`/en/arama?${q}`);
+    expect(href).not.toContain("köycegiz");
+  });
+
+  it("28) DİĞER locale route'ları ETKİLENMEZ: fallback hâlâ query'siz kök, villa detay query'yi korur", async () => {
+    /* (a) locale karşılığı OLMAYAN path → hâlâ query'siz locale kökü */
+    await openSwitcher("/teklif-al", "foo=bar", LANGUAGE_LABEL.tr);
+    expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute("href", "/en");
+    expect(screen.getByRole("option", { name: "DE" })).toHaveAttribute("href", "/de");
+    cleanup();
+
+    /* (b) query'siz villa detay → Phase 10C davranışı BİREBİR aynı */
+    await openSwitcher("/kiralik-villa/test", "", LANGUAGE_LABEL.tr);
+    expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute(
+      "href",
+      "/en/kiralik-villa/test"
+    );
   });
 });
