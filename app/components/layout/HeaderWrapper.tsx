@@ -15,6 +15,11 @@ import { getVillaTypeNamesByLocale } from "@/lib/i18n/get-villa-type-translation
    (`menu_translations`). Villa tipi çevirisiyle AYNI batch deseni:
    locale başına TEK `.in()` sorgusu, N+1 YOK. */
 import { getMenuNamesByLocale } from "@/lib/i18n/get-menu-translations.server";
+/* 🛡️ CMS SAYFA MENÜ ÖĞELERİ — `source_type: "page"` düğümlerin adı
+   `pages.title`'dan gelir; EN/DE karşılıkları migration 082'deki
+   `page_translations.title`'dan okunur. Villa tipi / manuel menü ile
+   AYNI batch deseni: locale başına TEK `.in()` sorgusu, N+1 YOK. */
+import { getPageTitlesByLocale } from "@/lib/i18n/get-page-titles-by-locale.server";
 import type { TaxonomyNameByLocale } from "@/lib/i18n/taxonomy-name.helper";
 
 /** `getMenu()` ağacının bu dosyada ihtiyaç duyulan minimum şekli. */
@@ -62,6 +67,25 @@ function collectManualMenuIds(nodes: MenuNodeLike[], out: string[]): void {
   }
 }
 
+/* 🛡️ Ağaçtaki tüm `page` öğelerinin `source_id`'leri (= `pages.id`).
+   ⚠️ ADMİN'DEKİ `page-auto` AYRIMI PUBLIC AĞAÇTA YOKTUR: hem admin'in
+   menüye ELLE bağladığı CMS sayfaları (`resolveMenuRow`, menu-resolver
+   .ts) hem de `show_in_menu=true` ile OTOMATİK dahil edilenler
+   (`menu.service.ts`) ağaca `source_type: "page"` + `source_id =
+   pages.id` olarak iner. `"page-auto"` yalnız `/maki-admin/menu`
+   listesinin kendi UI `kind` değeridir. Bu yüzden TEK bir toplayıcı
+   İKİSİNİ DE kapsar — ayrı kod yolu GEREKMEZ. */
+function collectPageIds(nodes: MenuNodeLike[], out: string[]): void {
+  for (const n of nodes) {
+    if (n?.source_type === "page" && typeof n.source_id === "string") {
+      out.push(n.source_id);
+    }
+    if (Array.isArray(n?.children) && n.children.length > 0) {
+      collectPageIds(n.children, out);
+    }
+  }
+}
+
 /** Çeviri haritalarını ağaca uygular (yeni node'lar döner, mutasyon YOK).
  *
  *  🛡️ KAYNAK BAŞINA TEK ÇEVİRİ YOLU — source_type'a göre AYRIŞIR,
@@ -70,19 +94,20 @@ function collectManualMenuIds(nodes: MenuNodeLike[], out: string[]): void {
  *      `villa_type_translations`) — MEVCUT DAVRANIŞ BİREBİR.
  *    • `manual`   → `menuNamesById[node.id]` (migration 086,
  *      `menu_translations`).
- *    • `page` / `page-auto` → BURADA DOKUNULMAZ; adı `pages.title`'dan
- *      gelir, çevirisi Pages sisteminin (`page_translations`) işidir.
+ *    • `page`     → `pageNamesById[source_id]` (`page_translations`
+ *      .title; explicit + auto-include AYNI yoldan geçer).
  *    • `region`   → BURADA DOKUNULMAZ; Phase 10I: özel isim, canonical.
  *  Eşleşme yoksa `nameByLocale` undefined kalır → canonical TR `name`
  *  (`resolveTaxonomyName` fallback'i). */
 function attachTypeNames<T extends MenuNodeLike>(
   nodes: T[],
   namesById: Record<string, TaxonomyNameByLocale>,
-  menuNamesById: Record<string, TaxonomyNameByLocale> = {}
+  menuNamesById: Record<string, TaxonomyNameByLocale> = {},
+  pageNamesById: Record<string, TaxonomyNameByLocale> = {}
 ): T[] {
   return nodes.map((n) => {
     const children = Array.isArray(n?.children)
-      ? attachTypeNames(n.children, namesById, menuNamesById)
+      ? attachTypeNames(n.children, namesById, menuNamesById, pageNamesById)
       : n?.children;
 
     let nameByLocale: TaxonomyNameByLocale | undefined;
@@ -90,6 +115,8 @@ function attachTypeNames<T extends MenuNodeLike>(
       nameByLocale = namesById[n.source_id];
     } else if (n?.source_type === "manual" && typeof n.id === "string") {
       nameByLocale = menuNamesById[n.id];
+    } else if (n?.source_type === "page" && typeof n.source_id === "string") {
+      nameByLocale = pageNamesById[n.source_id];
     }
 
     if (!nameByLocale && children === n?.children) return n;
@@ -143,25 +170,37 @@ export default async function HeaderWrapper() {
       /* 🛡️ MIGRATION 086 — YALNIZ manual menü satırlarının id'leri. */
       const manualIds: string[] = [];
       collectManualMenuIds(menuItems as MenuNodeLike[], manualIds);
+      /* 🛡️ CMS sayfa öğelerinin `pages.id`'leri (explicit + auto). */
+      const pageIds: string[] = [];
+      collectPageIds(menuItems as MenuNodeLike[], pageIds);
 
-      /* İki batch okuma PARALEL; her biri locale başına TEK `.in()`
+      /* ÜÇ batch okuma PARALEL; her biri locale başına TEK `.in()`
          sorgusu (N+1 YOK). Boş id listesinde sorgu HİÇ atılmaz.
          Okuma fail olursa header ÇÖKMEZ: harita boş kalır → canonical
          TR adı gösterilir (mevcut davranış). */
-      const [namesById, menuNamesById] = await Promise.all([
+      const [namesById, menuNamesById, pageNamesById] = await Promise.all([
         categoryIds.length > 0
           ? getVillaTypeNamesByLocale(categoryIds).catch(() => ({}))
           : Promise.resolve({}),
         manualIds.length > 0
           ? getMenuNamesByLocale(manualIds).catch(() => ({}))
           : Promise.resolve({}),
+        pageIds.length > 0
+          ? getPageTitlesByLocale(pageIds).catch(() => ({}))
+          : Promise.resolve({}),
       ]);
 
       if (
         Object.keys(namesById).length > 0 ||
-        Object.keys(menuNamesById).length > 0
+        Object.keys(menuNamesById).length > 0 ||
+        Object.keys(pageNamesById).length > 0
       ) {
-        menuItems = attachTypeNames(menuItems, namesById, menuNamesById);
+        menuItems = attachTypeNames(
+          menuItems,
+          namesById,
+          menuNamesById,
+          pageNamesById
+        );
       }
     }
   } catch (err) {

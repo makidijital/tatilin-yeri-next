@@ -490,7 +490,10 @@ export default function Footer({
                     href={`/p/${p.slug}`}
                     className="hover:text-[#ED7926] transition-colors duration-300 motion-reduce:transition-none"
                   >
-                    {p.title}
+                    {/* 🛡️ EN/DE `page_translations.title`; yoksa/boşsa
+                        canonical TR `p.title` (villa tipi satırıyla AYNI
+                        çözücü). `href` ve tasarım DEĞİŞMEDİ. */}
+                    {resolveTaxonomyName(p.title, p.nameByLocale, locale)}
                   </Link>
                 ))}
               </nav>

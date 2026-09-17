@@ -11,6 +11,12 @@ import { pagesRepository } from "@/lib/db/pages.repository";
    statik/ISR uygunluğu DEĞİŞMEZ. */
 import { isMultilingualEnabled } from "@/lib/i18n/config";
 import { getVillaTypeNamesByLocale } from "@/lib/i18n/get-villa-type-translations.server";
+/* 🛡️ CMS SAYFA BAŞLIKLARI — "Kurumsal" linklerinin adı `pages.title`'dan
+   gelir; EN/DE karşılıkları migration 082'deki `page_translations.title`.
+   Villa tipi çevirisiyle AYNI batch deseni (locale başına TEK `.in()`
+   sorgusu, N+1 YOK) ve AYNI wrapper sözleşmesi: locale'den BAĞIMSIZ
+   okunur, seçim `Footer.tsx` (client) içinde yapılır. */
+import { getPageTitlesByLocale } from "@/lib/i18n/get-page-titles-by-locale.server";
 import type { TaxonomyNameByLocale } from "@/lib/i18n/taxonomy-name.helper";
 
 /* ---------------- DYNAMIC TAXONOMY ITEMS ---------------- */
@@ -40,6 +46,10 @@ export type CorporatePage = {
   slug: string;
   menu_order?: number | null;
   created_at?: string | null;
+  /** 🛡️ OPSİYONEL — `page_translations.title` (EN/DE). Yoksa/boşsa
+   *  `resolveTaxonomyName` canonical TR `title`'a düşer (eski davranış).
+   *  ⚠️ `slug` ÇEVRİLMEZ; link `/p/{slug}` AYNEN kalır. */
+  nameByLocale?: TaxonomyNameByLocale;
 };
 
 /* ===================================================================
@@ -111,7 +121,7 @@ export default async function FooterWrapper() {
      (footer header'dan ayrı kanal). slug + title sanity check.
      Sıralama: menu_order ASC nulls-last, sonra created_at ASC
      (deterministic tie-break). */
-  const corporatePages: CorporatePage[] =
+  const corporatePagesBase: CorporatePage[] =
     corpPagesRes.status === "fulfilled" &&
     Array.isArray(corpPagesRes.value?.data)
       ? (corpPagesRes.value.data as CorporatePage[])
@@ -137,6 +147,22 @@ export default async function FooterWrapper() {
             return ac.localeCompare(bc);
           })
       : [];
+
+  /* 🛡️ EN/DE CMS sayfa başlıkları — villa tipi bloğuyla (yukarısı) AYNI
+     kural: `multilingual_enabled` kapalıyken hiç çağrılmaz (TR davranışı
+     BİREBİR, ek sorgu YOK). Okuma fail olursa footer çökmez: harita boş
+     kalır → canonical TR başlık gösterilir. Sıralama ve filtreleme
+     YUKARIDA tamamlandı; burada YALNIZ `nameByLocale` eklenir. */
+  const pageTitlesByLocale: Record<string, TaxonomyNameByLocale> =
+    isMultilingualEnabled(settings) && corporatePagesBase.length > 0
+      ? await getPageTitlesByLocale(
+          corporatePagesBase.map((p) => p.id)
+        ).catch(() => ({}))
+      : {};
+
+  const corporatePages: CorporatePage[] = corporatePagesBase.map((p) =>
+    pageTitlesByLocale[p.id] ? { ...p, nameByLocale: pageTitlesByLocale[p.id] } : p
+  );
 
   const year = new Date().getFullYear();
   const siteName = settings?.site_name || "VillayaGel";

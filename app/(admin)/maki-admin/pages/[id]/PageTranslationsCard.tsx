@@ -33,6 +33,13 @@ import {
   loadPageTranslationsAction,
   savePageTranslationAction,
 } from "./page-translations.action";
+/* 🛡️ CMS sayfa BAŞLIĞININ çevirisi artık public navigation'da da
+   okunuyor (Header menüsü + Footer "Kurumsal"). Bu yüzden çeviri
+   kaydı, TR başlık değiştirildiğinde `pages/[id]/page.tsx`'in
+   çağırdığı AYNI invalidation'ı (`revalidateMenu`, tag "menu")
+   çağırır. Yeni bir cache/invalidation mekanizması İCAT EDİLMEDİ;
+   `TypeTranslationsPanel.tsx` (Phase 10D) ile AYNI desen. */
+import { revalidateMenu } from "@/app/services/revalidate.actions";
 
 type WritableLocale = "en" | "de";
 
@@ -162,6 +169,9 @@ export default function PageTranslationsCard({ pageId, pageTitle }: Props) {
       toast.success(`${LOCALE_LABELS[activeLocale]} çevirisi kaydedildi`, {
         id: `page-translations-save-${pageId}`,
       });
+
+      /* Non-blocking — kayıt başarısı bu çağrıya BAĞLI DEĞİL. */
+      revalidateMenu().catch(() => {});
     } finally {
       setSaving(false);
     }
