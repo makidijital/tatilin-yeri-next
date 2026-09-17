@@ -496,6 +496,20 @@ export const tr: Dictionary = {
     },
   },
 
+  /* 🛡️ PHASE 12E — PUBLIC CMS statik UI metinleri. TR değerleri
+     `CmsPageBody.tsx`'teki ESKİ hardcoded metinlerin BİREBİR
+     kopyasıdır; hiçbiri değiştirilmedi. */
+  cms: {
+    breadcrumbHome: "Ana sayfa",
+    eyebrowContent: "İçerik",
+    eyebrowCorporate: "Kurumsal",
+    badgeHelpEyebrow: "Yardım",
+    badgeFaq: "Sık Sorulanlar",
+    badgePolicy: "Politika & Şartlar",
+    fallbackTitle: "Sayfa",
+    contentComingSoon: "İçerik yakında.",
+  },
+
   /* 🛡️ PHASE 12 — MAKI ADMIN / PAGES. Bu bloktaki TR değerleri
      `app/(admin)/maki-admin/pages/**` içindeki ESKİ hardcoded
      metinlerin BİREBİR (byte-identical) kopyasıdır — U+2026 (…),

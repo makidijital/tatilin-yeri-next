@@ -485,6 +485,18 @@ export const de: Dictionary = {
     },
   },
 
+  /* 🛡️ PHASE 12E — PUBLIC CMS statik UI metinleri. */
+  cms: {
+    breadcrumbHome: "Startseite",
+    eyebrowContent: "Inhalt",
+    eyebrowCorporate: "Unternehmen",
+    badgeHelpEyebrow: "Hilfe",
+    badgeFaq: "Häufige Fragen",
+    badgePolicy: "Richtlinien & Bedingungen",
+    fallbackTitle: "Seite",
+    contentComingSoon: "Inhalt folgt in Kürze.",
+  },
+
   /* 🛡️ PHASE 12 — MAKI ADMIN / PAGES. Bu fazda admin'de locale
      kaynağı YOK; bu değerler `Dictionary` exhaustiveness'i için
      hazır tutulur ve henüz hiçbir call-site tarafından RENDER

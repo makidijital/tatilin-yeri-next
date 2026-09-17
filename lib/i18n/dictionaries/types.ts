@@ -627,6 +627,40 @@ export type Dictionary = {
   };
 
   /* ===============================================================
+     🛡️ PHASE 12E — PUBLIC CMS SAYFASI (/p/[slug]) STATİK UI METİNLERİ
+     ===============================================================
+     `app/components/cms/CmsPageBody.tsx` içindeki hardcoded TR
+     arayüz metinleri (breadcrumb, eyebrow, hero rozeti, boş içerik
+     durumu). CMS'in ASIL içeriği (title/excerpt/body/seo_*) bu
+     namespace'ten GELMEZ — o, `page_translations` tablosundan
+     `resolvePageContent` ile çözülür (Phase 12D). Burada yalnız
+     sabit arayüz etiketleri vardır.
+
+     Fallback: mevcut public i18n davranışı — `getDictionary(locale)`
+     saf statik lookup, eksik key DERLEME HATASI (Dictionary tipi
+     exhaustive). Yeni bir fallback mekanizması EKLENMEDİ. */
+  cms: {
+    /** Breadcrumb'ın ilk halkası. ⚠️ `header.home` ("Anasayfa") ile
+     *  BİLEREK BİRLEŞTİRİLMEDİ — CMS sayfasındaki mevcut TR metin
+     *  "Ana sayfa" (ayrı yazım); birleştirmek TR çıktısını bozardı. */
+    breadcrumbHome: string;
+    /** Editorial (cover'lı) hero'nun üst eyebrow'u. */
+    eyebrowContent: string;
+    /** Kurumsal/yasal sayfaların PageHero eyebrow'u. */
+    eyebrowCorporate: string;
+    /** SSS sayfalarının rozet eyebrow'u. */
+    badgeHelpEyebrow: string;
+    /** SSS sayfalarının rozet satırı. */
+    badgeFaq: string;
+    /** Politika/şart sayfalarının rozet satırı. */
+    badgePolicy: string;
+    /** Başlık boşsa kullanılan yedek başlık. */
+    fallbackTitle: string;
+    /** Ne section ne body varsa gösterilen boş durum metni. */
+    contentComingSoon: string;
+  };
+
+  /* ===============================================================
      🛡️ PHASE 12 — MAKI ADMIN / PAGES (Seçenek A: locale kaynağı YOK)
      ===============================================================
      Admin panelinin İLK i18n namespace'i. Bu fazda admin tarafında

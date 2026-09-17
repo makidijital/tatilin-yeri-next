@@ -10,6 +10,15 @@ import {
   buildBreadcrumb,
 } from "@/app/components/seo/StructuredData";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+/* 🛡️ PHASE 12E — statik UI metinleri MEVCUT public dictionary'den.
+   `getDictionary` saf/senkron statik lookup (Phase 2); yeni provider/
+   context/fallback mekanizması EKLENMEDİ. CMS'in ASIL içeriği
+   (title/excerpt/body/seo_*) bu sözlükten GELMEZ — o `page_translations`
+   üzerinden `resolvePageContent` ile çözülür (Phase 12D). */
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import type { Dictionary } from "@/lib/i18n/dictionaries/types";
+
+type CmsDictionary = Dictionary["cms"];
 
 /* ===============================================================
    🛡️ PHASE 12D — /p/[slug] ORTAK GÖVDE (TR / EN / DE)
@@ -32,9 +41,12 @@ import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
        `page.title` üzerinden hesaplanır (Phase 10G'deki
        `getDistanceIconKey` ile AYNI ilke). Aksi halde EN/DE
        sayfalarda kurumsal hero kaybolurdu.
-     • Statik arayüz metinleri ("Ana sayfa", "İçerik", "Kurumsal",
-       "İçerik yakında.") bu fazda TR kalır — kapsam yalnız CMS
-       İÇERİĞİNİN çevirisidir.
+     • 🛡️ PHASE 12E GÜNCELLEMESİ: statik arayüz metinleri (breadcrumb,
+       eyebrow, hero rozeti, boş içerik durumu) ARTIK TR sabit DEĞİL —
+       mevcut public dictionary'nin `cms` namespace'inden, aynı
+       `locale` prop'u üzerinden çözülür. CMS'in ASIL içeriği
+       (title/excerpt/body/seo_*) yine `page_translations`'tan gelir;
+       iki kaynak birbirinden bağımsızdır.
    =============================================================== */
 
 /* ---------------------------------------------------------------
@@ -50,7 +62,8 @@ const CMS_POLICY_RE =
 
 function getCmsBadge(
   slug: string,
-  title: string | null | undefined
+  title: string | null | undefined,
+  dict: CmsDictionary
 ): { eyebrow?: string; lines: string[] } {
   const key = `${slug} ${title ?? ""}`.toLowerCase();
   /* Hakkımızda: sağ badge render edilmez (lines boş). Üst eyebrow
@@ -59,12 +72,12 @@ function getCmsBadge(
     return { lines: [] };
   }
   if (/sss|faq|sik sorul|sık sorul|yardim|yardım/.test(key)) {
-    return { eyebrow: "Yardım", lines: ["Sık Sorulanlar"] };
+    return { eyebrow: dict.badgeHelpEyebrow, lines: [dict.badgeFaq] };
   }
   /* Politika & şart sayfaları: badge yalnız "Politika & Şartlar";
      üst eyebrow "Kurumsal" getCorporateEyebrow'dan gelir. */
   if (CMS_POLICY_RE.test(key)) {
-    return { lines: ["Politika & Şartlar"] };
+    return { lines: [dict.badgePolicy] };
   }
   /* Diğer kurumsal/CMS PageHero sayfaları: badge yok. "Bilgilendirme"
      artık kullanılmaz; üst eyebrow "Kurumsal" getCorporateEyebrow'dan. */
@@ -78,10 +91,11 @@ const CMS_SSS_RE = /sss|faq|sik sorul|sık sorul|yardim|yardım/;
    her zaman "Kurumsal". Yalnız SSS mevcut hâliyle kalır (undefined). */
 function getCorporateEyebrow(
   slug: string,
-  title: string | null | undefined
+  title: string | null | undefined,
+  dict: CmsDictionary
 ): string | undefined {
   const key = `${slug} ${title ?? ""}`.toLowerCase();
-  return CMS_SSS_RE.test(key) ? undefined : "Kurumsal";
+  return CMS_SSS_RE.test(key) ? undefined : dict.eyebrowCorporate;
 }
 
 /* Kurumsal/yasal/bilgilendirme sayfaları (Hakkımızda, SSS, KVKK,
@@ -126,6 +140,10 @@ export default function CmsPageBody({
   resolvedExcerpt,
   body,
 }: Props) {
+  /* 🛡️ PHASE 12E — statik arayüz metinleri. `locale` prop'u zaten
+     mevcut (Phase 12D); yeni bir locale kaynağı EKLENMEDİ. */
+  const dict = getDictionary(locale).cms;
+
   /* 🛡️ PHASE 12D — body/excerpt/title ARTIK locale-aware çözülmüş
      olarak prop ile gelir (`resolvePageContent`). Mevcut defansif
      body/content drift fix'i o helper'ın içine TAŞINDI. */
@@ -153,8 +171,8 @@ export default function CmsPageBody({
 
   /* CMS içerik rozeti + eyebrow. lines boşsa (yalnız Hakkımızda) badge
      render edilmez ve eyebrow üstteki PageHero eyebrow'una taşınır. */
-  const cmsBadge = getCmsBadge(slug, page.title);
-  const heroEyebrow = getCorporateEyebrow(slug, page.title);
+  const cmsBadge = getCmsBadge(slug, page.title, dict);
+  const heroEyebrow = getCorporateEyebrow(slug, page.title, dict);
 
   /* SEO: BreadcrumbList JSON-LD */
   /* 🛡️ `locale` yalnız JSON-LD `inLanguage` için geçilir ve TR'de
@@ -163,8 +181,8 @@ export default function CmsPageBody({
      "verilmezse davranış öncekiyle AYNI"). */
   const breadcrumbLd = buildBreadcrumb(
     [
-      { name: "Ana sayfa", url: "/" },
-      { name: title || "Sayfa" },
+      { name: dict.breadcrumbHome, url: "/" },
+      { name: title || dict.fallbackTitle },
     ],
     locale === DEFAULT_LOCALE ? undefined : locale
   );
@@ -192,7 +210,7 @@ export default function CmsPageBody({
                 href="/"
                 className="hover:text-[var(--color-champagne-700)] transition-colors"
               >
-                Ana sayfa
+                {dict.breadcrumbHome}
               </Link>
               <span aria-hidden="true">·</span>
               <span className="text-[var(--color-stone-700)]">{title}</span>
@@ -201,7 +219,7 @@ export default function CmsPageBody({
             {/* Eyebrow */}
             <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)]">
               <span className="inline-block w-8 h-px bg-[var(--color-stone-300)] align-middle mr-3" />
-              İçerik
+              {dict.eyebrowContent}
             </p>
 
             {/* Title — premium serif */}
@@ -234,11 +252,11 @@ export default function CmsPageBody({
       ) : (
         <PageHero
           breadcrumb={[
-            { name: "Ana sayfa", href: "/" },
-            { name: title || "Sayfa" },
+            { name: dict.breadcrumbHome, href: "/" },
+            { name: title || dict.fallbackTitle },
           ]}
           eyebrow={heroEyebrow}
-          title={title || "Sayfa"}
+          title={title || dict.fallbackTitle}
           description={excerpt || undefined}
           badge={cmsBadge}
         />
@@ -294,7 +312,7 @@ export default function CmsPageBody({
             </div>
           ) : (
             <p className="text-[var(--color-stone-400)] italic text-center">
-              İçerik yakında.
+              {dict.contentComingSoon}
             </p>
           )}
         </div>
