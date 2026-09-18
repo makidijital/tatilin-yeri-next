@@ -1,6 +1,10 @@
 import { translationRepository } from "@/lib/db/translation.repository.server";
 import { pagesServerRepository } from "@/lib/db/pages.repository.server";
 import type { PageTranslationRow } from "@/lib/i18n/translations.types";
+/* 🛡️ MIGRATION 091 — bölüm çevirisi için TEK doğrulama noktası.
+   Canonical tarafın ZATEN kullandığı defansif parser REUSE edilir;
+   yeni bir section şeması/DSL'i İCAT EDİLMEDİ. */
+import { parsePageSections, type PageSection } from "@/lib/page-sections";
 
 /**
  * 🛡️ PHASE 12C — Admin Sayfa (pages) Çeviri Servisi
@@ -14,10 +18,18 @@ import type { PageTranslationRow } from "@/lib/i18n/translations.types";
  *   - TÜM iş kuralı doğrulaması BURADA (repository yalnız DB
  *     primitive'i — bkz. translation.repository.server.ts `upsertOne`).
  *
- * Çevrilen kolonlar migration 082'deki `page_translations` tablosuyla
- * BİREBİR: title, body, excerpt, seo_title, seo_description.
- * ⚠️ `sections` (JSONB) ve `slug` ÇEVRİLMEZ — `page_translations`
- * tablosunda böyle kolon YOKTUR; yeni kolon/migration İCAT EDİLMEDİ.
+ * Çevrilen kolonlar `page_translations` tablosuyla BİREBİR:
+ * title, body, excerpt, seo_title, seo_description (migration 082)
+ * + sections (migration 091).
+ * ⚠️ `slug` ÇEVRİLMEZ — tabloda kolonu YOKTUR (URL her locale'de
+ * canonical `pages.slug` taşır).
+ *
+ * 🛡️ MIGRATION 091 — `sections` GERİYE DÖNÜK UYUMLU:
+ *   `input.sections` VERİLMEZSE (`undefined`) upsert payload'ına HİÇ
+ *   eklenmez → mevcut çağıranların ürettiği payload BİREBİR aynı kalır
+ *   ve kayıtlı bölüm çevirisi UPDATE'te korunur. `null` geçilirse
+ *   bölüm çevirisi bilinçli olarak TEMİZLENİR (public taraf canonical
+ *   TR bölümlerine düşer).
  *
  * TR bu servisten YAZILAMAZ (locale whitelist "en" | "de"). Boş
  * bırakılan alanlar `null` yazılır → public tarafta TR'ye fallback.
@@ -39,6 +51,11 @@ const MAX_EXCERPT_LEN = 300;
 const MAX_BODY_LEN = 20000;
 const MAX_SEO_TITLE_LEN = 120;
 const MAX_SEO_DESCRIPTION_LEN = 300;
+/* Bölüm dizisi serileştirilmiş JSON uzunluk tavanı. Gövde tavanının
+   (20000) 2 katı: bir CMS sayfası birden çok richtext bölümü
+   taşıyabilir, ancak sınırsız DEĞİL (canonical tarafta da pratikte
+   aynı büyüklük sınıfı geçerli). */
+const MAX_SECTIONS_JSON_LEN = 40000;
 
 export const PAGE_TRANSLATION_MAX_LEN = {
   title: MAX_TITLE_LEN,
@@ -46,6 +63,7 @@ export const PAGE_TRANSLATION_MAX_LEN = {
   body: MAX_BODY_LEN,
   seoTitle: MAX_SEO_TITLE_LEN,
   seoDescription: MAX_SEO_DESCRIPTION_LEN,
+  sectionsJson: MAX_SECTIONS_JSON_LEN,
 } as const;
 
 export type PageTranslationInput = {
@@ -56,6 +74,9 @@ export type PageTranslationInput = {
   body?: string | null;
   seoTitle?: string | null;
   seoDescription?: string | null;
+  /** 🛡️ MIGRATION 091 — `PageSection[]` (ham). `undefined` → kolona
+   *  HİÇ dokunulmaz; `null`/geçersiz/boş → çeviri temizlenir (NULL). */
+  sections?: unknown;
 };
 
 export type PageTranslationResult =
@@ -69,6 +90,18 @@ export type PageTranslationsListResult =
 function normalize(value: string | null | undefined): string | null {
   const trimmed = (value ?? "").toString().trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+/**
+ * 🛡️ MIGRATION 091 — bölüm dizisinin `normalize()` karşılığı.
+ * `parsePageSections` ile SANITIZE eder (bilinmeyen type / eksik alan
+ * düşer), geçerli bölüm kalmazsa `null` döner → public taraf canonical
+ * TR bölümlerine fallback yapar. DB'ye yalnız doğrulanmış, canonical
+ * ile AYNI yapıdaki bir dizi yazılır.
+ */
+function normalizeSections(value: unknown): PageSection[] | null {
+  const parsed = parsePageSections(value);
+  return parsed.length > 0 ? parsed : null;
 }
 
 export async function getPageTranslations(
@@ -135,6 +168,18 @@ export async function upsertPageTranslation(
     };
   }
 
+  /* 🛡️ MIGRATION 091 — bölümler. `undefined` ise bu alan payload'a HİÇ
+     girmez (aşağıda), böylece mevcut çağıranların davranışı ve kayıtlı
+     bölüm çevirisi korunur. */
+  const sectionsProvided = input.sections !== undefined;
+  const sections = sectionsProvided ? normalizeSections(input.sections) : null;
+  if (sections && JSON.stringify(sections).length > MAX_SECTIONS_JSON_LEN) {
+    return {
+      ok: false,
+      error: `Bölümler ${MAX_SECTIONS_JSON_LEN} karakteri geçemez`,
+    };
+  }
+
   /* Parent existence pre-check — villa servisindeki `findSlugById`
      ile AYNI rol: FK hatasını generic mesaja çevirmek yerine erken,
      anlaşılır hata döner. Mevcut repository fonksiyonu REUSE edildi. */
@@ -153,6 +198,9 @@ export async function upsertPageTranslation(
       body,
       seo_title: seoTitle,
       seo_description: seoDescription,
+      /* `sections` verilmediyse ANAHTAR HİÇ EKLENMEZ — payload mevcut
+         çağıranlar için BİREBİR eskisi gibi kalır. */
+      ...(sectionsProvided ? { sections } : {}),
     }
   );
 

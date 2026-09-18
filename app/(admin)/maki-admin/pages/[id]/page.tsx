@@ -50,6 +50,10 @@ import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
    KAPSAM DIŞI (DB'de PRESERVE EDİLİR, dokunulmaz):
      - sections (JSONB) → yeni sayfa akışındaki section engine
        burada YENİDEN render edilmez; mevcut veri korunur.
+       🛡️ MIGRATION 091: canonical bölümler artık yalnız OKUNUP
+       `PageTranslationsCard`'a referans yapı olarak geçirilir
+       (EN/DE bölüm metinleri orada girilir). Bu ekranın PATCH
+       payload'ı DEĞİŞMEDİ — `sections` yazılmaz.
      - cover_image → yine korunur; yeni sayfa akışı tarafında
        yönetilir.
      - menu_parent_id, menu_order → menü ekranı yönetir.
@@ -79,6 +83,9 @@ type PageRow = {
   is_active: boolean | null;
   show_in_menu: boolean | null;
   cover_image: string | null;
+  /* 🛡️ MIGRATION 091 — bu ekrandan DÜZENLENMEZ (aşağıdaki "KAPSAM DIŞI"
+     notu geçerli); yalnız çeviri kartına REFERANS yapı olarak geçer. */
+  sections?: unknown;
 };
 
 export default function EditPagePage() {
@@ -97,6 +104,11 @@ export default function EditPagePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  /* 🛡️ MIGRATION 091 — canonical bölümler. Bu ekranda DÜZENLENMEZ ve
+     PATCH payload'ına GİRMEZ (DB'de aynen korunur); yalnız
+     `PageTranslationsCard`'a EN/DE bölüm çevirisinin yapısını
+     belirlemek için okunur. */
+  const [canonicalSections, setCanonicalSections] = useState<unknown>(null);
 
   /* 🛡️ PHASE 12C — çeviri kartı kapısı. `types/page.tsx` ile AYNI
      mekanik; settings null/hata → fail-safe KAPALI. */
@@ -169,6 +181,8 @@ export default function EditPagePage() {
         setIsActive(p.is_active !== false);
         setShowInMenu(!!p.show_in_menu);
         setCoverPath(p.cover_image ?? null);
+        /* 🛡️ MIGRATION 091 — yalnız OKUNUR; PATCH payload'ına eklenmez. */
+        setCanonicalSections(p.sections ?? null);
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : adminDict.common.unknownError;
@@ -615,7 +629,11 @@ export default function EditPagePage() {
           edilir; mevcut form/CRUD davranışını BOZMAZ (form dışında,
           kendi save akışıyla). */}
       {!loading && multilingualEnabled && id ? (
-        <PageTranslationsCard pageId={id} pageTitle={title} />
+        <PageTranslationsCard
+          pageId={id}
+          pageTitle={title}
+          canonicalSections={canonicalSections}
+        />
       ) : null}
     </div>
   );

@@ -78,6 +78,10 @@ export default async function CmsPage({ params }: Props) {
       title={resolved.title}
       resolvedExcerpt={resolved.excerpt}
       body={resolved.body}
+      /* 🛡️ MIGRATION 091 — bölümler de locale-aware çözülür; çeviri
+         yoksa `resolveTranslatedSections` canonical TR bölümlerine
+         düşer. EK SORGU YOK: aynı `resolvePageContent` çağrısı. */
+      resolvedSections={resolved.sections}
     />
   );
 }

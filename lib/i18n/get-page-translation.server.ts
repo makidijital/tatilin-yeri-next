@@ -5,6 +5,10 @@ import {
   getTranslation,
   resolveTranslatedField,
 } from "@/lib/i18n/get-translation.server";
+/* 🛡️ MIGRATION 091 — bölüm (sections) çevirisinin GEÇERLİLİK kapısı.
+   Yeni bir parser/DSL yazılmadı; canonical tarafın ZATEN kullandığı
+   defansif parser REUSE edilir (tek doğrulama noktası). */
+import { parsePageSections } from "@/lib/page-sections";
 
 /* ===============================================================
    🛡️ PHASE 12D — CMS SAYFA (pages) ÇEVİRİ OKUMA KATMANI
@@ -26,9 +30,18 @@ import {
    Çeviri satırı hiç yoksa TÜM alanlar TR'ye düşer — ancak URL
    (`/en/p/...`) korunur.
 
-   KAPSAM: migration 082 `page_translations` kolonlarıyla BİREBİR —
-   title · excerpt · body · seo_title · seo_description.
-   `slug` ve `sections` ÇEVRİLMEZ (tabloda kolonları YOK).
+   KAPSAM: `page_translations` kolonlarıyla BİREBİR —
+   title · excerpt · body · seo_title · seo_description (migration 082)
+   + sections (migration 091).
+   `slug` ÇEVRİLMEZ — URL her locale'de canonical `pages.slug` taşır
+   (tabloda kolonu YOKTUR).
+
+   🛡️ MIGRATION 091 — `sections` FALLBACK'İ NEDEN AYRI:
+   `resolveTranslatedField` STRING içindir (`.trim()` ile "dolu mu"
+   kararı verir); `sections` bir JSONB DİZİSİDİR. Bu yüzden AYNI
+   ilkenin dizi karşılığı olan küçük, izole bir helper kullanılır:
+   `resolveTranslatedSections`. Yeni bir çeviri sistemi, yeni bir
+   section DSL'i veya ikinci bir resolver katmanı OLUŞTURULMADI.
    =============================================================== */
 
 /** `pages` satırından okunan canonical (TR) alanlar. Alan adları DB
@@ -42,6 +55,8 @@ export type PageCanonicalContent = {
   content?: string | null;
   seo_title?: string | null;
   seo_description?: string | null;
+  /** 🛡️ MIGRATION 091 — canonical `pages.sections` (JSONB, ham). */
+  sections?: unknown;
 };
 
 export type ResolvedPageContent = {
@@ -50,7 +65,37 @@ export type ResolvedPageContent = {
   body: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  /** 🛡️ MIGRATION 091 — locale'e göre çözülmüş bölümler (HAM JSONB).
+   *  Tüketici taraf (`CmsPageBody`) bunu BUGÜNKÜ gibi
+   *  `parsePageSections` ile parse eder — render yolu DEĞİŞMEDİ. */
+  sections: unknown;
 };
+
+/**
+ * 🛡️ MIGRATION 091 — `sections` için alan bazlı fallback'in dizi
+ * karşılığı. `resolveTranslatedField` ile AYNI ilke:
+ *
+ *   "çeviri değeri ANLAMLI DOLU ise onu, değilse canonical'ı döndür"
+ *
+ * String'de "anlamlı dolu" = `.trim() !== ""`; bir bölüm dizisinde
+ * ise = "defansif parse'tan EN AZ BİR geçerli bölüm çıkıyor". Böylece
+ * `null`, `undefined`, `[]`, dizi olmayan bir değer veya yalnız
+ * bozuk/bilinmeyen tipli bölümler içeren bir çeviri SESSİZCE canonical
+ * TR bölümlerine düşer — EN/DE sayfa asla bölümsüz kalmaz.
+ *
+ * Saf (pure) — DB'ye dokunmaz, throw etmez, canonical değeri HİÇ
+ * değiştirmez (ham JSONB olduğu gibi geri döner; parse sorumluluğu
+ * bugünkü gibi render tarafındadır).
+ */
+export function resolveTranslatedSections(
+  translatedSections: unknown,
+  canonicalSections: unknown
+): unknown {
+  if (parsePageSections(translatedSections).length > 0) {
+    return translatedSections;
+  }
+  return canonicalSections;
+}
 
 function canonicalBody(page: PageCanonicalContent): string | null {
   return page.body ?? page.content ?? null;
@@ -63,6 +108,7 @@ function canonicalContent(page: PageCanonicalContent): ResolvedPageContent {
     body: canonicalBody(page),
     seoTitle: page.seo_title ?? null,
     seoDescription: page.seo_description ?? null,
+    sections: page.sections ?? null,
   };
 }
 
@@ -87,6 +133,7 @@ export async function resolvePageContent(
       body: null,
       seoTitle: null,
       seoDescription: null,
+      sections: null,
     };
   }
 
@@ -110,5 +157,8 @@ export async function resolvePageContent(
       row.seo_description,
       canonical.seoDescription
     ),
+    /* 🛡️ MIGRATION 091 — AYNI çeviri satırından okunur; EK SORGU YOK
+       (`getTranslation` zaten `select("*")` ile tüm kolonları getirir). */
+    sections: resolveTranslatedSections(row.sections, canonical.sections),
   };
 }

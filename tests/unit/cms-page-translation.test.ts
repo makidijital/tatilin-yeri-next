@@ -100,6 +100,9 @@ describe("resolvePageContent — TR", () => {
       body: TR_PAGE.body,
       seoTitle: TR_PAGE.seo_title,
       seoDescription: TR_PAGE.seo_description,
+      /* 🛡️ MIGRATION 091 — bölümler de çözülen içeriğin parçasıdır;
+         çeviri yok/geçersiz → canonical `pages.sections`. */
+      sections: TR_PAGE.sections,
     });
   });
 
@@ -119,6 +122,8 @@ describe("resolvePageContent — TR", () => {
       body: null,
       seoTitle: null,
       seoDescription: null,
+      /* 🛡️ MIGRATION 091 — page yoksa bölümler de null. */
+      sections: null,
     });
     expect(getTranslationMock).not.toHaveBeenCalled();
   });
@@ -141,6 +146,10 @@ describe("resolvePageContent — EN / DE", () => {
       body: EN_ROW.body,
       seoTitle: EN_ROW.seo_title,
       seoDescription: EN_ROW.seo_description,
+      /* 🛡️ MIGRATION 091 — EN satırında `sections` anahtarı YOK
+         (migration henüz uygulanmamış satır senaryosu) → canonical
+         bölümlere düşer. */
+      sections: TR_PAGE.sections,
     });
   });
 
@@ -161,6 +170,9 @@ describe("resolvePageContent — EN / DE", () => {
       body: TR_PAGE.body,
       seoTitle: TR_PAGE.seo_title,
       seoDescription: TR_PAGE.seo_description,
+      /* 🛡️ MIGRATION 091 — bölümler de çözülen içeriğin parçasıdır;
+         çeviri yok/geçersiz → canonical `pages.sections`. */
+      sections: TR_PAGE.sections,
     });
   });
 

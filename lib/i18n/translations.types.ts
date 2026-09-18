@@ -116,6 +116,20 @@ export type PageTranslationRow = {
   excerpt: string | null;
   seo_title: string | null;
   seo_description: string | null;
+  /* 🛡️ MIGRATION 091 — `pages.sections` (JSONB) çevirisi. Canonical ile
+     AYNI yapı: `PageSection[]` (richtext | image | quote). Tip burada
+     BİLEREK `unknown`: DB'den gelen JSONB ham gelir ve TEK doğrulama
+     noktası mevcut `parsePageSections` (lib/page-sections.ts) olmalıdır
+     — `PageSection[]` diye tip iddia etmek doğrulanmamış veriyi
+     doğrulanmış gibi gösterirdi. NULL / geçersiz / boş → public tarafta
+     canonical TR bölümlerine düşülür (`resolveTranslatedSections`).
+
+     OPSİYONEL — BİLİNÇLİ: repository `select("*")` ile okur; migration
+     091 HENÜZ UYGULANMAMIŞSA dönen satırda bu anahtar HİÇ BULUNMAZ.
+     `sections?: unknown` bu gerçeği modeller ve mevcut çağıranları/
+     fixture'ları bozmaz; `resolveTranslatedSections` `undefined`'ı da
+     canonical fallback'e çevirir (parse → [] → canonical). */
+  sections?: unknown;
   created_at: string;
   updated_at: string;
 };

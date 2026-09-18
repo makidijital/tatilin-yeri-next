@@ -205,6 +205,8 @@ describe("upsertPageTranslation", () => {
       body: 20000,
       seoTitle: 120,
       seoDescription: 300,
+      /* 🛡️ MIGRATION 091 — bölüm dizisi serileştirilmiş JSON tavanı. */
+      sectionsJson: 40000,
     });
 
     const cases: Array<[string, Record<string, string>]> = [

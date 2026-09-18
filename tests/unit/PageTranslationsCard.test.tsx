@@ -273,6 +273,11 @@ describe("Phase 12C — kayıt", () => {
       body: "EN body",
       seoTitle: "EN seo",
       seoDescription: "EN seo desc",
+      /* 🛡️ MIGRATION 091 — kart artık bölüm çevirisini de gönderir.
+         Bu testte `canonicalSections` prop'u VERİLMEDİĞİ için canonical
+         yapı boştur → `buildTranslatedSections` `null` döner ve public
+         taraf canonical TR bölümlerine düşer. */
+      sections: null,
     });
     await waitFor(() =>
       expect(notifySuccessMock).toHaveBeenCalledWith(
@@ -332,6 +337,8 @@ describe("Phase 12C — kayıt", () => {
       body: "",
       seoTitle: "",
       seoDescription: "",
+      /* 🛡️ MIGRATION 091 — boş kayıtta bölüm çevirisi de null. */
+      sections: null,
     });
     await waitFor(() =>
       expect(

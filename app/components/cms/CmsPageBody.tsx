@@ -34,8 +34,12 @@ type CmsDictionary = Dictionary["cms"];
 
    ⚠️ ÇEVRİLMEYENLER (bilinçli, migration 082 ile uyumlu):
      • `slug` — URL her locale'de canonical `pages.slug`.
-     • `sections` (JSONB) — `page_translations`'ta kolonu YOK;
-       her locale'de TR sections render edilir.
+     • `sections` içindeki `image.path` — ASSET yoludur, her locale'de
+       AYNI görsel gösterilir (çevrilmez).
+     🛡️ MIGRATION 091 GÜNCELLEMESİ: `sections`'ın KULLANICIYA GÖRÜNEN
+     metinleri (richtext.content · image.alt · quote.text/author) ARTIK
+     ÇEVRİLİR — `page_translations.sections` + `resolveTranslatedSections`
+     (çeviri yoksa/geçersizse canonical TR bölümlerine düşer).
      • Hero rozeti / eyebrow / "Kurumsal" kararı — anahtar kelime
        eşleşmesi TÜRKÇE metne bağlı olduğundan HER ZAMAN canonical
        `page.title` üzerinden hesaplanır (Phase 10G'deki
@@ -130,6 +134,11 @@ type Props = {
   resolvedExcerpt: string | null;
   /** `resolvePageContent` ile çözülmüş, locale-aware gövde. */
   body: string | null;
+  /** 🛡️ MIGRATION 091 — `resolvePageContent` ile çözülmüş, locale-aware
+   *  bölümler (HAM JSONB; parse aşağıda BUGÜNKÜ gibi yapılır).
+   *  Verilmezse canonical `page.sections` kullanılır → bu prop'u
+   *  geçmeyen mevcut çağıranların davranışı BİREBİR korunur. */
+  resolvedSections?: unknown;
 };
 
 export default function CmsPageBody({
@@ -139,6 +148,7 @@ export default function CmsPageBody({
   title,
   resolvedExcerpt,
   body,
+  resolvedSections,
 }: Props) {
   /* 🛡️ PHASE 12E — statik arayüz metinleri. `locale` prop'u zaten
      mevcut (Phase 12D); yeni bir locale kaynağı EKLENMEDİ. */
@@ -161,9 +171,17 @@ export default function CmsPageBody({
   const corporate = isCorporatePage(slug, page.title);
   const usePageHero = corporate || !coverUrl;
 
-  /* Sections: JSONB defansif parse — geçersiz veriler düşer. */
+  /* Sections: JSONB defansif parse — geçersiz veriler düşer.
+     🛡️ MIGRATION 091 — kaynak artık locale-aware: `resolvedSections`
+     (`resolvePageContent` → `resolveTranslatedSections`) verilmişse o,
+     verilmemişse BUGÜNKÜ gibi canonical `page.sections`. Parse, render
+     ve `hasSections` mantığı DEĞİŞMEDİ; bu bileşen hâlâ SAF ve
+     senkrondur — içinde DB sorgusu YOKTUR (veri erişimi route/service
+     katmanında kalır). */
   const sections = parsePageSections(
-    (page as { sections?: unknown }).sections
+    resolvedSections !== undefined
+      ? resolvedSections
+      : (page as { sections?: unknown }).sections
   );
   const hasSections = sections.length > 0;
   const hasBody =
