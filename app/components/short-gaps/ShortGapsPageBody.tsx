@@ -30,6 +30,14 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import type { MonthNumber } from "@/lib/i18n/dictionaries/types";
 import { getVillaBadgesByLocale } from "@/lib/i18n/get-villa-badge-translations.server";
+/* 🛡️ VİLLA TİPİ ADI (EN/DE) — `AramaPageBody` / `KiralikVillalarPageBody`
+   ile AYNI, ZATEN VAR OLAN iki helper. Yeni translation sistemi veya DB
+   katmanı YAZILMADI. */
+import { getVillaTypeNamesByLocale } from "@/lib/i18n/get-villa-type-translations.server";
+import {
+  resolveTaxonomyName,
+  type TaxonomyNameByLocale,
+} from "@/lib/i18n/taxonomy-name.helper";
 import { shortGapsMonthLabel } from "@/app/components/short-gaps/short-gaps-metadata";
 
 /* ===============================================================
@@ -323,9 +331,31 @@ export default async function ShortGapsPageBody({
     show_in_filter: o.show_in_filter,
     filter_group_name: o.filter_group_name,
   }));
+  /* ===============================================================
+     🛡️ VİLLA TİPİ ADI — SIDEBAR GÖRÜNÜMÜ İÇİN LOCALE-AWARE
+     ===============================================================
+     `AramaPageBody` / `KiralikVillalarPageBody` ile BİREBİR AYNI desen:
+       • locale === "tr" → çeviri sorgusu HİÇ atılmaz; TR davranışı ve
+         sorgu sayısı BİREBİR eskisi gibi.
+       • EN/DE → `getVillaTypeNamesByLocale` (TEK batch `.in()` sorgusu,
+         N+1 YOK) + `resolveTaxonomyName` (çeviri yoksa canonical TR
+         adına düşer). Hata → `{}` → TR fallback.
+
+     ⚠️ YALNIZ GÖRÜNEN `name` değişir. Canonical `typeOptionsRaw` dizisi
+     (tokensToIds / URL token üretimi / `villa_type_relations` filtresi)
+     DEĞİŞMEZ — sidebar'a ayrı bir kopya geçer.
+     ⚠️ BÖLGELER çevrilmez (Phase 10I: özel isim → canonical) —
+     `sidebarRegionOptions` yukarıda AYNEN korunur.
+     =============================================================== */
+  const typeNameByLocale: Record<string, TaxonomyNameByLocale> =
+    locale !== DEFAULT_LOCALE && typeOptionsRaw.length > 0
+      ? await getVillaTypeNamesByLocale(
+          typeOptionsRaw.map((t) => String(t.id))
+        ).catch(() => ({}))
+      : {};
   const sidebarCategoryOptions: GapFilterOption[] = typeOptionsRaw.map((o) => ({
     id: o.id,
-    name: o.name,
+    name: resolveTaxonomyName(o.name, typeNameByLocale[String(o.id)], locale),
     slug: o.slug,
   }));
   /* Seçili durum: URL token'ları (slug|id) → canonical id dizileri. */

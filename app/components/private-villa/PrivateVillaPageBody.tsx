@@ -69,6 +69,24 @@ import { getPoolTypeLabel } from "@/lib/pool-label.helper";
    yükleme, fiyat/müsaitlik mantığı ve `notFound()` DEĞİŞTİRİLMEDİ. */
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+/* 🛡️ ÇOKLU DİL — DB kaynaklı içerik alanları (açıklama / özellikler /
+   kurallar / fiyata dahiller) için MEVCUT okuma katmanı. Yeni bir
+   translation sistemi veya DB katmanı YAZILMADI; `/en|de/kiralik-villa/
+   [slug]` sayfasındaki desen BİREBİR reuse edilir.
+     • `locale === "tr"` → bu helper'ların hepsi DB'ye HİÇ SORGU ATMAZ
+       (bkz. get-translation.server.ts "TR KISAYOLU") → TR davranışı ve
+       sorgu sayısı BİREBİR eskisi gibi.
+     • EN/DE → koleksiyon başına TEK batch `.in()` sorgusu (N+1 YOK);
+       çeviri yoksa canonical TR değerine düşülür. */
+import { getVillaTranslatedDescription } from "@/lib/i18n/get-villa-translation.server";
+import {
+  getTranslationsForParents,
+  resolveTranslatedField,
+} from "@/lib/i18n/get-translation.server";
+/* 🛡️ Mesafe başlıkları DB'den DEĞİL, statik `distanceLabels`
+   dictionary'sinden çözülür (Phase 10D Batch 4 + migration 090) →
+   mesafeler için SIFIR ek sorgu. TR'de identity-map (byte-identical). */
+import { getTranslatedDistanceLabel } from "@/lib/distance-label.helper";
 
 /* ===============================================================
    🛡️ FAZ 31 — PRIVATE / TEMPORARY VILLA URL ROUTE
@@ -198,6 +216,43 @@ export default async function PrivateVillaPageBody({
       getPublicSettings(),
     ]);
 
+  /* 🛡️ ÇOKLU DİL — KOLEKSİYON BAŞINA TAM 1 BATCH ÇEVİRİ SORGUSU.
+     `/en|de/kiralik-villa/[slug]/page.tsx` ile BİREBİR AYNI desen ve
+     sıra; villa verisi zaten yukarıdaki tek Promise.all'dan geldiği
+     için burada yalnız çeviri okumaları paralelleşir — döngü içinde
+     DB sorgusu YOKTUR (N+1 yok).
+
+     ⚠️ MESAFELER BU BATCH'TE YOKTUR: villa başına mesafe çevirisi
+     migration 090 ile KALDIRILDI; `getTranslatedDistanceLabel` statik
+     dictionary'den çözer.
+
+     ⚠️ `locale === "tr"` → dördü de sorgu ATMADAN kısa devre yapar
+     (`getTranslationsForParents` boş Map, `getVillaTranslatedDescription`
+     canonical `villa.description`) → TR çıktısı BİREBİR eskisi gibi. */
+  const [
+    description,
+    featureTranslations,
+    ruleTranslations,
+    priceIncludeTranslations,
+  ] = await Promise.all([
+    getVillaTranslatedDescription(villa.id, villa.description, locale),
+    getTranslationsForParents(
+      "villa_feature",
+      features.map((f) => f.id),
+      locale
+    ),
+    getTranslationsForParents(
+      "rule_item",
+      rules.map((r) => r.id),
+      locale
+    ),
+    getTranslationsForParents(
+      "price_include_item",
+      priceIncludes.map((p) => p.id),
+      locale
+    ),
+  ]);
+
   /* 🛡️ YouTube videos — VillaDTO.youtube_videos zaten normalize edilmiş
      (villa.service > mapVilla). Defansif olarak parent component-side
      bir kez daha normalize edilir. */
@@ -315,11 +370,11 @@ export default async function PrivateVillaPageBody({
               <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] tracking-[-0.015em]">
                 {dictionary.villa.aboutTitle}
               </h2>
-              {villa.description && villa.description.trim() ? (
+              {description && description.trim() ? (
                 <div
                   className="villa-description card-premium mt-5 p-6 md:p-7 text-[var(--color-stone-600)] leading-[1.75] text-[15px]"
                   dangerouslySetInnerHTML={{
-                    __html: sanitizeHtml(villa.description),
+                    __html: sanitizeHtml(description),
                   }}
                 />
               ) : (
@@ -483,7 +538,10 @@ export default async function PrivateVillaPageBody({
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-[10.5px] tracking-[0.18em] uppercase font-medium text-[var(--color-stone-500)] truncate">
-                            {d.title}
+                            {/* 🛡️ İKON KEY canonical (TR) `d.title`'dan
+                                hesaplanır (yukarıda) — yalnız GÖRÜNEN
+                                başlık locale'e göre çözülür. */}
+                            {getTranslatedDistanceLabel(d.title, locale)}
                           </p>
                           <p
                             className="font-display text-[16px] md:text-[18px] text-[var(--color-stone-900)] mt-0.5 tracking-[-0.01em]"
@@ -527,7 +585,10 @@ export default async function PrivateVillaPageBody({
                       <span className="w-5 h-5 rounded-full bg-[var(--color-sand-100)] flex items-center justify-center shrink-0">
                         <Check size={12} className="text-[var(--color-champagne-600)]" />
                       </span>
-                      {f.name}
+                      {resolveTranslatedField(
+                        featureTranslations.get(f.id)?.name,
+                        f.name
+                      )}
                     </div>
                   ))}
                 </div>
@@ -576,7 +637,10 @@ export default async function PrivateVillaPageBody({
                           <span className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
                             <Check size={12} className="text-emerald-600" />
                           </span>
-                          {p.title}
+                          {resolveTranslatedField(
+                            priceIncludeTranslations.get(p.id)?.title,
+                            p.title
+                          )}
                         </div>
                       ))}
                     </div>
@@ -613,7 +677,10 @@ export default async function PrivateVillaPageBody({
                           <span className="w-5 h-5 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
                             <Check size={12} className="text-rose-600" />
                           </span>
-                          {r.title}
+                          {resolveTranslatedField(
+                            ruleTranslations.get(r.id)?.title,
+                            r.title
+                          )}
                         </div>
                       ))}
                     </div>
