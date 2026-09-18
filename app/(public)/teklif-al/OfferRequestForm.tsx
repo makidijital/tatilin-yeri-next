@@ -53,6 +53,14 @@ import type { CreateOfferRequestInput } from "@/app/services/offer-request.servi
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+/* 🛡️ Taxonomy ETİKETİ locale-aware — `/api/public/taxonomies` cevabına
+   ADDITIVE eklenen `name_by_locale` ile çözülür. Çeviri yoksa canonical
+   TR ada düşer (`ReservationForm`'un ödeme yöntemi etiketiyle AYNI
+   desen). Gönderilen payload token'ı (`slug || id`) DEĞİŞMEZ. */
+import {
+  resolveTaxonomyName,
+  type TaxonomyNameByLocale,
+} from "@/lib/i18n/taxonomy-name.helper";
 
 registerLocale("tr", tr);
 registerLocale("en", enUS);
@@ -143,6 +151,10 @@ type Option = {
   /** Migration 050 — Hero ile aynı: bölge dropdown'ı yalnız grup
       köklerini (name === filter_group_name) gösterir. */
   filter_group_name?: string | null;
+  /** 🛡️ ADDITIVE — `/api/public/taxonomies` cevabındaki EN/DE ad
+   *  haritası. Bölgelerde HİÇ gelmez (özel isim → çevrilmez);
+   *  villa tipi / özellik satırlarında gelir. Yoksa TR fallback. */
+  name_by_locale?: TaxonomyNameByLocale;
 };
 
 type SubmitStatus =
@@ -510,6 +522,7 @@ export default function OfferRequestForm({
           selected={state.regions}
           onToggle={(id) => toggleArr("regions", id)}
           emptyLabel={dict.regionsEmpty}
+          locale={locale}
         />
         <ChipMultiSelect
           label={dict.villaTypesLabel}
@@ -517,6 +530,7 @@ export default function OfferRequestForm({
           selected={state.villaTypes}
           onToggle={(id) => toggleArr("villaTypes", id)}
           emptyLabel={dict.villaTypesEmpty}
+          locale={locale}
         />
         <ChipMultiSelect
           label={dict.featuresLabel}
@@ -524,6 +538,7 @@ export default function OfferRequestForm({
           selected={state.features}
           onToggle={(id) => toggleArr("features", id)}
           emptyLabel={dict.featuresEmpty}
+          locale={locale}
         />
         <div>
           <p className="text-[11px] tracking-[0.14em] uppercase font-medium text-[var(--color-stone-500)] mb-2">
@@ -761,12 +776,16 @@ function ChipMultiSelect({
   selected,
   onToggle,
   emptyLabel,
+  locale,
 }: {
   label: string;
   options: Option[];
   selected: string[];
   onToggle: (id: string) => void;
   emptyLabel: string;
+  /** 🛡️ Yalnız GÖRÜNEN etiketi etkiler; `o.id` (state) ve
+   *  `tokenFromOption` (payload) DEĞİŞMEZ. */
+  locale: Locale;
 }) {
   return (
     <div>
@@ -781,6 +800,13 @@ function ChipMultiSelect({
         <ul role="list" className="flex flex-wrap gap-2">
           {options.map((o) => {
             const active = selected.includes(o.id);
+            /* Bölgelerde `name_by_locale` HİÇ gelmediği için sonuç
+               canonical `o.name`'dir → TR/EN/DE'de AYNI (özel isim). */
+            const displayName = resolveTaxonomyName(
+              o.name,
+              o.name_by_locale,
+              locale
+            );
             return (
               <li key={o.id}>
                 <button
@@ -801,7 +827,7 @@ function ChipMultiSelect({
                   {active && (
                     <Check size={12} aria-hidden strokeWidth={2} />
                   )}
-                  {o.name}
+                  {displayName}
                 </button>
               </li>
             );
