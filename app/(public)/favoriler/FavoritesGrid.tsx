@@ -9,7 +9,10 @@ import { useFavorites } from "@/hooks/use-favorites";
 /* 🛡️ Villa Migration S1 — client boundary: runtime villa.service import'u
    yerine server action. Tip (VillaDTO) type-only import → erase edilir,
    client bundle'a villa.service SIZMAZ. Call-site alias ile değişmez. */
-import { getVillasByIdsAction as getVillasByIds } from "@/app/services/villa.action";
+import {
+  getVillasByIdsAction as getVillasByIds,
+  getVillaBadgesAction,
+} from "@/app/services/villa.action";
 import type { VillaDTO } from "@/app/services/villa.service";
 /* 🛡️ FAZ 37 — Paylaşılabilir favori listesi service (DB snapshot). */
 import { createSharedFavoritesListAction as createSharedFavoritesList } from "./shared-favorites.action";
@@ -70,6 +73,10 @@ export default function FavoritesGrid({
   } = useFavorites();
 
   const [villas, setVillas] = useState<VillaDTO[]>([]);
+  /* 🛡️ Kart rozeti çevirileri — villa fetch'i ile AYNI effect'te TEK
+     batch çağrısı (villa başına istek YOK). TR'de action boş obje
+     döner (sorgu atılmaz) → TR davranışı BİREBİR eskisi gibi. */
+  const [badgeById, setBadgeById] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   /* 🛡️ FAZ 37 — Share state.
@@ -101,6 +108,12 @@ export default function FavoritesGrid({
       try {
         const result = await getVillasByIds(favorites);
         if (cancelled) return;
+        const badges = await getVillaBadgesAction(
+          result.map((v) => v.id),
+          locale
+        ).catch(() => ({}));
+        if (cancelled) return;
+        setBadgeById(badges);
         /* localStorage insertion order'a göre kullanıcının "son
            eklediği üstte" beklentisini karşıla. favorites array'i
            append-order; villaResult'ı bu sıraya göre yeniden ord et. */
@@ -120,7 +133,7 @@ export default function FavoritesGrid({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idsKey, isHydrated]);
+  }, [idsKey, isHydrated, locale]);
 
   const handleClear = useCallback(() => {
     /* Native confirm — public sayfada toast/modal sistemi yok;
@@ -461,7 +474,7 @@ export default function FavoritesGrid({
             price={villa.price}
             currency={villa.currency || "TRY"}
             images={villa.images}
-            badge={villa.badge}
+            badge={badgeById[villa.id] ?? villa.badge}
             bedrooms={villa.bedrooms || 1}
             bathrooms={villa.bathrooms || 1}
             guests={villa.guests || 2}

@@ -56,7 +56,11 @@ export async function buildCmsPageMetadata(
 
   const resolved = await resolvePageContent(page, locale);
 
-  const title = resolved.seoTitle || resolved.title || "Sayfa";
+  /* 🛡️ Son-çare başlık fallback'i MEVCUT `cms.fallbackTitle`
+     anahtarından (CmsPageBody ile AYNI key) — locale-aware.
+     seoTitle / title dolu olduğunda davranış DEĞİŞMEZ. */
+  const title =
+    resolved.seoTitle || resolved.title || getDictionary(locale).cms.fallbackTitle;
   const description =
     resolved.seoDescription ||
     (typeof resolved.excerpt === "string" && resolved.excerpt.trim().length > 0

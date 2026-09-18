@@ -48,6 +48,7 @@ import {
 /* 🛡️ PHASE 10G — locale-aware erişilebilirlik metinleri. `locale`
    OPSİYONEL, default "tr" → TR çıktısı BİREBİR AYNI. */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import type { Locale } from "@/lib/i18n/config";
 
 type Props = {
@@ -113,8 +114,10 @@ export default function VillaVideoModal({
       aria-modal="true"
       aria-label={
         villaTitle
-          ? `${villaTitle} — Villa videosu`
-          : "Villa videosu"
+          ? formatDictionaryString(dict.gallery.videoModalAriaLabelWithTitle, {
+              title: villaTitle,
+            })
+          : dict.gallery.videoModalAriaLabel
       }
       className="fade-in fixed inset-0 z-[1100] flex items-center justify-center p-4"
     >
@@ -163,8 +166,10 @@ export default function VillaVideoModal({
             src={`${getYouTubeEmbedUrl(activeVideo.id)}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
             title={
               villaTitle
-                ? `${villaTitle} — YouTube videosu`
-                : "Villa YouTube videosu"
+                ? formatDictionaryString(dict.gallery.videoFrameTitleWithTitle, {
+                    title: villaTitle,
+                  })
+                : dict.gallery.videoFrameTitle
             }
             referrerPolicy="strict-origin-when-cross-origin"
             allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

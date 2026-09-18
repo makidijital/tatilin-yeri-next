@@ -33,6 +33,7 @@ import type { Dictionary } from "@/lib/i18n/dictionaries/types";
    `VillaTypeCarousel` ile AYNI, ZATEN VAR OLAN iki helper. Yeni
    translation sistemi / DB katmanı YAZILMADI. */
 import { getVillaTypeNamesByLocale } from "@/lib/i18n/get-villa-type-translations.server";
+import { getVillaBadgesByLocale } from "@/lib/i18n/get-villa-badge-translations.server";
 import {
   resolveTaxonomyName,
   type TaxonomyNameByLocale,
@@ -856,6 +857,15 @@ export default async function AramaPageBody({
   const sliceStart = (currentPage - 1) * pageSize;
   const villasOnPage = sortedVillas.slice(sliceStart, sliceStart + pageSize);
 
+  /* 🛡️ Kart rozeti (villa_translations.badge) TEK batch sorguda
+     çözülür — `VillaList` / `DiscountCollection` ile AYNI desen,
+     N+1 YOK. TR'de sorgu HİÇ atılmaz → TR çıktısı ve maliyeti
+     BİREBİR eskisi gibi. Çeviri yoksa canonical rozet gösterilir. */
+  const badgeByVillaId = await getVillaBadgesByLocale(
+    [...villasOnPage, ...flexibleVillas].map((v) => v.id),
+    locale
+  );
+
   /* Esnek sonuç sayısı (banner ikinci satır + bölüm başlığı için).
      Normal `total` sayısını ETKİLEMEZ; 114+70 gibi toplam gösterilmez. */
   const flexibleCount = flexibleVillas.length;
@@ -1208,7 +1218,7 @@ export default async function AramaPageBody({
                       price={villa.price ?? undefined}
                       currency={villa.currency || "TRY"}
                       images={villa.images}
-                      badge={villa.badge ?? undefined}
+                      badge={badgeByVillaId.get(villa.id) ?? villa.badge ?? undefined}
                       bedrooms={villa.bedrooms || 1}
                       bathrooms={villa.bathrooms || 1}
                       guests={villa.guests || 2}
@@ -1309,7 +1319,7 @@ export default async function AramaPageBody({
                           price={villa.price ?? undefined}
                           currency={villa.currency || "TRY"}
                           images={villa.images}
-                          badge={villa.badge ?? undefined}
+                          badge={badgeByVillaId.get(villa.id) ?? villa.badge ?? undefined}
                           bedrooms={villa.bedrooms || 1}
                           bathrooms={villa.bathrooms || 1}
                           guests={villa.guests || 2}

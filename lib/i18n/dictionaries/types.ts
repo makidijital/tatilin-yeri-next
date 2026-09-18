@@ -266,6 +266,15 @@ export type Dictionary = {
     /* 🛡️ PHASE 10G — VillaVideoModal.tsx */
     closeVideoAriaLabel: string;
     otherVideosAriaLabel: string;
+    /* 🛡️ VillaVideoModal.tsx — modal dialog `aria-label`'ı ve YouTube
+       iframe `title`'ı. `playVideoAriaLabel*` ile AYNI çift desen:
+       villa adı varsa `…WithTitle`, yoksa düz varyant. */
+    /** template: {title} */
+    videoModalAriaLabelWithTitle: string;
+    videoModalAriaLabel: string;
+    /** template: {title} */
+    videoFrameTitleWithTitle: string;
+    videoFrameTitle: string;
   };
   /* 🛡️ PHASE 10B — PriceList.tsx UI stringleri. */
   price: {
@@ -843,6 +852,8 @@ export type Dictionary = {
       showResults: string;
       mobileTriggerEyebrow: string;
       mobileTriggerLabel: string;
+      /** 🛡️ Tarih aralığını sıfırlayan küçük "X" butonunun aria-label'ı. */
+      clearDateAriaLabel: string;
       /** `formatDictionaryString` — `{label}`. */
       increaseAriaLabel: string;
       /** `formatDictionaryString` — `{label}`. */

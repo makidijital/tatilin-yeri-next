@@ -78,6 +78,15 @@ vi.mock("@/app/(public)/arama/FilterSidebar", () => ({
 }));
 
 const cardProps: Record<string, unknown>[] = [];
+/* 🛡️ Kart rozeti çevirisi — `getVillaBadgesByLocale` MOCK'lanır.
+   Mock'suz hâlde servis fail-soft davranıp boş Map döndüğü için
+   mevcut testlerin çıktısı DEĞİŞMEZ; mock yalnız aşağıdaki rozet
+   testlerini deterministik yapar. */
+const villaBadgesMock = vi.fn();
+vi.mock("@/lib/i18n/get-villa-badge-translations.server", () => ({
+  getVillaBadgesByLocale: (...a: unknown[]) => villaBadgesMock(...a),
+}));
+
 vi.mock("@/app/components/villa/VillaCard", () => ({
   default: (props: Record<string, unknown>) => {
     cardProps.push(props);
@@ -250,6 +259,7 @@ beforeEach(() => {
     t1: { en: "Conservative Villas", de: "Konservative Villen" },
     t2: { en: "Honeymoon Villas", de: "Flitterwochen-Villen" },
   });
+  villaBadgesMock.mockResolvedValue(new Map());
 });
 
 /* ===============================================================
@@ -744,5 +754,99 @@ describe("SOURCE-LOCK — gövdede hardcoded TR kalmadı", () => {
     const occurrences = code.split('"/kiralik-villalar"').length - 1;
     expect(occurrences).toBe(1);
     expect(code.includes('href="/arama"')).toBe(false);
+  });
+});
+
+/* ===============================================================
+   F) VILLA ROZETİ (villa_translations.badge) — LOCALE DAVRANIŞI
+   ===============================================================
+   Bu blok, rozetin EN/DE'de GERÇEKTEN çevrilmiş değerle render
+   edildiğini (implementation detayını değil, VillaCard'a ulaşan
+   PROP'u) doğrular. Fallback ve N+1 guard'ları da buradadır.
+   Mevcut `renderBody` helper'ı REUSE edilir.
+   =============================================================== */
+describe("F) villa rozeti locale davranışı", () => {
+  /* Rozeti DOLU canonical villalar — TR değeri açıkça Türkçe. */
+  const BADGED = [
+    { ...villa(1), badge: "Yeni" },
+    { ...villa(2), badge: "Popüler" },
+  ];
+
+  it("30) EN — çeviri VARSA EN rozet VillaCard'a ulaşır", async () => {
+    villasMock.mockResolvedValue(BADGED);
+    villaBadgesMock.mockResolvedValue(
+      new Map([
+        ["v1", "New"],
+        ["v2", "Popular"],
+      ])
+    );
+    await renderBody("en");
+
+    const badges = cardProps.map((p) => p.badge);
+    expect(badges).toContain("New");
+    expect(badges).toContain("Popular");
+    expect(badges).not.toContain("Yeni");
+    expect(badges).not.toContain("Popüler");
+  });
+
+  it("31) DE — çeviri VARSA DE rozet VillaCard'a ulaşır", async () => {
+    villasMock.mockResolvedValue(BADGED);
+    villaBadgesMock.mockResolvedValue(
+      new Map([
+        ["v1", "Neu"],
+        ["v2", "Beliebt"],
+      ])
+    );
+    await renderBody("de");
+
+    const badges = cardProps.map((p) => p.badge);
+    expect(badges).toContain("Neu");
+    expect(badges).toContain("Beliebt");
+    expect(badges).not.toContain("Yeni");
+  });
+
+  it("32) EN — çeviri YOKSA canonical TR rozet FALLBACK olarak kalır", async () => {
+    villasMock.mockResolvedValue(BADGED);
+    villaBadgesMock.mockResolvedValue(new Map());
+    await renderBody("en");
+
+    const badges = cardProps.map((p) => p.badge);
+    expect(badges).toContain("Yeni");
+    expect(badges).toContain("Popüler");
+  });
+
+  it("33) EN — KISMİ çeviri: çevrili olan çevrilir, olmayan TR kalır", async () => {
+    villasMock.mockResolvedValue(BADGED);
+    villaBadgesMock.mockResolvedValue(new Map([["v1", "New"]]));
+    await renderBody("en");
+
+    const badges = cardProps.map((p) => p.badge);
+    expect(badges).toContain("New");
+    expect(badges).toContain("Popüler");
+  });
+
+  it("34) N+1 YOK — 30 villalık sayfada rozet sorgusu TEK çağrı, TÜM id'ler TEK batch'te", async () => {
+    villasMock.mockResolvedValue(MANY_VILLAS);
+    villaBadgesMock.mockResolvedValue(new Map());
+    await renderBody("en");
+
+    expect(villaBadgesMock).toHaveBeenCalledTimes(1);
+    const [ids, locale] = villaBadgesMock.mock.calls[0] as [string[], string];
+    expect(locale).toBe("en");
+    /* Sayfadaki kart sayısı kadar id TEK dizide gider. */
+    expect(Array.isArray(ids)).toBe(true);
+    expect(ids.length).toBe(cardProps.length);
+    expect(ids.length).toBeGreaterThan(1);
+  });
+
+  it("35) TR — canonical rozet BİREBİR korunur, servis 'tr' ile çağrılır", async () => {
+    villasMock.mockResolvedValue(BADGED);
+    villaBadgesMock.mockResolvedValue(new Map());
+    await renderBody("tr");
+
+    expect(villaBadgesMock.mock.calls[0][1]).toBe("tr");
+    const badges = cardProps.map((p) => p.badge);
+    expect(badges).toContain("Yeni");
+    expect(badges).toContain("Popüler");
   });
 });

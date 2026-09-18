@@ -159,6 +159,10 @@ export const en: Dictionary = {
     photoAriaLabel: "Photo {index}",
     closeVideoAriaLabel: "Close video",
     otherVideosAriaLabel: "Other videos",
+    videoModalAriaLabelWithTitle: "{title} — Villa video",
+    videoModalAriaLabel: "Villa video",
+    videoFrameTitleWithTitle: "{title} — YouTube video",
+    videoFrameTitle: "Villa YouTube video",
   },
   price: {
     noPriceInfo: "No price information",
@@ -622,6 +626,7 @@ export const en: Dictionary = {
       showResults: "Show {n} results",
       mobileTriggerEyebrow: "Filter",
       mobileTriggerLabel: "Region, dates, guests…",
+      clearDateAriaLabel: "Clear dates",
       increaseAriaLabel: "Increase {label}",
       decreaseAriaLabel: "Decrease {label}",
     },

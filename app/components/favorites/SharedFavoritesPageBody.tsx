@@ -13,6 +13,7 @@ import { formatDateForLocale } from "@/lib/date-format";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import { getVillaBadgesByLocale } from "@/lib/i18n/get-villa-badge-translations.server";
 
 /* ===============================================================
    🛡️ /favoriler/paylas/[token] — ORTAK GÖVDE
@@ -39,6 +40,15 @@ export default async function SharedFavoritesPageBody({
   if (!data) {
     notFound();
   }
+
+  /* 🛡️ Kart rozeti (villa_translations.badge) TEK batch sorguda
+     çözülür — `VillaList` / `DiscountCollection` ile AYNI desen,
+     N+1 YOK. TR'de sorgu HİÇ atılmaz → TR çıktısı ve maliyeti
+     BİREBİR eskisi gibi. Çeviri yoksa canonical rozet gösterilir. */
+  const badgeByVillaId = await getVillaBadgesByLocale(
+    data.villas.map((v) => v.id),
+    locale
+  );
 
   const visibleCount = data.villas.length;
   const totalCount = data.snapshot_count;
@@ -145,7 +155,7 @@ export default async function SharedFavoritesPageBody({
                 price={villa.price}
                 currency={villa.currency || "TRY"}
                 images={villa.images}
-                badge={villa.badge}
+                badge={badgeByVillaId.get(villa.id) ?? villa.badge}
                 bedrooms={villa.bedrooms || 1}
                 bathrooms={villa.bathrooms || 1}
                 guests={villa.guests || 2}

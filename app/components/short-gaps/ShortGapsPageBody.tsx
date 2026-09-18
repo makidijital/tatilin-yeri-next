@@ -29,6 +29,7 @@ import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import type { MonthNumber } from "@/lib/i18n/dictionaries/types";
+import { getVillaBadgesByLocale } from "@/lib/i18n/get-villa-badge-translations.server";
 import { shortGapsMonthLabel } from "@/app/components/short-gaps/short-gaps-metadata";
 
 /* ===============================================================
@@ -303,6 +304,15 @@ export default async function ShortGapsPageBody({
   const villaById = new Map(villas.map((v) => [v.id, v]));
   const visibleGaps = gapRows.filter((g) => villaById.has(g.villa_id));
 
+  /* 🛡️ Kart rozeti (villa_translations.badge) TEK batch sorguda
+     çözülür — `VillaList` / `DiscountCollection` ile AYNI desen,
+     N+1 YOK. TR'de sorgu HİÇ atılmaz → TR çıktısı ve maliyeti
+     BİREBİR eskisi gibi. Çeviri yoksa canonical rozet gösterilir. */
+  const badgeByVillaId = await getVillaBadgesByLocale(
+    villas.map((v) => v.id),
+    locale
+  );
+
   const basePath = `${localePrefix}/kisa-sureli-tarihler/${ay}/${nights}`;
   /* Sidebar — /arama FilterSidebar replikası ile aynı prop şekli.
      show_in_filter curation'ı bileşen içinde (regionGroups) uygulanır. */
@@ -401,7 +411,7 @@ export default async function ShortGapsPageBody({
                         price={villa.price ?? undefined}
                         currency={villa.currency}
                         images={villa.images}
-                        badge={villa.badge}
+                        badge={badgeByVillaId.get(villa.id) ?? villa.badge}
                         bedrooms={villa.bedrooms}
                         bathrooms={villa.bathrooms}
                         guests={villa.guests}

@@ -167,6 +167,10 @@ export const tr: Dictionary = {
     photoAriaLabel: "Fotoğraf {index}",
     closeVideoAriaLabel: "Videoyu kapat",
     otherVideosAriaLabel: "Diğer videolar",
+    videoModalAriaLabelWithTitle: "{title} — Villa videosu",
+    videoModalAriaLabel: "Villa videosu",
+    videoFrameTitleWithTitle: "{title} — YouTube videosu",
+    videoFrameTitle: "Villa YouTube videosu",
   },
   price: {
     noPriceInfo: "Fiyat bilgisi yok",
@@ -640,6 +644,7 @@ export const tr: Dictionary = {
       showResults: "{n} sonucu göster",
       mobileTriggerEyebrow: "Filtrele",
       mobileTriggerLabel: "Bölge, tarih, kişi…",
+      clearDateAriaLabel: "Tarihi temizle",
       increaseAriaLabel: "{label} arttır",
       decreaseAriaLabel: "{label} azalt",
     },

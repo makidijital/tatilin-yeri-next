@@ -620,7 +620,7 @@ export default function FilterSidebar({
                   setStartDate(null);
                   setEndDate(null);
                 }}
-                aria-label="Tarihi temizle"
+                aria-label={dict.clearDateAriaLabel}
                 className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[var(--color-stone-500)] hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)] transition-colors motion-reduce:transition-none"
               >
                 <X size={13} />
