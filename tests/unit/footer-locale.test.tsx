@@ -88,13 +88,24 @@ describe("Footer — Phase 9B locale dictionary (props ile doğrudan render)", (
     expect(screen.getByText("Tüm kategoriler")).toBeInTheDocument();
   });
 
-  it("6) href'ler locale'e göre DEĞİŞMEZ — EN path'te bile '/rezervasyon-kontrol' prefix'siz kalır", () => {
+  /* 🛡️ NAVIGATION LOCALE PERSISTENCE — sözleşme güncellendi:
+     iç linkler artık AKTİF LOCALE'i taşır (eski "prefix'siz kalır"
+     kuralı navigasyonda locale kaybına yol açıyordu). Test SİLİNMEDİ,
+     doğru davranışa çevrildi ve "TR'ye düşmüyor" kontrolü eklendi. */
+  it("6) href'ler aktif locale'i taşır — EN path'te '/en/rezervasyon-kontrol'", () => {
     usePathnameMock.mockReturnValue("/en/kiralik-villalar");
     render(<Footer {...BASE_PROPS} />);
     const reservationLink = screen.getByRole("link", {
       name: /Check Reservation/i,
     });
-    expect(reservationLink).toHaveAttribute("href", "/rezervasyon-kontrol");
+    expect(reservationLink).toHaveAttribute(
+      "href",
+      "/en/rezervasyon-kontrol"
+    );
+    expect(reservationLink).not.toHaveAttribute(
+      "href",
+      "/rezervasyon-kontrol"
+    );
   });
 });
 
@@ -189,10 +200,13 @@ describe("FooterWrapper — Phase 9B prop-passing (DB/service mock'lanır, gerç
 
 /* ---------------- GRUP 3 — Phase 9C href regresyon kilidi ---------------- */
 
-/* PHASE 9C AUDIT KARARI: Header/Footer href'leri bu fazda DEĞİŞTİRİLMEDİ
-   (bkz. Phase 9C audit raporu). Bu grup yalnızca BUGÜNKÜ href davranışını
-   (locale ne olursa olsun TR path'lerine gitmesini) gelecekte yanlışlıkla
-   bozulmaya karşı kilitler — dictionary/metin davranışına dokunmaz. */
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — SÖZLEŞME GÜNCELLEMESİ
+   Phase 9C'de bu grup "locale ne olursa olsun TR path'lerine gitsin"
+   davranışını kilitliyordu; o davranış EN/DE'de navigasyonda locale
+   kaybına yol açıyordu. Testler SİLİNMEDİ: TR beklentileri AYNEN
+   korunur (canonical prefix'siz), EN/DE beklentileri doğru davranışa
+   (prefix'li) çevrildi ve "TR route'una düşmüyor" kontrolü eklendi.
+   Query parametreleri ve token/slug kontratı DEĞİŞMEZ. */
 
 const PROPS_WITH_TAXONOMY_AND_CMS = {
   settings: null,
@@ -212,7 +226,7 @@ const PROPS_WITH_TAXONOMY_AND_CMS = {
   phoneDigits: "",
 };
 
-describe("Footer — Phase 9C href regresyon kilidi (locale'den bağımsız, href DEĞİŞMEDİ)", () => {
+describe("Footer — href locale kilidi (iç linkler aktif locale'i taşır)", () => {
   beforeEach(() => {
     usePathnameMock.mockReset();
   });
@@ -238,37 +252,47 @@ describe("Footer — Phase 9C href regresyon kilidi (locale'den bağımsız, hre
     expect(link).toHaveAttribute("href", "/p/hakkimizda");
   });
 
-  it("12) taxonomy + CMS href'leri '/en/...' path'te bile DEĞİŞMEZ (metin aynı kalır, yalnız başlıklar İngilizce'ye döner)", () => {
+  it("12) taxonomy + CMS href'leri '/en/...' path'te '/en' prefix'i alır (token/slug kontratı AYNEN)", () => {
     usePathnameMock.mockReturnValue("/en/kiralik-villalar");
     render(<Footer {...PROPS_WITH_TAXONOMY_AND_CMS} />);
     expect(screen.getByRole("link", { name: "Havuzlu Villa" })).toHaveAttribute(
       "href",
-      "/arama?villa-turleri=havuzlu-villa"
+      "/en/arama?villa-turleri=havuzlu-villa"
     );
     expect(screen.getByRole("link", { name: "Kalkan" })).toHaveAttribute(
       "href",
-      "/arama?bolgeler=kalkan"
+      "/en/arama?bolgeler=kalkan"
     );
     expect(screen.getByRole("link", { name: "Hakkımızda" })).toHaveAttribute(
       "href",
-      "/p/hakkimizda"
+      "/en/p/hakkimizda"
+    );
+    /* Prefix'siz TR route'una DÜŞMÜYOR. */
+    expect(screen.getByRole("link", { name: "Kalkan" })).not.toHaveAttribute(
+      "href",
+      "/arama?bolgeler=kalkan"
     );
   });
 
-  it("13) taxonomy + CMS href'leri '/de/...' path'te bile DEĞİŞMEZ", () => {
+  it("13) taxonomy + CMS href'leri '/de/...' path'te '/de' prefix'i alır (token/slug kontratı AYNEN)", () => {
     usePathnameMock.mockReturnValue("/de/kiralik-villalar");
     render(<Footer {...PROPS_WITH_TAXONOMY_AND_CMS} />);
     expect(screen.getByRole("link", { name: "Havuzlu Villa" })).toHaveAttribute(
       "href",
-      "/arama?villa-turleri=havuzlu-villa"
+      "/de/arama?villa-turleri=havuzlu-villa"
     );
     expect(screen.getByRole("link", { name: "Kalkan" })).toHaveAttribute(
       "href",
-      "/arama?bolgeler=kalkan"
+      "/de/arama?bolgeler=kalkan"
     );
     expect(screen.getByRole("link", { name: "Hakkımızda" })).toHaveAttribute(
       "href",
-      "/p/hakkimizda"
+      "/de/p/hakkimizda"
+    );
+    /* Prefix'siz TR route'una DÜŞMÜYOR. */
+    expect(screen.getByRole("link", { name: "Kalkan" })).not.toHaveAttribute(
+      "href",
+      "/arama?bolgeler=kalkan"
     );
   });
 

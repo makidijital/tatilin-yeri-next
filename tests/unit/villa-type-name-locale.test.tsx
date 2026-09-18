@@ -254,12 +254,16 @@ describe("Footer — villa tipi adı locale-aware", () => {
     expect(screen.getByText("Lüks Villa")).toBeInTheDocument();
   });
 
-  it("19) 🛡️ SLUG/HREF DEĞİŞMEDİ — EN'de de canonical TR slug token'ı kullanılır", () => {
+  /* 🛡️ NAVIGATION LOCALE PERSISTENCE — TOKEN (`luks-villa`) ve query
+     parametresi (`villa-turleri`) canonical KALIR; link yalnız aktif
+     locale prefix'ini alır. Eski "prefix'siz" beklentisi EN/DE'de
+     locale kaybına yol açıyordu. */
+  it("19) 🛡️ SLUG/TOKEN DEĞİŞMEDİ — EN'de canonical token + '/en' prefix", () => {
     usePathnameMock.mockReturnValue("/en/kiralik-villa/test");
     render(<Footer {...FOOTER_BASE} villaTypes={[TYPE_ITEM]} />);
     expect(
       screen.getByRole("link", { name: "Luxury Villa" })
-    ).toHaveAttribute("href", "/arama?villa-turleri=luks-villa");
+    ).toHaveAttribute("href", "/en/arama?villa-turleri=luks-villa");
   });
 });
 
@@ -408,7 +412,11 @@ describe("Header — kategori menü adı locale-aware", () => {
     expect(screen.getAllByText("Luxury Villa").length).toBeGreaterThan(0);
   });
 
-  it("29) 🛡️ SLUG/HREF DEĞİŞMEDİ — EN'de de canonical token", () => {
+  /* 🛡️ NAVIGATION LOCALE PERSISTENCE — TOKEN (`luks-villa`) ve query
+     parametresi (`villa-turleri`) canonical KALIR; link yalnız aktif
+     locale prefix'ini alır. Eski "prefix'siz" beklentisi EN/DE'de
+     locale kaybına yol açıyordu. */
+  it("29) 🛡️ SLUG/TOKEN DEĞİŞMEDİ — EN'de canonical token + '/en' prefix", () => {
     usePathnameMock.mockReturnValue("/en/kiralik-villa/test");
     render(
       <Header
@@ -419,7 +427,10 @@ describe("Header — kategori menü adı locale-aware", () => {
     const links = screen.getAllByRole("link", { name: "Luxury Villa" });
     expect(links.length).toBeGreaterThan(0);
     for (const l of links) {
-      expect(l).toHaveAttribute("href", "/arama?villa-turleri=luks-villa");
+      expect(l).toHaveAttribute(
+        "href",
+        "/en/arama?villa-turleri=luks-villa"
+      );
     }
   });
 });

@@ -15,6 +15,9 @@ import {
    DİL BAĞIMSIZ kalır — `bucketMonthToSlug` DEĞİŞMEDİ. */
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
+   (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import type { MonthNumber } from "@/lib/i18n/dictionaries/types";
 
@@ -178,7 +181,7 @@ export default async function ShortGapsSection({
                       return (
                         <li key={nights}>
                           <Link
-                            href={`/kisa-sureli-tarihler/${m.slug}/${nights}`}
+                            href={localeHref(`/kisa-sureli-tarihler/${m.slug}/${nights}`, locale)}
                             className="group/row flex items-center justify-between rounded-xl px-3 py-2.5 -mx-1 hover:bg-white/[0.06] transition-colors motion-reduce:transition-none"
                           >
                             <span className="text-[13.5px] text-white/75 group-hover/row:text-white transition-colors motion-reduce:transition-none">

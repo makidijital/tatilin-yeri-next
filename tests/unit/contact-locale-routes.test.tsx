@@ -425,8 +425,12 @@ describe("Gövde render — TR/EN/DE", () => {
       expect(screen.getByText(c.cta.titleAccent)).toBeInTheDocument();
       expect(screen.getByText(c.cta.description)).toBeInTheDocument();
       const link = screen.getByRole("link", { name: c.cta.button });
-      /* CTA hedefi canonical kalır. */
-      expect(link).toHaveAttribute("href", "/arama");
+      /* 🛡️ NAVIGATION LOCALE PERSISTENCE — CTA hedefi artık aktif
+         locale'i taşır (slug canonical kalır). */
+      expect(link).toHaveAttribute(
+        "href",
+        locale === "tr" ? "/arama" : `/${locale}/arama`
+      );
     }
   );
 

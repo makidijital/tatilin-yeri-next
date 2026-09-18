@@ -16,6 +16,9 @@ import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
    (title/excerpt/body/seo_*) bu sözlükten GELMEZ — o `page_translations`
    üzerinden `resolvePageContent` ile çözülür (Phase 12D). */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
+   (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 import type { Dictionary } from "@/lib/i18n/dictionaries/types";
 
 type CmsDictionary = Dictionary["cms"];
@@ -225,7 +228,7 @@ export default function CmsPageBody({
               className="flex items-center gap-2 text-[11px] tracking-[0.16em] uppercase font-medium text-[var(--color-stone-500)] mb-6"
             >
               <Link
-                href="/"
+                href={localeHref("/", locale)}
                 className="hover:text-[var(--color-champagne-700)] transition-colors"
               >
                 {dict.breadcrumbHome}
@@ -270,7 +273,7 @@ export default function CmsPageBody({
       ) : (
         <PageHero
           breadcrumb={[
-            { name: dict.breadcrumbHome, href: "/" },
+            { name: dict.breadcrumbHome, href: localeHref("/", locale) },
             { name: title || dict.fallbackTitle },
           ]}
           eyebrow={heroEyebrow}

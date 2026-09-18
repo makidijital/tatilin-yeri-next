@@ -16,6 +16,9 @@ import { de as deLocale } from "date-fns/locale";
    state'i, `buildHeroSearchParams` ve `router.push` hedefi DEĞİŞMEDİ. */
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
+   (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 
 import MobileKbSafeInput from "@/app/components/ui/datepicker/MobileKbSafeInput";
@@ -193,7 +196,7 @@ export default function HeroSearchPanel({
       /* Ana start/end DEĞİŞMEZ; yalnız ek-sonuç bayrağı. */
       flexible: flexible ? 3 : 0,
     });
-    router.push(`/arama?${query}`);
+    router.push(localeHref(`/arama?${query}`, locale));
   };
 
   const dateLabel = buildHeroDateLabel(startDate, endDate, locale);

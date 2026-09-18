@@ -27,6 +27,10 @@ import type { TaxonomyItem, CorporatePage } from "./FooterWrapper";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import { localeFromPathname } from "@/lib/i18n/config";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — footer iç linkleri aktif locale'i
+   taşır (bkz. lib/i18n/locale-href.ts). Dış bağlantılar (sosyal medya,
+   tel/mailto) helper tarafından AYNEN geçirilir. */
+import { localeHref } from "@/lib/i18n/locale-href";
 /* 🛡️ PHASE 10L — admin'de girilen `footer_copyright` metninin EN/DE
    karşılığı (migration 083). Saf/senkron resolver; TR'de canonical
    değeri AYNEN döndürür (bkz. lib/i18n/settings-translation.helper.ts). */
@@ -268,7 +272,7 @@ export default function Footer({
           {/* LEFT — dominant brand block */}
           <div className="lg:col-span-5 space-y-7">
             <Link
-              href="/"
+              href={localeHref("/", locale)}
               className="font-display text-[24px] tracking-tight inline-flex items-center text-[var(--color-stone-900)]"
             >
               {settings?.footer_logo || settings?.site_logo ? (
@@ -354,7 +358,7 @@ export default function Footer({
                   <ul className="space-y-3">
                     {villaTypes.map((t) => (
                       <li key={t.id}>
-                        <FooterLink href={taxonomyHref("villa-turleri", t)}>
+                        <FooterLink href={localeHref(taxonomyHref("villa-turleri", t), locale)}>
                           {resolveTaxonomyName(t.name, t.nameByLocale, locale)}
                         </FooterLink>
                       </li>
@@ -363,7 +367,7 @@ export default function Footer({
                 ) : (
                   <ul className="space-y-3">
                     <li>
-                      <FooterLink href="/arama">{dictionary.footer.allCategories}</FooterLink>
+                      <FooterLink href={localeHref("/arama", locale)}>{dictionary.footer.allCategories}</FooterLink>
                     </li>
                   </ul>
                 )}
@@ -378,13 +382,13 @@ export default function Footer({
                   <ul className="space-y-3">
                     {locations.map((loc) => (
                       <li key={loc.id}>
-                        <FooterLink href={taxonomyHref("bolgeler", loc)}>
+                        <FooterLink href={localeHref(taxonomyHref("bolgeler", loc), locale)}>
                           {loc.name}
                         </FooterLink>
                       </li>
                     ))}
                     <li className="pt-1">
-                      <FooterLink href="/arama">
+                      <FooterLink href={localeHref("/arama", locale)}>
                         <span className="text-[13px] text-[#ED7926] inline-flex items-center gap-1">
                           {dictionary.footer.allRegions}
                           <ArrowRight size={12} strokeWidth={1.75} aria-hidden />
@@ -395,7 +399,7 @@ export default function Footer({
                 ) : (
                   <ul className="space-y-3">
                     <li>
-                      <FooterLink href="/arama">{dictionary.footer.exploreAllRegions}</FooterLink>
+                      <FooterLink href={localeHref("/arama", locale)}>{dictionary.footer.exploreAllRegions}</FooterLink>
                     </li>
                   </ul>
                 )}
@@ -445,7 +449,7 @@ export default function Footer({
             </div>
 
             {/* MÜŞTERİ İŞLEMLERİ — rezervasyon durum sorgulama (mevcut href AYNEN) */}
-            <FooterLink href="/rezervasyon-kontrol">
+            <FooterLink href={localeHref("/rezervasyon-kontrol", locale)}>
               <span className="inline-flex items-center gap-1.5 text-[13.5px]">
                 {dictionary.footer.checkReservation}
                 <ArrowRight size={12} strokeWidth={1.75} aria-hidden />
@@ -489,7 +493,7 @@ export default function Footer({
                 {corporatePages.map((p) => (
                   <Link
                     key={p.id}
-                    href={`/p/${p.slug}`}
+                    href={localeHref(`/p/${p.slug}`, locale)}
                     className="hover:text-[#ED7926] transition-colors duration-300 motion-reduce:transition-none"
                   >
                     {/* 🛡️ EN/DE `page_translations.title`; yoksa/boşsa

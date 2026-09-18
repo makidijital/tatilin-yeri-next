@@ -19,6 +19,9 @@ import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
    ZATEN VAR OLAN `pathname`'den türetilir. Layout'a (server) dokunulmadı;
    `headers()`/`cookies()` KULLANILMADI. */
 import { localeFromPathname } from "@/lib/i18n/config";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
+   (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 /* ===============================================================
@@ -107,7 +110,7 @@ export default function BottomNav({
         <ul className="grid grid-cols-5">
           <li>
             <InternalItem
-              href="/"
+              href={localeHref("/", locale)}
               label={dict.header.home}
               Icon={Home}
               active={isActive("/")}
@@ -142,7 +145,7 @@ export default function BottomNav({
 
           <li>
             <InternalItem
-              href="/teklif-al"
+              href={localeHref("/teklif-al", locale)}
               label={navDict.offer}
               Icon={Sparkles}
               active={isActive("/teklif-al")}

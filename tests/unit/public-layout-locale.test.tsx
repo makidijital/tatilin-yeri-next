@@ -132,16 +132,25 @@ describe("1) BottomNav — locale", () => {
     expect(home).toHaveAttribute("aria-current", "page");
   });
 
-  it("1f) 🔒 HREF'LER locale'den BAĞIMSIZ (route davranışı değişmedi)", () => {
+  /* 🛡️ NAVIGATION LOCALE PERSISTENCE — sözleşme güncellendi: alt
+     navigasyon linkleri AKTİF LOCALE'i taşır. Eski "locale'den
+     BAĞIMSIZ" kuralı, EN/DE'de alt menüye dokunan kullanıcıyı
+     prefix'siz TR route'una düşürüyordu. Test SİLİNMEDİ: TR
+     beklentisi AYNEN korunur, EN/DE doğru davranışa çevrildi. */
+  it("1f) 🔒 HREF'LER aktif locale'i taşır (TR canonical, EN/DE prefix'li)", () => {
     for (const p of ["/", "/en", "/de"]) {
       usePathnameMock.mockReturnValue(p);
       const locale = p === "/" ? "tr" : (p.slice(1) as Locale);
+      const prefix = locale === "tr" ? "" : `/${locale}`;
       const { unmount } = render(<BottomNav {...props} />);
       const d = getDictionary(locale);
-      expect(screen.getByLabelText(d.header.home)).toHaveAttribute("href", "/");
+      expect(screen.getByLabelText(d.header.home)).toHaveAttribute(
+        "href",
+        prefix || "/"
+      );
       expect(screen.getByLabelText(d.layout.bottomNav.offer)).toHaveAttribute(
         "href",
-        "/teklif-al"
+        `${prefix}/teklif-al`
       );
       unmount();
     }
@@ -256,11 +265,25 @@ describe("4) CookieConsent — locale", () => {
     }
   });
 
-  it("4c) 🔒 'Detaylar' href'i DEĞİŞMEDİ — /p/cerez-politikasi", async () => {
+  /* 🛡️ NAVIGATION LOCALE PERSISTENCE — slug canonical kalır, link
+     aktif locale prefix'ini taşır. */
+  it("4c) 'Detaylar' href'i aktif locale'i taşır — /en/p/cerez-politikasi", async () => {
     usePathnameMock.mockReturnValue("/en");
     render(<CookieConsent />);
     const link = await screen.findByText(
       getDictionary("en").layout.cookie.details
+    );
+    expect(link.closest("a")).toHaveAttribute(
+      "href",
+      "/en/p/cerez-politikasi"
+    );
+  });
+
+  it("4d) TR'de çerez politikası linki canonical KALIR", async () => {
+    usePathnameMock.mockReturnValue("/");
+    render(<CookieConsent />);
+    const link = await screen.findByText(
+      getDictionary("tr").layout.cookie.details
     );
     expect(link.closest("a")).toHaveAttribute("href", "/p/cerez-politikasi");
   });

@@ -26,6 +26,10 @@ import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
    için mümkün; site-wide dynamic-rendering riski YOK). */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { localeFromPathname } from "@/lib/i18n/config";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç linkler aktif locale'i taşır.
+   Yeni bir routing sistemi DEĞİL; `buildLocaleAlternates` (Phase 7B)
+   üzerine ince, saf sarmalayıcı (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 /* 🛡️ PHASE 10H — `source_type: "category"` menü öğelerinin adı (villa
    tipi) locale'e göre çözülür; çeviri yoksa canonical TR adı kalır.
@@ -185,7 +189,7 @@ export default function Header({
         "
       />
       <Link
-        href="/teklif-al"
+        href={localeHref("/teklif-al", locale)}
         className="
           relative inline-flex items-center justify-center
           px-4 py-[7px] rounded-full
@@ -213,7 +217,7 @@ export default function Header({
           <div className="max-w-[1480px] mx-auto px-5 md:px-10 lg:px-16 h-[72px] md:h-[80px] flex items-center justify-between">
             {/* LOGO */}
             <Link
-              href="/"
+              href={localeHref("/", locale)}
               className="
                 font-display text-2xl tracking-tight
                 flex items-center
@@ -263,7 +267,7 @@ export default function Header({
                     className="relative group py-5"
                   >
                     <Link
-                      href={item.href}
+                      href={localeHref(item.href, locale)}
                       className={
                         "flex items-center gap-1 transition-colors motion-reduce:transition-none " +
                         (isActive
@@ -295,7 +299,7 @@ export default function Header({
                           {item.children!.map((child) => (
                             <Link
                               key={child.id}
-                              href={child.href}
+                              href={localeHref(child.href, locale)}
                               className="block px-5 py-3 text-[16px] text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)] transition"
                             >
                               {resolveTaxonomyName(
@@ -374,7 +378,7 @@ export default function Header({
                   "
                 />
                 <Link
-                  href="/teklif-al"
+                  href={localeHref("/teklif-al", locale)}
                   className="
                     relative inline-flex items-center justify-center
                     whitespace-nowrap
@@ -455,7 +459,7 @@ export default function Header({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <Link
-                      href={item.href}
+                      href={localeHref(item.href, locale)}
                       className="block flex-1 font-medium text-[var(--color-stone-900)]"
                     >
                       {itemName}
@@ -514,7 +518,7 @@ export default function Header({
                           {item.children!.map((child) => (
                             <Link
                               key={child.id}
-                              href={child.href}
+                              href={localeHref(child.href, locale)}
                               className="block text-[16.5px] text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] transition"
                             >
                               {resolveTaxonomyName(

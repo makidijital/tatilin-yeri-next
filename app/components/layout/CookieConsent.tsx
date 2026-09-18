@@ -21,13 +21,20 @@ import { usePathname } from "next/navigation";
 /* 🛡️ PHASE 11 — locale, Header/Footer ile AYNI desenle pathname'den
    türetilir. Consent/localStorage davranışına DOKUNULMADI. */
 import { localeFromPathname } from "@/lib/i18n/config";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
+   (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 const STORAGE_KEY = "cookie_consent";
 
 export default function CookieConsent() {
   const pathname = usePathname();
-  const dict = getDictionary(localeFromPathname(pathname)).layout.cookie;
+  /* 🛡️ NAVIGATION LOCALE PERSISTENCE — locale artık AYRI türetilir
+     (dictionary çözümü BİREBİR aynı kalır) çünkü çerez politikası
+     linkinin de aktif locale'i taşıması gerekir. */
+  const locale = localeFromPathname(pathname);
+  const dict = getDictionary(locale).layout.cookie;
   const [visible, setVisible] = useState(false);
 
   /* Mount sonrası: consent yoksa göster. try/catch fail-safe. */
@@ -83,7 +90,7 @@ export default function CookieConsent() {
         </p>
         <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
           <Link
-            href="/p/cerez-politikasi"
+            href={localeHref("/p/cerez-politikasi", locale)}
             className="
               inline-flex items-center justify-center
               px-3.5 py-2 rounded-lg

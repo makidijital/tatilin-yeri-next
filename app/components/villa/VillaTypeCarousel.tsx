@@ -17,6 +17,9 @@ import HorizontalCarousel from "./HorizontalCarousel";
    YAZILMADI. */
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
+   (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import { getVillaTypeNamesByLocale } from "@/lib/i18n/get-villa-type-translations.server";
 import { resolveTaxonomyName } from "@/lib/i18n/taxonomy-name.helper";
@@ -189,7 +192,7 @@ export default async function VillaTypeCarousel({
                 key={item.id}
                 className="snap-start shrink-0 w-[78vw] max-w-[280px] sm:w-[300px] md:w-[240px] lg:w-[252px]"
               >
-                <VillaTypeCard item={item} countBadge={dict.countBadge} />
+                <VillaTypeCard item={item} countBadge={dict.countBadge} locale={locale} />
               </li>
             ))}
           </ul>
@@ -205,15 +208,23 @@ export default async function VillaTypeCarousel({
 function VillaTypeCard({
   item,
   countBadge,
+  locale,
 }: {
   item: Item;
   /** `home.villaTypes.countBadge` — template: {count} */
   countBadge: string;
+  /** 🛡️ NAVIGATION LOCALE PERSISTENCE — kart linkinin prefix'i. */
+  locale: Locale;
 }) {
   /* SEO-friendly URL: slug öncelikli, fallback UUID — CategoryCollection
      ile birebir aynı canonical contract. */
   const token = item.slug || item.id;
-  const href = `/arama?villa-turleri=${encodeURIComponent(token)}`;
+  /* 🛡️ NAVIGATION LOCALE PERSISTENCE — villa tipi kartı linki aktif
+     locale'i taşır; `villa-turleri` token'ı ve query kontratı DEĞİŞMEZ. */
+  const href = localeHref(
+    `/arama?villa-turleri=${encodeURIComponent(token)}`,
+    locale
+  );
   const initial = (item.name?.[0] || "·").toUpperCase();
   const countLabel = formatDictionaryString(countBadge, { count: item.count });
 

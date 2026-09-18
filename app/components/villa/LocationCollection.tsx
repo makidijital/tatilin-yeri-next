@@ -16,6 +16,9 @@ import HorizontalCarousel from "./HorizontalCarousel";
    sistemi Phase 10I'de bilinçli olarak KALDIRILDI. */
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
+   (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 
 /* ===============================================================
    🛡️ LOCATION SHOWCASE — homepage "circular avatar" carousel
@@ -201,7 +204,7 @@ export default async function LocationCollection({
           <ul role="list" className="flex flex-nowrap min-w-max gap-7 md:gap-8 lg:gap-9">
             {items.map((item) => (
               <li key={item.key} className="snap-start shrink-0">
-                <LocationCard item={item} />
+                <LocationCard item={item} locale={locale} />
               </li>
             ))}
           </ul>
@@ -210,7 +213,7 @@ export default async function LocationCollection({
         {/* 🛡️ CTA — grid altında, tüm ekranlarda centered (header'dan taşındı). */}
         <div className="mt-9 md:mt-10 flex justify-center">
           <Link
-            href="/arama"
+            href={localeHref("/arama", locale)}
             className="
               group inline-flex items-center gap-2
               px-4 py-2 rounded-full
@@ -247,10 +250,15 @@ export default async function LocationCollection({
    sayısı küçük ikincil bilgi, yanında marka-renkli mini gradient nokta.
    Veri/link/placeholder mantığı DEĞİŞMEDİ (sadece sunum).
 =============================================================== */
-function LocationCard({ item }: { item: Item }) {
+function LocationCard({ item, locale }: { item: Item; locale: Locale }) {
   /* Grup üyelerinin token'ları (slug|id) virgülle; /arama çoklu değeri
      `regionsRaw.split(",")` ile parse edip `.in("location_id", …)` uygular. */
-  const href = `/arama?bolgeler=${encodeURIComponent(item.token)}`;
+  /* 🛡️ NAVIGATION LOCALE PERSISTENCE — bölge kartı linki aktif
+     locale'i taşır; `bolgeler` token'ı ve query kontratı DEĞİŞMEZ. */
+  const href = localeHref(
+    `/arama?bolgeler=${encodeURIComponent(item.token)}`,
+    locale
+  );
   const initial = (item.key?.[0] || "·").toUpperCase();
 
   return (

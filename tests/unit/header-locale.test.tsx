@@ -113,7 +113,20 @@ describe("Header — Phase 9A locale dictionary", () => {
    dictionary/metin davranışına dokunmaz, yukarıdaki testlerle
    ÇAKIŞMAZ.
 =============================================================== */
-describe("Header — Phase 9C href regresyon kilidi (locale'den bağımsız, href DEĞİŞMEDİ)", () => {
+/* ===============================================================
+   🛡️ NAVIGATION LOCALE PERSISTENCE — SÖZLEŞME GÜNCELLEMESİ
+   ===============================================================
+   Phase 9C'de bu blok "href locale'den BAĞIMSIZ, DEĞİŞMEZ" kuralını
+   kilitliyordu. O kural, EN/DE'de bir iç linke tıklandığında
+   prefix'siz TR route'una düşülmesine — yani locale'in navigasyonda
+   KAYBOLMASINA — yol açıyordu (bildirilen hata).
+
+   YENİ SÖZLEŞME: iç linkler AKTİF LOCALE'i taşır (`localeHref`).
+   Aşağıdaki testler SİLİNMEDİ/GEVŞETİLMEDİ — TR davranışı aynen
+   kilitli kalır, EN/DE beklentileri ise doğru davranışa çevrildi ve
+   "prefix'siz TR route'una düşmüyor" kontrolü EKLENEREK sıkılaştırıldı.
+   =============================================================== */
+describe("Header — href locale kilidi (iç linkler aktif locale'i taşır)", () => {
   beforeEach(() => {
     usePathnameMock.mockReset();
   });
@@ -125,11 +138,19 @@ describe("Header — Phase 9C href regresyon kilidi (locale'den bağımsız, hre
     expect(logoLink).toHaveAttribute("href", "/");
   });
 
-  it("Logo href her zaman '/' — '/en/...' path'te bile (locale prefix EKLENMEDİ)", () => {
+  it("Logo href '/en/...' path'te '/en' olur (locale KAYBOLMAZ)", () => {
     usePathnameMock.mockReturnValue("/en/kiralik-villa/ornek-slug");
     render(<Header menu={[]} siteLogo={null} />);
     const logoLink = screen.getByRole("link", { name: /Kiralama/i });
-    expect(logoLink).toHaveAttribute("href", "/");
+    expect(logoLink).toHaveAttribute("href", "/en");
+    expect(logoLink).not.toHaveAttribute("href", "/");
+  });
+
+  it("Logo href '/de/...' path'te '/de' olur", () => {
+    usePathnameMock.mockReturnValue("/de/kiralik-villa/ornek-slug");
+    render(<Header menu={[]} siteLogo={null} />);
+    const logoLink = screen.getByRole("link", { name: /Kiralama/i });
+    expect(logoLink).toHaveAttribute("href", "/de");
   });
 
   it("'Teklif Al' CTA href her zaman '/teklif-al' — TR path'te", () => {
@@ -142,13 +163,26 @@ describe("Header — Phase 9C href regresyon kilidi (locale'den bağımsız, hre
     });
   });
 
-  it("CTA href her zaman '/teklif-al' — '/en/...' path'te bile (metin İngilizce'ye döner ama href DEĞİŞMEZ)", () => {
+  it("CTA href '/en/...' path'te '/en/teklif-al' olur (metin VE hedef EN)", () => {
     usePathnameMock.mockReturnValue("/en/kiralik-villalar");
     render(<Header menu={[]} siteLogo={null} />);
     const ctaLinks = screen.getAllByRole("link", { name: "Get a Quote" });
     expect(ctaLinks.length).toBeGreaterThan(0);
     ctaLinks.forEach((link) => {
-      expect(link).toHaveAttribute("href", "/teklif-al");
+      expect(link).toHaveAttribute("href", "/en/teklif-al");
+      expect(link).not.toHaveAttribute("href", "/teklif-al");
+    });
+  });
+
+  it("CTA href '/de/...' path'te '/de/teklif-al' olur", () => {
+    usePathnameMock.mockReturnValue("/de/kiralik-villalar");
+    render(<Header menu={[]} siteLogo={null} />);
+    const ctaLinks = screen.getAllByRole("link", {
+      name: "Angebot anfordern",
+    });
+    expect(ctaLinks.length).toBeGreaterThan(0);
+    ctaLinks.forEach((link) => {
+      expect(link).toHaveAttribute("href", "/de/teklif-al");
     });
   });
 });

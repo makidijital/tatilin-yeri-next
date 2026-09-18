@@ -13,6 +13,9 @@ import { resolveVillaImageUrl } from "@/lib/storage.helpers";
    debounce, sonuç mantığı ve `variant` sistemi DEĞİŞMEDİ. */
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
+   (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 
 /* ===============================================================
    🛡️ VILLA SEARCH BOX — paylaşılan canlı arama (header + hero)
@@ -155,7 +158,7 @@ export default function VillaSearchBox({
     setOpenSearch(false);
     setSearch("");
     onResultNavigate?.();
-    window.setTimeout(() => router.push(`/kiralik-villa/${slug}`), 200);
+    window.setTimeout(() => router.push(localeHref(`/kiralik-villa/${slug}`, locale)), 200);
   };
 
   /* 🛡️ Sonuç satırı İÇERİĞİ — Link (diğer variantlar) ve button (sheet)
@@ -303,7 +306,7 @@ export default function VillaSearchBox({
             results.map((villa) => (
               <Link
                 key={villa.id}
-                href={`/kiralik-villa/${villa.slug}`}
+                href={localeHref(`/kiralik-villa/${villa.slug}`, locale)}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-sand-50)] transition border-b border-[var(--color-stone-100)] last:border-b-0"
                 onClick={handleResultClick}
               >

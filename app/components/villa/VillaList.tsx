@@ -8,6 +8,9 @@ import VillaCard from "./VillaCard";
    `villa_translations.badge` üzerinden çevrilir. */
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
+   (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 import { getVillaBadgesByLocale } from "@/lib/i18n/get-villa-badge-translations.server";
 
 export default async function VillaList({
@@ -125,7 +128,7 @@ export default async function VillaList({
         {/* 🛡️ CTA — grid altında, tüm ekranlarda centered (header'dan taşındı). */}
         <div className="mt-9 md:mt-10 flex justify-center">
           <a
-            href="/arama"
+            href={localeHref("/arama", locale)}
             className="
               group inline-flex items-center gap-2
               px-4 py-2 rounded-full

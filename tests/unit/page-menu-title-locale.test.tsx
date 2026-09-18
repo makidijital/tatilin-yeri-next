@@ -325,11 +325,13 @@ describe("HeaderWrapper — CMS sayfa menü öğeleri", () => {
     expect(screen.getAllByText("Hakkımızda").length).toBeGreaterThan(0);
   });
 
-  it("20) href DEĞİŞMEZ — `/p/{slug}` canonical kalır", async () => {
+  /* 🛡️ NAVIGATION LOCALE PERSISTENCE — `/p/{slug}` SLUG'ı canonical
+     kalır (çevrilmez); link yalnız aktif locale prefix'ini taşır. */
+  it("20) slug ÇEVRİLMEZ — `/p/{slug}` canonical, prefix locale'den", async () => {
     mockTranslations({ page: { "page-1": { en: "About Us" } } });
     render(await HeaderWrapper());
     for (const link of screen.getAllByRole("link", { name: "About Us" })) {
-      expect(link).toHaveAttribute("href", "/p/hakkimizda");
+      expect(link).toHaveAttribute("href", "/en/p/hakkimizda");
     }
   });
 });
@@ -481,12 +483,14 @@ describe("FooterWrapper + Footer — Kurumsal CMS sayfaları", () => {
     expect([...pageCalls()[0][1]].sort()).toEqual(["page-1", "page-2"]);
   });
 
-  it("32) href DEĞİŞMEZ — `/p/{slug}` canonical kalır", async () => {
+  /* 🛡️ NAVIGATION LOCALE PERSISTENCE — `/p/{slug}` SLUG'ı canonical
+     kalır (çevrilmez); link yalnız aktif locale prefix'ini taşır. */
+  it("32) slug ÇEVRİLMEZ — `/p/{slug}` canonical, prefix locale'den", async () => {
     mockTranslations({ page: { "page-1": { en: "About Us" } } });
     render(await FooterWrapper());
     expect(screen.getByRole("link", { name: "About Us" })).toHaveAttribute(
       "href",
-      "/p/hakkimizda"
+      "/en/p/hakkimizda"
     );
   });
 

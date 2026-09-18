@@ -46,6 +46,9 @@ import {
    sistemi kurulmadı. */
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
+   (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
 import type { Dictionary } from "@/lib/i18n/dictionaries/types";
 /* 🛡️ VİLLA TİPİ ADI (EN/DE) — `AramaPageBody` / `loadHeroFilters` ile
@@ -303,7 +306,7 @@ export default async function KiralikVillalarPageBody({
             ======================================================= */}
         <PageHero
           breadcrumb={[
-            { name: dict.breadcrumbHome, href: "/" },
+            { name: dict.breadcrumbHome, href: localeHref("/", locale) },
             { name: dict.breadcrumbCurrent },
           ]}
           eyebrow={dict.heroEyebrow}

@@ -9,6 +9,9 @@ import { useFavorites } from "@/hooks/use-favorites";
    mevcut davranış BİREBİR korunur. */
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
+   (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 
 /* ===============================================================
    🛡️ FAZ 36 — HEADER FAVORITES SHORTCUT
@@ -44,7 +47,7 @@ export default function HeaderFavoritesLink({
 
   return (
     <Link
-      href="/favoriler"
+      href={localeHref("/favoriler", locale)}
       aria-label={showBadge ? `${label} (${count})` : label}
       title={label}
       className="

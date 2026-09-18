@@ -27,6 +27,9 @@ import ContactForm from "@/app/(public)/iletisim/ContactForm";
    form submit akışı DEĞİŞTİRİLMEDİ. Yeni routing/i18n sistemi kurulmadı. */
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
+   (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 /* 🛡️ `business_hours` DEĞERİ admin'in girdiği dinamik metindir; çevirisi
    `settings_translations` (migration 087) üzerinden MEVCUT resolver ile
    çözülür — yeni resolver YAZILMADI. Telefon/e-posta/adres/sosyal URL'ler
@@ -196,7 +199,7 @@ export default async function ContactPageBody({
       {/* HERO — paylaşılan PageHero (kompakt editorial band) */}
       <PageHero
         breadcrumb={[
-          { name: breadcrumbHome, href: "/" },
+          { name: breadcrumbHome, href: localeHref("/", locale) },
           { name: breadcrumbCurrent },
         ]}
         eyebrow={dict.hero.eyebrow}
@@ -380,7 +383,7 @@ export default async function ContactPageBody({
               </p>
               <div className="mt-10">
                 <Link
-                  href="/arama"
+                  href={localeHref("/arama", locale)}
                   className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-white text-[var(--color-stone-900)] text-[13.5px] font-medium tracking-[0.04em] hover:bg-white/90 transition-colors shadow-[0_18px_40px_-18px_rgba(0,0,0,0.5)]"
                 >
                   {dict.cta.button} <ArrowUpRight size={14} />

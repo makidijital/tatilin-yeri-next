@@ -28,6 +28,9 @@ import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
+/* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
+   (bkz. lib/i18n/locale-href.ts). */
+import { localeHref } from "@/lib/i18n/locale-href";
 import type { Dictionary } from "@/lib/i18n/dictionaries/types";
 /* 🛡️ VİLLA TİPİ ADI (EN/DE) — `loadHeroFilters` (Phase 11 P0) ve
    `VillaTypeCarousel` ile AYNI, ZATEN VAR OLAN iki helper. Yeni
@@ -963,7 +966,7 @@ export default async function AramaPageBody({
          PageHero. Breadcrumb/başlık/SEO KORUNDU; sadece UI. */}
       <PageHero
         breadcrumb={[
-          { name: dict.breadcrumbHome, href: "/" },
+          { name: dict.breadcrumbHome, href: localeHref("/", locale) },
           { name: dict.breadcrumbVillas },
         ]}
         eyebrow={dict.heroEyebrow}
@@ -1080,13 +1083,13 @@ export default async function AramaPageBody({
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
                   <a
-                    href="/arama"
+                    href={basePath}
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--color-stone-900)] text-white text-[13px] font-medium tracking-[0.04em] hover:bg-[var(--color-stone-700)] transition-colors motion-reduce:transition-none"
                   >
                     {dict.errorRetry}
                   </a>
                   <a
-                    href="/kiralik-villalar"
+                    href={localeHref("/kiralik-villalar", locale)}
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[var(--color-stone-200)] text-[13px] font-medium text-[var(--color-stone-700)] hover:border-[var(--color-stone-300)] hover:text-[var(--color-stone-900)] transition-colors motion-reduce:transition-none"
                   >
                     {dict.showAllVillas}
@@ -1131,13 +1134,13 @@ export default async function AramaPageBody({
 
                     <div className="flex flex-wrap items-center justify-center gap-3 mt-10">
                       <a
-                        href="/arama"
+                        href={basePath}
                         className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--color-stone-900)] text-white text-[13px] font-medium tracking-[0.04em] hover:bg-[var(--color-stone-700)] transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
                       >
                         {dict.emptyClearFilters}
                       </a>
                       <a
-                        href="/kiralik-villalar"
+                        href={localeHref("/kiralik-villalar", locale)}
                         className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[var(--color-stone-200)] text-[13px] font-medium text-[var(--color-stone-700)] hover:border-[var(--color-champagne-500)] hover:text-[var(--color-stone-900)] hover:bg-[var(--color-sand-50)] transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
                       >
                         {dict.showAllVillas}
