@@ -82,15 +82,17 @@ export type PriceIncludeItemTranslationRow = {
   updated_at: string;
 };
 
-export type VillaDistanceTranslationRow = {
-  id: string;
-  distance_id: string;
-  locale: Locale;
-  title: string | null;
-  distance: string | null;
-  created_at: string;
-  updated_at: string;
-};
+/* 🛡️ `VillaDistanceTranslationRow` KALDIRILDI.
+   Villa BAŞINA mesafe çevirisi girme özelliği kaldırıldı: mesafe
+   başlıkları artık YALNIZ statik `distanceLabels` dictionary'sinden
+   çözülür (`lib/distance-label.helper.ts`), canonical olmayan
+   başlıklar aynen gösterilir. `villa_distances.title/distance` TR
+   canonical veri olarak AYNEN kalır. `villa_distance_translations`
+   tablosu migration 082'de DURUYOR (migration geçmişi DEĞİŞTİRİLMEDİ)
+   ve migration 090 ile kaldırılır; koddan artık HİÇ okunmaz/yazılmaz.
+   Tipin ve aşağıdaki entity kaydının kaldırılması, yanlışlıkla
+   yeniden bağlanmasını DERLEME ZAMANINDA engeller (`villa_location`
+   için Phase 10I'de uygulanan AYNI desen). */
 
 export type BlogPostTranslationRow = {
   id: string;
@@ -165,7 +167,7 @@ export type TranslationEntity =
   | "villa_feature"
   | "rule_item"
   | "price_include_item"
-  | "villa_distance"
+  /* 🛡️ "villa_distance" KALDIRILDI (bkz. yukarıdaki not). */
   | "blog_post"
   | "page"
   | "faq"
@@ -185,10 +187,8 @@ export type TranslationRowFor<E extends TranslationEntity> = E extends "villa"
         ? RuleItemTranslationRow
           : E extends "price_include_item"
             ? PriceIncludeItemTranslationRow
-            : E extends "villa_distance"
-              ? VillaDistanceTranslationRow
-              : E extends "blog_post"
-                ? BlogPostTranslationRow
+            : E extends "blog_post"
+              ? BlogPostTranslationRow
               : E extends "page"
                 ? PageTranslationRow
                 : E extends "faq"
@@ -232,10 +232,6 @@ export const TRANSLATION_ENTITY_CONFIG: Record<
   price_include_item: {
     table: "price_include_item_translations",
     parentIdColumn: "include_id",
-  },
-  villa_distance: {
-    table: "villa_distance_translations",
-    parentIdColumn: "distance_id",
   },
   /* 🛡️ MIGRATION 089 — blog yazısı içerik çevirileri. */
   blog_post: {

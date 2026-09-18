@@ -140,8 +140,13 @@ describe("getTranslation", () => {
   /* --- 9) Boş tablo / tüm entity'ler güvenli ---
      🛡️ PHASE 10I — 9 → 8 entity: `villa_location` registry'den kaldırıldı
      (bölge adları özel isimdir, çevrilmez). Liste daraltıldı, test
-     mantığı/assertion'ları DEĞİŞMEDİ. */
-  it("9) translation tablosu boşken (data:null,error:null) 8 entity'nin TAMAMI için güvenli null döner", async () => {
+     mantığı/assertion'ları DEĞİŞMEDİ.
+     🛡️ MIGRATION 090 — 8 → 7 entity: `villa_distance` registry'den
+     kaldırıldı (villa başına mesafe çevirisi özelliği kaldırıldı;
+     mesafe başlıkları statik `distanceLabels` dictionary'sinden
+     çözülür). Liste yine yalnız DARALTILDI; test mantığı/assertion'ları
+     DEĞİŞMEDİ. */
+  it("9) translation tablosu boşken (data:null,error:null) 7 entity'nin TAMAMI için güvenli null döner", async () => {
     findOneMock.mockResolvedValue({ data: null, error: null });
     const entities = [
       "villa",
@@ -149,7 +154,6 @@ describe("getTranslation", () => {
       "villa_feature",
       "rule_item",
       "price_include_item",
-      "villa_distance",
       "page",
       "faq",
     ] as const;

@@ -246,16 +246,12 @@ export default async function EnVillaDetailPage({
   ]);
 
   /* 🛡️ PHASE 8D-2 — koleksiyon başına TAM 1 batch çeviri sorgusu.
-     🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `villa_distance` da AYNI batch
-     desenine eklendi (migration 082'nin `villa_distance_translations`
-     tablosu; yeni tablo/migration YOK). Paralel çalıştığı için ek
-     gecikme getirmez, N+1 YOKTUR. */
-  const [
-    featureTranslations,
-    ruleTranslations,
-    priceIncludeTranslations,
-    distanceTranslations,
-  ] = await Promise.all([
+     ⚠️ MESAFELER BU BATCH'TE YOKTUR: villa başına mesafe çevirisi
+     KALDIRILDI (bkz. aşağıdaki `translatedDistances`). Mesafe
+     başlıkları DB'den değil, statik `distanceLabels` dictionary'sinden
+     çözülür → mesafeler için SIFIR sorgu. */
+  const [featureTranslations, ruleTranslations, priceIncludeTranslations] =
+    await Promise.all([
       getTranslationsForParents(
         "villa_feature",
         features.map((f) => f.id),
@@ -267,28 +263,16 @@ export default async function EnVillaDetailPage({
         priceIncludes.map((p) => p.id),
         "en"
       ),
-      getTranslationsForParents(
-        "villa_distance",
-        distances.map((d) => d.id),
-        "en"
-      ),
     ]);
 
   /* 🛡️ ICON KEY — ORİJİNAL (TR) d.title'dan hesaplanır. */
   const translatedDistances: TranslatedDistance[] = distances.map((d) => ({
     id: d.id,
-    /* 🛡️ ÖNCELİK SIRASI (mevcut davranış KORUNARAK genişletildi):
-         1) `villa_distance_translations.title` — admin'in girdiği
-            SERBEST/CUSTOM başlıkların çevirisi (mevcut generic
-            `resolveTranslatedField` fallback'i ile).
-         2) PHASE 10D BATCH 4 — 12 CANONICAL başlık için statik i18n
-            dictionary (`getTranslatedDistanceLabel`).
-         3) Canonical TR `d.title` (helper'ın kendi fallback'i).
-       Çeviri satırı yok/boş/whitespace ise sonuç ESKİSİYLE BİREBİR. */
-    displayTitle: resolveTranslatedField(
-      distanceTranslations.get(d.id)?.title,
-      getTranslatedDistanceLabel(d.title, "en")
-    ),
+    /* 🛡️ PHASE 10D BATCH 4 — 12 CANONICAL başlık için statik i18n
+       dictionary (`getTranslatedDistanceLabel` → `distanceLabels`).
+       Canonical OLMAYAN (legacy/custom) başlık helper'ın kendi
+       fallback'i ile AYNEN döner. Villa başına DB çevirisi YOKTUR. */
+    displayTitle: getTranslatedDistanceLabel(d.title, "en"),
     /* 🛡️ Mesafe DEĞERİ hiçbir zaman çevrilmez. */
     displayDistance: d.distance,
     iconKey: getDistanceIconKey(d.title),

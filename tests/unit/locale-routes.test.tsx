@@ -918,21 +918,18 @@ describe.each(VILLA_DETAIL_ROUTES)(
       expect(screen.getByText("300 m")).toBeInTheDocument();
       expect(screen.getByText("150 m")).toBeInTheDocument();
       expect(screen.getByText("2 km")).toBeInTheDocument();
-      /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `villa_distance` artık MEVCUT
-         generic batch sistemine de bağlı (admin'in girdiği CUSTOM
-         başlıklar için). Çeviri satırı YOKKEN çıktı yukarıdaki gibi
-         BİREBİR aynı kalır (canonical dictionary → TR fallback).
-         Sorgu TEK batch'tir (N+1 YOK) ve diğer üç koleksiyonla
-         PARALEL çalışır. */
+      /* 🛡️ MIGRATION 090 — villa BAŞINA mesafe çevirisi KALDIRILDI.
+         Mesafe başlıkları YALNIZ statik `distanceLabels` dictionary'si
+         ile çözülür → mesafeler için DB'ye HİÇ sorgu ATILMAZ.
+         (Önceden burada `villa_distance` batch çağrısı doğrulanıyordu;
+         assertion gevşetilmedi, TERSİ yönde sıkılaştırıldı.) */
       const distanceCalls = getTranslationsForParentsMock.mock.calls.filter(
         (call: unknown[]) => call[0] === "villa_distance"
       );
-      expect(distanceCalls).toHaveLength(1);
-      expect(distanceCalls[0][1]).toEqual(["d1", "d2", "d3"]);
-      expect(distanceCalls[0][2]).toBe(locale);
+      expect(distanceCalls).toHaveLength(0);
     });
 
-    it("16b) 🛡️ `villa_distance_translations.title` DOLU ise custom başlık ÇEVRİLİR (distance DEĞERİ yine çevrilmez)", async () => {
+    it("16b) 🛡️ MIGRATION 090 — DB'de `villa_distance` çevirisi OLSA BİLE kullanılmaz; canonical/custom başlık davranışı değişmez", async () => {
       getVillaDistancesMock.mockResolvedValue([
         {
           id: "d3",
@@ -942,6 +939,8 @@ describe.each(VILLA_DETAIL_ROUTES)(
           created_at: "",
         },
       ]);
+      /* Eski (kaldırılmış) sistemin verisi hâlâ mock'lanıyor —
+         AMAÇ: sayfanın onu ARTIK OKUMADIĞINI kanıtlamak. */
       getTranslationsForParentsMock.mockImplementation(
         async (entity: string) =>
           entity === "villa_distance"
@@ -956,8 +955,9 @@ describe.each(VILLA_DETAIL_ROUTES)(
       render(element);
       openVillaTab(locale, "location");
 
-      expect(screen.getByText("Legacy Custom Distance")).toBeInTheDocument();
-      expect(screen.queryByText("Eski Özel Mesafe")).toBeNull();
+      /* DB çevirisi KULLANILMAZ; canonical olmayan başlık AYNEN kalır. */
+      expect(screen.queryByText("Legacy Custom Distance")).toBeNull();
+      expect(screen.getByText("Eski Özel Mesafe")).toBeInTheDocument();
       /* Mesafe DEĞERİ locale'den BAĞIMSIZ. */
       expect(screen.getByText("2 km")).toBeInTheDocument();
       /* İkon anahtarı yine ORİJİNAL TR title'dan. */

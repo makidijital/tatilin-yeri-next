@@ -201,14 +201,45 @@ describe("4) blog_post translation entity", () => {
     }
   });
 
-  it("villa_distance çevirileri için de admin giriş yüzeyi var", () => {
+  /* 🛡️ MIGRATION 090 — villa BAŞINA mesafe çevirisi özelliği kaldırıldı.
+     Eski "admin giriş yüzeyi var" testinin YERİNE, özelliğin GERÇEKTEN
+     kaldırıldığını doğrulayan ters yönlü guard konuldu. */
+  it("villa_distance çeviri özelliği tamamen kaldırıldı (dosya + registry)", () => {
     for (const p of [
       "app/services/villa-distance-translation.service.ts",
       "app/(admin)/maki-admin/villas/[id]/_components/villa-distance-translations.action.ts",
       "app/(admin)/maki-admin/villas/[id]/_components/VillaDistanceTranslationsCard.tsx",
     ]) {
-      expect(existsSync(resolve(process.cwd(), p)), p).toBe(true);
+      expect(existsSync(resolve(process.cwd(), p)), p).toBe(false);
     }
+    expect(
+      Object.keys(TRANSLATION_ENTITY_CONFIG)
+    ).not.toContain("villa_distance");
+  });
+
+  it("migration 090 yalnız çeviri tablosunu düşürür, villa_distances'a DOKUNMAZ", () => {
+    const sql = readFileSync(
+      resolve(
+        process.cwd(),
+        "db/migrations/090_drop_villa_distance_translations.sql"
+      ),
+      "utf8"
+    );
+    /* Yorum satırlarını at — yalnız gerçek DDL denetlenir. */
+    const code = sql
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("--"))
+      .join("\n");
+    expect(code).toContain(
+      "DROP TABLE IF EXISTS public.villa_distance_translations"
+    );
+    /* villa_distances (parent) ve ortak trigger fonksiyonu KORUNUR. */
+    expect(/DROP\s+TABLE[^;]*public\.villa_distances\b/i.test(code)).toBe(false);
+    expect(/DELETE\s+FROM\s+public\.villa_distances\b/i.test(code)).toBe(false);
+    expect(/UPDATE\s+public\.villa_distances\b/i.test(code)).toBe(false);
+    expect(/TRUNCATE[^;]*villa_distances\b/i.test(code)).toBe(false);
+    expect(/ALTER\s+TABLE[^;]*villa_distances\b/i.test(code)).toBe(false);
+    expect(/DROP\s+FUNCTION[^;]*trg_touch_updated_at/i.test(code)).toBe(false);
   });
 });
 

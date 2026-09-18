@@ -53,7 +53,6 @@ import type {
 } from "@/lib/villa-layout.helper";
 import IcalSyncCard from "./_components/IcalSyncCard";
 import VillaTranslationsCard from "./_components/VillaTranslationsCard";
-import VillaDistanceTranslationsCard from "./_components/VillaDistanceTranslationsCard";
 
 /* 🛡️ FAZ 1+2 — typed villa form pipeline + helper-driven payload/audit. */
 import {
@@ -536,16 +535,10 @@ export default function EditVilla() {
           var, handleUpdate/buildVillaUpdatePayload/audit zincirine
           KARIŞMAZ. Steps 1-7 ve handleUpdate DEĞİŞMEDİ. */}
       {id && currentStep === 8 && (
-        <>
-          <VillaTranslationsCard
-            villaId={id as string}
-            villaTitle={form.title}
-          />
-          {/* 🛡️ `villa_distance_translations` admin giriş yüzeyi — public
-              EN/DE villa detayı bu tabloyu ZATEN okuyordu. Kendi state'i
-              + kendi save akışı; wizard "Güncelle" akışına karışmaz. */}
-          <VillaDistanceTranslationsCard villaId={id as string} />
-        </>
+        <VillaTranslationsCard
+          villaId={id as string}
+          villaTitle={form.title}
+        />
       )}
 
       {/* STICKY WIZARD NAV — Geri / İleri / Galeri / Güncelle

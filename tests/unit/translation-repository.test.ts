@@ -45,7 +45,16 @@ import {
    üzerinden girilen blog içerikleri (title/body/excerpt/seo_*) çevrilebilir.
    Şema migration 082'nin `page_translations` desenini birebir izler
    (blog_post_id + locale + içerik alanları). `slug` ÇEVRİLMEZ. */
-describe("TRANSLATION_ENTITY_CONFIG — 11 tablo, doğru table/parentIdColumn", () => {
+/* 🛡️ MIGRATION 090 — 11 → 10 entity. `villa_distance` registry'den
+   KALDIRILDI: villa BAŞINA mesafe çevirisi girme özelliği kaldırıldı,
+   mesafe başlıkları artık YALNIZ statik `distanceLabels` dictionary'si
+   ile çözülür (`lib/distance-label.helper.ts`).
+   `villa_distance_translations` TABLOSU migration 082'de DURUYOR
+   (migration geçmişi değiştirilmedi) ve migration 090 ile kaldırılır —
+   bu yüzden `tests/unit/translation-schema.test.ts` (migration 082
+   SQL'ini doğrular) DEĞİŞMEDİ; burada test edilen şey KOD
+   REGISTRY'sidir. `villa_location` (Phase 10I) ile AYNI desen. */
+describe("TRANSLATION_ENTITY_CONFIG — 10 tablo, doğru table/parentIdColumn", () => {
   const expected: Record<
     TranslationEntity,
     { table: string; parentIdColumn: string }
@@ -67,10 +76,6 @@ describe("TRANSLATION_ENTITY_CONFIG — 11 tablo, doğru table/parentIdColumn", 
       table: "price_include_item_translations",
       parentIdColumn: "include_id",
     },
-    villa_distance: {
-      table: "villa_distance_translations",
-      parentIdColumn: "distance_id",
-    },
     blog_post: {
       table: "blog_post_translations",
       parentIdColumn: "blog_post_id",
@@ -84,8 +89,8 @@ describe("TRANSLATION_ENTITY_CONFIG — 11 tablo, doğru table/parentIdColumn", 
     },
   };
 
-  it("tam olarak 11 entity içeriyor", () => {
-    expect(Object.keys(TRANSLATION_ENTITY_CONFIG)).toHaveLength(11);
+  it("tam olarak 10 entity içeriyor", () => {
+    expect(Object.keys(TRANSLATION_ENTITY_CONFIG)).toHaveLength(10);
   });
 
   /* 🛡️ PHASE 10I — REGRESYON KİLİDİ: bölge çevirisi geri gelmesin. */
@@ -296,15 +301,19 @@ describe("translationRepository.findManyForLocale", () => {
       "@/lib/db/translation.repository.server"
     );
 
+    /* 🛡️ MIGRATION 090 — entity `villa_distance` → `villa_feature`
+       olarak değiştirildi (o entity registry'den kaldırıldı). Testin
+       AMACI DEĞİŞMEDİ: N parent ID hâlâ TEK `.in()` sorgusuna çevrilir
+       (N+1 regresyon guard'ı). */
     await translationRepository.findManyForLocale(
-      "villa_distance",
+      "villa_feature",
       ["d1", "d2", "d3", "d4", "d5"],
       "en"
     );
 
     expect(fromMock).toHaveBeenCalledTimes(1);
     expect(inMock).toHaveBeenCalledTimes(1);
-    expect(inMock).toHaveBeenCalledWith("distance_id", [
+    expect(inMock).toHaveBeenCalledWith("feature_id", [
       "d1",
       "d2",
       "d3",
