@@ -791,6 +791,7 @@ export const en: Dictionary = {
     badgePolicy: "Policies & Terms",
     fallbackTitle: "Page",
     contentComingSoon: "Content coming soon.",
+    notFoundMetaTitle: "Page not found",
   },
 
   /* 🛡️ PHASE 12 — MAKI ADMIN / PAGES. Bu fazda admin'de locale

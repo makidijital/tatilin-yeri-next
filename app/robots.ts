@@ -1,5 +1,9 @@
 import type { MetadataRoute } from "next";
 
+/* 🛡️ Public locale prefix'leri — `lib/i18n/config.ts`'in TEK doğruluk
+   kaynağından türetilir (yeni bir locale listesi İCAT EDİLMEZ). */
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/lib/i18n/config";
+
 /* ===============================================================
    🛡️ ROBOTS — Next.js App Router (production-grade crawl policy)
    ===============================================================
@@ -43,7 +47,41 @@ import type { MetadataRoute } from "next";
    FUTURE-PROOF: yeni public route eklenince DEFAULT ALLOW olur (kök açık).
      Yalnız yeni bir internal/token/duplicate path çıkarsa buraya disallow
      eklenir. Yeni SEO sayfaları otomatik crawl'a açık kalır.
+
+   🛡️ LOCALE PREFIX'LERİ: Aşağıdaki TR path'lerinin `/en` ve `/de`
+     varyantları AYNI politikaya tabidir (ör. `/arama` kapalıyken
+     `/en/arama` açık kalmamalı — faceted search asimetrisi). Liste tek
+     yerde tutulur; `withLocalePrefixes` her giriş için prefix'li
+     kardeşlerini otomatik üretir. TR girdileri ve SIRA korunur; yeni bir
+     route politikası EKLENMEZ, yalnız mevcut politika EN/DE'ye eşitlenir.
    =============================================================== */
+
+/** TR (prefix'siz) disallow listesi — POLİTİKA KAYNAĞI. */
+const DISALLOW_PATHS: readonly string[] = [
+  "/maki-admin",
+  "/api",
+  "/arama",
+  "/favoriler",
+  "/liste/",
+  "/v/",
+  "/rezervasyon/",
+];
+
+/** `/maki-admin` ve `/api` locale-routed DEĞİLDİR → prefix üretilmez. */
+const LOCALE_PREFIXED_EXCLUDES: readonly string[] = ["/maki-admin", "/api"];
+
+/**
+ * Her TR path'i + (uygulanabilirse) `/en` ve `/de` varyantları.
+ * Sıra: önce TÜM TR girdileri (mevcut çıktı BİREBİR korunur), sonra
+ * prefix'li varyantlar.
+ */
+function withLocalePrefixes(paths: readonly string[]): string[] {
+  const prefixes = SUPPORTED_LOCALES.filter((l) => l !== DEFAULT_LOCALE);
+  const localized = paths
+    .filter((p) => !LOCALE_PREFIXED_EXCLUDES.includes(p))
+    .flatMap((p) => prefixes.map((l) => `/${l}${p}`));
+  return [...paths, ...localized];
+}
 
 const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ||
@@ -63,15 +101,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: [
-          "/maki-admin",
-          "/api",
-          "/arama",
-          "/favoriler",
-          "/liste/",
-          "/v/",
-          "/rezervasyon/",
-        ],
+        disallow: withLocalePrefixes(DISALLOW_PATHS),
       },
     ],
     /* Absolute URL yoksa OMIT — relative sitemap referansı geçersizdir. */

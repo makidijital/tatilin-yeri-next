@@ -800,6 +800,7 @@ export const de: Dictionary = {
     badgePolicy: "Richtlinien & Bedingungen",
     fallbackTitle: "Seite",
     contentComingSoon: "Inhalt folgt in Kürze.",
+    notFoundMetaTitle: "Seite nicht gefunden",
   },
 
   /* 🛡️ PHASE 12 — MAKI ADMIN / PAGES. Bu fazda admin'de locale

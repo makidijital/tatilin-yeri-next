@@ -3,8 +3,18 @@ import "server-only";
 import { reservationShareRepository } from "@/lib/db/reservation-share.repository.server";
 import { hashShareToken } from "@/lib/reservation-share.helper";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
-import { paymentMethodType } from "@/lib/payment-link.helper";
 import { getPaymentDisplayValues } from "@/lib/payment.helper";
+
+/* 🛡️ ÖDEME YÖNTEMİ ETİKETİ — MEVCUT generic çeviri altyapısı REUSE.
+   TR: canonical `payment_methods.name`. EN/DE: admin'in
+   `/maki-admin/payment-methods` ekranından girdiği
+   `payment_method_translations` değeri; yoksa/boşsa `resolveTaxonomyName`
+   ile TR canonical'a düşer. Sabit EN/DE metin ÜRETİLMEZ.
+   ⚠️ `payment_methods.type` yalnız iş mantığında kalır
+   (`paymentMethodType` / `isWesternUnionMethod` DEĞİŞMEDİ). */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getPaymentMethodNamesByLocale } from "@/lib/i18n/get-payment-method-translations.server";
+import { resolveTaxonomyName } from "@/lib/i18n/taxonomy-name.helper";
 
 /* 🛡️ Site geneli standart giriş/çıkış saatleri — CheckInOutTimes.tsx ile
    AYNI değerler (projede villa/ayar bazlı saat kaynağı YOK; tek standart). */
@@ -103,7 +113,9 @@ function nightsBetween(
 }
 
 export async function resolveReservationShare(
-  rawToken: string | null | undefined
+  rawToken: string | null | undefined,
+  /** 🛡️ Opsiyonel — verilmezse "tr" → TR çıktısı eskisi gibi. */
+  locale: Locale = DEFAULT_LOCALE
 ): Promise<ReservationShareResult> {
   const token = (rawToken || "").toString().trim();
   if (!token) return { kind: "invalid" };
@@ -156,7 +168,11 @@ export async function resolveReservationShare(
           cleaning_fee_try: number | null;
           pool_heating_selected: boolean | null;
           pool_heating_total_try: number | null;
-          payment_method: { type: string | null } | null;
+          payment_method: {
+            id: string | null;
+            name: string | null;
+            type: string | null;
+          } | null;
           villa: {
             title: string | null;
             villa_images:
@@ -231,17 +247,25 @@ export async function resolveReservationShare(
     imgs.find((i) => i?.is_cover)?.image_url ?? imgs[0]?.image_url ?? null;
   const villaImage = coverRaw ? resolveVillaImageUrl(coverRaw) ?? null : null;
 
-  /* Ödeme yöntemi etiketi — mevcut paymentMethodType helper (kafadan
-     üretme yok). Yöntem tanımlı değilse null (parantez gösterilmez). */
-  const pmType = row.payment_method
-    ? paymentMethodType(row.payment_method)
-    : null;
-  const paymentMethodLabel =
-    pmType === "credit_card"
-      ? "Kredi Kartı"
-      : pmType === "bank_transfer"
-        ? "Havale/EFT"
-        : null;
+  /* Ödeme yöntemi etiketi — CANONICAL `payment_methods.name` (+ EN/DE
+     `payment_method_translations`). Yöntem tanımlı değilse veya adı boşsa
+     null (parantez gösterilmez) — eski davranışla aynı.
+     SORGU: TR'de çeviri sorgusu HİÇ atılmaz; EN/DE'de TEK batch `.in()`
+     çağrısı (tek id) — N+1 YOK. Okuma hatası fail-soft → TR canonical. */
+  const pmId = (row.payment_method?.id ?? "").toString().trim();
+  const pmName = (row.payment_method?.name ?? "").toString().trim();
+  let paymentMethodLabel: string | null = null;
+  if (pmName) {
+    const namesByLocale =
+      locale === DEFAULT_LOCALE || !pmId
+        ? {}
+        : await getPaymentMethodNamesByLocale([pmId]).catch(() => ({}));
+    paymentMethodLabel = resolveTaxonomyName(
+      pmName,
+      namesByLocale[pmId],
+      locale
+    );
+  }
 
   /* Mülk sahibi — yalnız ad + telefon (email/iban embed edilmedi). */
   const owner = row.villa?.owner ?? null;

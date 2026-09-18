@@ -149,6 +149,9 @@ describe("Phase 12E — `cms` namespace bütünlüğü", () => {
     "badgePolicy",
     "fallbackTitle",
     "contentComingSoon",
+    /* 🛡️ Sayfa bulunamadığında `generateMetadata` başlığı (EN/DE açığı
+       kapatıldı; TR değeri eski hardcoded metinle BİREBİR). */
+    "notFoundMetaTitle",
   ];
 
   it("1) TR/EN/DE'de AYNI key seti", () => {

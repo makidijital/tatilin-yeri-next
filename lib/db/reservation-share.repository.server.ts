@@ -48,7 +48,15 @@ export type ReservationShareRow = {
      ödeme değişmez). Yalnız müşteriye gösterilir. */
   damage_deposit: number | null;
   cleaning_fee_try: number | null;
-  payment_method: { type: string | null } | null;
+  /* 🛡️ `id` + `name` ADDITIVE: görünen ödeme yöntemi etiketi artık
+     CANONICAL `payment_methods.name` (+ `payment_method_translations`
+     EN/DE) üzerinden çözülür. `type` AYNEN kalır — ödeme/iş mantığı
+     (`paymentMethodType` / `isWesternUnionMethod`) DEĞİŞMEDİ. */
+  payment_method: {
+    id: string | null;
+    name: string | null;
+    type: string | null;
+  } | null;
   villa: {
     title: string | null;
     villa_images:
@@ -164,7 +172,7 @@ export const reservationShareRepository = {
          cleaning_fee_try,
          pool_heating_selected,
          pool_heating_total_try,
-         payment_method:payment_method_id ( type ),
+         payment_method:payment_method_id ( id, name, type ),
          villa:villa_id ( title, villa_images ( image_url, is_cover, sort_order ), owner:owner_id ( first_name, last_name, phone ) )`
       )
       .eq("id", id)

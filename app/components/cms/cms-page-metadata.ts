@@ -10,6 +10,7 @@ import {
   isMultilingualEnabled,
   type Locale,
 } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
 import { resolvePageContent } from "@/lib/i18n/get-page-translation.server";
 
@@ -43,8 +44,12 @@ export async function buildCmsPageMetadata(
 ): Promise<Metadata> {
   const page = await getPageBySlug(slug);
   if (!page) {
+    /* 🛡️ TR değeri ESKİ hardcoded metinle BİREBİR; EN/DE için
+       dictionary'den çözülür. `notFound()` / global 404 akışı
+       DEĞİŞTİRİLMEDİ (TR sayfası bu metadata ile inline 404 bloğu
+       render eder; EN/DE `notFound()` yoluna girer). */
     return {
-      title: "Sayfa bulunamadı",
+      title: getDictionary(locale).cms.notFoundMetaTitle,
       robots: { index: false, follow: false },
     };
   }

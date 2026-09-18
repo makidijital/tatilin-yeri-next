@@ -39,6 +39,7 @@ vi.mock("@/lib/storage.helpers", () => ({
 }));
 
 import { resolvePageContent } from "@/lib/i18n/get-page-translation.server";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { buildCmsPageMetadata } from "@/app/components/cms/cms-page-metadata";
 
 const PAGE_ID = "page-uuid-1";
@@ -228,11 +229,24 @@ describe("buildCmsPageMetadata — TR (mevcut davranış korunuyor)", () => {
     expect(md.description).toBe(TR_PAGE.excerpt);
   });
 
-  it("14) sayfa yoksa 'Sayfa bulunamadı' + noindex", async () => {
+  /* 🛡️ "Sayfa bulunamadı" başlığı ARTIK dictionary'den
+     (`cms.notFoundMetaTitle`) — TR değeri eski hardcoded metinle
+     BİREBİR, EN/DE kendi karşılığını döner. `noindex` DEĞİŞMEDİ. */
+  it("14) sayfa yoksa locale'e uygun 'bulunamadı' başlığı + noindex", async () => {
     getPageBySlugMock.mockResolvedValue(null);
-    const md = await buildCmsPageMetadata(SLUG, "en");
-    expect(md.title).toBe("Sayfa bulunamadı");
-    expect(md.robots).toEqual({ index: false, follow: false });
+
+    const tr = await buildCmsPageMetadata(SLUG, "tr");
+    expect(tr.title).toBe("Sayfa bulunamadı");
+    expect(tr.robots).toEqual({ index: false, follow: false });
+
+    const en = await buildCmsPageMetadata(SLUG, "en");
+    expect(en.title).toBe(getDictionary("en").cms.notFoundMetaTitle);
+    expect(en.title).not.toBe("Sayfa bulunamadı");
+    expect(en.robots).toEqual({ index: false, follow: false });
+
+    const de = await buildCmsPageMetadata(SLUG, "de");
+    expect(de.title).toBe(getDictionary("de").cms.notFoundMetaTitle);
+    expect(de.robots).toEqual({ index: false, follow: false });
   });
 
   it("15) page.noindex her locale'de uygulanır", async () => {

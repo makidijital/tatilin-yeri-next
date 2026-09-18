@@ -817,6 +817,7 @@ export const tr: Dictionary = {
     badgePolicy: "Politika & Şartlar",
     fallbackTitle: "Sayfa",
     contentComingSoon: "İçerik yakında.",
+    notFoundMetaTitle: "Sayfa bulunamadı",
   },
 
   /* 🛡️ PHASE 12 — MAKI ADMIN / PAGES. Bu bloktaki TR değerleri

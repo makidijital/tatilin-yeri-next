@@ -6,7 +6,8 @@ import { resolveReservationShare } from "@/app/(public)/rezervasyon-kontrol/shar
 
 /* 🛡️ PUBLIC ÇOKLU DİL — statik metinler MEVCUT public dictionary'den
    (`reservationLookup` + `search.breadcrumbHome` REUSE). Token/share
-   çözümleme akışı (`resolveReservationShare`) DEĞİŞTİRİLMEDİ. */
+   çözümleme akışı (`resolveReservationShare`) DEĞİŞTİRİLMEDİ —
+   yalnız ödeme yöntemi etiketi için `locale` geçirilir. */
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
@@ -49,7 +50,10 @@ export default async function ReservationLookupPageBody({
 
   const sp = await searchParams;
   const token = firstString(sp?.token);
-  const share = token ? await resolveReservationShare(token) : null;
+  /* 🛡️ Ödeme yöntemi ETİKETİ locale-aware çözülür (canonical
+     `payment_methods.name` + `payment_method_translations`); token/
+     snapshot/tutar akışı DEĞİŞMEDİ. */
+  const share = token ? await resolveReservationShare(token, locale) : null;
   const isShareOk = share?.kind === "ok";
 
   return (

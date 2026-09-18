@@ -1057,6 +1057,9 @@ export type Dictionary = {
     fallbackTitle: string;
     /** Ne section ne body varsa gösterilen boş durum metni. */
     contentComingSoon: string;
+    /** Sayfa bulunamadığında `generateMetadata`'nın döndüğü başlık.
+     *  TR değeri ESKİ hardcoded metinle BİREBİR. */
+    notFoundMetaTitle: string;
   };
 
   /* ===============================================================
