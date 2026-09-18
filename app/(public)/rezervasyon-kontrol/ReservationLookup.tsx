@@ -16,6 +16,17 @@ import {
 
 import { formatDateTr } from "@/lib/date-format";
 
+/* 🛡️ PUBLIC ÇOKLU DİL — statik metinler MEVCUT public dictionary'den
+   (`reservationLookup` namespace). API endpoint'i, istek gövdesi ve
+   güvenlik semantiği (yalnız reservation_no + email eşleşmesi)
+   DEĞİŞTİRİLMEDİ. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import type { Dictionary } from "@/lib/i18n/dictionaries/types";
+
+type LookupDict = Dictionary["reservationLookup"];
+
 /* ===============================================================
    🛡️ ReservationLookup — public rezervasyon durum sorgulama
    ===============================================================
@@ -40,11 +51,13 @@ type LookupResult = {
 
 type UiState = "idle" | "pending" | "success" | "error";
 
+/* 🛡️ Durum ANAHTARLARI (`StatusKey`) ve görsel tasarım DEĞİŞMEDİ; yalnız
+   etiket/mesaj metinleri dictionary anahtarlarına bağlandı. */
 const STATUS_DESIGN: Record<
   StatusKey,
   {
-    label: string;
-    message: string;
+    labelKey: keyof LookupDict;
+    messageKey: keyof LookupDict;
     icon: typeof Clock;
     cardClass: string;
     iconWrapClass: string;
@@ -52,32 +65,32 @@ const STATUS_DESIGN: Record<
   }
 > = {
   pending: {
-    label: "Beklemede",
-    message: "Talebiniz alınmıştır. Ekibimiz incelemektedir.",
+    labelKey: "statusPendingLabel",
+    messageKey: "statusPendingMessage",
     icon: Clock,
     cardClass: "border-amber-200 bg-amber-50/60",
     iconWrapClass: "bg-amber-100 text-amber-700",
     badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
   },
   confirmed: {
-    label: "Onaylandı",
-    message: "Rezervasyonunuz onaylanmıştır.",
+    labelKey: "statusConfirmedLabel",
+    messageKey: "statusConfirmedMessage",
     icon: CheckCircle2,
     cardClass: "border-emerald-200 bg-emerald-50/60",
     iconWrapClass: "bg-emerald-100 text-emerald-700",
     badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
   },
   prepayment: {
-    label: "Ön Ödeme Bekleniyor",
-    message: "Rezervasyonunuz için ön ödeme bekleniyor.",
+    labelKey: "statusPrepaymentLabel",
+    messageKey: "statusPrepaymentMessage",
     icon: CreditCard,
     cardClass: "border-blue-200 bg-blue-50/60",
     iconWrapClass: "bg-blue-100 text-blue-700",
     badgeClass: "bg-blue-100 text-blue-800 border-blue-200",
   },
   cancelled: {
-    label: "İptal Edildi",
-    message: "Rezervasyon iptal edilmiştir.",
+    labelKey: "statusCancelledLabel",
+    messageKey: "statusCancelledMessage",
     icon: XCircle,
     cardClass: "border-red-200 bg-red-50/60",
     iconWrapClass: "bg-red-100 text-red-700",
@@ -85,7 +98,13 @@ const STATUS_DESIGN: Record<
   },
 };
 
-export default function ReservationLookup() {
+export default function ReservationLookup({
+  /* 🛡️ Opsiyonel — verilmezse "tr" → TR çıktısı BİREBİR eskisi gibi. */
+  locale = DEFAULT_LOCALE,
+}: {
+  locale?: Locale;
+}) {
+  const dict = getDictionary(locale).reservationLookup;
   const [code, setCode] = useState("");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<UiState>("idle");
@@ -100,7 +119,7 @@ export default function ReservationLookup() {
     const emailTrim = email.trim();
 
     if (!codeTrim || !emailTrim) {
-      setErrorMsg("Rezervasyon kodu ve e-posta adresinizi girin.");
+      setErrorMsg(dict.errorMissingFields);
       setStatus("error");
       setResult(null);
       return;
@@ -119,10 +138,9 @@ export default function ReservationLookup() {
       const json = await res.json().catch(() => null);
 
       if (!res.ok || !json?.ok) {
-        setErrorMsg(
-          json?.error ||
-            "Bu bilgilerle eşleşen bir rezervasyon bulunamadı."
-        );
+        /* 🛡️ Sunucu hata metni yerine locale-aware mesaj — API
+           sözleşmesi ve güvenlik davranışı DEĞİŞMEDİ. */
+        setErrorMsg(dict.errorNotFound);
         setStatus("error");
         return;
       }
@@ -130,7 +148,7 @@ export default function ReservationLookup() {
       setResult(json.reservation as LookupResult);
       setStatus("success");
     } catch {
-      setErrorMsg("Bağlantı hatası. Lütfen tekrar deneyin.");
+      setErrorMsg(dict.errorNetwork);
       setStatus("error");
     }
   }
@@ -144,10 +162,10 @@ export default function ReservationLookup() {
         <div className="bg-white border border-[var(--color-stone-100)] rounded-3xl p-6 md:p-8 shadow-[0_8px_40px_-16px_rgb(27_26_23/0.12)]">
           <div className="mb-6">
             <p className="text-[11px] tracking-[0.22em] uppercase font-medium text-[var(--brand-coral)]">
-              Sorgulama
+              {dict.formEyebrow}
             </p>
             <h2 className="font-display text-[22px] md:text-[26px] text-[var(--color-stone-900)] mt-2 leading-[1.15] tracking-[-0.02em]">
-              Bilgilerinizi girin.
+              {dict.formTitle}
             </h2>
           </div>
 
@@ -157,7 +175,7 @@ export default function ReservationLookup() {
                 htmlFor="rk-code"
                 className="text-[11px] tracking-[0.18em] uppercase font-medium text-[var(--color-stone-500)] block"
               >
-                Rezervasyon Kodu
+                {dict.codeLabel}
               </label>
               <input
                 id="rk-code"
@@ -165,7 +183,7 @@ export default function ReservationLookup() {
                 type="text"
                 inputMode="text"
                 autoComplete="off"
-                placeholder="örn. REZ-2026-0042"
+                placeholder={dict.codePlaceholder}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 disabled={busy}
@@ -178,14 +196,14 @@ export default function ReservationLookup() {
                 htmlFor="rk-email"
                 className="text-[11px] tracking-[0.18em] uppercase font-medium text-[var(--color-stone-500)] block"
               >
-                E-posta Adresi
+                {dict.emailLabel}
               </label>
               <input
                 id="rk-email"
                 name="email"
                 type="email"
                 autoComplete="email"
-                placeholder="ornek@email.com"
+                placeholder={dict.emailPlaceholder}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={busy}
@@ -206,17 +224,16 @@ export default function ReservationLookup() {
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[var(--color-stone-900)] text-white text-[13.5px] font-medium tracking-[0.04em] hover:bg-[var(--color-stone-700)] transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {busy ? (
-                <>Sorgulanıyor…</>
+                <>{dict.submitting}</>
               ) : (
                 <>
-                  <Search size={15} /> Rezervasyonu Görüntüle
+                  <Search size={15} /> {dict.submit}
                 </>
               )}
             </button>
 
             <p className="text-[11.5px] text-[var(--color-stone-400)] leading-relaxed">
-              Rezervasyon kodunuzu onay e-postanızda bulabilirsiniz.
-              Bilgileriniz yalnızca durum görüntülemek için kullanılır.
+              {dict.formHint}
             </p>
           </form>
         </div>
@@ -225,9 +242,9 @@ export default function ReservationLookup() {
       {/* SAĞ — SONUÇ */}
       <div className="lg:col-span-7">
         {status === "success" && result ? (
-          <ResultCard result={result} />
+          <ResultCard result={result} dict={dict} />
         ) : (
-          <EmptyState />
+          <EmptyState dict={dict} />
         )}
       </div>
     </div>
@@ -237,7 +254,13 @@ export default function ReservationLookup() {
 /* ===============================================================
    ResultCard — bulunan rezervasyon + durum tasarımı
    =============================================================== */
-function ResultCard({ result }: { result: LookupResult }) {
+function ResultCard({
+  result,
+  dict,
+}: {
+  result: LookupResult;
+  dict: LookupDict;
+}) {
   const design = STATUS_DESIGN[result.statusKey];
   const StatusIcon = design.icon;
 
@@ -261,10 +284,10 @@ function ResultCard({ result }: { result: LookupResult }) {
                 design.badgeClass
               }
             >
-              {design.label}
+              {dict[design.labelKey]}
             </span>
             <p className="text-[14.5px] md:text-[15px] text-[var(--color-stone-700)] mt-2.5 leading-relaxed">
-              {design.message}
+              {dict[design.messageKey]}
             </p>
           </div>
         </div>
@@ -275,31 +298,33 @@ function ResultCard({ result }: { result: LookupResult }) {
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
           <DetailRow
             icon={<Home size={15} />}
-            label="Villa"
+            label={dict.detailVilla}
             value={result.villaTitle}
           />
           <DetailRow
             icon={<Hash size={15} />}
-            label="Rezervasyon Kodu"
+            label={dict.detailCode}
             value={result.reservationNo || "—"}
             mono
           />
           <DetailRow
             icon={<CalendarDays size={15} />}
-            label="Giriş Tarihi"
+            label={dict.detailCheckIn}
             value={result.startDate ? formatDateTr(result.startDate) : "—"}
           />
           <DetailRow
             icon={<CalendarDays size={15} />}
-            label="Çıkış Tarihi"
+            label={dict.detailCheckOut}
             value={result.endDate ? formatDateTr(result.endDate) : "—"}
           />
           <DetailRow
             icon={<Users size={15} />}
-            label="Misafir Sayısı"
+            label={dict.detailGuests}
             value={
               result.guests
-                ? `${result.guests} misafir`
+                ? formatDictionaryString(dict.detailGuestsValue, {
+                    n: result.guests,
+                  })
                 : "—"
             }
           />
@@ -345,18 +370,17 @@ function DetailRow({
 /* ===============================================================
    EmptyState — sorgu öncesi nazik placeholder
    =============================================================== */
-function EmptyState() {
+function EmptyState({ dict }: { dict: LookupDict }) {
   return (
     <div className="rounded-3xl border border-dashed border-[var(--color-stone-200)] bg-[var(--color-sand-50)]/50 px-8 py-12 md:py-16 text-center">
       <span className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white border border-[var(--color-stone-100)] text-[var(--color-champagne-700)] shadow-[0_8px_24px_-16px_rgba(27,26,23,0.2)]">
         <Search size={24} strokeWidth={1.75} />
       </span>
       <h3 className="font-display text-[19px] md:text-[21px] text-[var(--color-stone-900)] mt-5 tracking-[-0.01em]">
-        Rezervasyon durumunuz burada görünecek
+        {dict.emptyTitle}
       </h3>
       <p className="text-[14px] text-[var(--color-stone-500)] mt-2.5 leading-relaxed max-w-sm mx-auto">
-        Rezervasyon kodunuz ve e-posta adresinizle sorgulayın; villa,
-        tarih ve güncel durum bilgileri bu alanda listelenir.
+        {dict.emptyBody}
       </p>
     </div>
   );

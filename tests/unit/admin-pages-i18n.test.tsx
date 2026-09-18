@@ -231,11 +231,17 @@ describe("Phase 12 — admin namespace bütünlüğü", () => {
     expect(getDictionary(DEFAULT_LOCALE).admin).toBe(tr.admin);
   });
 
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `common` namespace'ine 3 PUBLIC
+     anahtar eklendi (`searching`, `carouselPrev`, `carouselNext`:
+     VillaSearchBox + HorizontalCarousel). Bu testin amacı "admin
+     namespace'i public `common`'ı KİRLETMESİN" — o kural GEÇERLİ. */
   it("public `common.*` namespace'i KİRLETİLMEDİ (key seti aynı)", () => {
     expect(Object.keys(tr.common).sort()).toEqual(
       [
         "back",
         "cancel",
+        "carouselNext",
+        "carouselPrev",
         "checkAvailability",
         "close",
         "continue",
@@ -247,6 +253,7 @@ describe("Phase 12 — admin namespace bütünlüğü", () => {
         "previous",
         "save",
         "search",
+        "searching",
         "success",
         "viewAll",
       ].sort()

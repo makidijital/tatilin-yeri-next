@@ -73,6 +73,11 @@ export type Dictionary = {
     next: string;
     previous: string;
     loading: string;
+    /** 🛡️ Canlı arama sonuçları beklenirken (VillaSearchBox). */
+    searching: string;
+    /** 🛡️ Yatay carousel ok butonları (HorizontalCarousel varsayılanları). */
+    carouselPrev: string;
+    carouselNext: string;
     error: string;
     success: string;
     viewAll: string;
@@ -94,6 +99,12 @@ export type Dictionary = {
     support: string;
     menuOpen: string;
     menuClose: string;
+    /** 🛡️ Logo `alt` metni. */
+    logoAlt: string;
+    /** `formatDictionaryString` — `{label}`. Alt menü aç/kapa aria-label. */
+    submenuOpenAriaLabel: string;
+    /** `formatDictionaryString` — `{label}`. */
+    submenuCloseAriaLabel: string;
     /* 🛡️ TopBar (app/components/layout/TopBar.tsx) statik metinleri.
        TopBar header alanının bir parçası olduğu için AYRI bir namespace
        AÇILMADI — mevcut `header` genişletildi. */
@@ -117,6 +128,17 @@ export type Dictionary = {
     address: string;
     checkReservation: string;
     webDevelopment: string;
+    /** 🛡️ Marka tanıtım paragrafı. */
+    tagline: string;
+    /** `formatDictionaryString` — `{year}`, `{site_name}`. Yalnız
+     *  `settings.footer_copyright` BOŞSA kullanılan varsayılan. */
+    copyrightFallback: string;
+    ariaLabel: string;
+    villaCategoriesAriaLabel: string;
+    popularRegionsAriaLabel: string;
+    corporateAriaLabel: string;
+    tursabAlt: string;
+    paymentMethodsAlt: string;
   };
   booking: {
     reservation: string;
@@ -383,6 +405,8 @@ export type Dictionary = {
     remove: string;
     saved: string;
     save: string;
+    /** 🛡️ Header favori kısayolu (HeaderFavoritesLink). */
+    myFavorites: string;
   };
   /* 🛡️ PHASE 10G — VillaReviewsSection.tsx. */
   reviews: {
@@ -1054,6 +1078,253 @@ export type Dictionary = {
      `common.loading` ("Yükleniyor") admin'deki "Yükleniyor…"
      varyantıyla BYTE-IDENTICAL DEĞİL → `admin.common.loadingEllipsis`
      AYRI key olarak tutuldu (public TR regresyonu riski sıfır). */
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — /teklif-al (concierge teklif formu).
+     TR değerleri `app/(public)/teklif-al/page.tsx` + `OfferRequestForm.tsx`
+     içindeki ESKİ hardcoded metinlerin BİREBİR kopyasıdır.
+     ⚠️ KAPSAM DIŞI (VERİ, çevrilmez): taxonomy seçenek adları
+     (bölge/villa tipi/özellik — kendi çeviri sistemleri var), para birimi
+     kodları, telefon/e-posta placeholder formatları. */
+  offer: {
+    metaTitle: string;
+    metaDescription: string;
+    heroEyebrow: string;
+    heroTitle: string;
+    heroDescription: string;
+    trust1Title: string;
+    trust1Description: string;
+    trust2Title: string;
+    trust2Description: string;
+    trust3Title: string;
+    trust3Description: string;
+    groupHoneymoon: string;
+    groupHoneymoonDescription: string;
+    groupCoreFamily: string;
+    groupCoreFamilyDescription: string;
+    groupExtendedFamily: string;
+    groupExtendedFamilyDescription: string;
+    groupFriends: string;
+    groupFriendsDescription: string;
+    step1Title: string;
+    step1Subtitle: string;
+    travelGroupAriaLabel: string;
+    step2Title: string;
+    step2Subtitle: string;
+    dateRangeLabel: string;
+    datePlaceholder: string;
+    adultsLabel: string;
+    childrenLabel: string;
+    /** `formatDictionaryString` — `{label}`. */
+    stepperDecreaseAriaLabel: string;
+    /** `formatDictionaryString` — `{label}`. */
+    stepperIncreaseAriaLabel: string;
+    step3Title: string;
+    step3Subtitle: string;
+    regionsLabel: string;
+    regionsEmpty: string;
+    villaTypesLabel: string;
+    villaTypesEmpty: string;
+    featuresLabel: string;
+    featuresEmpty: string;
+    budgetLabel: string;
+    budgetMin: string;
+    budgetMax: string;
+    currencyLabel: string;
+    step4Title: string;
+    step4Subtitle: string;
+    fullNameLabel: string;
+    fullNamePlaceholder: string;
+    phoneLabel: string;
+    emailLabel: string;
+    emailPlaceholder: string;
+    noteLabel: string;
+    notePlaceholder: string;
+    privacyNote: string;
+    submit: string;
+    submitting: string;
+    errorGeneric: string;
+    successTitle: string;
+    successBody: string;
+  };
+
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — /rezervasyon-kontrol.
+     TR değerleri `page.tsx` + `ReservationLookup.tsx` +
+     `ReservationShareView.tsx` içindeki ESKİ hardcoded metinlerin BİREBİR
+     kopyasıdır. ⚠️ KAPSAM DIŞI (VERİ): villa adı, rezervasyon kodu,
+     tutarlar, tarih biçimi, telefon/e-posta değerleri. */
+  reservationLookup: {
+    metaTitle: string;
+    metaDescription: string;
+    ogDescription: string;
+    breadcrumbCurrent: string;
+    heroEyebrow: string;
+    heroTitle: string;
+    heroDescription: string;
+    heroTitleShare: string;
+    heroDescriptionShare: string;
+    cancelledTitle: string;
+    cancelledBody: string;
+    invalidTitle: string;
+    invalidBody: string;
+    formEyebrow: string;
+    formTitle: string;
+    codeLabel: string;
+    codePlaceholder: string;
+    emailLabel: string;
+    emailPlaceholder: string;
+    submit: string;
+    submitting: string;
+    formHint: string;
+    errorMissingFields: string;
+    errorNotFound: string;
+    errorNetwork: string;
+    emptyTitle: string;
+    emptyBody: string;
+    statusPendingLabel: string;
+    statusPendingMessage: string;
+    statusConfirmedLabel: string;
+    statusConfirmedMessage: string;
+    statusPrepaymentLabel: string;
+    statusPrepaymentMessage: string;
+    statusCancelledLabel: string;
+    statusCancelledMessage: string;
+    detailVilla: string;
+    detailCode: string;
+    detailCheckIn: string;
+    detailCheckOut: string;
+    detailGuests: string;
+    /** `formatDictionaryString` — `{n}`. */
+    detailGuestsValue: string;
+    shareTitle: string;
+    shareSubtitle: string;
+    shareReservationNo: string;
+    /** `formatDictionaryString` — `{n}`. */
+    shareNights: string;
+    /** `formatDictionaryString` — `{n}`. */
+    shareGuests: string;
+    shareIncludedInPrice: string;
+    shareStayHeading: string;
+    shareCheckIn: string;
+    shareCheckOut: string;
+    sharePaymentHeading: string;
+    shareTotal: string;
+    sharePaid: string;
+    shareCleaningFee: string;
+    sharePoolHeatingFee: string;
+    shareRemaining: string;
+    shareDeposit: string;
+    shareDepositNote: string;
+    shareOwnerHeading: string;
+    shareOwnerEmpty: string;
+    shareGuestHeading: string;
+    shareGuestName: string;
+    shareGuestPhone: string;
+    shareGuestEmail: string;
+    shareContactNote: string;
+    shareWhatsappCta: string;
+    sharePhoneCta: string;
+    shareWhatsappAriaLabel: string;
+    sharePhoneAriaLabel: string;
+    shareLookupAgain: string;
+  };
+
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — /favoriler ve /favoriler/paylas/[token].
+     Mevcut `favorites` namespace'i (kalp butonu etiketleri) DEĞİŞTİRİLMEDİ;
+     bunlar SAYFA metinleridir. */
+  favoritesPage: {
+    metaTitle: string;
+    metaDescription: string;
+    heroEyebrow: string;
+    heroTitle: string;
+    heroDescription: string;
+    /** Araç çubuğu: "<n> villa koleksiyonunuzda" sonek metni. */
+    countSuffix: string;
+    shareError: string;
+    emptyTitle: string;
+    emptyBody: string;
+    emptyExploreCta: string;
+    emptySearchCta: string;
+    unavailableTitle: string;
+    unavailableBody: string;
+    unavailableExploreCta: string;
+    unavailableClearCta: string;
+    shareAriaLabel: string;
+    shareCta: string;
+    sharePreparing: string;
+    clearAriaLabel: string;
+    clearCta: string;
+    clearConfirm: string;
+    shareCopied: string;
+    shareReady: string;
+    sharePreview: string;
+    sharedMetaInvalidTitle: string;
+    sharedMetaTitle: string;
+    sharedMetaDescription: string;
+    sharedEyebrow: string;
+    sharedBadge: string;
+    sharedTitle: string;
+    /** Başlığın ikinci satırı (vurgu rengi). */
+    sharedTitleAccent: string;
+    sharedVillaUnit: string;
+    sharedBody: string;
+    /** `formatDictionaryString` — `{date}`. */
+    sharedCreatedAt: string;
+    /** `formatDictionaryString` — `{visible}`, `{total}`. */
+    sharedVisibleCount: string;
+    sharedEmptyTitle: string;
+    sharedEmptyBody: string;
+    sharedCtaTitle: string;
+    sharedCtaBody: string;
+    sharedExploreCta: string;
+    sharedFavoritesCta: string;
+  };
+
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — /kisa-sureli-tarihler/[ay]/[gece].
+     Mevcut `shortStay` namespace'i (villa detay rozeti) DEĞİŞTİRİLMEDİ. */
+  shortGaps: {
+    /** `formatDictionaryString` — `{month}`, `{n}`. */
+    metaTitle: string;
+    /** `formatDictionaryString` — `{month}`, `{n}`. */
+    metaDescription: string;
+    heroEyebrow: string;
+    /** `formatDictionaryString` — `{month}`, `{n}`. */
+    heroTitle: string;
+    /** `formatDictionaryString` — `{n}`, `{count}`. */
+    heroSubtitle: string;
+    emptyBody: string;
+    /* 🛡️ Filtre paneli metinlerinin ÇOĞU `search.filters`'tan REUSE
+       edilir (GapFilterSidebar, /arama FilterSidebar'ın replikasıdır).
+       Burada YALNIZ o namespace'te karşılığı OLMAYAN metinler var. */
+    filterTitle: string;
+    filterSubtitle: string;
+    filterApplyCta: string;
+    /** `formatDictionaryString` — `{n}`. */
+    showResults: string;
+    mobileTrigger: string;
+    mobileSummaryPlaceholder: string;
+    filtersAriaLabel: string;
+  };
+
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — global 404 (app/not-found.tsx). */
+  notFound: {
+    metaTitle: string;
+    metaDescription: string;
+    title: string;
+    body: string;
+    homeCta: string;
+    villasCta: string;
+    suggestionsEyebrow: string;
+    suggestionsTitle: string;
+  };
+
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — bakım ekranı ((public)/layout.tsx).
+     ⚠️ `settings.maintenance_message` CANONICAL kalır (migration 084 kararı
+     DEĞİŞMEDİ) — yalnız admin mesaj GİRMEDİĞİNDE gösterilen varsayılan
+     metin ve "Bakım" etiketi locale-aware olur. */
+  maintenance: {
+    eyebrow: string;
+    defaultMessage: string;
+  };
+
   admin: {
     /** Admin genelinde tekrar eden mikro metinler. Phase 13+'te
      *  `admin.blog` / `admin.villas` eklendiğinde yeniden kullanılır. */

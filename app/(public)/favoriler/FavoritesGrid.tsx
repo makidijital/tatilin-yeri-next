@@ -14,6 +14,12 @@ import type { VillaDTO } from "@/app/services/villa.service";
 /* 🛡️ FAZ 37 — Paylaşılabilir favori listesi service (DB snapshot). */
 import { createSharedFavoritesListAction as createSharedFavoritesList } from "./shared-favorites.action";
 
+/* 🛡️ PUBLIC ÇOKLU DİL — statik metinler MEVCUT public dictionary'den
+   (`favoritesPage` namespace). localStorage favori mantığı, share token
+   akışı ve VillaCard veri akışı DEĞİŞTİRİLMEDİ. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+
 /* ===============================================================
    🛡️ FAZ 36 — FAVORITES GRID (client island)
    ===============================================================
@@ -48,7 +54,14 @@ import { createSharedFavoritesListAction as createSharedFavoritesList } from "./
      gallery, cache, sidebar, private URL system.
    =============================================================== */
 
-export default function FavoritesGrid() {
+export default function FavoritesGrid({
+  /* 🛡️ Opsiyonel — verilmezse "tr" → TR çıktısı BİREBİR eskisi gibi. */
+  locale = DEFAULT_LOCALE,
+}: {
+  locale?: Locale;
+}) {
+  const dict = getDictionary(locale).favoritesPage;
+  const localePrefix = locale === DEFAULT_LOCALE ? "" : `/${locale}`;
   const {
     favorites,
     isHydrated,
@@ -113,9 +126,7 @@ export default function FavoritesGrid() {
     /* Native confirm — public sayfada toast/modal sistemi yok;
        admin NotificationProvider buraya wire edilmedi. */
     if (typeof window === "undefined") return;
-    const ok = window.confirm(
-      "Tüm favorilerinizi temizlemek istediğinize emin misiniz?"
-    );
+    const ok = window.confirm(dict.clearConfirm);
     if (!ok) return;
     clearFavorites();
     setVillas([]);
@@ -133,7 +144,8 @@ export default function FavoritesGrid() {
     setShareState({ kind: "loading" });
     const res = await createSharedFavoritesList(favorites);
     if (!res.ok) {
-      setShareState({ kind: "error", message: res.error });
+      /* 🛡️ Sunucu hata metni yerine locale-aware generic mesaj. */
+      setShareState({ kind: "error", message: dict.shareError });
       return;
     }
 
@@ -141,7 +153,7 @@ export default function FavoritesGrid() {
       typeof window !== "undefined" && window.location?.origin
         ? window.location.origin
         : "";
-    const url = `${origin}/favoriler/paylas/${res.token}`;
+    const url = `${origin}${localePrefix}/favoriler/paylas/${res.token}`;
 
     /* Clipboard — defansif: API yoksa veya permission düşerse URL
        success panel'de gösterilir (manuel kopya). */
@@ -206,16 +218,14 @@ export default function FavoritesGrid() {
           <Heart size={18} strokeWidth={1.5} />
         </div>
         <h2 className="font-display text-2xl md:text-3xl text-[var(--color-stone-900)] mt-6 tracking-[-0.015em]">
-          Koleksiyonunuzu başlatın
+          {dict.emptyTitle}
         </h2>
         <p className="text-[14.5px] md:text-[15px] leading-[1.65] text-[var(--color-stone-500)] mt-4 max-w-md mx-auto">
-          Akdeniz&apos;in seçkin villaları arasında beğendiklerinizi
-          kalp ikonuyla işaretleyin. Seçimleriniz burada toplanır;
-          ileride döndüğünüzde sizi bekler.
+          {dict.emptyBody}
         </p>
         <div className="mt-8 flex items-center justify-center gap-3 flex-wrap">
           <Link
-            href="/kiralik-villalar"
+            href={`${localePrefix}/kiralik-villalar`}
             className="
               inline-flex items-center gap-2
               px-5 py-2.5 rounded-full
@@ -227,10 +237,10 @@ export default function FavoritesGrid() {
               focus-visible:ring-[var(--color-champagne-500)]/40
             "
           >
-            Tüm villaları keşfet
+            {dict.emptyExploreCta}
           </Link>
           <Link
-            href="/arama"
+            href={`${localePrefix}/arama`}
             className="
               inline-flex items-center gap-2
               px-5 py-2.5 rounded-full
@@ -243,7 +253,7 @@ export default function FavoritesGrid() {
               focus-visible:ring-[var(--color-champagne-500)]/40
             "
           >
-            Aramaya başla
+            {dict.emptySearchCta}
           </Link>
         </div>
       </div>
@@ -262,16 +272,14 @@ export default function FavoritesGrid() {
         "
       >
         <h2 className="font-display text-xl md:text-2xl text-[var(--color-stone-900)] tracking-[-0.015em]">
-          Şu an gösterilecek favori yok
+          {dict.unavailableTitle}
         </h2>
         <p className="text-[14px] text-[var(--color-stone-500)] mt-3 max-w-md mx-auto">
-          Listenizdeki villalar geçici olarak gösterilmiyor olabilir.
-          Daha sonra tekrar deneyebilir veya koleksiyonu sıfırlayıp
-          yeniden başlayabilirsiniz.
+          {dict.unavailableBody}
         </p>
         <div className="mt-7 flex items-center justify-center gap-3 flex-wrap">
           <Link
-            href="/kiralik-villalar"
+            href={`${localePrefix}/kiralik-villalar`}
             className="
               inline-flex items-center gap-2 px-5 py-2.5 rounded-full
               bg-[var(--color-stone-900)] text-white
@@ -280,7 +288,7 @@ export default function FavoritesGrid() {
               transition-colors motion-reduce:transition-none
             "
           >
-            Villaları keşfet
+            {dict.unavailableExploreCta}
           </Link>
           <button
             type="button"
@@ -294,7 +302,7 @@ export default function FavoritesGrid() {
             "
           >
             <Trash2 size={14} />
-            Listeyi temizle
+            {dict.unavailableClearCta}
           </button>
         </div>
       </div>
@@ -310,7 +318,7 @@ export default function FavoritesGrid() {
           <span className="font-display text-[16px] text-[var(--color-stone-900)] mr-1.5 tracking-[-0.01em]">
             {villas.length}
           </span>
-          villa koleksiyonunuzda
+          {dict.countSuffix}
         </p>
         <div className="flex items-center gap-2 flex-wrap">
           {/* 🛡️ FAZ 37 — Listeyi Paylaş CTA.
@@ -337,12 +345,12 @@ export default function FavoritesGrid() {
               focus-visible:ring-[var(--color-champagne-500)]/40
               disabled:opacity-50 disabled:cursor-not-allowed
             "
-            aria-label="Listeyi paylaş"
+            aria-label={dict.shareAriaLabel}
           >
             <Share2 size={13} aria-hidden />
             {shareState.kind === "loading"
-              ? "Hazırlanıyor…"
-              : "Listeyi Paylaş"}
+              ? dict.sharePreparing
+              : dict.shareCta}
           </button>
           <button
             type="button"
@@ -357,10 +365,10 @@ export default function FavoritesGrid() {
               focus-visible:ring-red-200 rounded-md
               px-2 py-1
             "
-            aria-label="Tüm favorileri temizle"
+            aria-label={dict.clearAriaLabel}
           >
             <Trash2 size={13} />
-            Favorileri temizle
+            {dict.clearCta}
           </button>
         </div>
       </div>
@@ -392,9 +400,7 @@ export default function FavoritesGrid() {
             </span>
             <div className="min-w-0">
               <p className="text-[13px] font-medium text-emerald-900">
-                {shareState.copied
-                  ? "Paylaşım bağlantısı kopyalandı"
-                  : "Paylaşım bağlantısı hazır"}
+                {shareState.copied ? dict.shareCopied : dict.shareReady}
               </p>
               <p className="text-[12px] text-emerald-800/70 truncate font-mono mt-0.5">
                 {shareState.url}
@@ -416,7 +422,7 @@ export default function FavoritesGrid() {
               transition-colors motion-reduce:transition-none
             "
           >
-            Önizle
+            {dict.sharePreview}
           </a>
         </div>
       )}

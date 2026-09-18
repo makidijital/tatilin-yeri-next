@@ -19,6 +19,9 @@ export const de: Dictionary = {
     next: "Weiter",
     previous: "Zurück",
     loading: "Wird geladen",
+    searching: "Wird gesucht...",
+    carouselPrev: "Zurück scrollen",
+    carouselNext: "Weiter scrollen",
     error: "Ein Fehler ist aufgetreten",
     success: "Erfolgreich",
     viewAll: "Alle anzeigen",
@@ -38,6 +41,9 @@ export const de: Dictionary = {
     support: "Support",
     menuOpen: "Menü öffnen",
     menuClose: "Menü schließen",
+    logoAlt: "Website-Logo",
+    submenuOpenAriaLabel: "Öffnen: Untermenü {label}",
+    submenuCloseAriaLabel: "Schließen: Untermenü {label}",
     /* 🛡️ TopBar statik metinleri. */
     supportBadge: "24/7 Support",
     agencyCredential: "TURSAB Agentur der Gruppe A · Lizenznr.: {no}",
@@ -54,6 +60,15 @@ export const de: Dictionary = {
     address: "Adresse",
     checkReservation: "Reservierung prüfen",
     webDevelopment: "Webentwicklung",
+    tagline:
+      "Entdecken Sie die schönsten Villen des Mittelmeers mit einem Premium-Erlebnis. Privatpool, Meerblick und Boutique-Komfort — alles auf einer Plattform.",
+    copyrightFallback: "© {year} {site_name} · Alle Rechte vorbehalten",
+    ariaLabel: "Seitenfußzeile",
+    villaCategoriesAriaLabel: "Villenkategorien",
+    popularRegionsAriaLabel: "Beliebte Regionen",
+    corporateAriaLabel: "Unternehmen",
+    tursabAlt: "TÜRSAB-Mitglied",
+    paymentMethodsAlt: "Zahlungsarten Visa, Mastercard und Troy",
   },
   booking: {
     reservation: "Reservierung",
@@ -275,6 +290,7 @@ export const de: Dictionary = {
     remove: "Aus Favoriten entfernen",
     saved: "In meinen Favoriten",
     save: "Zu Favoriten speichern",
+    myFavorites: "Meine Favoriten",
   },
   /* 🛡️ PHASE 10G — VillaReviewsSection.tsx */
   reviews: {
@@ -790,6 +806,247 @@ export const de: Dictionary = {
      kaynağı YOK; bu değerler `Dictionary` exhaustiveness'i için
      hazır tutulur ve henüz hiçbir call-site tarafından RENDER
      EDİLMEZ (call-site'lar `DEFAULT_LOCALE` kullanır). */
+  offer: {
+    metaTitle: "Angebot anfordern — Ihre persönliche Villa-Empfehlung",
+    metaDescription:
+      "Teilen Sie uns Ihre Wünsche mit — wir senden Ihnen kurzfristig eine persönliche Auswahl mediterraner Villen.",
+    heroEyebrow: "Persönlicher Villa-Berater",
+    heroTitle: "Finden wir gemeinsam die passende Villa.",
+    heroDescription:
+      "Teilen Sie uns Ihre Wünsche mit — wir senden Ihnen kurzfristig eine persönliche Villa-Auswahl. Jedes Detail wird für Sie ausgewählt, keine Villa ist Zufall.",
+    trust1Title: "Schnelle Rückmeldung",
+    trust1Description: "Durchschnittliche Antwortzeit 30 Minuten",
+    trust2Title: "Persönliche Betreuung",
+    trust2Description: "Ihr Reiseberater empfiehlt persönlich",
+    trust3Title: "Regionale Expertise",
+    trust3Description: "Kalkan, Kaş, Fethiye, Üzümlü und Umgebung",
+    groupHoneymoon: "Flitterwochen-Paar",
+    groupHoneymoonDescription: "Romantische Auszeit, abgeschiedene Lage",
+    groupCoreFamily: "Kernfamilie",
+    groupCoreFamilyDescription: "Kinderfreundlich, sicher und ruhig",
+    groupExtendedFamily: "Großfamilie",
+    groupExtendedFamilyDescription: "Viele Schlafzimmer, großzügiger Wohnraum",
+    groupFriends: "Freundesgruppe",
+    groupFriendsDescription: "Gemeinschaftsbereiche, Poolparty",
+    step1Title: "Mit wem verreisen Sie?",
+    step1Subtitle:
+      "Wählen Sie Ihre Reisegruppe, damit wir die passende Villa empfehlen können.",
+    travelGroupAriaLabel: "Reisegruppe",
+    step2Title: "Termine und Personen",
+    step2Subtitle: "Teilen Sie uns den Rahmen Ihrer Urlaubsplanung mit.",
+    dateRangeLabel: "Zeitraum",
+    datePlaceholder: "Anreise — Abreise",
+    adultsLabel: "Erwachsene",
+    childrenLabel: "Kinder",
+    stepperDecreaseAriaLabel: "{label} verringern",
+    stepperIncreaseAriaLabel: "{label} erhöhen",
+    step3Title: "Ihre Präferenzen",
+    step3Subtitle: "Wählen Sie Regionen, Villentypen und Ausstattung Ihrer Wahl.",
+    regionsLabel: "Regionen",
+    regionsEmpty: "Regionen werden geladen…",
+    villaTypesLabel: "Villentypen",
+    villaTypesEmpty: "Typen werden geladen…",
+    featuresLabel: "Beliebte Ausstattung",
+    featuresEmpty: "Ausstattung wird geladen…",
+    budgetLabel: "Budgetrahmen",
+    budgetMin: "Minimum",
+    budgetMax: "Maximum",
+    currencyLabel: "Währung",
+    step4Title: "Ihre Kontaktdaten",
+    step4Subtitle: "Ihr Villa-Berater meldet sich über diese Angaben bei Ihnen.",
+    fullNameLabel: "Vor- und Nachname",
+    fullNamePlaceholder: "Ihr Vor- und Nachname",
+    phoneLabel: "Telefon",
+    emailLabel: "E-Mail (optional)",
+    emailPlaceholder: "beispiel@mail.com",
+    noteLabel: "Ihre Anmerkung",
+    notePlaceholder:
+      "Weitere Details — Sonderwünsche, Geburtstag, Haustiere, Transfer…",
+    privacyNote:
+      "Ihre Angaben werden ausschließlich für die Villa-Empfehlung verwendet und niemals für Marketingzwecke außerhalb Ihrer persönlichen Beratung.",
+    submit: "Mein Angebot erstellen",
+    submitting: "Wird gesendet…",
+    errorGeneric:
+      "Ihre Anfrage konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+    successTitle: "Ihre Anfrage ist eingegangen.",
+    successBody:
+      "Ihr Villa-Berater meldet sich in Kürze bei Ihnen und übermittelt Ihnen persönliche Empfehlungen. Vielen Dank.",
+  },
+
+  reservationLookup: {
+    metaTitle: "Reservierungsstatus",
+    metaDescription:
+      "Sehen Sie Ihren Reservierungsstatus sofort mit Ihrem Reservierungscode und Ihrer E-Mail-Adresse ein.",
+    ogDescription:
+      "Sehen Sie Ihren Reservierungsstatus mit Reservierungscode und E-Mail-Adresse ein.",
+    breadcrumbCurrent: "Reservierungsstatus",
+    heroEyebrow: "Reservierung",
+    heroTitle: "Reservierung abfragen.",
+    heroDescription:
+      "Mit Ihrem Reservierungscode und Ihrer E-Mail-Adresse können Sie Ihren Reservierungsstatus einsehen.",
+    heroTitleShare: "Ihre Reservierungsdaten.",
+    heroDescriptionShare:
+      "Die Bestätigungs- und Zahlungsübersicht Ihrer Reservierung finden Sie unten.",
+    cancelledTitle: "Diese Reservierung ist nicht mehr aktiv.",
+    cancelledBody:
+      "Bei Fragen zu Ihrer Reservierung können Sie sich gerne an uns wenden.",
+    invalidTitle: "Dieser Reservierungslink ist ungültig oder abgelaufen.",
+    invalidBody:
+      "Unten können Sie mit Ihrem Reservierungscode und Ihrer E-Mail-Adresse suchen.",
+    formEyebrow: "Abfrage",
+    formTitle: "Geben Sie Ihre Daten ein.",
+    codeLabel: "Reservierungscode",
+    codePlaceholder: "z. B. REZ-2026-0042",
+    emailLabel: "E-Mail-Adresse",
+    emailPlaceholder: "beispiel@email.com",
+    submit: "Reservierung anzeigen",
+    submitting: "Wird abgefragt…",
+    formHint:
+      "Ihren Reservierungscode finden Sie in Ihrer Bestätigungs-E-Mail. Ihre Angaben werden nur zur Statusanzeige verwendet.",
+    errorMissingFields:
+      "Bitte geben Sie Ihren Reservierungscode und Ihre E-Mail-Adresse ein.",
+    errorNotFound: "Zu diesen Angaben wurde keine Reservierung gefunden.",
+    errorNetwork: "Verbindungsfehler. Bitte versuchen Sie es erneut.",
+    emptyTitle: "Ihr Reservierungsstatus erscheint hier",
+    emptyBody:
+      "Suchen Sie mit Ihrem Reservierungscode und Ihrer E-Mail-Adresse; Villa, Termine und aktueller Status werden in diesem Bereich angezeigt.",
+    statusPendingLabel: "In Bearbeitung",
+    statusPendingMessage: "Ihre Anfrage ist eingegangen. Unser Team prüft sie.",
+    statusConfirmedLabel: "Bestätigt",
+    statusConfirmedMessage: "Ihre Reservierung wurde bestätigt.",
+    statusPrepaymentLabel: "Anzahlung ausstehend",
+    statusPrepaymentMessage: "Für Ihre Reservierung wird eine Anzahlung erwartet.",
+    statusCancelledLabel: "Storniert",
+    statusCancelledMessage: "Die Reservierung wurde storniert.",
+    detailVilla: "Villa",
+    detailCode: "Reservierungscode",
+    detailCheckIn: "Anreisedatum",
+    detailCheckOut: "Abreisedatum",
+    detailGuests: "Anzahl der Gäste",
+    detailGuestsValue: "{n} Gäste",
+    shareTitle: "Ihre Reservierung ist bestätigt",
+    shareSubtitle: "Ihre Reservierung wurde erfolgreich erstellt.",
+    shareReservationNo: "Reservierungsnr.:",
+    shareNights: "{n} Nächte",
+    shareGuests: "{n} Gäste",
+    shareIncludedInPrice: "(Im Preis enthalten.)",
+    shareStayHeading: "Aufenthaltsdaten",
+    shareCheckIn: "Anreise",
+    shareCheckOut: "Abreise",
+    sharePaymentHeading: "Zahlungsübersicht",
+    shareTotal: "Gesamtbetrag der Unterkunft",
+    sharePaid: "Gezahlter Betrag",
+    shareCleaningFee: "Reinigungsgebühr",
+    sharePoolHeatingFee: "Poolheizungsgebühr",
+    shareRemaining: "Restzahlung (bei Anreise fällig)",
+    shareDeposit: "Kaution",
+    shareDepositNote:
+      "Bei Anreise wird zusätzlich eine Kaution erhoben. Sofern in der Villa kein Schaden entsteht, wird sie bei der Abreise vollständig erstattet.",
+    shareOwnerHeading: "Kontaktdaten des Eigentümers",
+    shareOwnerEmpty: "Es sind keine Kontaktdaten des Eigentümers vorhanden.",
+    shareGuestHeading: "Kontaktdaten des Gastes",
+    shareGuestName: "Vor- und Nachname",
+    shareGuestPhone: "Telefon",
+    shareGuestEmail: "E-Mail",
+    shareContactNote:
+      "Wenn Sie Fragen zu Ihrer Reservierung haben, wenden Sie sich gerne an uns.",
+    shareWhatsappCta: "Über WhatsApp erreichen",
+    sharePhoneCta: "Rufen Sie uns an",
+    shareWhatsappAriaLabel: "Über WhatsApp erreichen",
+    sharePhoneAriaLabel: "Anrufen",
+    shareLookupAgain: "Eine andere Reservierung abfragen",
+  },
+
+  favoritesPage: {
+    metaTitle: "Meine Favoriten",
+    metaDescription:
+      "Ihre bevorzugten Objekte aus den mediterranen Villen — Ihre eigene Sammlung.",
+    heroEyebrow: "Meine Sammlung",
+    heroTitle: "Meine Favoriten",
+    heroDescription:
+      "Die von Ihnen ausgewählten Villen werden auf dieser Seite gespeichert. Die Liste bleibt auf diesem Gerät; Sie können jederzeit Villen hinzufügen, entfernen oder die Sammlung zurücksetzen.",
+    countSuffix: "Villen in Ihrer Sammlung",
+    shareError:
+      "Der Freigabelink konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+    emptyTitle: "Starten Sie Ihre Sammlung",
+    emptyBody:
+      "Markieren Sie Ihre Lieblingsvillen unter den schönsten Häusern des Mittelmeers mit dem Herz-Symbol. Ihre Auswahl wird hier gesammelt und wartet auf Ihre Rückkehr.",
+    emptyExploreCta: "Alle Villen entdecken",
+    emptySearchCta: "Suche starten",
+    unavailableTitle: "Derzeit keine Favoriten verfügbar",
+    unavailableBody:
+      "Die Villen auf Ihrer Liste sind möglicherweise vorübergehend nicht verfügbar. Versuchen Sie es später erneut oder setzen Sie die Sammlung zurück.",
+    unavailableExploreCta: "Villen entdecken",
+    unavailableClearCta: "Liste leeren",
+    shareAriaLabel: "Liste teilen",
+    shareCta: "Liste teilen",
+    sharePreparing: "Wird vorbereitet…",
+    clearAriaLabel: "Alle Favoriten löschen",
+    clearCta: "Favoriten löschen",
+    clearConfirm: "Möchten Sie wirklich alle Favoriten löschen?",
+    shareCopied: "Freigabelink kopiert",
+    shareReady: "Freigabelink bereit",
+    sharePreview: "Vorschau",
+    sharedMetaInvalidTitle: "Ungültiger Link",
+    sharedMetaTitle: "Geteilte Favoritenliste",
+    sharedMetaDescription:
+      "Eine Auswahl mediterraner Villen, die jemand mit Ihnen geteilt hat.",
+    sharedEyebrow: "Private Freigabe",
+    sharedBadge: "Reiseliste",
+    sharedTitle: "Mit Ihnen geteilt",
+    sharedTitleAccent: "Villen.",
+    sharedVillaUnit: "Villen",
+    sharedBody:
+      "Eine sorgfältig zusammengestellte Auswahl mediterraner Villen. Sehen Sie sich die Liste unten an; klicken Sie auf eine Villa, um die Details zu sehen.",
+    sharedCreatedAt: "Erstellt am {date}",
+    sharedVisibleCount: "{visible} / {total} Villen derzeit sichtbar",
+    sharedEmptyTitle: "Die geteilten Villen sind derzeit nicht sichtbar",
+    sharedEmptyBody:
+      "Die Villen der Liste sind möglicherweise vorübergehend nicht verfügbar. Über den Link unten entdecken Sie die mediterrane Kollektion.",
+    sharedCtaTitle: "Erstellen Sie Ihre eigene Sammlung",
+    sharedCtaBody:
+      "Markieren Sie Ihre Lieblingsvillen mit dem Herz-Symbol; erstellen Sie Ihre eigene Liste und teilen Sie sie mit Ihren Liebsten.",
+    sharedExploreCta: "Villen entdecken",
+    sharedFavoritesCta: "Meine Favoriten",
+  },
+
+  shortGaps: {
+    metaTitle: "{month} Verfügbare Villen für {n} Nächte",
+    metaDescription:
+      "Villen mit kurzen Lücken von {n} Nächten zwischen belegten Terminen im {month}. Entdecken Sie passende Villen für einen Kurzurlaub.",
+    heroEyebrow: "Kurzaufenthalt-Termine",
+    heroTitle: "{month} · Verfügbare Villen für {n} Nächte",
+    heroSubtitle:
+      "{count} verfügbare Lücken von {n} Nächten zwischen belegten Terminen.",
+    emptyBody: "Es wurde keine passende Kurzaufenthalt-Lücke gefunden.",
+    filterTitle: "Filtern",
+    filterSubtitle: "Suche eingrenzen.",
+    filterApplyCta: "Filtern",
+    showResults: "{n} Villen anzeigen",
+    mobileTrigger: "Filtern",
+    mobileSummaryPlaceholder: "Region, Villentyp, Personen…",
+    filtersAriaLabel: "Filter",
+  },
+
+  notFound: {
+    metaTitle: "Die gesuchte Seite wurde nicht gefunden — 404",
+    metaDescription:
+      "Die Seite wurde möglicherweise entfernt oder verschoben, oder der Link ist fehlerhaft. Setzen Sie Ihre Villensuche fort.",
+    title: "Die gesuchte Seite wurde nicht gefunden",
+    body:
+      "Die Seite wurde möglicherweise entfernt oder verschoben, oder der Link ist fehlerhaft. Unten können Sie Ihre Villensuche fortsetzen.",
+    homeCta: "Zur Startseite",
+    villasCta: "Mietvillen ansehen",
+    suggestionsEyebrow: "Vielleicht interessiert Sie das",
+    suggestionsTitle: "Ausgewählte Villen",
+  },
+
+  maintenance: {
+    eyebrow: "Wartung",
+    defaultMessage:
+      "Wir erneuern unsere Website. In Kürze sind wir wieder für Sie da.",
+  },
+
   admin: {
     common: {
       loadingEllipsis: "Wird geladen…",

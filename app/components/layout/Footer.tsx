@@ -25,6 +25,7 @@ import type { TaxonomyItem, CorporatePage } from "./FooterWrapper";
    olduğu için Header'daki gibi gerek yok; site-wide dynamic-rendering
    riski YOK (bkz. Phase 9B audit — bu tasarımın seçilme nedeni). */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import { localeFromPathname } from "@/lib/i18n/config";
 /* 🛡️ PHASE 10L — admin'de girilen `footer_copyright` metninin EN/DE
    karşılığı (migration 083). Saf/senkron resolver; TR'de canonical
@@ -228,7 +229,7 @@ export default function Footer({
 
   return (
     <footer
-      aria-label="Site altbilgisi"
+      aria-label={dictionary.footer.ariaLabel}
       className="relative mt-20 md:mt-28 overflow-hidden text-[var(--color-stone-700)]"
       /* ☀️ Soft, ferah zemin — koyu lacivert kaldırıldı. Sıcak kırık beyaz
          yüzey; turuncu/mavi yalnızca çok hafif, ayrı glow katmanlarında
@@ -297,9 +298,7 @@ export default function Footer({
               )}
             </Link>
             <p className="text-[14.5px] text-[var(--color-stone-500)] leading-relaxed max-w-sm">
-              Akdeniz&apos;in seçkin villalarını premium bir deneyimle
-              keşfedin. Özel havuz, deniz manzarası ve butik konfor — tek bir
-              platformda.
+              {dictionary.footer.tagline}
             </p>
 
             {/* Sosyal — settings'ten dinamik (mevcut API aynen) */}
@@ -347,7 +346,7 @@ export default function Footer({
 
             <div className="mt-6 grid grid-cols-2 gap-x-10 gap-y-8">
               {/* VİLLA KATEGORİLERİ (dynamic villa_types) */}
-              <nav aria-label="Villa kategorileri">
+              <nav aria-label={dictionary.footer.villaCategoriesAriaLabel}>
                 <p className="text-[13px] font-medium text-[var(--color-stone-800)] mb-4">
                   {dictionary.footer.villas}
                 </p>
@@ -371,7 +370,7 @@ export default function Footer({
               </nav>
 
               {/* POPÜLER BÖLGELER (dynamic villa_locations) */}
-              <nav aria-label="Popüler bölgeler">
+              <nav aria-label={dictionary.footer.popularRegionsAriaLabel}>
                 <p className="text-[13px] font-medium text-[var(--color-stone-800)] mb-4">
                   {dictionary.footer.regions}
                 </p>
@@ -476,12 +475,15 @@ export default function Footer({
                 ? copyrightTemplate
                     .replace(/\{year\}/g, String(year))
                     .replace(/\{site_name\}/g, siteName)
-                : `© ${year} ${siteName} · Tüm hakları saklıdır`}
+                : formatDictionaryString(
+                    dictionary.footer.copyrightFallback,
+                    { year, site_name: siteName }
+                  )}
             </p>
 
             {corporatePages.length > 0 && (
               <nav
-                aria-label="Kurumsal"
+                aria-label={dictionary.footer.corporateAriaLabel}
                 className="flex flex-wrap items-center gap-x-5 gap-y-2"
               >
                 {corporatePages.map((p) => (
@@ -503,14 +505,14 @@ export default function Footer({
           <div className="mt-6 pt-6 border-t border-[var(--color-stone-200)] flex flex-wrap items-center gap-6">
             <Image
               src="/brand/trust/tursab.png"
-              alt="TÜRSAB üyesi"
+              alt={dictionary.footer.tursabAlt}
               width={290}
               height={132}
               className="h-8 w-auto object-contain opacity-80"
             />
             <Image
               src="/brand/trust/payment-methods.png"
-              alt="Visa, Mastercard ve Troy ödeme yöntemleri"
+              alt={dictionary.footer.paymentMethodsAlt}
               width={1400}
               height={400}
               className="h-8 w-auto object-contain opacity-90"
@@ -524,7 +526,7 @@ export default function Footer({
               href="https://makidijital.com"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Web geliştirme: Maki Dijital"
+              aria-label={`${dictionary.footer.webDevelopment}: Maki Dijital`}
               className="
                 group inline-flex items-center justify-center gap-2
                 text-[11.5px] tracking-[0.04em]

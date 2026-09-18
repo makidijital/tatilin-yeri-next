@@ -191,7 +191,11 @@ describe("sitemap() — Phase 7D villa locale alternates", () => {
   });
 
   /* --- 10) mevcut diğer sitemap entry'leri korunuyor --- */
-  it("10) statik/pages/blog entry'leri AYNEN korunuyor, `alternates` TAŞIMIYORLAR (yalnız villa entry'leri)", async () => {
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `/`, `/kiralik-villalar`,
+     `/iletisim`, `/teklif-al` ve `/p/[slug]` ARTIK gerçek `/en` + `/de`
+     route'larına sahip → sitemap onlara da `alternates.languages` verir.
+     BLOG hâlâ TR-only → `alternates` TAŞIMAZ (regresyon guard'ı). */
+  it("10) locale route'u OLAN entry'ler alternates taşır, blog TAŞIMAZ", async () => {
     getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: true });
 
     const entries = await runSitemap();
@@ -205,15 +209,55 @@ describe("sitemap() — Phase 7D villa locale alternates", () => {
     expect(urls).toContain("https://example.com/blog");
     expect(urls).toContain("https://example.com/blog/ilk-yazi");
 
-    const nonVillaEntries = entries.filter(
-      (e) => !e.url.includes("/kiralik-villa/")
-    );
-    for (const entry of nonVillaEntries) {
-      expect((entry as Record<string, unknown>).alternates).toBeUndefined();
+    const byUrl = new Map(entries.map((e) => [e.url, e]));
+    const localized = [
+      "https://example.com/",
+      "https://example.com/kiralik-villalar",
+      "https://example.com/iletisim",
+      "https://example.com/teklif-al",
+      "https://example.com/p/hakkimizda",
+    ];
+    for (const u of localized) {
+      const alt = (byUrl.get(u) as Record<string, unknown> | undefined)
+        ?.alternates as { languages?: Record<string, string> } | undefined;
+      expect(alt?.languages).toBeDefined();
+      expect(Object.keys(alt!.languages!).sort()).toEqual([
+        "de",
+        "en",
+        "tr",
+        "x-default",
+      ]);
+    }
+
+    /* Ana sayfa hreflang'i `buildLocaleAlternates` ile birebir. */
+    const homeAlt = (
+      byUrl.get("https://example.com/") as Record<string, unknown>
+    ).alternates as { languages: Record<string, string> };
+    expect(homeAlt.languages.en).toBe("https://example.com/en");
+    expect(homeAlt.languages.de).toBe("https://example.com/de");
+    expect(homeAlt.languages.tr).toBe("https://example.com/");
+
+    /* BLOG — TR-only, alternates YOK. */
+    for (const u of [
+      "https://example.com/blog",
+      "https://example.com/blog/ilk-yazi",
+    ]) {
+      expect(
+        (byUrl.get(u) as Record<string, unknown>).alternates
+      ).toBeUndefined();
     }
 
     // Toplam entry sayısı: 4 statik + 2 villa + 1 page + 1 blog-index + 1 blog = 9
     expect(entries).toHaveLength(9);
+  });
+
+  it("10a) `multilingual_enabled=false` → HİÇBİR entry alternates taşımaz", async () => {
+    getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: false });
+
+    const entries = await runSitemap();
+    for (const entry of entries) {
+      expect((entry as Record<string, unknown>).alternates).toBeUndefined();
+    }
   });
 
   it("10b) villa fetch exception atarsa (fail-soft) diğer entry'ler yine döner (ÖNCEKİ davranış)", async () => {

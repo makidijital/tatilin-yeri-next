@@ -8,6 +8,10 @@ import HeaderWrapper from "@/app/components/layout/HeaderWrapper";
    static/ISR rendering uygunluğu ETKİLENMEDİ. */
 import FooterWrapper from "@/app/components/layout/FooterWrapper";
 import CookieConsent from "@/app/components/layout/CookieConsent";
+/* 🛡️ PUBLIC ÇOKLU DİL — bakım ekranı client island'a taşındı (locale
+   `usePathname` ile türetilir). DOM/className/metin sırası BİREBİR aynı;
+   `settings.maintenance_message` canonical kalır. */
+import MaintenanceScreen from "@/app/components/layout/MaintenanceScreen";
 import FloatingSocial from "@/app/components/layout/FloatingSocial";
 import BottomNav from "@/app/components/layout/BottomNav";
 import ScrollToTopButton from "@/app/components/layout/ScrollToTopButton";
@@ -41,26 +45,11 @@ export default async function PublicLayout({
   const settings = await getCachedSettings().catch(() => null);
   if (settings?.maintenance_mode === true) {
     const brand = settings?.site_name?.trim() || "Villa Kiralama";
-    const message =
-      settings?.maintenance_message?.trim() ||
-      "Sitemizi yeniliyoruz. Kısa süre içinde tekrar buradayız.";
+    /* 🛡️ `settings.maintenance_message` CANONICAL kalır (migration 084
+       kararı DEĞİŞMEDİ). Boşsa dictionary varsayılanı gösterilir; "Bakım"
+       etiketi ve varsayılan metin locale-aware (bkz. MaintenanceScreen). */
     return (
-      <div className="public-shell flex flex-col min-h-screen bg-[var(--color-ivory)]">
-        <section className="flex-1 flex items-center justify-center px-5 md:px-10 py-24">
-          <div className="max-w-xl text-center">
-            <p className="text-[11px] tracking-[0.28em] uppercase font-medium text-[var(--color-stone-500)]">
-              <span className="inline-block w-8 h-px bg-[var(--color-stone-300)] align-middle mr-3" />
-              Bakım
-            </p>
-            <h1 className="font-display text-[40px] md:text-[64px] text-[var(--color-stone-900)] mt-6 leading-[1.02] tracking-[-0.03em]">
-              {brand}
-            </h1>
-            <p className="text-[var(--color-stone-500)] mt-6 leading-relaxed text-[15px] md:text-[16px]">
-              {message}
-            </p>
-          </div>
-        </section>
-      </div>
+      <MaintenanceScreen brand={brand} message={settings?.maintenance_message} />
     );
   }
 

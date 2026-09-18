@@ -52,7 +52,8 @@ export default function VillaSearchBox({
   onResultNavigate?: () => void;
   locale?: Locale;
 }) {
-  const searchDict = getDictionary(locale).layout.search;
+  const dictionary = getDictionary(locale);
+  const searchDict = dictionary.layout.search;
   const placeholderText = placeholder ?? searchDict.placeholder;
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<any[]>([]);
@@ -224,7 +225,7 @@ export default function VillaSearchBox({
           {search && loading && (
             <div className="p-4 text-sm text-[var(--color-stone-500)] flex items-center gap-2">
               <span className="w-3 h-3 border-2 border-[var(--brand-coral)] border-t-transparent rounded-full animate-spin" />
-              Aranıyor...
+              {dictionary.common.searching}
             </div>
           )}
 
@@ -283,7 +284,7 @@ export default function VillaSearchBox({
           {loading && (
             <div className="p-4 text-sm text-[var(--color-stone-500)] flex items-center gap-2">
               <span className="w-3 h-3 border-2 border-[var(--brand-coral)] border-t-transparent rounded-full animate-spin" />
-              Aranıyor...
+              {dictionary.common.searching}
             </div>
           )}
 

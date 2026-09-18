@@ -46,6 +46,11 @@ const EXACT_LOCALE_ROUTED_PATHS: readonly string[] = [
      `ContactPageBody`). Dosya başındaki bakım kuralı: "Yeni bir
      /en//de route eklendiğinde bu liste GÜNCELLENMELİ". */
   "/iletisim",
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — aşağıdaki üç sayfanın da artık
+     GERÇEK `/en` ve `/de` route dosyası var (ortak gövde + locale prop). */
+  "/teklif-al",
+  "/rezervasyon-kontrol",
+  "/favoriler",
 ];
 
 /** Dinamik segment taşıyan (ör. `[slug]`) route'ların base prefix'leri.
@@ -58,6 +63,10 @@ const PREFIXED_LOCALE_ROUTED_PATHS: readonly string[] = [
      `page_translations` okur). Bu dosyanın üstyazısındaki bakım kuralı:
      "Yeni bir /en//de route eklendiğinde bu liste GÜNCELLENMELİ". */
   "/p/",
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — dinamik segmentler (token / ay /
+     gece) AYNEN korunur; yalnız locale prefix'i değişir. */
+  "/favoriler/paylas/",
+  "/kisa-sureli-tarihler/",
 ];
 
 /**

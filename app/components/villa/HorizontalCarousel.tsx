@@ -3,6 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+/* 🛡️ Varsayılan ok etiketleri dictionary'den (TR değerleri ESKİ
+   hardcoded metinlerle BİREBİR). Dört çağıranın hepsi zaten kendi
+   locale'inden `prevLabel`/`nextLabel` geçiriyor — bu yalnız
+   hardcoded metni kaldıran güvenli fallback'tir. */
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+
+const FALLBACK_CAROUSEL = getDictionary(DEFAULT_LOCALE).common;
+
 /* ===============================================================
    🛡️ HORIZONTAL CAROUSEL — generic reusable scroller
    ===============================================================
@@ -49,8 +58,8 @@ export default function HorizontalCarousel({
   ariaLabel,
   showArrows = false,
   scrollStep = 420,
-  prevLabel = "Geri kaydır",
-  nextLabel = "İleri kaydır",
+  prevLabel = FALLBACK_CAROUSEL.carouselPrev,
+  nextLabel = FALLBACK_CAROUSEL.carouselNext,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [atStart, setAtStart] = useState(true);

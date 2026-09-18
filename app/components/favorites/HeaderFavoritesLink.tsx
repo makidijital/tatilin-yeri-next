@@ -4,6 +4,11 @@ import Link from "next/link";
 import { Heart } from "lucide-react";
 
 import { useFavorites } from "@/hooks/use-favorites";
+/* 🛡️ Header ile AYNI desen: aktif locale prop olarak gelir (Header
+   `usePathname` + `localeFromPathname` ile türetir). Verilmezse TR →
+   mevcut davranış BİREBİR korunur. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 /* ===============================================================
    🛡️ FAZ 36 — HEADER FAVORITES SHORTCUT
@@ -28,17 +33,20 @@ import { useFavorites } from "@/hooks/use-favorites";
      - Mobile-safe: hit area 36×36px; rounded-full
    =============================================================== */
 
-export default function HeaderFavoritesLink() {
+export default function HeaderFavoritesLink({
+  locale = DEFAULT_LOCALE,
+}: {
+  locale?: Locale;
+}) {
   const { count, isHydrated } = useFavorites();
   const showBadge = isHydrated && count > 0;
+  const label = getDictionary(locale).favorites.myFavorites;
 
   return (
     <Link
       href="/favoriler"
-      aria-label={
-        showBadge ? `Favorilerim (${count})` : "Favorilerim"
-      }
-      title="Favorilerim"
+      aria-label={showBadge ? `${label} (${count})` : label}
+      title={label}
       className="
         relative inline-flex items-center justify-center
         w-10 h-10 rounded-full

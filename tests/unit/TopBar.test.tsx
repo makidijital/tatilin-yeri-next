@@ -209,25 +209,37 @@ describe("TopBar — Phase 10C dil değiştirici", () => {
     );
   });
 
-  /* --- 10-12) FALLBACK-TO-HOME (locale karşılığı olmayan route'lar) --- */
+  /* --- 10-12) LOCALE ROUTE'LARI + FALLBACK-TO-HOME ---
+     🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA: `/teklif-al` artık GERÇEK `/en` ve
+     `/de` route'larına sahip → fallback DEĞİL, prefix'li hedef.
+     Fallback davranışı `/blog` (12) ile doğrulanmaya devam ediyor. */
 
-  it("10) '/teklif-al' (locale karşılığı yok) → EN→'/en', DE→'/de' (ASLA 404/broken)", async () => {
+  it("10) '/teklif-al' → EN→'/en/teklif-al', DE→'/de/teklif-al'", async () => {
     usePathnameMock.mockReturnValue("/teklif-al");
     getPublicSettingsMock.mockResolvedValue(settingsWith({ multilingual_enabled: true }));
     render(<TopBar />);
     await screen.findByLabelText(LANGUAGE_LABEL.tr);
     fireEvent.click(screen.getByLabelText(LANGUAGE_LABEL.tr));
-    expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute("href", "/en");
-    expect(screen.getByRole("option", { name: "DE" })).toHaveAttribute("href", "/de");
+    expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute(
+      "href",
+      "/en/teklif-al"
+    );
+    expect(screen.getByRole("option", { name: "DE" })).toHaveAttribute(
+      "href",
+      "/de/teklif-al"
+    );
   });
 
-  it("11) '/en/teklif-al' → TR→'/' (kullanıcı örneği birebir)", async () => {
+  it("11) '/en/teklif-al' → TR→'/teklif-al'", async () => {
     usePathnameMock.mockReturnValue("/en/teklif-al");
     getPublicSettingsMock.mockResolvedValue(settingsWith({ multilingual_enabled: true }));
     render(<TopBar />);
     await screen.findByLabelText(LANGUAGE_LABEL.en);
     fireEvent.click(screen.getByLabelText(LANGUAGE_LABEL.en));
-    expect(screen.getByRole("option", { name: "TR" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("option", { name: "TR" })).toHaveAttribute(
+      "href",
+      "/teklif-al"
+    );
   });
 
   it("12) '/de/blog' → EN→'/en' (kullanıcı örneği birebir)", async () => {
@@ -436,9 +448,17 @@ describe("TopBar — Phase 10C dil değiştirici", () => {
 
   it("28) DİĞER locale route'ları ETKİLENMEZ: fallback hâlâ query'siz kök, villa detay query'yi korur", async () => {
     /* (a) locale karşılığı OLMAYAN path → hâlâ query'siz locale kökü */
-    await openSwitcher("/teklif-al", "foo=bar", LANGUAGE_LABEL.tr);
+    await openSwitcher("/blog", "foo=bar", LANGUAGE_LABEL.tr);
     expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute("href", "/en");
     expect(screen.getByRole("option", { name: "DE" })).toHaveAttribute("href", "/de");
+    cleanup();
+
+    /* (a2) 🛡️ `/teklif-al` ARTIK locale route'u → query AYNEN korunur */
+    await openSwitcher("/teklif-al", "foo=bar", LANGUAGE_LABEL.tr);
+    expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute(
+      "href",
+      "/en/teklif-al?foo=bar"
+    );
     cleanup();
 
     /* (b) query'siz villa detay → Phase 10C davranışı BİREBİR aynı */

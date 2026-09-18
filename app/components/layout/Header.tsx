@@ -26,6 +26,7 @@ import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
    için mümkün; site-wide dynamic-rendering riski YOK). */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { localeFromPathname } from "@/lib/i18n/config";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 /* 🛡️ PHASE 10H — `source_type: "category"` menü öğelerinin adı (villa
    tipi) locale'e göre çözülür; çeviri yoksa canonical TR adı kalır.
    Saf helper — DB/server bağımlılığı YOK. */
@@ -225,7 +226,7 @@ export default function Header({
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={siteLogo}
-                  alt="Site logosu"
+                  alt={dictionary.header.logoAlt}
                   className="h-12 w-auto object-contain"
                 />
               ) : (
@@ -325,7 +326,7 @@ export default function Header({
 
               {/* Favorites shortcut (FAZ 36).
                  🛡️ FAZ 39C: variant prop kaldırıldı (dead). */}
-              <HeaderFavoritesLink />
+              <HeaderFavoritesLink locale={locale} />
             </div>
 
             {/* 🛡️ MOBILE ACTIONS — search input + hamburger toggle.
@@ -347,7 +348,7 @@ export default function Header({
                  component'i (ikon + köşe badge); yalnız `md:hidden` bu
                  blokta → desktop cluster'daki kopya etkilenmez. Eski
                  drawer içi "Favorilerim" satırı kaldırıldı. */}
-              <HeaderFavoritesLink />
+              <HeaderFavoritesLink locale={locale} />
 
               {/* 🛡️ MOBİL TEKLİF AL — eski görünür "Menü" yazısının
                  yerini aldı. Hamburger toggle'dan TAMAMEN bağımsız ayrı
@@ -471,11 +472,12 @@ export default function Header({
                         type="button"
                         onClick={() => toggleSubmenu(itemKey)}
                         aria-expanded={isSubmenuOpen}
-                        aria-label={
-                          (isSubmenuOpen ? "Kapat: " : "Aç: ") +
-                          itemName +
-                          " alt menüsü"
-                        }
+                        aria-label={formatDictionaryString(
+                          isSubmenuOpen
+                            ? dictionary.header.submenuCloseAriaLabel
+                            : dictionary.header.submenuOpenAriaLabel,
+                          { label: itemName }
+                        )}
                         className="
                           shrink-0 inline-flex items-center justify-center
                           h-7 w-7 rounded-full

@@ -42,39 +42,53 @@ import {
    honeypot/time-trap + service-role insert. Tip korunur. */
 import type { CreateOfferRequestInput } from "@/app/services/offer-request.service";
 
+/* 🛡️ PUBLIC ÇOKLU DİL — statik metinler MEVCUT public dictionary'den
+   (`offer` namespace). Taxonomy seçenek adları (bölge/villa tipi/
+   özellik) VERİdir ve burada ÇEVRİLMEZ; API endpoint'i, honeypot/
+   time-trap, payload alanları ve submit akışı DEĞİŞMEDİ. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+
 registerLocale("tr", tr);
 
 /* ─────────────── Travel groups (static) ─────────────── */
 type TravelGroup = "honeymoon" | "core_family" | "extended_family" | "friends";
 
+/* 🛡️ `id` değerleri (payload'a giden `travel_group`) DEĞİŞMEDİ; yalnız
+   görünen etiket/açıklama dictionary anahtarlarına bağlandı. */
 const TRAVEL_GROUPS: Array<{
   id: TravelGroup;
-  label: string;
-  description: string;
+  labelKey: "groupHoneymoon" | "groupCoreFamily" | "groupExtendedFamily" | "groupFriends";
+  descriptionKey:
+    | "groupHoneymoonDescription"
+    | "groupCoreFamilyDescription"
+    | "groupExtendedFamilyDescription"
+    | "groupFriendsDescription";
   icon: React.ReactNode;
 }> = [
   {
     id: "honeymoon",
-    label: "Balayı Çifti",
-    description: "Romantik kaçamak, izole konum",
+    labelKey: "groupHoneymoon",
+    descriptionKey: "groupHoneymoonDescription",
     icon: <Heart size={18} strokeWidth={1.6} aria-hidden />,
   },
   {
     id: "core_family",
-    label: "Çekirdek Aile",
-    description: "Çocuk dostu, güvenli ve sakin",
+    labelKey: "groupCoreFamily",
+    descriptionKey: "groupCoreFamilyDescription",
     icon: <Home size={18} strokeWidth={1.6} aria-hidden />,
   },
   {
     id: "extended_family",
-    label: "Geniş Aile",
-    description: "Çok yataklı, geniş yaşam alanı",
+    labelKey: "groupExtendedFamily",
+    descriptionKey: "groupExtendedFamilyDescription",
     icon: <Users size={18} strokeWidth={1.6} aria-hidden />,
   },
   {
     id: "friends",
-    label: "Arkadaş Grubu",
-    description: "Sosyal alanlar, havuz partisi",
+    labelKey: "groupFriends",
+    descriptionKey: "groupFriendsDescription",
     icon: <PartyPopper size={18} strokeWidth={1.6} aria-hidden />,
   },
 ];
@@ -131,7 +145,13 @@ type SubmitStatus =
   | { kind: "success" }
   | { kind: "error"; message: string };
 
-export default function OfferRequestForm() {
+export default function OfferRequestForm({
+  /* 🛡️ Opsiyonel — verilmezse "tr" → TR çıktısı BİREBİR eskisi gibi. */
+  locale = DEFAULT_LOCALE,
+}: {
+  locale?: Locale;
+}) {
+  const dict = getDictionary(locale).offer;
   const [state, setState] = useState<FormState>(INITIAL);
   const [status, setStatus] = useState<SubmitStatus>({ kind: "idle" });
 
@@ -272,7 +292,9 @@ export default function OfferRequestForm() {
       if (!httpRes.ok || !res?.ok) {
         setStatus({
           kind: "error",
-          message: res?.error || "Talebiniz kaydedilemedi. Lütfen tekrar deneyin.",
+          /* 🛡️ Sunucu hata metni yerine locale-aware generic mesaj —
+             `ContactForm`/`ReservationForm` ile AYNI yaklaşım. */
+          message: dict.errorGeneric,
         });
         return;
       }
@@ -280,7 +302,7 @@ export default function OfferRequestForm() {
     } catch {
       setStatus({
         kind: "error",
-        message: "Talebiniz kaydedilemedi. Lütfen tekrar deneyin.",
+        message: dict.errorGeneric,
       });
     }
   };
@@ -308,11 +330,10 @@ export default function OfferRequestForm() {
           <Sparkles size={20} strokeWidth={1.6} />
         </div>
         <h2 className="font-display font-medium text-[24px] md:text-[28px] text-[var(--color-stone-900)] tracking-[-0.015em] mt-5">
-          Talebiniz alındı.
+          {dict.successTitle}
         </h2>
         <p className="text-[14.5px] text-[var(--color-stone-500)] mt-3 max-w-md mx-auto leading-relaxed">
-          Villa danışmanınız en kısa sürede sizinle iletişime
-          geçecek ve size özel önerileri iletecek. Teşekkür ederiz.
+          {dict.successBody}
         </p>
       </div>
     );
@@ -342,12 +363,12 @@ export default function OfferRequestForm() {
       {/* ─────── 1. TRAVEL GROUP ─────── */}
       <Section
         eyebrow="1"
-        title="Kimlerle tatil planlıyorsunuz?"
-        subtitle="En uygun villayı önermek için tatil grubunuzu seçin."
+        title={dict.step1Title}
+        subtitle={dict.step1Subtitle}
       >
         <ul
           role="radiogroup"
-          aria-label="Tatil grubu"
+          aria-label={dict.travelGroupAriaLabel}
           className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4"
         >
           {TRAVEL_GROUPS.map((g) => {
@@ -390,10 +411,10 @@ export default function OfferRequestForm() {
                             : "text-[var(--color-stone-900)]")
                         }
                       >
-                        {g.label}
+                        {dict[g.labelKey]}
                       </p>
                       <p className="text-[12.5px] text-[var(--color-stone-500)] mt-1 leading-snug">
-                        {g.description}
+                        {dict[g.descriptionKey]}
                       </p>
                     </div>
                   </div>
@@ -407,13 +428,13 @@ export default function OfferRequestForm() {
       {/* ─────── 2. DATES + PEOPLE ─────── */}
       <Section
         eyebrow="2"
-        title="Tarih ve kişi bilgisi"
-        subtitle="Tatil planınızın çerçevesini paylaşın."
+        title={dict.step2Title}
+        subtitle={dict.step2Subtitle}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-[11px] tracking-[0.14em] uppercase font-medium text-[var(--color-stone-500)] mb-2">
-              Tarih aralığı
+              {dict.dateRangeLabel}
             </label>
             <div className="flex items-center gap-2 rounded-2xl border border-[var(--color-stone-200)] bg-white px-3 py-2.5">
               <Calendar
@@ -435,7 +456,7 @@ export default function OfferRequestForm() {
                 locale="tr"
                 dateFormat="dd.MM.yyyy"
                 minDate={new Date()}
-                placeholderText="Giriş — Çıkış"
+                placeholderText={dict.datePlaceholder}
                 className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none w-full text-[14px] font-medium !text-[var(--color-stone-900)] placeholder:!text-[var(--color-stone-400)] cursor-pointer"
                 portalId="teklif-datepicker-portal"
                 popperClassName="!z-[60]"
@@ -449,14 +470,18 @@ export default function OfferRequestForm() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <NumberStepper
-              label="Yetişkin"
+              label={dict.adultsLabel}
+              decreaseAriaLabel={dict.stepperDecreaseAriaLabel}
+              increaseAriaLabel={dict.stepperIncreaseAriaLabel}
               value={state.adults}
               min={1}
               max={40}
               onChange={(n) => updateField("adults", n)}
             />
             <NumberStepper
-              label="Çocuk"
+              label={dict.childrenLabel}
+              decreaseAriaLabel={dict.stepperDecreaseAriaLabel}
+              increaseAriaLabel={dict.stepperIncreaseAriaLabel}
               value={state.children}
               min={0}
               max={20}
@@ -470,50 +495,50 @@ export default function OfferRequestForm() {
       {/* ─────── 3. PREFERENCES ─────── */}
       <Section
         eyebrow="3"
-        title="Tercihleriniz"
-        subtitle="Aklınızdaki bölge, villa tipi ve özellikleri seçin."
+        title={dict.step3Title}
+        subtitle={dict.step3Subtitle}
       >
         <ChipMultiSelect
-          label="Bölgeler"
+          label={dict.regionsLabel}
           options={regionOpts}
           selected={state.regions}
           onToggle={(id) => toggleArr("regions", id)}
-          emptyLabel="Bölgeler yükleniyor…"
+          emptyLabel={dict.regionsEmpty}
         />
         <ChipMultiSelect
-          label="Villa Tipleri"
+          label={dict.villaTypesLabel}
           options={typeOpts}
           selected={state.villaTypes}
           onToggle={(id) => toggleArr("villaTypes", id)}
-          emptyLabel="Tipler yükleniyor…"
+          emptyLabel={dict.villaTypesEmpty}
         />
         <ChipMultiSelect
-          label="Öne çıkan özellikler"
+          label={dict.featuresLabel}
           options={featureOpts}
           selected={state.features}
           onToggle={(id) => toggleArr("features", id)}
-          emptyLabel="Özellikler yükleniyor…"
+          emptyLabel={dict.featuresEmpty}
         />
         <div>
           <p className="text-[11px] tracking-[0.14em] uppercase font-medium text-[var(--color-stone-500)] mb-2">
-            Bütçe aralığı
+            {dict.budgetLabel}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
             <BudgetField
-              label="Minimum"
+              label={dict.budgetMin}
               value={state.budgetMin}
               onChange={(v) => updateField("budgetMin", v)}
               className="md:col-span-5"
             />
             <BudgetField
-              label="Maksimum"
+              label={dict.budgetMax}
               value={state.budgetMax}
               onChange={(v) => updateField("budgetMax", v)}
               className="md:col-span-5"
             />
             <div className="md:col-span-2">
               <label className="block text-[11px] tracking-[0.14em] uppercase font-medium text-[var(--color-stone-500)] mb-2">
-                Para birimi
+                {dict.currencyLabel}
               </label>
               <select
                 value={state.budgetCurrency}
@@ -538,20 +563,20 @@ export default function OfferRequestForm() {
       {/* ─────── 4. CONTACT ─────── */}
       <Section
         eyebrow="4"
-        title="İletişim bilgileriniz"
-        subtitle="Villa danışmanınız sizinle bu bilgilerden iletişime geçer."
+        title={dict.step4Title}
+        subtitle={dict.step4Subtitle}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <TextField
-            label="Ad Soyad"
+            label={dict.fullNameLabel}
             value={state.fullName}
             onChange={(v) => updateField("fullName", v)}
             required
-            placeholder="Adınız Soyadınız"
+            placeholder={dict.fullNamePlaceholder}
             maxLength={120}
           />
           <TextField
-            label="Telefon"
+            label={dict.phoneLabel}
             value={state.phone}
             onChange={(v) => updateField("phone", v)}
             required
@@ -561,10 +586,10 @@ export default function OfferRequestForm() {
           />
         </div>
         <TextField
-          label="E-posta (opsiyonel)"
+          label={dict.emailLabel}
           value={state.email}
           onChange={(v) => updateField("email", v)}
-          placeholder="ornek@mail.com"
+          placeholder={dict.emailPlaceholder}
           type="email"
           maxLength={160}
         />
@@ -573,7 +598,7 @@ export default function OfferRequestForm() {
             htmlFor="offer-note"
             className="block text-[11px] tracking-[0.14em] uppercase font-medium text-[var(--color-stone-500)] mb-2"
           >
-            Özel notunuz
+            {dict.noteLabel}
           </label>
           <textarea
             id="offer-note"
@@ -581,7 +606,7 @@ export default function OfferRequestForm() {
             onChange={(e) => updateField("note", e.target.value)}
             rows={4}
             maxLength={2000}
-            placeholder="Aklınızdaki ek detaylar — özel istekler, doğum günü, evcil hayvan, ulaşım…"
+            placeholder={dict.notePlaceholder}
             className="
               w-full !rounded-2xl !border !border-[var(--color-stone-200)] !bg-white
               px-4 py-3 text-[14.5px] !text-[var(--color-stone-700)]
@@ -612,8 +637,7 @@ export default function OfferRequestForm() {
 
       <div className="rounded-3xl bg-white border border-[var(--color-stone-100)] shadow-[0_12px_28px_-18px_rgba(27,26,23,0.10)] p-6 md:p-7 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <p className="text-[12.5px] text-[var(--color-stone-500)] max-w-md">
-          Bilgileriniz yalnızca villa önerisi için kullanılır.
-          Size özel danışmanlık dışında pazarlama amaçlı kullanılmaz.
+          {dict.privacyNote}
         </p>
         <button
           type="submit"
@@ -621,9 +645,7 @@ export default function OfferRequestForm() {
           className="btn-primary btn-glow"
         >
           <Check size={15} aria-hidden />
-          {status.kind === "loading"
-            ? "Gönderiliyor…"
-            : "Teklifimi Oluştur"}
+          {status.kind === "loading" ? dict.submitting : dict.submit}
         </button>
       </div>
     </form>
@@ -681,12 +703,17 @@ function NumberStepper({
   min,
   max,
   onChange,
+  decreaseAriaLabel,
+  increaseAriaLabel,
 }: {
   label: string;
   value: number;
   min: number;
   max: number;
   onChange: (n: number) => void;
+  /** `formatDictionaryString` şablonu — `{label}`. */
+  decreaseAriaLabel: string;
+  increaseAriaLabel: string;
 }) {
   const dec = () => onChange(Math.max(min, value - 1));
   const inc = () => onChange(Math.min(max, value + 1));
@@ -700,7 +727,7 @@ function NumberStepper({
           type="button"
           onClick={dec}
           disabled={value <= min}
-          aria-label={`${label} azalt`}
+          aria-label={formatDictionaryString(decreaseAriaLabel, { label })}
           className="w-8 h-8 rounded-full bg-[var(--color-sand-50)] hover:bg-[var(--brand-coral-tint)] hover:text-[var(--brand-coral)] text-[var(--color-stone-700)] flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Minus size={14} strokeWidth={1.75} />
@@ -712,7 +739,7 @@ function NumberStepper({
           type="button"
           onClick={inc}
           disabled={value >= max}
-          aria-label={`${label} arttır`}
+          aria-label={formatDictionaryString(increaseAriaLabel, { label })}
           className="w-8 h-8 rounded-full bg-[var(--color-sand-50)] hover:bg-[var(--brand-coral-tint)] hover:text-[var(--brand-coral)] text-[var(--color-stone-700)] flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Plus size={14} strokeWidth={1.75} />

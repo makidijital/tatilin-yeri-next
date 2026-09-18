@@ -168,22 +168,30 @@ describe.each(ROUTES)(
       ).toBeUndefined();
     });
 
-    /* --- 7) mevcut robots/noindex davranışının korunması (BU FAZDA
-       DEĞİŞMEDİ — flag true olsa BİLE hâlâ noindex) --- */
-    it("robots HER ZAMAN {index:false,follow:false} — multilingual_enabled=false iken", async () => {
+    /* --- 7) 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — KOŞULSUZ `noindex`
+       KALDIRILDI. Bu override Phase 4A/6B/7C'nin geçici
+       `LocaleRouteComingSoon` placeholder'ından kalmıştı; sayfa Phase
+       10B'den beri TR ile AYNI, tam çevrilmiş gerçek içeriği render
+       ediyor ve sitemap bu URL'leri hreflang alternate olarak veriyor.
+       Index politikası artık root layout'un
+       `settings.robots_index/robots_follow` ayarından MİRAS alınır;
+       `multilingual_enabled=false` iken route zaten 404 döner.
+       ⚠️ Villa BULUNAMADIĞINDA dönen noindex DEĞİŞMEDİ (aşağıdaki
+       test). --- */
+    it("robots override YOK — flag kapalıyken de root politikası miras alınır", async () => {
       getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: false });
       getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
 
       const result = await callGenerateMetadata(modulePath);
-      expect(result.robots).toEqual({ index: false, follow: false });
+      expect(result.robots).toBeUndefined();
     });
 
-    it("robots HER ZAMAN {index:false,follow:false} — multilingual_enabled=true İKEN DE (bu faz robots'u değiştirmiyor)", async () => {
+    it("robots override YOK — flag açıkken de (hreflang ile tutarlı)", async () => {
       getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: true });
       getVillaBySlugMock.mockResolvedValue(BASE_VILLA);
 
       const result = await callGenerateMetadata(modulePath);
-      expect(result.robots).toEqual({ index: false, follow: false });
+      expect(result.robots).toBeUndefined();
     });
 
     it("villa bulunamazsa (null) → notFound title + noindex, alternates YOK", async () => {

@@ -135,10 +135,19 @@ export async function generateMetadata({
     "de"
   );
 
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — KOŞULSUZ `noindex` KALDIRILDI.
+     Bu override Phase 4A/6B/7C'nin GEÇİCİ `LocaleRouteComingSoon`
+     placeholder'ından kalmıştı (bkz. app/sitemap.ts, Phase 7D notu);
+     sayfa Phase 10B'den beri TR ile AYNI, tam çevrilmiş gerçek içeriği
+     render ediyor ve sitemap TR entry'sine bu URL'leri hreflang
+     alternate olarak veriyor. Index politikası artık root layout'un
+     `settings.robots_index/robots_follow` ayarından miras alınır —
+     `multilingual_enabled` kapalıyken route zaten
+     `requirePublicLocaleEnabled()` ile 404 döner.
+     ⚠️ Villa BULUNAMADIĞINDA dönen `noindex` (yukarıda) DEĞİŞMEDİ. */
   return {
     title,
     description,
-    robots: { index: false, follow: false },
     alternates: isMultilingualEnabled(settings)
       ? { canonical, languages }
       : { canonical },
@@ -236,9 +245,17 @@ export default async function DeVillaDetailPage({
     getCachedVillaReviewStats(villa.id),
   ]);
 
-  /* 🛡️ PHASE 8D-2 — koleksiyon başına TAM 1 batch çeviri sorgusu. */
-  const [featureTranslations, ruleTranslations, priceIncludeTranslations] =
-    await Promise.all([
+  /* 🛡️ PHASE 8D-2 — koleksiyon başına TAM 1 batch çeviri sorgusu.
+     🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `villa_distance` da AYNI batch
+     desenine eklendi (migration 082'nin `villa_distance_translations`
+     tablosu; yeni tablo/migration YOK). Paralel çalıştığı için ek
+     gecikme getirmez, N+1 YOKTUR. */
+  const [
+    featureTranslations,
+    ruleTranslations,
+    priceIncludeTranslations,
+    distanceTranslations,
+  ] = await Promise.all([
       getTranslationsForParents(
         "villa_feature",
         features.map((f) => f.id),
@@ -250,13 +267,28 @@ export default async function DeVillaDetailPage({
         priceIncludes.map((p) => p.id),
         "de"
       ),
+      getTranslationsForParents(
+        "villa_distance",
+        distances.map((d) => d.id),
+        "de"
+      ),
     ]);
 
   /* 🛡️ ICON KEY — ORİJİNAL (TR) d.title'dan hesaplanır. */
   const translatedDistances: TranslatedDistance[] = distances.map((d) => ({
     id: d.id,
-    /* 🛡️ PHASE 10D BATCH 4 — title statik i18n dictionary üzerinden. */
-    displayTitle: getTranslatedDistanceLabel(d.title, "de"),
+    /* 🛡️ ÖNCELİK SIRASI (mevcut davranış KORUNARAK genişletildi):
+         1) `villa_distance_translations.title` — admin'in girdiği
+            SERBEST/CUSTOM başlıkların çevirisi (mevcut generic
+            `resolveTranslatedField` fallback'i ile).
+         2) PHASE 10D BATCH 4 — 12 CANONICAL başlık için statik i18n
+            dictionary (`getTranslatedDistanceLabel`).
+         3) Canonical TR `d.title` (helper'ın kendi fallback'i).
+       Çeviri satırı yok/boş/whitespace ise sonuç ESKİSİYLE BİREBİR. */
+    displayTitle: resolveTranslatedField(
+      distanceTranslations.get(d.id)?.title,
+      getTranslatedDistanceLabel(d.title, "de")
+    ),
     /* 🛡️ Mesafe DEĞERİ hiçbir zaman çevrilmez. */
     displayDistance: d.distance,
     iconKey: getDistanceIconKey(d.title),

@@ -1,28 +1,23 @@
 import type { Metadata } from "next";
-import PageHero from "@/app/components/ui/PageHero";
-import FavoritesGrid from "./FavoritesGrid";
+
+import FavoritesPageBody from "@/app/components/favorites/FavoritesPageBody";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 /* ===============================================================
-   🛡️ FAZ 36 — /favoriler PUBLIC ROUTE
+   🛡️ /favoriler — PUBLIC ROUTE (TR)
    ===============================================================
-   Guest favorites koleksiyonu — localStorage'dan okunur, server'a
-   yansımaz. Bu sayfa ince server skeleton; gerçek liste client
-   island (`FavoritesGrid`) içinde render edilir.
+   Sayfa gövdesi `app/components/favorites/FavoritesPageBody.tsx`'e
+   TAŞINDI (DOM/CSS DEĞİŞTİRİLMEDEN) — `/en|de/favoriler` AYNI gövdeyi
+   render eder.
 
-   SEO:
+   SEO DEĞİŞMEDİ:
      robots: noindex/nofollow → kişiye özel içerik; index'lenmemeli.
-     canonical YOK (kullanıcı bazlı liste).
-
-   DOKUNULMAYAN:
-     reservation engine, pricing, BookingSidebar, review system,
-     AggregateRating, cache architecture, search algorithms, private
-     URL system, gallery, admin, sidebar permissions, auth middleware.
+     canonical YOK (kullanıcı bazlı liste) → hreflang de YOK.
    =============================================================== */
 
 export const metadata: Metadata = {
-  title: "Favorilerim",
-  description:
-    "Akdeniz villaları arasında seçtiğiniz favori mülkler — kendi koleksiyonunuz.",
+  title: getDictionary("tr").favoritesPage.metaTitle,
+  description: getDictionary("tr").favoritesPage.metaDescription,
   robots: {
     index: false,
     follow: false,
@@ -31,20 +26,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return (
-    <>
-      <PageHero
-        breadcrumb={[{ name: "Ana sayfa", href: "/" }, { name: "Favorilerim" }]}
-        eyebrow="Koleksiyonum"
-        title="Favorilerim"
-        description="Seçtiğiniz villalar bu sayfada saklanır. Liste bu cihazda kalır; istediğiniz zaman ekleyebilir, çıkarabilir veya koleksiyonu sıfırlayabilirsiniz."
-      />
-
-      <section className="px-5 md:px-10 lg:px-16 pt-12 md:pt-16 pb-24 md:pb-32">
-        <div className="max-w-[1280px] mx-auto">
-          <FavoritesGrid />
-        </div>
-      </section>
-    </>
-  );
+  return <FavoritesPageBody locale="tr" />;
 }

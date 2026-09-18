@@ -22,6 +22,9 @@ export const tr: Dictionary = {
     next: "İleri",
     previous: "Önceki",
     loading: "Yükleniyor",
+    searching: "Aranıyor...",
+    carouselPrev: "Geri kaydır",
+    carouselNext: "İleri kaydır",
     error: "Bir hata oluştu",
     success: "Başarılı",
     viewAll: "Tümünü Gör",
@@ -41,6 +44,9 @@ export const tr: Dictionary = {
     support: "Destek",
     menuOpen: "Menüyü aç",
     menuClose: "Menüyü kapat",
+    logoAlt: "Site logosu",
+    submenuOpenAriaLabel: "Aç: {label} alt menüsü",
+    submenuCloseAriaLabel: "Kapat: {label} alt menüsü",
     /* 🛡️ TopBar — TR değerleri ESKİ hardcoded metinlerin BİREBİR
        kopyasıdır; render çıktısı byte-identical. */
     supportBadge: "7/24 Destek",
@@ -58,6 +64,15 @@ export const tr: Dictionary = {
     address: "Adres",
     checkReservation: "Rezervasyon Sorgula",
     webDevelopment: "Web Geliştirme",
+    tagline:
+      "Akdeniz'in seçkin villalarını premium bir deneyimle keşfedin. Özel havuz, deniz manzarası ve butik konfor — tek bir platformda.",
+    copyrightFallback: "© {year} {site_name} · Tüm hakları saklıdır",
+    ariaLabel: "Site altbilgisi",
+    villaCategoriesAriaLabel: "Villa kategorileri",
+    popularRegionsAriaLabel: "Popüler bölgeler",
+    corporateAriaLabel: "Kurumsal",
+    tursabAlt: "TÜRSAB üyesi",
+    paymentMethodsAlt: "Visa, Mastercard ve Troy ödeme yöntemleri",
   },
   booking: {
     reservation: "Rezervasyon",
@@ -289,6 +304,7 @@ export const tr: Dictionary = {
     remove: "Favorilerden kaldır",
     saved: "Favorilerimde",
     save: "Favorilere Kaydet",
+    myFavorites: "Favorilerim",
   },
   /* 🛡️ PHASE 10G — VillaReviewsSection.tsx'in BUGÜNKÜ hardcoded metinleri. */
   reviews: {
@@ -807,6 +823,249 @@ export const tr: Dictionary = {
      `app/(admin)/maki-admin/pages/**` içindeki ESKİ hardcoded
      metinlerin BİREBİR (byte-identical) kopyasıdır — U+2026 (…),
      U+2014 (—) ve kesme işaretleri dahil. Metin DEĞİŞTİRİLMEDİ. */
+  /* 🛡️ /teklif-al — TR değerleri ESKİ hardcoded metinlerin BİREBİR kopyası. */
+  offer: {
+    metaTitle: "Teklif Al — Size Özel Villa Önerisi",
+    metaDescription:
+      "Kriterlerinizi paylaşın, size özel Akdeniz villa önerilerini kısa sürede iletelim.",
+    heroEyebrow: "Özel Villa Danışmanı",
+    heroTitle: "Size en uygun villayı birlikte bulalım.",
+    heroDescription:
+      "Kriterlerinizi paylaşın, size özel villa önerilerini kısa sürede iletelim. Her detay sizin için seçilir, hiçbir villa tesadüf değildir.",
+    trust1Title: "Hızlı dönüş",
+    trust1Description: "Ortalama yanıt süresi 30 dakika",
+    trust2Title: "Kişisel destek",
+    trust2Description: "Tatil danışmanınız size özel önerir",
+    trust3Title: "Bölge uzmanlığı",
+    trust3Description: "Kalkan, Kaş, Fethiye, Üzümlü ve çevresi",
+    groupHoneymoon: "Balayı Çifti",
+    groupHoneymoonDescription: "Romantik kaçamak, izole konum",
+    groupCoreFamily: "Çekirdek Aile",
+    groupCoreFamilyDescription: "Çocuk dostu, güvenli ve sakin",
+    groupExtendedFamily: "Geniş Aile",
+    groupExtendedFamilyDescription: "Çok yataklı, geniş yaşam alanı",
+    groupFriends: "Arkadaş Grubu",
+    groupFriendsDescription: "Sosyal alanlar, havuz partisi",
+    step1Title: "Kimlerle tatil planlıyorsunuz?",
+    step1Subtitle: "En uygun villayı önermek için tatil grubunuzu seçin.",
+    travelGroupAriaLabel: "Tatil grubu",
+    step2Title: "Tarih ve kişi bilgisi",
+    step2Subtitle: "Tatil planınızın çerçevesini paylaşın.",
+    dateRangeLabel: "Tarih aralığı",
+    datePlaceholder: "Giriş — Çıkış",
+    adultsLabel: "Yetişkin",
+    childrenLabel: "Çocuk",
+    stepperDecreaseAriaLabel: "{label} azalt",
+    stepperIncreaseAriaLabel: "{label} arttır",
+    step3Title: "Tercihleriniz",
+    step3Subtitle: "Aklınızdaki bölge, villa tipi ve özellikleri seçin.",
+    regionsLabel: "Bölgeler",
+    regionsEmpty: "Bölgeler yükleniyor…",
+    villaTypesLabel: "Villa Tipleri",
+    villaTypesEmpty: "Tipler yükleniyor…",
+    featuresLabel: "Öne çıkan özellikler",
+    featuresEmpty: "Özellikler yükleniyor…",
+    budgetLabel: "Bütçe aralığı",
+    budgetMin: "Minimum",
+    budgetMax: "Maksimum",
+    currencyLabel: "Para birimi",
+    step4Title: "İletişim bilgileriniz",
+    step4Subtitle:
+      "Villa danışmanınız sizinle bu bilgilerden iletişime geçer.",
+    fullNameLabel: "Ad Soyad",
+    fullNamePlaceholder: "Adınız Soyadınız",
+    phoneLabel: "Telefon",
+    emailLabel: "E-posta (opsiyonel)",
+    emailPlaceholder: "ornek@mail.com",
+    noteLabel: "Özel notunuz",
+    notePlaceholder:
+      "Aklınızdaki ek detaylar — özel istekler, doğum günü, evcil hayvan, ulaşım…",
+    privacyNote:
+      "Bilgileriniz yalnızca villa önerisi için kullanılır. Size özel danışmanlık dışında pazarlama amaçlı kullanılmaz.",
+    submit: "Teklifimi Oluştur",
+    submitting: "Gönderiliyor…",
+    errorGeneric: "Talebiniz kaydedilemedi. Lütfen tekrar deneyin.",
+    successTitle: "Talebiniz alındı.",
+    successBody:
+      "Villa danışmanınız en kısa sürede sizinle iletişime geçecek ve size özel önerileri iletecek. Teşekkür ederiz.",
+  },
+
+  /* 🛡️ /rezervasyon-kontrol — TR değerleri BİREBİR. */
+  reservationLookup: {
+    metaTitle: "Rezervasyon Kontrol",
+    metaDescription:
+      "Rezervasyon kodunuz ve e-posta adresiniz ile rezervasyon durumunuzu anlık olarak görüntüleyin.",
+    ogDescription:
+      "Rezervasyon kodunuz ve e-posta adresiniz ile rezervasyon durumunuzu görüntüleyin.",
+    breadcrumbCurrent: "Rezervasyon Kontrol",
+    heroEyebrow: "Rezervasyon",
+    heroTitle: "Rezervasyonunuzu Sorgulayın.",
+    heroDescription:
+      "Rezervasyon kodunuz ve e-posta adresiniz ile rezervasyon durumunuzu görüntüleyebilirsiniz.",
+    heroTitleShare: "Rezervasyon Bilgileriniz.",
+    heroDescriptionShare:
+      "Rezervasyonunuzun onay ve ödeme özeti aşağıdadır.",
+    cancelledTitle: "Bu rezervasyon artık aktif değil.",
+    cancelledBody:
+      "Rezervasyonunuzla ilgili sorularınız için bizimle iletişime geçebilirsiniz.",
+    invalidTitle: "Bu rezervasyon bağlantısı geçersiz veya süresi dolmuş.",
+    invalidBody:
+      "Aşağıdan rezervasyon kodunuz ve e-postanız ile sorgulayabilirsiniz.",
+    formEyebrow: "Sorgulama",
+    formTitle: "Bilgilerinizi girin.",
+    codeLabel: "Rezervasyon Kodu",
+    codePlaceholder: "örn. REZ-2026-0042",
+    emailLabel: "E-posta Adresi",
+    emailPlaceholder: "ornek@email.com",
+    submit: "Rezervasyonu Görüntüle",
+    submitting: "Sorgulanıyor…",
+    formHint:
+      "Rezervasyon kodunuzu onay e-postanızda bulabilirsiniz. Bilgileriniz yalnızca durum görüntülemek için kullanılır.",
+    errorMissingFields: "Rezervasyon kodu ve e-posta adresinizi girin.",
+    errorNotFound: "Bu bilgilerle eşleşen bir rezervasyon bulunamadı.",
+    errorNetwork: "Bağlantı hatası. Lütfen tekrar deneyin.",
+    emptyTitle: "Rezervasyon durumunuz burada görünecek",
+    emptyBody:
+      "Rezervasyon kodunuz ve e-posta adresinizle sorgulayın; villa, tarih ve güncel durum bilgileri bu alanda listelenir.",
+    statusPendingLabel: "Beklemede",
+    statusPendingMessage: "Talebiniz alınmıştır. Ekibimiz incelemektedir.",
+    statusConfirmedLabel: "Onaylandı",
+    statusConfirmedMessage: "Rezervasyonunuz onaylanmıştır.",
+    statusPrepaymentLabel: "Ön Ödeme Bekleniyor",
+    statusPrepaymentMessage: "Rezervasyonunuz için ön ödeme bekleniyor.",
+    statusCancelledLabel: "İptal Edildi",
+    statusCancelledMessage: "Rezervasyon iptal edilmiştir.",
+    detailVilla: "Villa",
+    detailCode: "Rezervasyon Kodu",
+    detailCheckIn: "Giriş Tarihi",
+    detailCheckOut: "Çıkış Tarihi",
+    detailGuests: "Misafir Sayısı",
+    detailGuestsValue: "{n} misafir",
+    shareTitle: "Rezervasyonunuz Onaylandı",
+    shareSubtitle: "Rezervasyonunuz başarıyla oluşturulmuştur.",
+    shareReservationNo: "Rezervasyon No:",
+    shareNights: "{n} gece",
+    shareGuests: "{n} misafir",
+    shareIncludedInPrice: "(Fiyata Dahildir.)",
+    shareStayHeading: "Konaklama Bilgileri",
+    shareCheckIn: "Giriş",
+    shareCheckOut: "Çıkış",
+    sharePaymentHeading: "Ödeme Özeti",
+    shareTotal: "Toplam Konaklama Tutarı",
+    sharePaid: "Ödenen Tutar",
+    shareCleaningFee: "Temizlik Ücreti",
+    sharePoolHeatingFee: "Havuz Isıtma Ücreti",
+    shareRemaining: "Kalan Ödeme (Girişte Alınacak)",
+    shareDeposit: "Hasar Depozitosu",
+    shareDepositNote:
+      "Girişte hasar depozitosu ek olarak alınır. Villada herhangi bir hasar oluşmaması durumunda çıkışta eksiksiz olarak iade edilir.",
+    shareOwnerHeading: "Mülk Sahibi İletişim Bilgileri",
+    shareOwnerEmpty: "Mülk sahibi iletişim bilgileri bulunmuyor.",
+    shareGuestHeading: "Misafir İletişim Bilgileri",
+    shareGuestName: "Ad Soyad",
+    shareGuestPhone: "Telefon",
+    shareGuestEmail: "E-posta",
+    shareContactNote:
+      "Rezervasyonunuzla ilgili herhangi bir sorunuz varsa bizimle iletişime geçebilirsiniz.",
+    shareWhatsappCta: "WhatsApp'tan Ulaşın",
+    sharePhoneCta: "Bizi Arayın",
+    shareWhatsappAriaLabel: "WhatsApp ile ulaş",
+    sharePhoneAriaLabel: "Telefonla ara",
+    shareLookupAgain: "Farklı bir rezervasyon sorgula",
+  },
+
+  /* 🛡️ /favoriler + /favoriler/paylas/[token] — TR değerleri BİREBİR. */
+  favoritesPage: {
+    metaTitle: "Favorilerim",
+    metaDescription:
+      "Akdeniz villaları arasında seçtiğiniz favori mülkler — kendi koleksiyonunuz.",
+    heroEyebrow: "Koleksiyonum",
+    heroTitle: "Favorilerim",
+    heroDescription:
+      "Seçtiğiniz villalar bu sayfada saklanır. Liste bu cihazda kalır; istediğiniz zaman ekleyebilir, çıkarabilir veya koleksiyonu sıfırlayabilirsiniz.",
+    countSuffix: "villa koleksiyonunuzda",
+    shareError: "Paylaşım bağlantısı oluşturulamadı. Lütfen tekrar deneyin.",
+    emptyTitle: "Koleksiyonunuzu başlatın",
+    emptyBody:
+      "Akdeniz'in seçkin villaları arasında beğendiklerinizi kalp ikonuyla işaretleyin. Seçimleriniz burada toplanır; ileride döndüğünüzde sizi bekler.",
+    emptyExploreCta: "Tüm villaları keşfet",
+    emptySearchCta: "Aramaya başla",
+    unavailableTitle: "Şu an gösterilecek favori yok",
+    unavailableBody:
+      "Listenizdeki villalar geçici olarak gösterilmiyor olabilir. Daha sonra tekrar deneyebilir veya koleksiyonu sıfırlayıp yeniden başlayabilirsiniz.",
+    unavailableExploreCta: "Villaları keşfet",
+    unavailableClearCta: "Listeyi temizle",
+    shareAriaLabel: "Listeyi paylaş",
+    shareCta: "Listeyi Paylaş",
+    sharePreparing: "Hazırlanıyor…",
+    clearAriaLabel: "Tüm favorileri temizle",
+    clearCta: "Favorileri temizle",
+    clearConfirm: "Tüm favorilerinizi temizlemek istediğinize emin misiniz?",
+    shareCopied: "Paylaşım bağlantısı kopyalandı",
+    shareReady: "Paylaşım bağlantısı hazır",
+    sharePreview: "Önizle",
+    sharedMetaInvalidTitle: "Bağlantı geçersiz",
+    sharedMetaTitle: "Paylaşılan favori liste",
+    sharedMetaDescription:
+      "Birinin sizinle paylaştığı seçili Akdeniz villaları.",
+    sharedEyebrow: "Özel Paylaşım",
+    sharedBadge: "Seyahat Listesi",
+    sharedTitle: "Sizinle paylaşılan",
+    sharedTitleAccent: "villalar.",
+    sharedVillaUnit: "villa",
+    sharedBody:
+      "Akdeniz villaları arasından özenle seçilmiş bir koleksiyon. Aşağıdaki listeyi inceleyin; ilgilendiğiniz villaya tıklayarak detayları görebilirsiniz.",
+    sharedCreatedAt: "{date} tarihinde oluşturuldu",
+    sharedVisibleCount: "{visible} / {total} villa şu an görünür",
+    sharedEmptyTitle: "Paylaşılan villalar şu an görüntülenmiyor",
+    sharedEmptyBody:
+      "Listedeki villalar geçici olarak gösterilmiyor olabilir. Aşağıdaki bağlantı ile Akdeniz koleksiyonunu keşfedebilirsiniz.",
+    sharedCtaTitle: "Kendi koleksiyonunuzu oluşturun",
+    sharedCtaBody:
+      "Akdeniz villaları arasında beğendiklerinizi kalp ikonuyla işaretleyin; kendi listenizi oluşturup yakınlarınızla paylaşabilirsiniz.",
+    sharedExploreCta: "Villaları keşfet",
+    sharedFavoritesCta: "Favorilerim",
+  },
+
+  /* 🛡️ /kisa-sureli-tarihler/[ay]/[gece] — TR değerleri BİREBİR. */
+  shortGaps: {
+    metaTitle: "{month} {n} Gecelik Uygun Villalar",
+    metaDescription:
+      "{month} döneminde dolu tarihler arasında kalan {n} gecelik kısa boşluklara sahip villalar. Kısa süreli tatil için uygun villaları keşfedin.",
+    heroEyebrow: "Kısa Süreli Tarihler",
+    heroTitle: "{month} · {n} Gecelik Uygun Villalar",
+    heroSubtitle:
+      "Dolu tarihler arasında kalan {n} gecelik {count} uygun boşluk.",
+    emptyBody: "Bu kriterlere uygun kısa süreli boşluk bulunamadı.",
+    filterTitle: "Filtrele",
+    filterSubtitle: "Aramayı daralt.",
+    filterApplyCta: "Filtrele",
+    showResults: "{n} villa göster",
+    mobileTrigger: "Filtrele",
+    mobileSummaryPlaceholder: "Bölge, villa tipi, kişi…",
+    filtersAriaLabel: "Filtreler",
+  },
+
+  /* 🛡️ Global 404 — TR değerleri BİREBİR. */
+  notFound: {
+    metaTitle: "Aradığınız sayfayı bulamadık — 404",
+    metaDescription:
+      "Sayfa kaldırılmış, taşınmış veya bağlantı hatalı olabilir. Villa aramaya devam edin.",
+    title: "Aradığınız sayfayı bulamadık",
+    body:
+      "Sayfa kaldırılmış, taşınmış veya bağlantı hatalı olabilir. Dilerseniz aşağıdan villa aramaya kaldığınız yerden devam edebilirsiniz.",
+    homeCta: "Ana Sayfaya Dön",
+    villasCta: "Kiralık Villaları Gör",
+    suggestionsEyebrow: "Belki bunlar ilginizi çeker",
+    suggestionsTitle: "Öne çıkan villalar",
+  },
+
+  /* 🛡️ Bakım ekranı — TR değerleri BİREBİR. */
+  maintenance: {
+    eyebrow: "Bakım",
+    defaultMessage: "Sitemizi yeniliyoruz. Kısa süre içinde tekrar buradayız.",
+  },
+
   admin: {
     common: {
       loadingEllipsis: "Yükleniyor…",

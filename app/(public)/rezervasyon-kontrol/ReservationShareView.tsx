@@ -13,6 +13,13 @@ import {
 import { getCachedSettings } from "@/lib/cache.helpers";
 import type { ReservationShareDTO } from "./share.resolve";
 
+/* 🛡️ PUBLIC ÇOKLU DİL — statik metinler MEVCUT public dictionary'den
+   (`reservationLookup` namespace). Tutar/tarih biçimi, snapshot değerleri
+   ve `share.resolve` akışı DEĞİŞTİRİLMEDİ. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+
 /* ===============================================================
    🛡️ RESERVATION SHARE VIEW — token ile gelen müşteri görünümü
    ===============================================================
@@ -59,7 +66,15 @@ function toWaNumber(phone: string): string {
 
 /* Küçük WhatsApp + telefon aksiyon ikonları (mevcut iletişim dili).
    Yalnız telefon varken caller render eder. */
-function PhoneActions({ phone }: { phone: string }) {
+function PhoneActions({
+  phone,
+  whatsappAriaLabel,
+  phoneAriaLabel,
+}: {
+  phone: string;
+  whatsappAriaLabel: string;
+  phoneAriaLabel: string;
+}) {
   const wa = toWaNumber(phone);
   return (
     <span className="inline-flex items-center gap-1.5 align-middle">
@@ -68,7 +83,7 @@ function PhoneActions({ phone }: { phone: string }) {
           href={`https://wa.me/${wa}`}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="WhatsApp ile ulaş"
+          aria-label={whatsappAriaLabel}
           className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#25D366]/12 text-[#1da851] hover:bg-[#25D366] hover:text-white transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/40"
         >
           <MessageCircle size={15} aria-hidden />
@@ -76,7 +91,7 @@ function PhoneActions({ phone }: { phone: string }) {
       )}
       <a
         href={`tel:${phone}`}
-        aria-label="Telefonla ara"
+        aria-label={phoneAriaLabel}
         className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand-coral-tint)] text-[var(--brand-coral-deep)] hover:bg-[var(--brand-coral)] hover:text-white transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/40"
       >
         <Phone size={15} aria-hidden />
@@ -87,9 +102,14 @@ function PhoneActions({ phone }: { phone: string }) {
 
 export default async function ReservationShareView({
   data,
+  /* 🛡️ Opsiyonel — verilmezse "tr" → TR çıktısı BİREBİR eskisi gibi. */
+  locale = DEFAULT_LOCALE,
 }: {
   data: ReservationShareDTO;
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale).reservationLookup;
+  const localePrefix = locale === DEFAULT_LOCALE ? "" : `/${locale}`;
   const settings = await getCachedSettings().catch(() => null);
   const phone = settings?.phone?.trim() || "";
   const phoneHref = phone ? `tel:${phone}` : null;
@@ -120,14 +140,14 @@ export default async function ReservationShareView({
           <CheckCircle2 size={26} strokeWidth={2} aria-hidden />
         </span>
         <h1 className="font-display text-[30px] md:text-[38px] text-[var(--color-stone-900)] mt-5 tracking-[-0.02em] leading-[1.05]">
-          Rezervasyonunuz Onaylandı
+          {dict.shareTitle}
         </h1>
         <p className="text-[var(--color-stone-500)] mt-3 text-[14.5px]">
-          Rezervasyonunuz başarıyla oluşturulmuştur.
+          {dict.shareSubtitle}
         </p>
         {data.reservationNo && (
           <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--color-sand-50)] border border-[var(--color-stone-100)] px-4 py-1.5 text-[13px] font-medium text-[var(--color-stone-700)]">
-            Rezervasyon No:
+            {dict.shareReservationNo}
             <span className="font-semibold text-[var(--color-stone-900)] tabular-nums">
               {data.reservationNo}
             </span>
@@ -139,7 +159,7 @@ export default async function ReservationShareView({
       <section className="mt-9 rounded-2xl border border-[var(--color-stone-100)] bg-white p-5 md:p-6">
         <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-[var(--color-stone-500)]">
           <CalendarDays size={15} className="text-[var(--brand-coral)]" aria-hidden />
-          Konaklama Bilgileri
+          {dict.shareStayHeading}
         </h2>
         <div className="mt-4 flex flex-col sm:flex-row gap-4 md:gap-5">
           {/* Villa kapak görseli — sol; yoksa hiç render edilmez
@@ -161,7 +181,7 @@ export default async function ReservationShareView({
             <div className="mt-4 grid grid-cols-2 gap-4 text-[14px]">
               <div>
                 <div className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-stone-400)] font-semibold">
-                  Giriş
+                  {dict.shareCheckIn}
                 </div>
                 <div className="mt-1 font-medium text-[var(--color-stone-900)]">
                   {formatDateTr(data.startDate)}
@@ -172,7 +192,7 @@ export default async function ReservationShareView({
               </div>
               <div>
                 <div className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-stone-400)] font-semibold">
-                  Çıkış
+                  {dict.shareCheckOut}
                 </div>
                 <div className="mt-1 font-medium text-[var(--color-stone-900)]">
                   {formatDateTr(data.endDate)}
@@ -185,12 +205,17 @@ export default async function ReservationShareView({
             <div className="mt-4 flex flex-wrap gap-2">
               {data.nights !== null && (
                 <span className="inline-flex items-center rounded-full bg-[var(--color-sand-50)] px-3 py-1 text-[12.5px] font-medium text-[var(--color-stone-700)]">
-                  {data.nights} gece
+                  {formatDictionaryString(dict.shareNights, {
+                    n: data.nights,
+                  })}
                 </span>
               )}
               {data.guests !== null && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-sand-50)] px-3 py-1 text-[12.5px] font-medium text-[var(--color-stone-700)]">
-                  <Users size={13} aria-hidden /> {data.guests} misafir
+                  <Users size={13} aria-hidden />{" "}
+                  {formatDictionaryString(dict.shareGuests, {
+                    n: data.guests,
+                  })}
                 </span>
               )}
             </div>
@@ -203,12 +228,12 @@ export default async function ReservationShareView({
         <section className="mt-5 rounded-2xl border border-[var(--color-stone-100)] bg-white p-5 md:p-6">
           <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-[var(--color-stone-500)]">
             <CreditCard size={15} className="text-[var(--brand-coral)]" aria-hidden />
-            Ödeme Özeti
+            {dict.sharePaymentHeading}
           </h2>
           <dl className="mt-4 space-y-3">
             <div className="flex items-center justify-between">
               <dt className="text-[14px] text-[var(--color-stone-600)]">
-                Toplam Konaklama Tutarı
+                {dict.shareTotal}
               </dt>
               <dd className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums">
                 {TL(data.total)}
@@ -217,7 +242,7 @@ export default async function ReservationShareView({
 
             <div className="flex items-center justify-between">
               <dt className="text-[14px] text-[var(--color-stone-600)]">
-                Ödenen Tutar
+                {dict.sharePaid}
                 {data.paymentMethodLabel ? ` (${data.paymentMethodLabel})` : ""}
               </dt>
               <dd className="text-[15px] font-semibold text-emerald-700 tabular-nums">
@@ -230,9 +255,9 @@ export default async function ReservationShareView({
             {data.cleaningFee !== null && (
               <div className="flex items-center justify-between">
                 <dt className="text-[14px] text-[var(--color-stone-600)]">
-                  Temizlik Ücreti{" "}
+                  {dict.shareCleaningFee}{" "}
                   <span className="text-[var(--color-stone-400)]">
-                    (Fiyata Dahildir.)
+                    {dict.shareIncludedInPrice}
                   </span>
                 </dt>
                 <dd className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums">
@@ -249,9 +274,9 @@ export default async function ReservationShareView({
             {data.poolHeatingFee !== null && (
               <div className="flex items-center justify-between">
                 <dt className="text-[14px] text-[var(--color-stone-600)]">
-                  Havuz Isıtma Ücreti{" "}
+                  {dict.sharePoolHeatingFee}{" "}
                   <span className="text-[var(--color-stone-400)]">
-                    (Fiyata Dahildir.)
+                    {dict.shareIncludedInPrice}
                   </span>
                 </dt>
                 <dd className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums">
@@ -266,7 +291,7 @@ export default async function ReservationShareView({
           <div className="mt-4 border-t border-[var(--color-stone-100)] pt-4">
             <div className="rk-remaining-glow flex items-center justify-between rounded-xl border border-[var(--brand-coral)]/35 bg-[var(--brand-coral-tint)] px-4 py-3.5">
               <span className="text-[13px] font-semibold text-[var(--brand-coral-deep)]">
-                Kalan Ödeme (Girişte Alınacak)
+                {dict.shareRemaining}
               </span>
               <span className="text-[18px] font-bold leading-none tracking-tight text-[var(--brand-coral-deep)] tabular-nums">
                 {TL(data.isFullPayment ? 0 : data.remaining)}
@@ -280,15 +305,14 @@ export default async function ReservationShareView({
               <div>
                 <div className="flex items-center justify-between">
                   <dt className="text-[14px] text-[var(--color-stone-600)]">
-                    Hasar Depozitosu
+                    {dict.shareDeposit}
                   </dt>
                   <dd className="text-[15px] font-semibold text-[var(--color-stone-900)] tabular-nums">
                     {TL(data.damageDeposit)}
                   </dd>
                 </div>
                 <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-stone-400)]">
-                  Girişte hasar depozitosu ek olarak alınır. Villada herhangi bir
-                  hasar oluşmaması durumunda çıkışta eksiksiz olarak iade edilir.
+                  {dict.shareDepositNote}
                 </p>
               </div>
             </div>
@@ -300,7 +324,7 @@ export default async function ReservationShareView({
       <section className="mt-5 rounded-2xl border border-[var(--color-stone-100)] bg-white p-5 md:p-6">
         <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-[var(--color-stone-500)]">
           <User size={15} className="text-[var(--brand-coral)]" aria-hidden />
-          Mülk Sahibi İletişim Bilgileri
+          {dict.shareOwnerHeading}
         </h2>
         {data.ownerName || data.ownerPhone ? (
           <div className="mt-3 space-y-1">
@@ -312,13 +336,17 @@ export default async function ReservationShareView({
             {data.ownerPhone && (
               <div className="flex items-center flex-wrap gap-x-3 gap-y-2 text-[14px] text-[var(--color-stone-600)]">
                 <span className="tabular-nums">{data.ownerPhone}</span>
-                <PhoneActions phone={data.ownerPhone} />
+                <PhoneActions
+                  phone={data.ownerPhone}
+                  whatsappAriaLabel={dict.shareWhatsappAriaLabel}
+                  phoneAriaLabel={dict.sharePhoneAriaLabel}
+                />
               </div>
             )}
           </div>
         ) : (
           <p className="mt-3 text-[13.5px] text-[var(--color-stone-500)]">
-            Mülk sahibi iletişim bilgileri bulunmuyor.
+            {dict.shareOwnerEmpty}
           </p>
         )}
 
@@ -326,12 +354,12 @@ export default async function ReservationShareView({
 
         <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-[var(--color-stone-500)]">
           <User size={15} className="text-[var(--brand-coral)]" aria-hidden />
-          Misafir İletişim Bilgileri
+          {dict.shareGuestHeading}
         </h2>
         <dl className="mt-3 space-y-1.5 text-[14px]">
           <div className="flex gap-3">
             <dt className="w-24 shrink-0 text-[var(--color-stone-500)]">
-              Ad Soyad
+              {dict.shareGuestName}
             </dt>
             <dd className="min-w-0 font-medium text-[var(--color-stone-900)]">
               {data.guestName || "—"}
@@ -339,13 +367,17 @@ export default async function ReservationShareView({
           </div>
           <div className="flex gap-3">
             <dt className="w-24 shrink-0 text-[var(--color-stone-500)]">
-              Telefon
+              {dict.shareGuestPhone}
             </dt>
             <dd className="min-w-0 text-[var(--color-stone-900)]">
               {data.guestPhone ? (
                 <span className="inline-flex items-center flex-wrap gap-x-3 gap-y-2">
                   <span className="tabular-nums">{data.guestPhone}</span>
-                  <PhoneActions phone={data.guestPhone} />
+                  <PhoneActions
+                    phone={data.guestPhone}
+                    whatsappAriaLabel={dict.shareWhatsappAriaLabel}
+                    phoneAriaLabel={dict.sharePhoneAriaLabel}
+                  />
                 </span>
               ) : (
                 "—"
@@ -354,7 +386,7 @@ export default async function ReservationShareView({
           </div>
           <div className="flex gap-3">
             <dt className="w-24 shrink-0 text-[var(--color-stone-500)]">
-              E-posta
+              {dict.shareGuestEmail}
             </dt>
             <dd className="min-w-0 break-all text-[var(--color-stone-900)]">
               {data.guestEmail || "—"}
@@ -367,8 +399,7 @@ export default async function ReservationShareView({
       {(whatsappHref || phoneHref) && (
         <section className="mt-5 rounded-2xl border border-[var(--color-stone-100)] bg-white p-5 md:p-6 text-center">
           <p className="text-[13.5px] text-[var(--color-stone-600)]">
-            Rezervasyonunuzla ilgili herhangi bir sorunuz varsa bizimle
-            iletişime geçebilirsiniz.
+            {dict.shareContactNote}
           </p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
             {whatsappHref && (
@@ -378,7 +409,7 @@ export default async function ReservationShareView({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-5 py-2.5 text-[13px] font-medium text-white hover:bg-[#1da851] transition-colors"
               >
-                WhatsApp&apos;tan Ulaşın
+                {dict.shareWhatsappCta}
               </a>
             )}
             {phoneHref && (
@@ -386,7 +417,7 @@ export default async function ReservationShareView({
                 href={phoneHref}
                 className="inline-flex items-center gap-2 rounded-full border border-[var(--color-stone-200)] px-5 py-2.5 text-[13px] font-medium text-[var(--color-stone-700)] hover:border-[var(--brand-coral)] hover:text-[var(--color-stone-900)] transition-colors"
               >
-                Bizi Arayın
+                {dict.sharePhoneCta}
               </a>
             )}
           </div>
@@ -395,10 +426,10 @@ export default async function ReservationShareView({
 
       <div className="mt-8 text-center">
         <Link
-          href="/rezervasyon-kontrol"
+          href={`${localePrefix}/rezervasyon-kontrol`}
           className="text-[13px] text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] underline underline-offset-4 transition-colors"
         >
-          Farklı bir rezervasyon sorgula
+          {dict.shareLookupAgain}
         </Link>
       </div>
     </div>

@@ -928,8 +928,19 @@ describe("locale switch — /rezervasyon/*", () => {
     expect(t.de).toBe("/de/rezervasyon/basarili?ref=res-1&villa=test-villa");
   });
 
-  it("57) /rezervasyon-kontrol locale-routed DEĞİL (kapsam dışı, davranış korunur)", () => {
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `/rezervasyon-kontrol` ARTIK kendi
+     `/en` + `/de` route'larına sahip (ortak `ReservationLookupPageBody`)
+     → locale switch onu da korur. `/rezervasyon/` PREFIX'i ile
+     YANLIŞLIKLA eşleşme olmadığı aşağıda ayrıca doğrulanır. */
+  it("57) /rezervasyon-kontrol locale-routed (kendi exact kaydı)", () => {
     const t = getLocaleSwitchTargets("/rezervasyon-kontrol");
+    expect(t.tr).toBe("/rezervasyon-kontrol");
+    expect(t.en).toBe("/en/rezervasyon-kontrol");
+    expect(t.de).toBe("/de/rezervasyon-kontrol");
+  });
+
+  it("57b) /rezervasyon-kontrolX → fallback (prefix ile yanlış eşleşme yok)", () => {
+    const t = getLocaleSwitchTargets("/rezervasyon-kontrolX");
     expect(t.tr).toBe("/");
     expect(t.en).toBe("/en");
     expect(t.de).toBe("/de");

@@ -918,14 +918,50 @@ describe.each(VILLA_DETAIL_ROUTES)(
       expect(screen.getByText("300 m")).toBeInTheDocument();
       expect(screen.getByText("150 m")).toBeInTheDocument();
       expect(screen.getByText("2 km")).toBeInTheDocument();
-      /* 🛡️ villa_distance için artık DB çeviri sorgusu HİÇ ATILMAZ
-         (villa_distance_translations KULLANILMIYOR — statik dictionary
-         reuse edildi). */
-      expect(getTranslationsForParentsMock).not.toHaveBeenCalledWith(
-        "villa_distance",
-        expect.anything(),
-        expect.anything()
+      /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `villa_distance` artık MEVCUT
+         generic batch sistemine de bağlı (admin'in girdiği CUSTOM
+         başlıklar için). Çeviri satırı YOKKEN çıktı yukarıdaki gibi
+         BİREBİR aynı kalır (canonical dictionary → TR fallback).
+         Sorgu TEK batch'tir (N+1 YOK) ve diğer üç koleksiyonla
+         PARALEL çalışır. */
+      const distanceCalls = getTranslationsForParentsMock.mock.calls.filter(
+        (call: unknown[]) => call[0] === "villa_distance"
       );
+      expect(distanceCalls).toHaveLength(1);
+      expect(distanceCalls[0][1]).toEqual(["d1", "d2", "d3"]);
+      expect(distanceCalls[0][2]).toBe(locale);
+    });
+
+    it("16b) 🛡️ `villa_distance_translations.title` DOLU ise custom başlık ÇEVRİLİR (distance DEĞERİ yine çevrilmez)", async () => {
+      getVillaDistancesMock.mockResolvedValue([
+        {
+          id: "d3",
+          villa_id: "test-villa-id",
+          title: "Eski Özel Mesafe",
+          distance: "2 km",
+          created_at: "",
+        },
+      ]);
+      getTranslationsForParentsMock.mockImplementation(
+        async (entity: string) =>
+          entity === "villa_distance"
+            ? new Map([["d3", { title: "Legacy Custom Distance" }]])
+            : new Map()
+      );
+
+      const { default: Page } = await import(modulePath);
+      const element = await Page({
+        params: Promise.resolve({ slug: "test-villa" }),
+      });
+      render(element);
+      openVillaTab(locale, "location");
+
+      expect(screen.getByText("Legacy Custom Distance")).toBeInTheDocument();
+      expect(screen.queryByText("Eski Özel Mesafe")).toBeNull();
+      /* Mesafe DEĞERİ locale'den BAĞIMSIZ. */
+      expect(screen.getByText("2 km")).toBeInTheDocument();
+      /* İkon anahtarı yine ORİJİNAL TR title'dan. */
+      expect(getDistanceIconKeyMock).toHaveBeenCalledWith("Eski Özel Mesafe");
     });
 
     it("17) 🛡️ REGRESYON: distance icon key ORİJİNAL (TR) title'dan hesaplanır, ÇEVRİLMİŞ displayTitle'dan DEĞİL", async () => {

@@ -66,6 +66,7 @@ vi.mock("@/lib/db/pages.repository", () => ({
 }));
 
 import { getPageTitlesByLocale } from "@/lib/i18n/get-page-titles-by-locale.server";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 import HeaderWrapper from "@/app/components/layout/HeaderWrapper";
 import FooterWrapper from "@/app/components/layout/FooterWrapper";
 
@@ -500,7 +501,13 @@ describe("FooterWrapper + Footer — Kurumsal CMS sayfaları", () => {
       page: { "page-1": { en: "About Us" }, "page-2": { en: "Contact" } },
     });
     render(await FooterWrapper());
-    const nav = screen.getByRole("navigation", { name: "Kurumsal" });
+    /* 🛡️ aria-label artık dictionary'den (`footer.corporateAriaLabel`);
+       TR değeri "Kurumsal" ile BİREBİR aynı. Bu test beforeEach'ten
+       gelen `/en` pathname'i ile render ediliyor (EN başlıklar
+       bekleniyor) → EN etiketiyle sorgulanır. */
+    const nav = screen.getByRole("navigation", {
+      name: getDictionary("en").footer.corporateAriaLabel,
+    });
     const texts = Array.from(nav.querySelectorAll("a")).map(
       (a) => a.textContent
     );

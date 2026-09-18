@@ -17,6 +17,15 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+/* 🛡️ PUBLIC ÇOKLU DİL — filtre paneli metinleri MEVCUT `search.filters`
+   namespace'inden REUSE edilir (bu bileşen /arama FilterSidebar'ın
+   replikasıdır); yalnız karşılığı olmayan birkaç metin `shortGaps`
+   namespace'inden gelir. URL CONTRACT (bolgeler · villa-turleri ·
+   guests) ve filtre mantığı DEĞİŞTİRİLMEDİ. */
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+
 import {
   ChevronDown,
   MapPin,
@@ -54,12 +63,21 @@ type Props = {
   initial: GapInitialFilters;
   /** Mobil CTA "X villa göster" için. */
   resultCount?: number;
+  /** 🛡️ Opsiyonel — verilmezse "tr" → TR çıktısı BİREBİR eskisi gibi. */
+  locale?: Locale;
 };
 
 /* ---------------- Helpers ---------------- */
 
-const regionShortLabel = (name: string, group: string): string => {
-  if (name === group) return `Tüm ${group}`;
+const regionShortLabel = (
+  name: string,
+  group: string,
+  allGroupTemplate: string
+): string => {
+  /* 🛡️ Bölge ADI ÇEVRİLMEZ (özel isim); yalnız "Tüm …" ön eki locale'e
+     göre çözülür — /arama FilterSidebar ile AYNI kural. */
+  if (name === group)
+    return formatDictionaryString(allGroupTemplate, { group });
   if (name.includes("/")) {
     const tail = name.split("/").pop()?.trim();
     if (tail) return tail;
@@ -76,7 +94,12 @@ export default function GapFilterSidebar({
   categoryOptions,
   initial,
   resultCount = 0,
+  locale = DEFAULT_LOCALE,
 }: Props) {
+  const dictionary = getDictionary(locale);
+  const dict = dictionary.shortGaps;
+  /* 🛡️ Filtre paneli metinleri /arama FilterSidebar ile AYNI namespace. */
+  const filtersDict = dictionary.search.filters;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -240,17 +263,17 @@ export default function GapFilterSidebar({
         <div>
           <p className="text-[11px] tracking-[0.24em] uppercase font-medium text-[var(--color-stone-500)]">
             <span className="inline-block w-6 h-px bg-[var(--color-stone-300)] align-middle mr-2" />
-            Filtrele
+            {dict.filterTitle}
           </p>
           <h2 className="font-display text-[26px] md:text-[28px] text-[var(--color-stone-900)] mt-2 tracking-[-0.025em] leading-tight">
-            Aramayı daralt.
+            {dict.filterSubtitle}
           </h2>
         </div>
 
         <button
           type="button"
           onClick={() => setMobileOpen(false)}
-          aria-label="Filtreleri kapat"
+          aria-label={filtersDict.closeAriaLabel}
           className="md:hidden -mr-1 w-10 h-10 rounded-full flex items-center justify-center text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)] transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
         >
           <X size={18} />
@@ -262,9 +285,13 @@ export default function GapFilterSidebar({
         {/* ============ 1) VİLLA TİPİ ============ */}
         <FilterGroup
           icon={<Tag size={14} className="text-[var(--color-champagne-500)]" />}
-          label="Villa Tipi"
+          label={filtersDict.typeLabel}
           summary={
-            categories.length === 0 ? "Tümü" : `${categories.length} seçili`
+            categories.length === 0
+              ? filtersDict.typeAll
+              : formatDictionaryString(filtersDict.selectedCount, {
+                  n: categories.length,
+                })
           }
         >
           {categoryOptions.length === 0 ? (
@@ -305,14 +332,18 @@ export default function GapFilterSidebar({
           icon={
             <MapPin size={14} className="text-[var(--color-champagne-500)]" />
           }
-          label="Bölge"
+          label={filtersDict.regionLabel}
           summary={
-            regions.length === 0 ? "Tüm bölgeler" : `${regions.length} seçili`
+            regions.length === 0
+              ? filtersDict.regionAll
+              : formatDictionaryString(filtersDict.selectedCount, {
+                  n: regions.length,
+                })
           }
         >
           {regionGroups.length === 0 ? (
             <p className="text-[13px] text-[var(--color-stone-400)]">
-              Bölge yok.
+              {filtersDict.regionEmpty}
             </p>
           ) : (
             <div className="space-y-1.5">
@@ -345,7 +376,10 @@ export default function GapFilterSidebar({
                       </span>
                       {selectedCount > 0 && (
                         <span className="text-[11px] tabular-nums text-[var(--color-stone-400)] shrink-0">
-                          {selectedCount} seçili
+                          {formatDictionaryString(
+                            filtersDict.selectedCount,
+                            { n: selectedCount }
+                          )}
                         </span>
                       )}
                     </button>
@@ -369,7 +403,7 @@ export default function GapFilterSidebar({
                                   className="!w-4 !h-4 accent-[var(--color-champagne-500)] !rounded"
                                 />
                                 <span className="truncate">
-                                  {regionShortLabel(opt.name, g.group)}
+                                  {regionShortLabel(opt.name, g.group, filtersDict.regionGroupAll)}
                                 </span>
                               </label>
                             </li>
@@ -389,21 +423,25 @@ export default function GapFilterSidebar({
           icon={
             <Users size={14} className="text-[var(--color-champagne-500)]" />
           }
-          label="Kişi Sayısı"
-          summary={guestCount > 1 ? `${guestCount} kişi` : "1 kişi"}
+          label={filtersDict.guestsLabel}
+          summary={formatDictionaryString(filtersDict.guestsSummary, {
+            n: guestCount,
+          })}
         >
           <div className="space-y-3">
             <CounterRow
-              label="Kişi"
-              hint="Toplam kapasite"
+              label={filtersDict.guestsCounterLabel}
+              hint={filtersDict.guestsCounterHint}
+              decreaseAriaLabel={filtersDict.decreaseAriaLabel}
+              increaseAriaLabel={filtersDict.increaseAriaLabel}
               value={guestCount}
               min={1}
               max={20}
               onChange={setGuestCount}
             />
             <p className="text-[11px] tracking-[0.04em] text-[var(--color-stone-400)] pt-1 leading-relaxed">
-              <span className="tabular-nums">{guestCount}</span>+ kişi kapasitesi
-              olan villalar gösterilir.
+              <span className="tabular-nums">{guestCount}</span>
+              {filtersDict.guestsHint}
             </p>
           </div>
         </FilterGroup>
@@ -418,7 +456,7 @@ export default function GapFilterSidebar({
           className="inline-flex items-center gap-2 px-4 py-3 rounded-full border border-[var(--color-stone-200)] text-[13px] font-medium text-[var(--color-stone-700)] hover:border-[var(--color-stone-300)] hover:text-[var(--color-stone-900)] transition-colors motion-reduce:transition-none disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
         >
           <RotateCcw size={13} />
-          Temizle
+          {filtersDict.reset}
         </button>
         <button
           type="button"
@@ -429,10 +467,12 @@ export default function GapFilterSidebar({
           <Search size={14} />
           <span>
             {isPending
-              ? "Aranıyor…"
+              ? filtersDict.applying
               : mobileOpen
-              ? `${resultCount} villa göster`
-              : "Filtrele"}
+              ? formatDictionaryString(dict.showResults, {
+                  n: resultCount ?? 0,
+                })
+              : dict.filterApplyCta}
           </span>
         </button>
       </div>
@@ -460,10 +500,10 @@ export default function GapFilterSidebar({
             </span>
             <span>
               <span className="block text-[11px] tracking-[0.18em] uppercase font-medium text-[var(--color-stone-500)]">
-                Filtrele
+                {dict.mobileTrigger}
               </span>
               <span className="block text-[14px] font-medium text-[var(--color-stone-900)] mt-0.5">
-                Bölge, villa tipi, kişi…
+                {dict.mobileSummaryPlaceholder}
               </span>
             </span>
           </span>
@@ -494,7 +534,7 @@ export default function GapFilterSidebar({
         aria-hidden={!mobileOpen}
         role="dialog"
         aria-modal="true"
-        aria-label="Filtreler"
+        aria-label={dict.filtersAriaLabel}
       >
         <div
           onClick={() => setMobileOpen(false)}
@@ -559,6 +599,8 @@ function CounterRow({
   min,
   max,
   onChange,
+  decreaseAriaLabel,
+  increaseAriaLabel,
 }: {
   label: string;
   hint: string;
@@ -566,6 +608,9 @@ function CounterRow({
   min: number;
   max: number;
   onChange: (n: number) => void;
+  /** `formatDictionaryString` şablonu — `{label}`. */
+  decreaseAriaLabel: string;
+  increaseAriaLabel: string;
 }) {
   const canDec = value > min;
   const canInc = value < max;
@@ -584,7 +629,7 @@ function CounterRow({
           type="button"
           onClick={() => canDec && onChange(value - 1)}
           disabled={!canDec}
-          aria-label={`${label} azalt`}
+          aria-label={formatDictionaryString(decreaseAriaLabel, { label })}
           className="w-8 h-8 rounded-full border border-[var(--color-stone-200)] text-[var(--color-stone-700)] flex items-center justify-center hover:border-[var(--color-stone-300)] hover:text-[var(--color-stone-900)] transition-colors motion-reduce:transition-none disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
         >
           <Minus size={13} />
@@ -596,7 +641,7 @@ function CounterRow({
           type="button"
           onClick={() => canInc && onChange(value + 1)}
           disabled={!canInc}
-          aria-label={`${label} arttır`}
+          aria-label={formatDictionaryString(increaseAriaLabel, { label })}
           className="w-8 h-8 rounded-full border border-[var(--color-stone-200)] text-[var(--color-stone-700)] flex items-center justify-center hover:border-[var(--color-stone-300)] hover:text-[var(--color-stone-900)] transition-colors motion-reduce:transition-none disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
         >
           <Plus size={13} />

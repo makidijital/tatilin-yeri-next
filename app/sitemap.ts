@@ -109,14 +109,19 @@ function toDate(value: string | null | undefined): Date | undefined {
    alanı EKLENİYOR. Path'ler Phase 7B'nin `buildLocaleAlternates`'inden
    (tek kaynak); absolute'a bu dosyanın MEVCUT `url()` helper'ıyla
    çözülüyor (yeni bir absolute-URL mekanizması İCAT EDİLMEDİ). */
-function villaLanguageAlternates(slug: string): Record<string, string> {
-  const { languages } = buildLocaleAlternates(`/kiralik-villa/${slug}`, "tr");
+function languageAlternates(trPath: string): Record<string, string> {
+  const { languages } = buildLocaleAlternates(trPath, "tr");
   return {
     tr: url(languages.tr),
     en: url(languages.en),
     de: url(languages.de),
     "x-default": url(languages["x-default"]),
   };
+}
+
+/** Villa detay — mevcut çağıranın imzası DEĞİŞMEDİ. */
+function villaLanguageAlternates(slug: string): Record<string, string> {
+  return languageAlternates(`/kiralik-villa/${slug}`);
 }
 
 type SlugRow = { slug: string | null; created_at: string | null };
@@ -139,30 +144,54 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   /* ---------- STATIK INDEXLENEN ROUTE'LAR ---------- */
   const now = new Date();
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `/`, `/kiralik-villalar`,
+     `/iletisim` ve `/teklif-al` artık GERÇEK `/en` + `/de` route
+     dosyalarına sahip (ortak gövde + locale prop) ve kendi
+     `generateMetadata`'larında hreflang üretiyorlar. Sitemap de AYNI
+     `buildLocaleAlternates` kaynağından `alternates.languages` alanını
+     alır — TR entry'lerinin `url` alanı DEĞİŞMEZ, yalnız ek bir
+     hreflang-ilişki alanı EKLENİR (villa detayda uygulanan AYNI desen).
+     `multilingual_enabled=false` iken alan HİÇ eklenmez. */
   const staticEntries: MetadataRoute.Sitemap = [
     {
       url: url("/"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 1.0,
+      ...(multilingualEnabled
+        ? { alternates: { languages: languageAlternates("/") } }
+        : {}),
     },
     {
       url: url("/kiralik-villalar"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.9,
+      ...(multilingualEnabled
+        ? {
+            alternates: {
+              languages: languageAlternates("/kiralik-villalar"),
+            },
+          }
+        : {}),
     },
     {
       url: url("/iletisim"),
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.5,
+      ...(multilingualEnabled
+        ? { alternates: { languages: languageAlternates("/iletisim") } }
+        : {}),
     },
     {
       url: url("/teklif-al"),
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.5,
+      ...(multilingualEnabled
+        ? { alternates: { languages: languageAlternates("/teklif-al") } }
+        : {}),
     },
   ];
 
@@ -211,6 +240,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           lastModified: toDate(p.created_at),
           changeFrequency: "monthly",
           priority: 0.6,
+          /* 🛡️ CMS sayfaları `/en|de/p/[slug]` ile gerçek içerik
+             render ediyor (`page_translations`). */
+          ...(multilingualEnabled
+            ? {
+                alternates: {
+                  languages: languageAlternates(`/p/${p.slug}`),
+                },
+              }
+            : {}),
         }));
     }
   } catch (err) {
