@@ -358,6 +358,49 @@ export const en: Dictionary = {
     discountValidFull:
       "Valid {sMonth} {sDay}, {sYear} – {eMonth} {eDay}, {eYear}",
   },
+  blog: {
+    metaTitle: "Blog",
+    metaDescription:
+      "Villa holiday guides, regional recommendations and travel tips. Fresh stories from the finest corners of the Mediterranean.",
+    ogDescription:
+      "Villa holiday guides, regional recommendations and travel tips.",
+    breadcrumbHome: "Home",
+    breadcrumbBlog: "Blog",
+    eyebrow: "Blog",
+    heroTitle: "Blog & Guides",
+    heroDescription:
+      "Explore villa rental guides for Kaş and Kalkan, regional tips and holiday inspiration.",
+    listEmpty: "No blog posts published yet.",
+    detailNotFoundTitle: "Post not found",
+    contentComing: "Content coming soon.",
+  },
+  privateVilla: {
+    metaInvalidTitle: "Invalid link",
+    metaTitleFallback: "Private Link",
+    metaDescription:
+      "Private share link — a villa visible only to people who have the link.",
+    badge: "Private Share",
+    badgeNote: "Visible only to people with the link",
+    detailsEyebrow: "Details",
+    dimensionsCaption: "Width × Length × Depth",
+    priceIncludesEyebrow: "Included",
+    rulesEyebrow: "Rules",
+    locationEyebrow: "Location",
+    approximateLocation: "Approximate location shown",
+    openInGoogleMaps: "Open in Google Maps",
+    tourismAuthority: "Republic of Türkiye, Ministry of Culture and Tourism",
+    documentNumberLabel: "Licence No:",
+  },
+  sharedList: {
+    eyebrow: "Handpicked for you",
+    titleFallback: "Villas shared with you",
+    villaUnit: "villas",
+    guestsLabel: "{n} guests",
+    footerNote:
+      "Maki Dijital — visit our main archive to see every villa.",
+    footerCta: "Explore all villas",
+    staleNotice: "{n} villa(s) on this list are currently unavailable.",
+  },
   home: {
     hero: {
       badge: "Mediterranean Collection",

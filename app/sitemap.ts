@@ -276,6 +276,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           lastModified: toDate(b.updated_at || b.published_at),
           changeFrequency: "weekly",
           priority: 0.7,
+          /* 🛡️ hreflang — `/en|de/blog/[slug]` GERÇEK route'ları var.
+             `multilingual_enabled` kapalıyken çıktı eskisiyle AYNI. */
+          ...(multilingualEnabled
+            ? {
+                alternates: {
+                  languages: languageAlternates(`/blog/${b.slug}`),
+                },
+              }
+            : {}),
         }));
     }
   } catch (err) {
@@ -292,6 +301,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.7,
+      ...(multilingualEnabled
+        ? { alternates: { languages: languageAlternates("/blog") } }
+        : {}),
     },
   ];
 

@@ -503,6 +503,74 @@ export type Dictionary = {
     discountValidFull: string;
   };
   /* ===============================================================
+     🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — /blog ve /blog/[slug]
+     ===============================================================
+     Yazı BAŞLIĞI / ÖZETİ / GÖVDESİ ve SEO alanları DB'den gelir
+     (`blog_post_translations`, migration 089) — burada YALNIZ statik
+     UI metinleri vardır. TR değerleri sayfaların BUGÜNKÜ hardcoded
+     metinleriyle BİREBİR aynıdır. `slug` ve `category` ÇEVRİLMEZ. */
+  blog: {
+    metaTitle: string;
+    metaDescription: string;
+    ogDescription: string;
+    breadcrumbHome: string;
+    breadcrumbBlog: string;
+    eyebrow: string;
+    heroTitle: string;
+    heroDescription: string;
+    listEmpty: string;
+    /** Detay sayfası — yazı bulunamadığında metadata başlığı. */
+    detailNotFoundTitle: string;
+    /** Detay sayfası — gövde ve özet boşsa. */
+    contentComing: string;
+  };
+  /* ===============================================================
+     🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — /v/[token] (özel paylaşım linki)
+     ===============================================================
+     Off-market villa önizleme sayfası. `noindex`'tir ama EN/DE
+     müşteriye de gönderilebildiği için görünen metinler dictionary'den
+     gelir. Bölüm başlıkları MEVCUT `villa` / `pool` / `map` /
+     `villaTabs` / `price` / `layout` anahtarlarından REUSE edilir;
+     burada YALNIZ bu sayfaya ÖZGÜ metinler tutulur. TR değerleri
+     sayfanın BUGÜNKÜ hardcoded metinleriyle BİREBİR aynıdır. */
+  privateVilla: {
+    metaInvalidTitle: string;
+    metaTitleFallback: string;
+    metaDescription: string;
+    badge: string;
+    badgeNote: string;
+    detailsEyebrow: string;
+    /** Havuz ölçü kartının alt açıklaması. */
+    dimensionsCaption: string;
+    priceIncludesEyebrow: string;
+    rulesEyebrow: string;
+    locationEyebrow: string;
+    approximateLocation: string;
+    openInGoogleMaps: string;
+    tourismAuthority: string;
+    documentNumberLabel: string;
+  };
+  /* ===============================================================
+     🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — /liste/[token]
+     ===============================================================
+     Admin'in "Villa Listesi" ekranından ürettiği kısa token URL'i.
+     Sayfa `noindex`'tir ama EN/DE müşteriye de gönderilebildiği için
+     görünen metinler dictionary'den gelir. TR değerleri sayfanın
+     BUGÜNKÜ hardcoded metinleriyle BİREBİR aynıdır. Liste başlığı ve
+     notu ADMIN'İN GİRDİĞİ veridir → çevrilmez, aynen gösterilir. */
+  sharedList: {
+    eyebrow: string;
+    titleFallback: string;
+    /** Villa sayısının yanındaki birim. */
+    villaUnit: string;
+    /** template: {n} */
+    guestsLabel: string;
+    footerNote: string;
+    footerCta: string;
+    /** template: {n} */
+    staleNotice: string;
+  };
+  /* ===============================================================
      🛡️ PHASE 11 — ANA SAYFA (homepage) UI METİNLERİ
      ===============================================================
      Yalnız STATİK UI metni. Admin'in girdiği içerik (hero_*,

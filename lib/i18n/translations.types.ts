@@ -92,6 +92,19 @@ export type VillaDistanceTranslationRow = {
   updated_at: string;
 };
 
+export type BlogPostTranslationRow = {
+  id: string;
+  blog_post_id: string;
+  locale: Locale;
+  title: string | null;
+  body: string | null;
+  excerpt: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type PageTranslationRow = {
   id: string;
   page_id: string;
@@ -153,6 +166,7 @@ export type TranslationEntity =
   | "rule_item"
   | "price_include_item"
   | "villa_distance"
+  | "blog_post"
   | "page"
   | "faq"
   /* 🛡️ MIGRATION 086 — migration 082'nin 9 tablosundan SONRA eklendi;
@@ -173,6 +187,8 @@ export type TranslationRowFor<E extends TranslationEntity> = E extends "villa"
             ? PriceIncludeItemTranslationRow
             : E extends "villa_distance"
               ? VillaDistanceTranslationRow
+              : E extends "blog_post"
+                ? BlogPostTranslationRow
               : E extends "page"
                 ? PageTranslationRow
                 : E extends "faq"
@@ -220,6 +236,11 @@ export const TRANSLATION_ENTITY_CONFIG: Record<
   villa_distance: {
     table: "villa_distance_translations",
     parentIdColumn: "distance_id",
+  },
+  /* 🛡️ MIGRATION 089 — blog yazısı içerik çevirileri. */
+  blog_post: {
+    table: "blog_post_translations",
+    parentIdColumn: "blog_post_id",
   },
   page: { table: "page_translations", parentIdColumn: "page_id" },
   faq: { table: "faq_translations", parentIdColumn: "faq_id" },

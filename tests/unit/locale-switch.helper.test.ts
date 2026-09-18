@@ -50,8 +50,20 @@ describe("hasLocaleRoute", () => {
     expect(hasLocaleRoute("/teklif-al")).toBe(true);
   });
 
-  it("9) '/blog' → false", () => {
-    expect(hasLocaleRoute("/blog")).toBe(false);
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `/en|de/blog` ve
+     `/en|de/blog/[slug]` GERÇEK route dosyaları eklendi (ortak
+     `BlogIndexPageBody` / `BlogDetailPageBody` + migration 089
+     `blog_post_translations`) → beklenen değer false → true. */
+  it("9) '/blog' → true (EN/DE route'ları var)", () => {
+    expect(hasLocaleRoute("/blog")).toBe(true);
+  });
+
+  it("9b) '/blog/bir-yazi' → true (detay route'ları var)", () => {
+    expect(hasLocaleRoute("/blog/bir-yazi")).toBe(true);
+  });
+
+  it("9c) '/bloglar' → false (prefix ile YANLIŞLIKLA eşleşmez)", () => {
+    expect(hasLocaleRoute("/bloglar")).toBe(false);
   });
 
   /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `/en|de/favoriler`. */
@@ -88,8 +100,20 @@ describe("hasLocaleRoute", () => {
     expect(hasLocaleRoute("/rezervasyon-kontrolX")).toBe(false);
   });
 
-  it("14) '/v/abc123' → false", () => {
-    expect(hasLocaleRoute("/v/abc123")).toBe(false);
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `/en|de/v/[token]` ve
+     `/en|de/liste/[token]` GERÇEK route dosyaları eklendi. Sayfalar
+     `noindex`'tir ama kullanıcı linke EN/DE ile de ulaşabildiği için
+     dil değiştirici çalışmalıdır → beklenen değer false → true. */
+  it("14) '/v/abc123' → true (EN/DE route'ları var)", () => {
+    expect(hasLocaleRoute("/v/abc123")).toBe(true);
+  });
+
+  it("14b) '/liste/abc123' → true (EN/DE route'ları var)", () => {
+    expect(hasLocaleRoute("/liste/abc123")).toBe(true);
+  });
+
+  it("14c) '/v/' → false (token YOKSA eşleşmez)", () => {
+    expect(hasLocaleRoute("/v/")).toBe(false);
   });
 
   /* 🛡️ PHASE 12D — /en/p/[slug] ve /de/p/[slug] route'ları EKLENDİ;
@@ -207,9 +231,20 @@ describe("getLocaleSwitchTargets", () => {
     expect(targets.de).toBe("/de/teklif-al");
   });
 
-  it("13) '/de/blog' → fallback (kullanıcı örneği: EN seçilince '/en' döner)", () => {
-    const targets = getLocaleSwitchTargets("/de/blog");
-    expect(targets.en).toBe("/en");
+  it("13) '/de/blog' → locale prefix'li hedefler (artık EN/DE route'u var)", () => {
+    expect(getLocaleSwitchTargets("/de/blog")).toEqual({
+      tr: "/blog",
+      en: "/en/blog",
+      de: "/de/blog",
+    });
+  });
+
+  it("13c) '/en/blog/bir-yazi' → slug AYNEN korunur", () => {
+    expect(getLocaleSwitchTargets("/en/blog/bir-yazi")).toEqual({
+      tr: "/blog/bir-yazi",
+      en: "/en/blog/bir-yazi",
+      de: "/de/blog/bir-yazi",
+    });
   });
 
   it("14) '/rezervasyon-kontrol' → locale prefix'li hedefler", () => {
@@ -247,11 +282,19 @@ describe("getLocaleSwitchTargets", () => {
     });
   });
 
-  it("16) '/v/abc123' → fallback", () => {
+  it("16) '/v/abc123' → token AYNEN korunur", () => {
     expect(getLocaleSwitchTargets("/v/abc123")).toEqual({
-      tr: "/",
-      en: "/en",
-      de: "/de",
+      tr: "/v/abc123",
+      en: "/en/v/abc123",
+      de: "/de/v/abc123",
+    });
+  });
+
+  it("16b) '/de/liste/abc123' → token AYNEN korunur", () => {
+    expect(getLocaleSwitchTargets("/de/liste/abc123")).toEqual({
+      tr: "/liste/abc123",
+      en: "/en/liste/abc123",
+      de: "/de/liste/abc123",
     });
   });
 });
@@ -346,8 +389,14 @@ describe("getLocaleSwitchTargets — query string koruma", () => {
       en: "/en/teklif-al?foo=bar",
       de: "/de/teklif-al?foo=bar",
     });
-    /* (a2) fallback (locale karşılığı yok) → query EKLENMEZ, kökler aynen */
+    /* (a2) `/blog` artık allowlist'te → query AYNEN korunur */
     expect(getLocaleSwitchTargets("/de/blog", "x=1")).toEqual({
+      tr: "/blog?x=1",
+      en: "/en/blog?x=1",
+      de: "/de/blog?x=1",
+    });
+    /* (a3) gerçek fallback (locale karşılığı YOK) → query EKLENMEZ */
+    expect(getLocaleSwitchTargets("/bilinmeyen-sayfa", "x=1")).toEqual({
       tr: "/",
       en: "/en",
       de: "/de",

@@ -372,6 +372,49 @@ export const tr: Dictionary = {
     discountValidFull:
       "{sDay} {sMonth} {sYear} - {eDay} {eMonth} {eYear} arası geçerli",
   },
+  blog: {
+    metaTitle: "Blog",
+    metaDescription:
+      "Villa tatili rehberleri, bölge önerileri ve seyahat ipuçları. Akdeniz'in seçkin köşelerinden güncel blog yazıları.",
+    ogDescription:
+      "Villa tatili rehberleri, bölge önerileri ve seyahat ipuçları.",
+    breadcrumbHome: "Ana sayfa",
+    breadcrumbBlog: "Blog",
+    eyebrow: "Blog",
+    heroTitle: "Blog & Rehber",
+    heroDescription:
+      "Villa kiralama, Kaş, Kalkan ve bölge rehberleri, seyahat ipuçları ve tatil önerilerini keşfedin.",
+    listEmpty: "Henüz blog yazısı yayınlanmadı.",
+    detailNotFoundTitle: "Yazı bulunamadı",
+    contentComing: "İçerik yakında.",
+  },
+  privateVilla: {
+    metaInvalidTitle: "Bağlantı geçersiz",
+    metaTitleFallback: "Özel Bağlantı",
+    metaDescription:
+      "Özel paylaşım bağlantısı — sadece bağlantıya sahip kişilere açık villa.",
+    badge: "Özel Paylaşım",
+    badgeNote: "Sadece bağlantıyı bilen kişilere açık",
+    detailsEyebrow: "Detaylar",
+    dimensionsCaption: "Genişlik × Uzunluk × Derinlik",
+    priceIncludesEyebrow: "Fiyata Dahil",
+    rulesEyebrow: "Kurallar",
+    locationEyebrow: "Konum",
+    approximateLocation: "Yaklaşık konum gösterilmektedir",
+    openInGoogleMaps: "Google Maps'te aç",
+    tourismAuthority: "T.C. Kültür ve Turizm Bakanlığı",
+    documentNumberLabel: "Belge No:",
+  },
+  sharedList: {
+    eyebrow: "Sizin için özel seçildi",
+    titleFallback: "Sizinle paylaşılan villalar",
+    villaUnit: "villa",
+    guestsLabel: "{n} kişi",
+    footerNote:
+      "Maki Dijital — tüm villaları görmek için ana arşivimizi ziyaret edin.",
+    footerCta: "Tüm villaları keşfet",
+    staleNotice: "Listedeki {n} villa şu anda görüntülenemiyor.",
+  },
   home: {
     hero: {
       badge: "Akdeniz Collection",

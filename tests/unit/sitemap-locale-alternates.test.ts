@@ -194,8 +194,9 @@ describe("sitemap() — Phase 7D villa locale alternates", () => {
   /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `/`, `/kiralik-villalar`,
      `/iletisim`, `/teklif-al` ve `/p/[slug]` ARTIK gerçek `/en` + `/de`
      route'larına sahip → sitemap onlara da `alternates.languages` verir.
-     BLOG hâlâ TR-only → `alternates` TAŞIMAZ (regresyon guard'ı). */
-  it("10) locale route'u OLAN entry'ler alternates taşır, blog TAŞIMAZ", async () => {
+     🛡️ BLOG da ARTIK `/en|de/blog` + `/en|de/blog/[slug]` route'larına
+     sahip (migration 089 `blog_post_translations`) → alternates TAŞIR. */
+  it("10) locale route'u OLAN entry'ler alternates taşır (blog dahil)", async () => {
     getCachedSettingsMock.mockResolvedValue({ multilingual_enabled: true });
 
     const entries = await runSitemap();
@@ -216,6 +217,8 @@ describe("sitemap() — Phase 7D villa locale alternates", () => {
       "https://example.com/iletisim",
       "https://example.com/teklif-al",
       "https://example.com/p/hakkimizda",
+      "https://example.com/blog",
+      "https://example.com/blog/ilk-yazi",
     ];
     for (const u of localized) {
       const alt = (byUrl.get(u) as Record<string, unknown> | undefined)
@@ -237,15 +240,14 @@ describe("sitemap() — Phase 7D villa locale alternates", () => {
     expect(homeAlt.languages.de).toBe("https://example.com/de");
     expect(homeAlt.languages.tr).toBe("https://example.com/");
 
-    /* BLOG — TR-only, alternates YOK. */
-    for (const u of [
-      "https://example.com/blog",
-      "https://example.com/blog/ilk-yazi",
-    ]) {
-      expect(
-        (byUrl.get(u) as Record<string, unknown>).alternates
-      ).toBeUndefined();
-    }
+    /* BLOG hreflang — `buildLocaleAlternates` ile birebir. */
+    const blogAlt = (
+      byUrl.get("https://example.com/blog/ilk-yazi") as Record<string, unknown>
+    ).alternates as { languages: Record<string, string> };
+    expect(blogAlt.languages.tr).toBe("https://example.com/blog/ilk-yazi");
+    expect(blogAlt.languages.en).toBe("https://example.com/en/blog/ilk-yazi");
+    expect(blogAlt.languages.de).toBe("https://example.com/de/blog/ilk-yazi");
+    expect(blogAlt.languages["x-default"]).toBe(blogAlt.languages.tr);
 
     // Toplam entry sayısı: 4 statik + 2 villa + 1 page + 1 blog-index + 1 blog = 9
     expect(entries).toHaveLength(9);

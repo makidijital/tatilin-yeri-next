@@ -2,17 +2,15 @@ import type { Metadata } from "next";
 
 import PrivateVillaPageBody from "@/app/components/private-villa/PrivateVillaPageBody";
 import { buildPrivateVillaMetadata } from "@/app/components/private-villa/private-villa-metadata";
+import { requirePublicLocaleEnabled } from "@/lib/i18n/public-locale-gate.server";
+import { setRequestLocale } from "@/lib/i18n/request-locale.server";
 
 /* ===============================================================
-   🛡️ FAZ 31 — PRIVATE / TEMPORARY VILLA URL ROUTE (TR)
+   🛡️ /en/v/[token] — off-market preview (en)
    ===============================================================
-   `/v/[token]` — off-market preview route.
-
-   Gövde `PrivateVillaPageBody`'ye, metadata `private-villa-metadata`'ya
-   taşındı (TR/EN/DE ORTAK) — bu dosya ince bir sarmalayıcıdır. Token
-   resolve, veri yükleme, fiyat/müsaitlik mantığı, `notFound()` ve SEO
-   politikası (noindex/nofollow, canonical YOK) BİREBİR aynıdır; TR
-   çıktısı DEĞİŞMEDİ.
+   TR ile AYNI gövde (`PrivateVillaPageBody`) — tek fark `locale`
+   prop'u. Token resolve/veri/fiyat mantığı ve `notFound()` BİREBİR
+   aynıdır. SEO: TR ile AYNI (noindex/nofollow, canonical YOK).
    =============================================================== */
 
 export async function generateMetadata({
@@ -20,10 +18,10 @@ export async function generateMetadata({
 }: {
   params: Promise<{ token: string }>;
 }): Promise<Metadata> {
-  return buildPrivateVillaMetadata(params);
+  return buildPrivateVillaMetadata(params, "en");
 }
 
-export default async function PrivateVillaDetail({
+export default async function ENPrivateVillaDetail({
   params,
   searchParams,
 }: {
@@ -33,5 +31,14 @@ export default async function PrivateVillaDetail({
     end?: string | string[];
   }>;
 }) {
-  return <PrivateVillaPageBody params={params} searchParams={searchParams} />;
+  setRequestLocale("en");
+  await requirePublicLocaleEnabled();
+
+  return (
+    <PrivateVillaPageBody
+      params={params}
+      searchParams={searchParams}
+      locale="en"
+    />
+  );
 }

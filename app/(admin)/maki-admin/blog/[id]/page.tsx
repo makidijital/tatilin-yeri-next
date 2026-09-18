@@ -6,6 +6,12 @@ import { Loader2 } from "lucide-react";
 
 import { adminFetch } from "@/lib/admin-fetch";
 import BlogPostForm, { type BlogFormInitial } from "../BlogPostForm";
+/* 🛡️ MIGRATION 089 — blog yazısı EN/DE çevirileri. `pages/[id]/page.tsx`
+   (Phase 12C) ile BİREBİR AYNI desen: `multilingual_enabled` kapısı +
+   aynı `getPublicSettingsAction` fetch mekaniği. Kart kendi save
+   akışına sahiptir → mevcut BlogPostForm CRUD'una KARIŞMAZ. */
+import BlogTranslationsCard from "../BlogTranslationsCard";
+import { getPublicSettingsAction } from "@/app/services/settings.action";
 
 /* ===============================================================
    🛡️ Blog — Yazı Düzenle (admin). GET /api/admin/blog/[id] → form.
@@ -17,6 +23,21 @@ export default function EditBlogPost() {
 
   const [initial, setInitial] = useState<BlogFormInitial | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [multilingualEnabled, setMultilingualEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const settings = await getPublicSettingsAction();
+      if (cancelled) return;
+      setMultilingualEnabled(!!settings?.multilingual_enabled);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -58,6 +79,13 @@ export default function EditBlogPost() {
       ) : (
         <BlogPostForm mode="edit" initial={initial} />
       )}
+
+      {/* 🛡️ MIGRATION 089 — BLOG ÇEVİRİLERİ (EN / DE). Yalnız
+          `multilingual_enabled=true` ve kayıt yüklendiğinde render
+          edilir; mevcut form/CRUD davranışını BOZMAZ. */}
+      {initial && multilingualEnabled && id ? (
+        <BlogTranslationsCard postId={id} postTitle={initial.title} />
+      ) : null}
     </div>
   );
 }

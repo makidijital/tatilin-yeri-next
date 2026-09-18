@@ -51,6 +51,9 @@ const EXACT_LOCALE_ROUTED_PATHS: readonly string[] = [
   "/teklif-al",
   "/rezervasyon-kontrol",
   "/favoriler",
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `/en|de/blog` GERÇEK route dosyası
+     var (ortak `BlogIndexPageBody` + `blog_post_translations`). */
+  "/blog",
 ];
 
 /** Dinamik segment taşıyan (ör. `[slug]`) route'ların base prefix'leri.
@@ -67,6 +70,14 @@ const PREFIXED_LOCALE_ROUTED_PATHS: readonly string[] = [
      gece) AYNEN korunur; yalnız locale prefix'i değişir. */
   "/favoriler/paylas/",
   "/kisa-sureli-tarihler/",
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — blog detayı ve token sayfaları da
+     artık GERÇEK `/en` ve `/de` route dosyalarına sahip. Dinamik
+     segment (slug / token) AYNEN korunur; yalnız locale prefix'i
+     değişir. `/v/` ve `/liste/` noindex'tir ama kullanıcı linke EN/DE
+     ile de ulaşabildiği için dil değiştirici çalışmalıdır. */
+  "/blog/",
+  "/liste/",
+  "/v/",
 ];
 
 /**

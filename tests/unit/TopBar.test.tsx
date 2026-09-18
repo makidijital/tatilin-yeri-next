@@ -242,13 +242,18 @@ describe("TopBar — Phase 10C dil değiştirici", () => {
     );
   });
 
-  it("12) '/de/blog' → EN→'/en' (kullanıcı örneği birebir)", async () => {
+  /* 🛡️ PUBLIC ÇOKLU DİL TAMAMLAMA — `/en|de/blog` GERÇEK route'ları
+     eklendi; `/de/blog` artık fallback DEĞİL, locale-routed. */
+  it("12) '/de/blog' → EN→'/en/blog' (artık locale route'u var)", async () => {
     usePathnameMock.mockReturnValue("/de/blog");
     getPublicSettingsMock.mockResolvedValue(settingsWith({ multilingual_enabled: true }));
     render(<TopBar />);
     await screen.findByLabelText(LANGUAGE_LABEL.de);
     fireEvent.click(screen.getByLabelText(LANGUAGE_LABEL.de));
-    expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute("href", "/en");
+    expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute(
+      "href",
+      "/en/blog"
+    );
   });
 
   /* --- 13-16) REGRESYON: mevcut TopBar davranışı ETKİLENMEDİ --- */
@@ -447,10 +452,20 @@ describe("TopBar — Phase 10C dil değiştirici", () => {
   });
 
   it("28) DİĞER locale route'ları ETKİLENMEZ: fallback hâlâ query'siz kök, villa detay query'yi korur", async () => {
-    /* (a) locale karşılığı OLMAYAN path → hâlâ query'siz locale kökü */
-    await openSwitcher("/blog", "foo=bar", LANGUAGE_LABEL.tr);
+    /* (a) locale karşılığı OLMAYAN path → hâlâ query'siz locale kökü.
+       🛡️ `/blog` ARTIK locale-routed olduğu için gerçek bir fallback
+       örneğiyle (bilinmeyen path) değiştirildi. */
+    await openSwitcher("/bilinmeyen-sayfa", "foo=bar", LANGUAGE_LABEL.tr);
     expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute("href", "/en");
     expect(screen.getByRole("option", { name: "DE" })).toHaveAttribute("href", "/de");
+    cleanup();
+
+    /* (a1) 🛡️ `/blog` ARTIK locale route'u → query AYNEN korunur */
+    await openSwitcher("/blog", "foo=bar", LANGUAGE_LABEL.tr);
+    expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute(
+      "href",
+      "/en/blog?foo=bar"
+    );
     cleanup();
 
     /* (a2) 🛡️ `/teklif-al` ARTIK locale route'u → query AYNEN korunur */

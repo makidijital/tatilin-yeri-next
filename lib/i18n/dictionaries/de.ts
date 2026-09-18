@@ -359,6 +359,49 @@ export const de: Dictionary = {
     discountValidFull:
       "Gültig vom {sDay}. {sMonth} {sYear} bis {eDay}. {eMonth} {eYear}",
   },
+  blog: {
+    metaTitle: "Blog",
+    metaDescription:
+      "Villa-Urlaubsratgeber, Regionstipps und Reisehinweise. Aktuelle Beiträge aus den schönsten Ecken des Mittelmeers.",
+    ogDescription: "Villa-Urlaubsratgeber, Regionstipps und Reisehinweise.",
+    breadcrumbHome: "Startseite",
+    breadcrumbBlog: "Blog",
+    eyebrow: "Blog",
+    heroTitle: "Blog & Ratgeber",
+    heroDescription:
+      "Entdecken Sie Ratgeber zur Villenmiete in Kaş und Kalkan, Regionstipps und Urlaubsideen.",
+    listEmpty: "Es wurden noch keine Blogbeiträge veröffentlicht.",
+    detailNotFoundTitle: "Beitrag nicht gefunden",
+    contentComing: "Inhalt folgt in Kürze.",
+  },
+  privateVilla: {
+    metaInvalidTitle: "Ungültiger Link",
+    metaTitleFallback: "Privater Link",
+    metaDescription:
+      "Privater Freigabelink — eine Villa, die nur Personen mit dem Link sehen.",
+    badge: "Private Freigabe",
+    badgeNote: "Nur für Personen mit dem Link sichtbar",
+    detailsEyebrow: "Details",
+    dimensionsCaption: "Breite × Länge × Tiefe",
+    priceIncludesEyebrow: "Inbegriffen",
+    rulesEyebrow: "Regeln",
+    locationEyebrow: "Lage",
+    approximateLocation: "Ungefähre Lage wird angezeigt",
+    openInGoogleMaps: "In Google Maps öffnen",
+    tourismAuthority:
+      "Republik Türkiye, Ministerium für Kultur und Tourismus",
+    documentNumberLabel: "Lizenznr.:",
+  },
+  sharedList: {
+    eyebrow: "Für Sie ausgewählt",
+    titleFallback: "Für Sie freigegebene Villen",
+    villaUnit: "Villen",
+    guestsLabel: "{n} Gäste",
+    footerNote:
+      "Maki Dijital — besuchen Sie unser Hauptarchiv, um alle Villen zu sehen.",
+    footerCta: "Alle Villen entdecken",
+    staleNotice: "{n} Villa(s) dieser Liste sind derzeit nicht verfügbar.",
+  },
   home: {
     hero: {
       badge: "Mittelmeer Collection",
