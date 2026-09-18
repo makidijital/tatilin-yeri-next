@@ -15,7 +15,7 @@ import { getStartingPrice } from "@/lib/price.engine";
 import {
   resolveBucketMonthFromSlug,
   parseGapNights,
-  formatGapRangeTr,
+  formatGapRange,
 } from "@/lib/short-gaps.helpers";
 import GapFilterSidebar, {
   type GapFilterOption,
@@ -28,6 +28,7 @@ import GapFilterSidebar, {
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import type { MonthNumber } from "@/lib/i18n/dictionaries/types";
 import { shortGapsMonthLabel } from "@/app/components/short-gaps/short-gaps-metadata";
 
 /* ===============================================================
@@ -148,6 +149,13 @@ export default async function ShortGapsPageBody({
   const gapVillaIds = Array.from(new Set(gapRows.map((g) => g.villa_id)));
 
   const monthLabel = shortGapsMonthLabel(ay, locale);
+
+  /* 🛡️ Kart tarih aralığı ay adı — `shortGapsMonthLabel` ile AYNI
+     kaynak (`home.months`). TR'de `formatGapRangeTr` çıktısıyla
+     BİREBİR aynı; EN/DE kendi ay adlarını alır. */
+  const gapMonths = getDictionary(locale).home.months;
+  const gapMonthName = (m: number): string =>
+    gapMonths[m as MonthNumber] ?? "";
 
   /* Filtre opsiyonları (taxonomy) — sidebar + token resolve. */
   const [regionOptionsRaw, typeOptionsRaw] = await Promise.all([
@@ -378,7 +386,11 @@ export default async function ShortGapsPageBody({
                 {visibleGaps.map((gap) => {
                   const villa = villaById.get(gap.villa_id);
                   if (!villa) return null;
-                  const gapLabel = formatGapRangeTr(gap.gap_start, gap.gap_end);
+                  const gapLabel = formatGapRange(
+                    gap.gap_start,
+                    gap.gap_end,
+                    gapMonthName
+                  );
                   return (
                     <div key={`${gap.villa_id}_${gap.gap_start}`}>
                       <VillaCard
@@ -415,6 +427,8 @@ export default async function ShortGapsPageBody({
                               }
                             : undefined
                         }
+                        /* 🛡️ Kart metinleri + detay linki locale-aware. */
+                        locale={locale}
                       />
                     </div>
                   );

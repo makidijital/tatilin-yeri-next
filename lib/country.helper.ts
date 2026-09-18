@@ -1,5 +1,11 @@
 import { Country } from "country-state-city";
 
+import {
+  DEFAULT_LOCALE,
+  LOCALE_BCP47,
+  type Locale,
+} from "@/lib/i18n/config";
+
 /* ===============================================================
    🌍 COUNTRY HELPER — display-side localization wrapper
    ===============================================================
@@ -43,12 +49,42 @@ const COUNTRY_DISPLAY_OVERRIDES: Readonly<Record<string, string>> = {
    - boş / null / undefined → "" (UI tarafı `||` ile fallback kullanır)
    - bilinmeyen kod → ham kod (defensive — silent UI breakage YOK)
 --------------------------------------------------------------- */
-export function getCountryLabel(iso: string | null | undefined): string {
+export function getCountryLabel(
+  iso: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE
+): string {
   if (!iso) return "";
   const code = iso.toUpperCase();
-  const override = COUNTRY_DISPLAY_OVERRIDES[code];
-  if (override) return override;
-  return Country.getCountryByCode(code)?.name || iso;
+
+  /* 🛡️ PUBLIC ÇOKLU DİL — TR yolu BİREBİR korunur (override + library).
+     `locale` verilmediğinde de DEFAULT_LOCALE = "tr" → admin, mail ve
+     voucher çağıranlarının çıktısı DEĞİŞMEDİ. */
+  if (locale === DEFAULT_LOCALE) {
+    const override = COUNTRY_DISPLAY_OVERRIDES[code];
+    if (override) return override;
+    return Country.getCountryByCode(code)?.name || iso;
+  }
+
+  /* EN/DE: ülke adı platformun MEVCUT `Intl` altyapısından çözülür
+     (yeni bağımlılık/veri tablosu YOK). Çözülemezse library default'una,
+     o da yoksa ham koda düşer — sessiz UI kırılması yok. */
+  const localized = intlRegionName(code, locale);
+  return localized || Country.getCountryByCode(code)?.name || iso;
+}
+
+/** ISO 3166-1 alpha-2 → locale'e göre ülke adı. Desteklenmiyorsa "". */
+function intlRegionName(code: string, locale: Locale): string {
+  if (!/^[A-Z]{2}$/.test(code)) return "";
+  try {
+    const dn = new Intl.DisplayNames([LOCALE_BCP47[locale]], {
+      type: "region",
+    });
+    const name = dn.of(code);
+    /* `of()` bilinmeyen kodda kodun kendisini döndürebilir. */
+    return typeof name === "string" && name !== code ? name : "";
+  } catch {
+    return "";
+  }
 }
 
 /* ---------------------------------------------------------------

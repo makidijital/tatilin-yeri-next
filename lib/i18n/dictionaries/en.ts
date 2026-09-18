@@ -317,6 +317,7 @@ export const en: Dictionary = {
     successMessage: "Your review will be published after review. Thank you.",
     submitting: "Sending…",
     submit: "Submit my review",
+    errorGeneric: "Your review could not be saved. Please try again.",
   },
   /* 🛡️ PHASE 10G — VillaCard.tsx */
   card: {
@@ -352,6 +353,10 @@ export const en: Dictionary = {
     reserveNights: "{n} Nights",
     flexibleTitle: "Flexible Date Deal",
     flexibleSubtitle: "Available within ±3 days",
+    discountValidSameMonth: "Valid {sMonth} {sDay} – {eDay}",
+    discountValidSameYear: "Valid {sMonth} {sDay} – {eMonth} {eDay}",
+    discountValidFull:
+      "Valid {sMonth} {sDay}, {sYear} – {eMonth} {eDay}, {eYear}",
   },
   home: {
     hero: {

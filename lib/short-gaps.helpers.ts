@@ -144,11 +144,27 @@ export function parseGapNights(raw: string): ShortGapNights | null {
  * Girdiler "YYYY-MM-DD". Geçersizde "".
  */
 export function formatGapRangeTr(gapStart: string, gapEnd: string): string {
+  return formatGapRange(gapStart, gapEnd, (m) => monthNumberToNameTr(m));
+}
+
+/**
+ * 🛡️ `formatGapRangeTr`'nin DİL BAĞIMSIZ çekirdeği — `bucketMonthLabel`
+ * ile AYNI desen. Ay adını dışarıdan bir çözücüyle alır (kart listesi
+ * `home.months` sözlüğünü geçirir), çıktı biçimi (`"<gün> <Ay> - <gün>
+ * <Ay>"`) ve geçersiz girdi davranışı (`""`) AYNEN korunur.
+ * `formatGapRangeTr` bunun TR sarmalayıcısıdır → mevcut çağıranlar
+ * BİT-BİRE AYNI sonucu alır.
+ */
+export function formatGapRange(
+  gapStart: string,
+  gapEnd: string,
+  monthName: (month: number) => string
+): string {
   const s = parseYmd(gapStart);
   const e = parseYmd(gapEnd);
   if (!s || !e) return "";
-  const sLabel = `${s.day} ${monthNumberToNameTr(s.month)}`;
-  const eLabel = `${e.day} ${monthNumberToNameTr(e.month)}`;
+  const sLabel = `${s.day} ${monthName(s.month)}`;
+  const eLabel = `${e.day} ${monthName(e.month)}`;
   return `${sLabel} - ${eLabel}`;
 }
 

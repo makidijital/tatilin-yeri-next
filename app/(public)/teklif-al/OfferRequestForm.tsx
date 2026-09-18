@@ -18,7 +18,11 @@ import {
 } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { tr } from "date-fns/locale";
+/* 🛡️ TR/EN/DE takvim locale'leri — `FilterSidebar.tsx` /
+   `HeroSearchPanel.tsx` ile AYNI desen. `react-datepicker` sürümü ve
+   mevcut `registerLocale` mekanizması DEĞİŞMEDİ; yalnız iki locale
+   daha kaydedildi. Yeni kütüphane EKLENMEDİ. */
+import { tr, enUS, de } from "date-fns/locale";
 
 import MobileKbSafeInput from "@/app/components/ui/datepicker/MobileKbSafeInput";
 import {
@@ -51,6 +55,8 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 
 registerLocale("tr", tr);
+registerLocale("en", enUS);
+registerLocale("de", de);
 
 /* ─────────────── Travel groups (static) ─────────────── */
 type TravelGroup = "honeymoon" | "core_family" | "extended_family" | "friends";
@@ -453,7 +459,7 @@ export default function OfferRequestForm({
                 startDate={state.startDate}
                 endDate={state.endDate}
                 selectsRange
-                locale="tr"
+                locale={locale}
                 dateFormat="dd.MM.yyyy"
                 minDate={new Date()}
                 placeholderText={dict.datePlaceholder}

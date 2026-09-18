@@ -586,20 +586,21 @@ export default function FilterSidebar({
                  onChange, URL (formatDateForUrl), filter querysi ve
                  calendar internal'ı (dateFormat/selectsRange/locale/
                  minDate) DOKUNULMADI. Summary (L565-580) ile birebir
-                 aynı format: tr-TR + day numeric + month short →
+                 aynı format: LOCALE_BCP47[locale] + day numeric + month
+                 short →
                  "4 Haz – 11 Haz". Separator en-dash, placeholder ile
                  tutarlı. */
               value={
                 startDate && endDate
-                  ? `${startDate.toLocaleDateString("tr-TR", {
+                  ? `${startDate.toLocaleDateString(LOCALE_BCP47[locale], {
                       day: "numeric",
                       month: "short",
-                    })} – ${endDate.toLocaleDateString("tr-TR", {
+                    })} – ${endDate.toLocaleDateString(LOCALE_BCP47[locale], {
                       day: "numeric",
                       month: "short",
                     })}`
                   : startDate
-                  ? startDate.toLocaleDateString("tr-TR", {
+                  ? startDate.toLocaleDateString(LOCALE_BCP47[locale], {
                       day: "numeric",
                       month: "short",
                     })

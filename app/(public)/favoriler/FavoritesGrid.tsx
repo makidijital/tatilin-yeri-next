@@ -467,6 +467,8 @@ export default function FavoritesGrid({
             guests={villa.guests || 2}
             reviewAverage={villa.review_average}
             reviewCount={villa.review_count}
+            /* 🛡️ Kart metinleri + detay linki locale-aware. */
+            locale={locale}
           />
         ))}
       </div>

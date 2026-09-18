@@ -208,7 +208,7 @@ export default function ShortStayFeeNotice({
           className="ssfn-panel-in mt-2.5 rounded-2xl border border-red-100 bg-white p-4 shadow-[0_18px_40px_-24px_rgba(220,38,38,0.28)]"
         >
           <p className="font-display text-xl font-bold text-red-600 tabular-nums">
-            {formatCurrency(convertedFee, currency)}
+            {formatCurrency(convertedFee, currency, locale ?? "tr")}
           </p>
         </div>
       )}

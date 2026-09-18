@@ -331,6 +331,7 @@ export const tr: Dictionary = {
     successMessage: "Yorumunuz inceleme sonrası yayınlanacaktır. Teşekkürler.",
     submitting: "Gönderiliyor…",
     submit: "Yorumumu gönder",
+    errorGeneric: "Yorumunuz kaydedilemedi. Lütfen tekrar deneyin.",
   },
   /* 🛡️ PHASE 10G — VillaCard.tsx'in BUGÜNKÜ hardcoded metinleri. */
   card: {
@@ -366,6 +367,10 @@ export const tr: Dictionary = {
     reserveNights: "{n} Gece",
     flexibleTitle: "Esnek Tarih Fırsatı",
     flexibleSubtitle: "±3 gün içinde müsait",
+    discountValidSameMonth: "{sDay} - {eDay} {sMonth} arası geçerli",
+    discountValidSameYear: "{sDay} {sMonth} - {eDay} {eMonth} arası geçerli",
+    discountValidFull:
+      "{sDay} {sMonth} {sYear} - {eDay} {eMonth} {eYear} arası geçerli",
   },
   home: {
     hero: {

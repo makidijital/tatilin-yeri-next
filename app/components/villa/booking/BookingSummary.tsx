@@ -152,10 +152,10 @@ export default function BookingSummary({
           </span>
           <div className="text-right">
             <span className="block text-[11px] text-[var(--color-stone-400)] line-through tabular-nums">
-              {formatCurrency(activeStayDiscount.originalStay, currency)}
+              {formatCurrency(activeStayDiscount.originalStay, currency, locale ?? "tr")}
             </span>
             <span className="block text-[var(--color-stone-900)] font-medium tabular-nums">
-              {formatCurrency(activeStayDiscount.discountedStay, currency)}
+              {formatCurrency(activeStayDiscount.discountedStay, currency, locale ?? "tr")}
             </span>
             {/* 🛡️ Marka mavisi (#0973BA) solid etiket — eski "%NN İNDİRİM" /
                 "ÖZEL FİYAT" rozetinin YERİNE geçti (bkz. dosya-üstü kontrat
@@ -170,13 +170,13 @@ export default function BookingSummary({
       ) : (
         <Row
           label={accommodationLabel}
-          value={formatCurrency(result.stay, currency)}
+          value={formatCurrency(result.stay, currency, locale ?? "tr")}
         />
       )}
       {result.cleaning > 0 && (
         <Row
           label={dict.booking.shortStayFeeLabel}
-          value={formatCurrency(result.cleaning, currency)}
+          value={formatCurrency(result.cleaning, currency, locale ?? "tr")}
         />
       )}
 
@@ -202,12 +202,12 @@ export default function BookingSummary({
             </span>
             {poolHeatingSelected && (
               <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
-                {formatCurrency(poolHeatingTotal, currency)}
+                {formatCurrency(poolHeatingTotal, currency, locale ?? "tr")}
               </span>
             )}
           </label>
           <p className="pl-[26px] mt-0.5 text-[11px] text-[var(--color-stone-400)]">
-            {formatCurrency(poolHeatingFee, poolHeatingCurrency || "TRY")}{" "}
+            {formatCurrency(poolHeatingFee, poolHeatingCurrency || "TRY", locale ?? "tr")}{" "}
             {dict.booking.poolHeatingPerNightSuffix}
             {poolHeatingSelected &&
               ` ${formatDictionaryString(dict.booking.poolHeatingNightsMultiplier, {
@@ -222,7 +222,7 @@ export default function BookingSummary({
         <div className="flex items-center justify-between rounded-xl bg-green-50/70 px-3 py-2.5">
           <span className="font-semibold text-green-800">{dict.booking.total}</span>
           <span className="font-display text-lg font-bold text-green-700 tabular-nums">
-            {formatCurrency(result.total, currency)}
+            {formatCurrency(result.total, currency, locale ?? "tr")}
           </span>
         </div>
       </div>
@@ -237,7 +237,7 @@ export default function BookingSummary({
             })}
           </p>
           <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
-            {formatCurrency(prepayment, currency)}
+            {formatCurrency(prepayment, currency, locale ?? "tr")}
           </p>
         </div>
         <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
@@ -245,7 +245,7 @@ export default function BookingSummary({
             {dict.booking.dueAtCheckinLabel}
           </p>
           <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
-            {formatCurrency(result.total - prepayment, currency)}
+            {formatCurrency(result.total - prepayment, currency, locale ?? "tr")}
           </p>
         </div>
       </div>
@@ -262,7 +262,7 @@ export default function BookingSummary({
               {dict.booking.depositLabel}
             </span>
             <span className="font-semibold text-[var(--color-stone-900)] tabular-nums">
-              {formatCurrency(convertedDeposit, currency)}
+              {formatCurrency(convertedDeposit, currency, locale ?? "tr")}
             </span>
           </div>
           <p className="mt-1.5 text-xs text-[var(--color-stone-500)] leading-relaxed">

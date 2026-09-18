@@ -335,7 +335,7 @@ export default function BookingCalendar({
                       letterSpacing: "0.02em",
                     }}
                   >
-                    {formatCurrency(price, currency)}
+                    {formatCurrency(price, currency, locale ?? "tr")}
                   </div>
                 )}
               </div>

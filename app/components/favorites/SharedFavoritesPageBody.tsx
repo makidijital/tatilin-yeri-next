@@ -4,7 +4,7 @@ import { Heart, Sparkles, ArrowUpRight } from "lucide-react";
 
 import { getSharedFavoritesList } from "@/app/services/shared-favorites.service";
 import VillaCard from "@/app/components/villa/VillaCard";
-import { formatDateTr } from "@/lib/date-format";
+import { formatDateForLocale } from "@/lib/date-format";
 
 /* 🛡️ PUBLIC ÇOKLU DİL — statik metinler MEVCUT public dictionary'den
    (`favoritesPage` namespace). Token/share çözümleme
@@ -96,7 +96,7 @@ export default async function SharedFavoritesPageBody({
             </span>
             <span className="tabular-nums">
               {formatDictionaryString(dict.sharedCreatedAt, {
-                date: formatDateTr(data.created_at),
+                date: formatDateForLocale(data.created_at, locale),
               })}
             </span>
             {visibleCount < totalCount && (
@@ -151,6 +151,8 @@ export default async function SharedFavoritesPageBody({
                 guests={villa.guests || 2}
                 reviewAverage={villa.review_average}
                 reviewCount={villa.review_count}
+                /* 🛡️ Kart metinleri + detay linki locale-aware. */
+                locale={locale}
               />
             ))}
           </div>

@@ -48,7 +48,7 @@ import { useRouter } from "next/navigation";
    dictionary'den (`reservation.*` + REUSE edilen `booking.*`).
    Fiyat hesaplama, snapshot, ödeme, havuz ısıtma, payload, API
    endpoint, mail dispatch ve validation KURALLARI DEĞİŞMEDİ. */
-import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { DEFAULT_LOCALE, LOCALE_BCP47, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 /* 🛡️ MIGRATION 088 — ödeme yöntemi ADI locale-aware GÖSTERİLİR.
@@ -593,13 +593,13 @@ export default function ReservationForm({
                 <span>
                   {/* 🛡️ Europe/Istanbul explicit — server SSR / client
                        hidrasyon aynı çıktı (UTC server'da day kayması yok). */}
-                  {new Date(start).toLocaleDateString("tr-TR", {
+                  {new Date(start).toLocaleDateString(LOCALE_BCP47[activeLocale], {
                     day: "numeric",
                     month: "long",
                     timeZone: "Europe/Istanbul",
                   })}{" "}
                   –{" "}
-                  {new Date(end).toLocaleDateString("tr-TR", {
+                  {new Date(end).toLocaleDateString(LOCALE_BCP47[activeLocale], {
                     day: "numeric",
                     month: "long",
                     timeZone: "Europe/Istanbul",
@@ -659,10 +659,10 @@ export default function ReservationForm({
                   </span>
                   <div className="text-right">
                     <span className="block text-[11px] text-[var(--color-stone-400)] line-through tabular-nums">
-                      {formatCurrency(resultWithoutDiscount?.stay || 0, currency)}
+                      {formatCurrency(resultWithoutDiscount?.stay || 0, currency, activeLocale)}
                     </span>
                     <span className="block text-[var(--color-stone-900)] font-medium tabular-nums">
-                      {formatCurrency(result?.stay || 0, currency)}
+                      {formatCurrency(result?.stay || 0, currency, activeLocale)}
                     </span>
                     <span className="mt-1 inline-block rounded-full bg-[#0973BA] px-2.5 py-0.5 text-[10px] font-semibold text-white text-center whitespace-nowrap">
                       {bookingDict.discountedTotal}
@@ -678,7 +678,7 @@ export default function ReservationForm({
                     )}
                   </span>
                   <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
-                    {formatCurrency(result?.stay || 0, currency)}
+                    {formatCurrency(result?.stay || 0, currency, activeLocale)}
                   </span>
                 </div>
               )}
@@ -691,7 +691,7 @@ export default function ReservationForm({
                 <div className="flex justify-between text-[var(--color-stone-600)]">
                   <span>{bookingDict.shortStayFeeLabel}</span>
                   <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
-                    {formatCurrency((result as any).cleaning || 0, currency)}
+                    {formatCurrency((result as any).cleaning || 0, currency, activeLocale)}
                   </span>
                 </div>
               )}
@@ -706,7 +706,7 @@ export default function ReservationForm({
                   <div className="flex justify-between text-[var(--color-stone-600)]">
                     <span>{bookingDict.poolHeatingFeeLabel}</span>
                     <span className="text-[var(--color-stone-900)] font-medium tabular-nums">
-                      {formatCurrency((result as any).poolHeating || 0, currency)}
+                      {formatCurrency((result as any).poolHeating || 0, currency, activeLocale)}
                     </span>
                   </div>
                   {typeof villa.pool_heating_fee === "number" &&
@@ -714,7 +714,8 @@ export default function ReservationForm({
                       <p className="mt-0.5 text-[11px] text-[var(--color-stone-400)]">
                         {formatCurrency(
                           villa.pool_heating_fee,
-                          villa.pool_heating_currency || "TRY"
+                          villa.pool_heating_currency || "TRY",
+                          activeLocale
                         )}{" "}
                         {bookingDict.poolHeatingPerNightSuffix}{" "}
                         {formatDictionaryString(
@@ -734,7 +735,7 @@ export default function ReservationForm({
                     {bookingDict.total}
                   </span>
                   <span className="font-display text-lg font-bold text-green-700 tabular-nums">
-                    {formatCurrency(totalPrice, currency)}
+                    {formatCurrency(totalPrice, currency, activeLocale)}
                   </span>
                 </div>
               </div>
@@ -752,7 +753,7 @@ export default function ReservationForm({
                         {dict.summary.payNowAll}
                       </p>
                       <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
-                        {formatCurrency(totalPrice, currency)}
+                        {formatCurrency(totalPrice, currency, activeLocale)}
                       </p>
                     </div>
                     <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
@@ -760,7 +761,7 @@ export default function ReservationForm({
                         {bookingDict.dueAtCheckinLabel}
                       </p>
                       <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
-                        {formatCurrency(0, currency)}
+                        {formatCurrency(0, currency, activeLocale)}
                       </p>
                     </div>
                   </>
@@ -774,7 +775,7 @@ export default function ReservationForm({
                         )}
                       </p>
                       <p className="mt-0.5 font-display text-base font-bold text-purple-700 tabular-nums">
-                        {formatCurrency(prepayment, currency)}
+                        {formatCurrency(prepayment, currency, activeLocale)}
                       </p>
                     </div>
                     <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
@@ -782,7 +783,7 @@ export default function ReservationForm({
                         {bookingDict.dueAtCheckinLabel}
                       </p>
                       <p className="mt-0.5 font-display text-base font-bold text-orange-600 tabular-nums">
-                        {formatCurrency(totalPrice - prepayment, currency)}
+                        {formatCurrency(totalPrice - prepayment, currency, activeLocale)}
                       </p>
                     </div>
                   </>
@@ -875,10 +876,11 @@ export default function ReservationForm({
               <option value="">{dict.form.countrySelect}</option>
               {countries.map((c) => (
                 <option key={c.isoCode} value={c.isoCode}>
-                  {/* 🌍 Display override: TR → "Türkiye". Option value
-                      hâlâ ISO code (`c.isoCode`); form payload ve
-                      validation aynen ISO code akar. */}
-                  {getCountryLabel(c.isoCode)}
+                  {/* 🌍 Display override: TR locale'de "Türkiye";
+                      EN/DE'de Intl ülke adı. Option value hâlâ ISO code
+                      (`c.isoCode`); form payload ve validation aynen
+                      ISO code akar. */}
+                  {getCountryLabel(c.isoCode, activeLocale)}
                 </option>
               ))}
             </select>

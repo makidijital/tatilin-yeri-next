@@ -1,3 +1,9 @@
+import {
+  DEFAULT_LOCALE,
+  LOCALE_BCP47,
+  type Locale,
+} from "@/lib/i18n/config";
+
 /* ===============================================================
    🛡️ SAFE RATE RESOLVER (Faz 2A)
    ===============================================================
@@ -85,13 +91,26 @@ export function convertPrice(
   );
 }
 
+/* ===============================================================
+   🛡️ PUBLIC ÇOKLU DİL — formatCurrency locale-aware
+   ===============================================================
+   `locale` OPSİYONEL ve son parametre → mevcut `formatCurrency(a, c)`
+   çağrılarının TAMAMI (admin, mail, voucher, offer humanize, testler)
+   `DEFAULT_LOCALE` = "tr" ile eskisiyle BYTE-IDENTICAL çalışır.
+
+   Değişen TEK şey görüntüleme biçimi: BCP-47 etiketi MEVCUT
+   `LOCALE_BCP47` haritasından gelir (tr → "tr-TR" AYNEN). Tutarın
+   DEĞERİ, `currency` kodu, `style`/`maximumFractionDigits` ayarları
+   ve tüm fiyat/kur hesaplama mantığı DEĞİŞMEDİ.
+   =============================================================== */
 export function formatCurrency(
   amount: number,
-  currency: string
+  currency: string,
+  locale: Locale = DEFAULT_LOCALE
 ) {
 
   return new Intl.NumberFormat(
-    "tr-TR",
+    LOCALE_BCP47[locale],
     {
       style: "currency",
       currency,

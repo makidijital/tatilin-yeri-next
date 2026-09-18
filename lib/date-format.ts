@@ -1,4 +1,7 @@
 import type { Locale } from "@/lib/i18n/config";
+/* 🛡️ Saf `{token}` interpolation helper'ı (Phase 10B) — yeni bağımlılık
+   DEĞİL, MEVCUT dictionary altyapısının parçası. */
+import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 
 /* ===============================================================
    🔥 DATE FORMAT/PARSE — TEK MERKEZİ HELPER
@@ -300,25 +303,69 @@ export function formatDiscountDateRangeTr(
   startDate?: string | null,
   endDate?: string | null
 ): string {
+  return formatDiscountDateRange(
+    startDate,
+    endDate,
+    (month) => MONTHS_TR_FULL[month - 1] ?? "",
+    DISCOUNT_RANGE_TEMPLATES_TR
+  );
+}
+
+/* 🛡️ `formatDiscountDateRangeTr`'nin BUGÜNKÜ üç çıktı şablonu — birebir
+   aynı metin. TR sarmalayıcısı bunları kullandığı için TR çıktısı
+   dictionary'den BAĞIMSIZ olarak BİT-BİRE korunur. */
+const DISCOUNT_RANGE_TEMPLATES_TR: DiscountDateRangeTemplates = {
+  sameMonth: "{sDay} - {eDay} {sMonth} arası geçerli",
+  sameYear: "{sDay} {sMonth} - {eDay} {eMonth} arası geçerli",
+  full: "{sDay} {sMonth} {sYear} - {eDay} {eMonth} {eYear} arası geçerli",
+};
+
+/** İndirim aralığı metninin üç dal şablonu (`{sDay}` `{sMonth}` `{sYear}`
+ *  `{eDay}` `{eMonth}` `{eYear}` token'ları). */
+export type DiscountDateRangeTemplates = {
+  /** Aynı ay + aynı yıl. */
+  sameMonth: string;
+  /** Farklı ay, aynı yıl. */
+  sameYear: string;
+  /** Farklı yıl. */
+  full: string;
+};
+
+/**
+ * 🛡️ `formatDiscountDateRangeTr`'nin DİL BAĞIMSIZ çekirdeği —
+ * `bucketMonthLabel` / `formatGapRange` ile AYNI desen. Ay adını ve üç
+ * şablonu dışarıdan alır (kart `home.months` + `card.discountValid*`
+ * değerlerini geçirir). Tarih matematiği, dal koşulları (aynı ay /
+ * aynı yıl / farklı yıl), `parseLocalDate` kullanımı ve geçersiz girdi
+ * davranışı (`""`) AYNEN korunur. Yeni tarih sistemi İCAT EDİLMEDİ.
+ */
+export function formatDiscountDateRange(
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+  monthName: (month: number) => string,
+  templates: DiscountDateRangeTemplates
+): string {
   if (!startDate || !endDate) return "";
   const s = parseLocalDate(startDate);
   const e = parseLocalDate(endDate);
   if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return "";
 
-  const sDay = s.getDate();
-  const sMonth = MONTHS_TR_FULL[s.getMonth()];
-  const sYear = s.getFullYear();
-  const eDay = e.getDate();
-  const eMonth = MONTHS_TR_FULL[e.getMonth()];
-  const eYear = e.getFullYear();
+  const params = {
+    sDay: s.getDate(),
+    sMonth: monthName(s.getMonth() + 1),
+    sYear: s.getFullYear(),
+    eDay: e.getDate(),
+    eMonth: monthName(e.getMonth() + 1),
+    eYear: e.getFullYear(),
+  };
 
-  if (sYear === eYear && s.getMonth() === e.getMonth()) {
-    return `${sDay} - ${eDay} ${sMonth} arası geçerli`;
+  if (params.sYear === params.eYear && s.getMonth() === e.getMonth()) {
+    return formatDictionaryString(templates.sameMonth, params);
   }
-  if (sYear === eYear) {
-    return `${sDay} ${sMonth} - ${eDay} ${eMonth} arası geçerli`;
+  if (params.sYear === params.eYear) {
+    return formatDictionaryString(templates.sameYear, params);
   }
-  return `${sDay} ${sMonth} ${sYear} - ${eDay} ${eMonth} ${eYear} arası geçerli`;
+  return formatDictionaryString(templates.full, params);
 }
 
 /* ---------------------------------------------

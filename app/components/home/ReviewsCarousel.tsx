@@ -43,7 +43,7 @@ import { useCallback, useEffect, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import { Star } from "lucide-react";
 
-import { formatDateTr } from "@/lib/date-format";
+import { formatDateForLocale } from "@/lib/date-format";
 /* 🛡️ PHASE 11 P0 — görünür buton metinleri + accessibility metinleri
    locale'e göre. Veri/mantık (Embla, expanded state, CarouselReview)
    DEĞİŞMEDİ. */
@@ -239,7 +239,7 @@ function ActiveTestimonial({
                 </p>
                 {review.created_at && (
                   <p className="text-[11.5px] text-[var(--color-stone-400)] tabular-nums mt-0.5">
-                    {formatDateTr(review.created_at)}
+                    {formatDateForLocale(review.created_at, locale)}
                   </p>
                 )}
               </div>

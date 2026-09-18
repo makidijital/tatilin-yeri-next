@@ -437,6 +437,10 @@ export type Dictionary = {
     successMessage: string;
     submitting: string;
     submit: string;
+    /** 🛡️ Sunucu ham hata metni yerine gösterilen locale-aware mesaj
+        (`reservation.form.errorGeneric` / `contact.form.errorGeneric`
+        ile AYNI desen). */
+    errorGeneric: string;
   };
   /* 🛡️ PHASE 10G — VillaCard.tsx (villa detay "Benzer Villalar" bölümü
      bu kartı EN/DE'de de render eder). TR değerleri component'in
@@ -487,6 +491,16 @@ export type Dictionary = {
     reserveNights: string;
     flexibleTitle: string;
     flexibleSubtitle: string;
+    /* 🛡️ İndirim geçerlilik aralığı — `formatDiscountDateRange`
+       çekirdeğinin üç dalı. Token'lar: {sDay} {sMonth} {sYear}
+       {eDay} {eMonth} {eYear}. Ay adları `home.months`'tan gelir.
+       TR değerleri `formatDiscountDateRangeTr` çıktısıyla BİREBİR. */
+    /** template: {sDay}, {eDay}, {sMonth} — aynı ay + aynı yıl */
+    discountValidSameMonth: string;
+    /** template: {sDay}, {sMonth}, {eDay}, {eMonth} — aynı yıl */
+    discountValidSameYear: string;
+    /** template: {sDay}, {sMonth}, {sYear}, {eDay}, {eMonth}, {eYear} */
+    discountValidFull: string;
   };
   /* ===============================================================
      🛡️ PHASE 11 — ANA SAYFA (homepage) UI METİNLERİ

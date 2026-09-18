@@ -493,7 +493,12 @@ function ReviewForm({
     });
 
     if (!res.ok) {
-      setStatus({ kind: "error", message: res.error });
+      /* 🛡️ PUBLIC ÇOKLU DİL — servis TR validation/hata metni döndürür;
+         EN/DE kullanıcısına ham sunucu metni BASILMAZ. Diğer public
+         formlarla (`reservation` / `contact` / `offer`) AYNI desen:
+         dictionary'den locale-aware generic mesaj. Servis contract'ı,
+         `res.error` alanı ve iş mantığı DEĞİŞMEDİ. */
+      setStatus({ kind: "error", message: dict.reviews.errorGeneric });
       return;
     }
 

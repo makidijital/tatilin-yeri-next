@@ -16,7 +16,11 @@ import type { ReservationShareDTO } from "./share.resolve";
 /* 🛡️ PUBLIC ÇOKLU DİL — statik metinler MEVCUT public dictionary'den
    (`reservationLookup` namespace). Tutar/tarih biçimi, snapshot değerleri
    ve `share.resolve` akışı DEĞİŞTİRİLMEDİ. */
-import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import {
+  DEFAULT_LOCALE,
+  LOCALE_BCP47,
+  type Locale,
+} from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 
@@ -32,22 +36,31 @@ import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
    değil; "veri yoksa gösterme" kuralı). Core + ödeme özeti + iletişim.
    =============================================================== */
 
-const TL = (v: number | null): string =>
-  v === null ? "—" : `${Math.round(v).toLocaleString("tr-TR")} TL`;
+/* 🛡️ PUBLIC ÇOKLU DİL — tutar/tarih biçimi artık locale-aware.
+   Biçim ŞEKLİ (yuvarlama, "—" fallback, "TL" birimi, "<tarih>, <gün>"
+   düzeni, UTC timeZone) DEĞİŞMEDİ; yalnız BCP-47 etiketi MEVCUT
+   `LOCALE_BCP47` haritasından gelir → TR çıktısı BİREBİR aynı kalır,
+   EN/DE kendi doğal biçimini alır. Snapshot tutarları, `share.resolve`
+   akışı ve DTO alanları DOKUNULMADI. */
+const formatShareAmount = (v: number | null, locale: Locale): string =>
+  v === null
+    ? "—"
+    : `${Math.round(v).toLocaleString(LOCALE_BCP47[locale])} TL`;
 
-/** "21 Eylül 2026, Pazartesi" — gün adı tarihten dinamik türetilir (TR). */
-function formatDateTr(iso: string | null): string {
+/** TR: "21 Eylül 2026, Pazartesi" — gün adı tarihten dinamik türetilir. */
+function formatShareDate(iso: string | null, locale: Locale): string {
   if (!iso) return "—";
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   if (!m) return "—";
+  const tag = LOCALE_BCP47[locale];
   const dt = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-  const base = dt.toLocaleDateString("tr-TR", {
+  const base = dt.toLocaleDateString(tag, {
     day: "numeric",
     month: "long",
     year: "numeric",
     timeZone: "UTC",
   });
-  const weekday = dt.toLocaleDateString("tr-TR", {
+  const weekday = dt.toLocaleDateString(tag, {
     weekday: "long",
     timeZone: "UTC",
   });
@@ -110,6 +123,11 @@ export default async function ReservationShareView({
 }) {
   const dict = getDictionary(locale).reservationLookup;
   const localePrefix = locale === DEFAULT_LOCALE ? "" : `/${locale}`;
+  /* Locale'i tek yerde bağlayan ince sarmalayıcılar — çağrı yerleri
+     (aşağıdaki `TL(...)` / `formatDate(...)`) değişmedi. */
+  const TL = (v: number | null): string => formatShareAmount(v, locale);
+  const formatDate = (iso: string | null): string =>
+    formatShareDate(iso, locale);
   const settings = await getCachedSettings().catch(() => null);
   const phone = settings?.phone?.trim() || "";
   const phoneHref = phone ? `tel:${phone}` : null;
@@ -184,7 +202,7 @@ export default async function ReservationShareView({
                   {dict.shareCheckIn}
                 </div>
                 <div className="mt-1 font-medium text-[var(--color-stone-900)]">
-                  {formatDateTr(data.startDate)}
+                  {formatDate(data.startDate)}
                 </div>
                 <div className="mt-1 inline-flex items-center gap-1 text-[13px] text-[var(--color-stone-500)] tabular-nums">
                   <Clock size={13} aria-hidden /> {data.checkInTime}
@@ -195,7 +213,7 @@ export default async function ReservationShareView({
                   {dict.shareCheckOut}
                 </div>
                 <div className="mt-1 font-medium text-[var(--color-stone-900)]">
-                  {formatDateTr(data.endDate)}
+                  {formatDate(data.endDate)}
                 </div>
                 <div className="mt-1 inline-flex items-center gap-1 text-[13px] text-[var(--color-stone-500)] tabular-nums">
                   <Clock size={13} aria-hidden /> {data.checkOutTime}

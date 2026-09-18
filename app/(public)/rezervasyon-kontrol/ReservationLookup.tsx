@@ -14,7 +14,7 @@ import {
   Hash,
 } from "lucide-react";
 
-import { formatDateTr } from "@/lib/date-format";
+import { formatDateForLocale } from "@/lib/date-format";
 
 /* 🛡️ PUBLIC ÇOKLU DİL — statik metinler MEVCUT public dictionary'den
    (`reservationLookup` namespace). API endpoint'i, istek gövdesi ve
@@ -242,7 +242,7 @@ export default function ReservationLookup({
       {/* SAĞ — SONUÇ */}
       <div className="lg:col-span-7">
         {status === "success" && result ? (
-          <ResultCard result={result} dict={dict} />
+          <ResultCard result={result} dict={dict} locale={locale} />
         ) : (
           <EmptyState dict={dict} />
         )}
@@ -257,9 +257,12 @@ export default function ReservationLookup({
 function ResultCard({
   result,
   dict,
+  locale,
 }: {
   result: LookupResult;
   dict: LookupDict;
+  /* 🛡️ Tarih biçimi için locale — metin/veri akışı DEĞİŞMEDİ. */
+  locale: Locale;
 }) {
   const design = STATUS_DESIGN[result.statusKey];
   const StatusIcon = design.icon;
@@ -310,12 +313,20 @@ function ResultCard({
           <DetailRow
             icon={<CalendarDays size={15} />}
             label={dict.detailCheckIn}
-            value={result.startDate ? formatDateTr(result.startDate) : "—"}
+            value={
+              result.startDate
+                ? formatDateForLocale(result.startDate, locale)
+                : "—"
+            }
           />
           <DetailRow
             icon={<CalendarDays size={15} />}
             label={dict.detailCheckOut}
-            value={result.endDate ? formatDateTr(result.endDate) : "—"}
+            value={
+              result.endDate
+                ? formatDateForLocale(result.endDate, locale)
+                : "—"
+            }
           />
           <DetailRow
             icon={<Users size={15} />}

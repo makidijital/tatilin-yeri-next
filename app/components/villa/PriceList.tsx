@@ -466,13 +466,13 @@ export default function PriceList({
                 {isDiscounted ? (
                   <div className="text-left md:text-right">
                     <p className="text-[12px] text-[var(--color-stone-400)] line-through tabular-nums leading-none">
-                      {formatCurrency(convertedPrice, currency)}
+                      {formatCurrency(convertedPrice, currency, effectiveLocale)}
                     </p>
                     <p
                       className="mt-1 font-display font-bold text-[19px] md:text-[17px] text-green-600 tracking-[-0.02em] leading-none"
                       style={{ fontVariantNumeric: "tabular-nums" }}
                     >
-                      {formatCurrency(discountedResult!.converted, currency)}
+                      {formatCurrency(discountedResult!.converted, currency, effectiveLocale)}
                     </p>
                     <p
                       className="text-[8.5px] tracking-[0.18em] uppercase text-[var(--color-stone-400)] font-medium mt-1.5"
@@ -487,7 +487,7 @@ export default function PriceList({
                       className="font-display font-bold text-[19px] md:text-[17px] text-[#ED7926] tracking-[-0.02em] leading-none"
                       style={{ fontVariantNumeric: "tabular-nums" }}
                     >
-                      {formatCurrency(convertedPrice, currency)}
+                      {formatCurrency(convertedPrice, currency, effectiveLocale)}
                     </p>
                     <p
                       className="text-[8.5px] tracking-[0.18em] uppercase text-[var(--color-stone-400)] font-medium mt-1.5"
@@ -557,7 +557,7 @@ export default function PriceList({
                                 <ShieldCheck size={12} strokeWidth={1.9} aria-hidden />
                               </span>
                               {formatDictionaryString(dict.price.damageDeposit, {
-                                amount: formatCurrency(convertedDeposit, currency),
+                                amount: formatCurrency(convertedDeposit, currency, effectiveLocale),
                               })}
                             </li>
                           )}

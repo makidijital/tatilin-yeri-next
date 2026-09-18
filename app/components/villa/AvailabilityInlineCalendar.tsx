@@ -240,7 +240,7 @@ export default function AvailabilityInlineCalendar({
       currency,
       rates
     );
-    return formatCurrency(converted, currency);
+    return formatCurrency(converted, currency, locale ?? "tr");
   };
 
   /* Responsive month count — admin pattern'iyle aynı: 1/2/3 col.

@@ -870,7 +870,8 @@ export function useBookingEngine(
       currency,
       rates
     ),
-    currency
+    currency,
+    locale ?? "tr"
   );
 
   /* ---------------------------------------------

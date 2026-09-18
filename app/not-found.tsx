@@ -7,7 +7,6 @@ import HeaderWrapper from "@/app/components/layout/HeaderWrapper";
    (async server, DB'den veri çeker) kullanılır. Davranış BİREBİR aynı;
    yalnızca veri-çekme sorumluluğu Footer'dan FooterWrapper'a taşındı. */
 import FooterWrapper from "@/app/components/layout/FooterWrapper";
-import VillaCard from "@/app/components/villa/VillaCard";
 import { getCachedVillas } from "@/lib/cache.helpers";
 /* 🛡️ PUBLIC ÇOKLU DİL — görünen 404 gövdesi client island'a taşındı
    (locale `usePathname` ile türetilir; Header/Footer ile AYNI desen).
@@ -50,27 +49,10 @@ export default async function NotFound() {
     <div className="flex flex-col min-h-screen bg-[var(--color-ivory)]">
       <HeaderWrapper />
 
-      <NotFoundContent
-        suggestions={
-          featured.length > 0
-            ? featured.map((villa) => (
-                <VillaCard
-                  key={villa.slug || villa.id}
-                  id={villa.id}
-                  slug={villa.slug ?? ""}
-                  title={villa.title}
-                  location={villa.location}
-                  price={villa.price}
-                  currency={villa.currency || "TRY"}
-                  images={villa.images}
-                  bedrooms={villa.bedrooms || 1}
-                  bathrooms={villa.bathrooms || 1}
-                  guests={villa.guests || 2}
-                />
-              ))
-            : null
-        }
-      />
+      {/* 🛡️ Kartlar `NotFoundContent` (client island) içinde render
+          edilir — VillaCard ancak orada türetilen locale'i alabilir.
+          `getCachedVillas` akışı, sıralama ve kart prop'ları AYNEN. */}
+      <NotFoundContent suggestionVillas={featured} />
 
       <FooterWrapper />
     </div>
