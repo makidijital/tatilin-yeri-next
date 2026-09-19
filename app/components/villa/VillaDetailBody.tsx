@@ -99,7 +99,17 @@ export type VillaDetailBodyProps = {
   reviewStats: ReviewStatsProp;
 
   orphanGapRuleEnabled: boolean;
-  minPrice: { price: number; currency: string } | null;
+  /* ⓘ `minPrice` prop'u KALDIRILDI: bu component'te tek tüketicisi
+     mobil CTA'nın fiyat gösterimiydi ve o kaldırıldı. Sayfalardaki
+     `minPrice` değişkeni JSON-LD `priceFrom` için AYNEN duruyor. */
+
+  /* 🔄 MOBİL CTA İLETİŞİM AKSİYONLARI — ham `settings` alanları.
+     Türetme (tel: / wa.me fallback) AŞAĞIDA TEK YERDE yapılır;
+     çağıran sayfalar (tr/en/de) yalnız ham değeri geçer. Yeni
+     business logic YOK — `app/(public)/layout.tsx` ve
+     `FloatingSocial` ile BİREBİR AYNI ifade. */
+  contactPhone?: string | null;
+  contactWhatsappLink?: string | null;
 
   /** /arama'dan gelen tarihler — opsiyonel hydrate (TR davranışı). */
   initialStart?: string;
@@ -132,7 +142,8 @@ export default function VillaDetailBody({
   reviews,
   reviewStats,
   orphanGapRuleEnabled,
-  minPrice,
+  contactPhone,
+  contactWhatsappLink,
   initialStart,
   initialEnd,
   bookingSidebarId,
@@ -140,6 +151,17 @@ export default function VillaDetailBody({
   breadcrumbLd,
 }: VillaDetailBodyProps) {
   const dict = getDictionary(locale);
+
+  /* 🔄 Mobil CTA iletişim href'leri — `app/(public)/layout.tsx` ve
+     `FloatingSocial` ile BİREBİR AYNI türetme (yeni mantık YOK):
+     whatsapp_link öncelikli, yoksa telefon hanelerinden wa.me. */
+  const ctaPhoneDigits = (contactPhone || "").replace(/\D/g, "");
+  const ctaPhoneHref = contactPhone?.trim()
+    ? `tel:${contactPhone.trim()}`
+    : null;
+  const ctaWhatsappHref =
+    contactWhatsappLink?.trim() ||
+    (ctaPhoneDigits ? `https://wa.me/${ctaPhoneDigits}` : null);
 
   return (
     <>
@@ -391,10 +413,10 @@ export default function VillaDetailBody({
 
         {/* 🛡️ MOBILE STICKY CTA — yalnız <lg viewport. */}
         <MobileBookingCta
-          priceAmount={minPrice?.price ?? null}
-          priceCurrency={minPrice?.currency ?? null}
           targetId={bookingSidebarId}
           locale={locale}
+          phoneHref={ctaPhoneHref}
+          whatsappHref={ctaWhatsappHref}
         />
       </div>
 

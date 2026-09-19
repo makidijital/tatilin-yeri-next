@@ -390,7 +390,10 @@ export default async function VillaDetail({
       reviews={reviews}
       reviewStats={reviewStats}
       orphanGapRuleEnabled={settings?.orphan_gap_rule_enabled ?? true}
-      minPrice={minPrice}
+      /* 🔄 Mobil CTA'nın WhatsApp/telefon aksiyonları — ham settings
+         alanları; href türetmesi VillaDetailBody'de TEK yerde. */
+      contactPhone={settings?.phone ?? null}
+      contactWhatsappLink={settings?.whatsapp_link ?? null}
       initialStart={hasInitialRange ? initialStart : undefined}
       initialEnd={hasInitialRange ? initialEnd : undefined}
       bookingSidebarId="booking-sidebar"
