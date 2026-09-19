@@ -88,9 +88,11 @@ describe("1) BottomNav — locale", () => {
     expect(screen.getByLabelText("Alt gezinme")).toBeInTheDocument();
     expect(screen.getByText("Anasayfa")).toBeInTheDocument();
     expect(screen.getByText("Arama")).toBeInTheDocument();
-    expect(screen.getByText("Öneri Al")).toBeInTheDocument();
     expect(screen.getByText("Telefon")).toBeInTheDocument();
     expect(screen.getByText("WhatsApp")).toBeInTheDocument();
+    /* 🔄 "Öneri Al" alt bardan KALDIRILDI — assertion silinmedi,
+       tersine çevrildi (öğe artık bulunmamalı). */
+    expect(screen.queryByText("Öneri Al")).not.toBeInTheDocument();
     /* "Villa ara" hem arama BUTONUNDA hem (kapalı) sheet dialog'unda
        geçer — burada BUTON hedeflenir. */
     expect(
@@ -105,9 +107,12 @@ describe("1) BottomNav — locale", () => {
     expect(screen.getByLabelText(d.layout.bottomNav.ariaLabel)).toBeInTheDocument();
     expect(screen.getByText(d.header.home)).toBeInTheDocument();
     expect(screen.getByText(d.layout.bottomNav.search)).toBeInTheDocument();
-    expect(screen.getByText(d.layout.bottomNav.offer)).toBeInTheDocument();
     expect(screen.getByText(d.footer.phone)).toBeInTheDocument();
     expect(screen.queryByText("Öneri Al")).not.toBeInTheDocument();
+    /* 🔄 Çevrilmiş "Öneri Al" de artık alt barda YOK. */
+    expect(
+      screen.queryByText(d.layout.bottomNav.offer)
+    ).not.toBeInTheDocument();
   });
 
   it("1c) DE — çevrilmiş metinler", () => {
@@ -115,8 +120,10 @@ describe("1) BottomNav — locale", () => {
     render(<BottomNav {...props} />);
     const d = getDictionary("de");
     expect(screen.getByText(d.header.home)).toBeInTheDocument();
-    expect(screen.getByText(d.layout.bottomNav.offer)).toBeInTheDocument();
     expect(screen.queryByText("Anasayfa")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(d.layout.bottomNav.offer)
+    ).not.toBeInTheDocument();
   });
 
   it("1d) 🔒 P0 REGRESYONU — /en/kiralik-villa/x'te nav HÂLÂ gizli (null)", () => {
@@ -130,6 +137,66 @@ describe("1) BottomNav — locale", () => {
     render(<BottomNav {...props} />);
     const home = screen.getByLabelText(getDictionary("en").header.home);
     expect(home).toHaveAttribute("aria-current", "page");
+  });
+
+  /* ===============================================================
+     🔄 ALT BAR İÇERİK SÖZLEŞMESİ (bu tur)
+     ===============================================================
+     "Öneri Al" kaldırıldı; WhatsApp artık GERÇEK marka glyph'i
+     kullanıyor (lucide `MessageCircle` sohbet balonu DEĞİL).
+     WhatsApp/telefon hedefleri PROP'tan gelir — yeniden üretilmez.
+  =============================================================== */
+  it("1g) 🔒 Alt barda TAM 4 öğe var ve grid 4 sütun", () => {
+    usePathnameMock.mockReturnValue("/");
+    const { container } = render(<BottomNav {...props} />);
+    expect(container.querySelectorAll("nav ul > li")).toHaveLength(4);
+    expect(container.querySelector("nav ul")?.className).toContain(
+      "grid-cols-4"
+    );
+  });
+
+  it("1h) 🔒 WhatsApp ikonu GERÇEK marka glyph'i (emoji/sohbet balonu değil)", () => {
+    usePathnameMock.mockReturnValue("/");
+    const { container } = render(<BottomNav {...props} />);
+    const wa = container.querySelector('a[href="https://wa.me/900000"]');
+    expect(wa).not.toBeNull();
+    const path = wa?.querySelector("svg path");
+    /* FloatingSocialClient ile BİREBİR aynı path verisi. */
+    expect(path?.getAttribute("d")?.startsWith("M.057 24")).toBe(true);
+    /* Rengi çağıran taşır → currentColor + text-[#25D366] korunur. */
+    expect(wa?.querySelector("svg")?.getAttribute("fill")).toBe(
+      "currentColor"
+    );
+    expect(wa?.querySelector("svg")?.getAttribute("class")).toContain(
+      "text-[#25D366]"
+    );
+  });
+
+  it("1i) 🔒 Telefon ikonu gerçek component (emoji/unicode YOK) ve href AYNEN", () => {
+    usePathnameMock.mockReturnValue("/");
+    const { container } = render(<BottomNav {...props} />);
+    const tel = container.querySelector('a[href="tel:+900000"]');
+    expect(tel).not.toBeNull();
+    expect(tel?.querySelector("svg")).not.toBeNull();
+    /* lucide ikonları `lucide` class'ı taşır → gerçek component. */
+    expect(tel?.querySelector("svg")?.getAttribute("class")).toContain(
+      "lucide"
+    );
+    expect(tel?.textContent).not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
+  });
+
+  it("1j) 🔒 WhatsApp/telefon hedefleri PROP'tan gelir — hardcode YOK", () => {
+    usePathnameMock.mockReturnValue("/");
+    const { container, unmount } = render(
+      <BottomNav phoneHref="tel:+905550001122" whatsappHref="https://example.test/wa" />
+    );
+    expect(
+      container.querySelector('a[href="https://example.test/wa"]')
+    ).not.toBeNull();
+    expect(
+      container.querySelector('a[href="tel:+905550001122"]')
+    ).not.toBeNull();
+    unmount();
   });
 
   /* 🛡️ NAVIGATION LOCALE PERSISTENCE — sözleşme güncellendi: alt
@@ -148,10 +215,12 @@ describe("1) BottomNav — locale", () => {
         "href",
         prefix || "/"
       );
-      expect(screen.getByLabelText(d.layout.bottomNav.offer)).toHaveAttribute(
-        "href",
-        `${prefix}/teklif-al`
-      );
+      /* 🔄 Alt barda ARTIK hiçbir /teklif-al linki olmamalı (öğe
+         kaldırıldı). Eski href beklentisi silinmedi, bu daha SIKI
+         kurala dönüştürüldü. */
+      expect(
+        document.querySelector('a[href$="/teklif-al"]')
+      ).toBeNull();
       unmount();
     }
   });
