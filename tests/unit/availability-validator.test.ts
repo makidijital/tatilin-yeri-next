@@ -5,13 +5,13 @@
      • isValidYmd
      • isValidRange
      • AVAILABILITY_BLOCKING_STATUSES
-   `getBlockedVillaIds` (lib/availability.helper.ts) Supabase
+   `getBlockedVillaIds` (lib/availability.helper.ts) eski sağlayıcı
    çağırıyor → bu faz testlenmiyor.
 
    FAZ 51B: import path `@/lib/availability.helper`'tan
    `@/lib/availability.validator`'a taşındı. Helper bu sembolleri
    re-export ediyor → production davranışı byte-identical, test
-   yan etkisi (Supabase module-load) elimine edildi.
+   yan etkisi (eski sağlayıcı module-load) elimine edildi.
 
    AYRICA: helper'ın HALF-OPEN [start, end) overlap semantic'ini
    pure string karşılaştırması ile yeniden doğruluyoruz (regresyon

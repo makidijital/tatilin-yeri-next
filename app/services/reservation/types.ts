@@ -189,7 +189,7 @@ export type ReservationUpdateInput = {
 /* ---------------- UPDATE PAYLOAD (DB-SHAPE) ---------------- */
 
 /** `updateReservationFull` içinde inline tanımlı `ReservationUpdatePayload`
- *  shape'inin BYTE-IDENTICAL kopyası. Supabase update() PostgreSQL'in
+ *  shape'inin BYTE-IDENTICAL kopyası. repository update() PostgreSQL'in
  *  nullable kolonlarına `null` yazımını desteklediği için `| null`
  *  widening runtime'da byte-identical.
  *

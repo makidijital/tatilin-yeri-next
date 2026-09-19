@@ -11,11 +11,11 @@ import { dbNative as db } from "@/lib/db/native";
 /* ===============================================================
    🛡️ EXCHANGE RATES REPOSITORY (Phase 1 — repo consolidation)
    ===============================================================
-   `exchange-rate.service.ts` içindeki inline `supabase.from(...)`
+   `exchange-rate.service.ts` içindeki inline `db.from(...)`
    read'lerinin BİREBİR taşınmış hali (single table: exchange_rates).
    Davranış değişmez:
-     - `db` = supabaseDbProvider (anon, RLS aktif); `db.from` ≡
-       `supabase.from` (bind) → byte-identical.
+     - `db` = dbNative (anon, RLS aktif); `db.from` ≡
+       `db.from` (bind) → byte-identical.
      - Method'lar ham native sonucu (`{ data, error }`) döner;
        map/aggregate/return/log SERVICE'te.
 

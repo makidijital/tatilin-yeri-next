@@ -17,7 +17,7 @@
 
    MEVCUT TYPE'LAR (faz 1):
      - richtext: paragraph(s); newline ile blocklara bölünür
-     - image:    Supabase Storage relative path (page-covers/...)
+     - image:    R2 storage relative path (page-covers/...)
      - quote:    metin + opsiyonel yazar
    =============================================================== */
 

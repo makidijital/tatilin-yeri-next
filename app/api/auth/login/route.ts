@@ -11,7 +11,7 @@ import {
    🛡️ FAZ 2 (NATIVE AUTH) — POST /api/auth/login
    ===============================================================
    Native login. YALNIZ AUTH_PROVIDER=native iken aktif; aksi halde 404
-   → default (supabase) modda bu endpoint YOK gibi davranır, sıfır maruziyet.
+   → default (eski sağlayıcı) modda bu endpoint YOK gibi davranır, sıfır maruziyet.
 
    Body: { email, password, remember? }
    Başarı: 200 { ok:true, admin:{ id, email, full_name, sidebar_permissions } }

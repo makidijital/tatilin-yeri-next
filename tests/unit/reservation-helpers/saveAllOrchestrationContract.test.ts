@@ -11,7 +11,7 @@
    özelliklerini "event sequence" olarak çıkarıp, beklediğimiz
    minimum kontrat sırasına karşı assert ediyoruz.
 
-   NEDEN AST? Bu test runtime'da saveAll'ı ÇAĞIRMAZ — ne Supabase
+   NEDEN AST? Bu test runtime'da saveAll'ı ÇAĞIRMAZ — ne eski sağlayıcı
    mock'u, ne RTL render, ne window.location override. Sadece kaynak
    kodu okur. Brittle riskini düşürmek için:
      • çağrı argümanları (içeriği) test edilmez

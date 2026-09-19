@@ -2,7 +2,7 @@ import "server-only";
 
 /* 🛡️ NATIVE CUTOVER (FAZ 4 S2 — reservation core) — native provider'a
    alındı. Tüm tüketiciler server (manualReservation.service, handler-inputs,
-   fetchBlockedDates [server-only]). Supabase importu tamamen kaldırıldı.
+   fetchBlockedDates [server-only]). eski sağlayıcı importu tamamen kaldırıldı.
    `server-only` defansif sınır. Metod gövdeleri + embed + half-open overlap
    (.lt/.gt) + insert/update .select().single() (RETURNING) + SQL AYNEN. */
 import { dbNative as db } from "@/lib/db/native";
@@ -11,18 +11,18 @@ import { dbNative as db } from "@/lib/db/native";
    🛡️ FAZ 34 — MANUAL RESERVATION REPOSITORY (Data Access Layer)
    ===============================================================
    AMAÇ (FAZ 0 mapping raporu):
-     Manual-reservation domain'inde Supabase'i tek katman aşağı
-     it. Service / page / component artık Supabase client'ı
+     Manual-reservation domain'inde eski sağlayıcıyı tek katman aşağı
+     it. Service / page / component artık eski sağlayıcı client'ı
      doğrudan tüketmez; bu repository üzerinden delege eder.
 
-     bugün : service|component → supabase
-     hedef : service → repository → supabase
-             component → service → repository → supabase
+     bugün : service|component → eski sağlayıcı
+     hedef : service → repository → eski sağlayıcı
+             component → service → repository → eski sağlayıcı
 
    PRODUCTION-SAFE YAKLAŞIM (reservation.repository.ts paralel):
      - Query'ler BİREBİR aynı (filter chain, embed, single() vs.
        maybeSingle(), order pattern).
-     - Return shape: Supabase native `{ data, error }`. Repository
+     - Return shape: native `{ data, error }`. Repository
        sessiz; throw YOK, console.error YOK.
      - SQLSTATE 23P01 / `manual_reservations_no_overlap` mapping
        bu dosyada YOK — service edge'inde (_helpers/errors.ts'e
@@ -79,7 +79,7 @@ export const manualReservationRepository = {
      READ — DETAIL (`getManualReservationById` delege)
      ===============================================================
      Orijinal (manualReservation.service.ts L17-31):
-       supabase
+       eski sağlayıcı
          .from("manual_reservations")
          .select("id, villa_id, start_date, end_date, note, source, status, created_at")
          .eq("id", id)
@@ -97,7 +97,7 @@ export const manualReservationRepository = {
      READ — LIST (`manual-reservations/page.tsx > getManualReservations` delege)
      ===============================================================
      Orijinal (page.tsx > getManualReservations):
-       supabase
+       eski sağlayıcı
          .from("manual_reservations")
          .select(`id, start_date, end_date, note, created_at, villa:villa_id ( title )`)
          .order("created_at", { ascending: false });
@@ -116,7 +116,7 @@ export const manualReservationRepository = {
      READ — ACTIVE RESERVATIONS BY VILLA (calendar feed cross-table)
      ===============================================================
      Orijinal (ManualReservationForm.tsx L120-124):
-       supabase
+       eski sağlayıcı
          .from("reservations")
          .select("start_date, end_date, status")
          .eq("villa_id", selectedVilla)
@@ -143,7 +143,7 @@ export const manualReservationRepository = {
      READ — MANUAL BLOCKS BY VILLA (calendar feed own-table)
      ===============================================================
      Orijinal (ManualReservationForm.tsx L129-132):
-       supabase
+       eski sağlayıcı
          .from("manual_reservations")
          .select("id, start_date, end_date")
          .eq("villa_id", selectedVilla);
@@ -165,7 +165,7 @@ export const manualReservationRepository = {
      READ — BLOCK DATE RANGES BY VILLA (edit-page calendar feed)
      ===============================================================
      Orijinal (fetchBlockedDates.ts):
-       supabase.from("manual_reservations")
+       db.from("manual_reservations")
          .select("start_date, end_date")
          .eq("villa_id", villaId);
 
@@ -293,7 +293,7 @@ export const manualReservationRepository = {
        - Predicate AYNEN: `.eq("id", id)` — başka filter YOK.
        - Payload shape orchestrator/service tarafında belirlenir;
          repository payload'a müdahil olmaz.
-       - Return shape Supabase native `{ data, error }`. Repository
+       - Return shape native `{ data, error }`. Repository
          sessiz; throw / console / SQLSTATE parse YOK.
 
      CALLER (service):
@@ -327,7 +327,7 @@ export const manualReservationRepository = {
          DB FK behavior'una bağlı).
        - `.select()` chain YOK (orijinal davranış: delete sonrası
          row dönmez; sadece error/success).
-       - Return shape Supabase native `{ error }`. Repository
+       - Return shape native `{ error }`. Repository
          sessiz; throw / console YOK.
 
      CALLER (service > deleteManualReservation, sonra component):
@@ -345,7 +345,7 @@ export const manualReservationRepository = {
      WRITE — INSERT (createManualReservation delege; AVAILABILITY-CRITICAL)
      ===============================================================
      Orijinal pattern (manualReservation.service.ts L207-211):
-       const { data: inserted, error } = await supabase
+       const { data: inserted, error } = await eski sağlayıcı
          .from("manual_reservations")
          .insert([insertData])
          .select()
@@ -361,7 +361,7 @@ export const manualReservationRepository = {
        - Payload shape (`source: "manual"`, `status: "blocked"`
          literal'lar + 4 alan) orchestrator/service tarafında
          belirlenir; repository payload'a müdahil olmaz.
-       - Return shape Supabase native `{ data, error }`. Repository
+       - Return shape native `{ data, error }`. Repository
          sessiz; SQLSTATE 23P01 / `manual_reservations_no_overlap`
          parse + throw mesajları + console.error tag service
          edge'inde.

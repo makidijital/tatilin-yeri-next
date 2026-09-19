@@ -1,12 +1,12 @@
 /* ===============================================================
    🛡️ FAZ 38 — STORAGE PROVIDER TYPES
    ===============================================================
-   Provider-agnostic shape'ler. Supabase Storage'a özgü hiçbir
+   Provider-agnostic shape'ler. R2 storage'a özgü hiçbir
    field yok; gelecekteki adapter'lar (R2/S3/Bunny) aynı kontratı
    uygular.
    =============================================================== */
 
-/** Provider-agnostic upload options. Supabase native shape ile
+/** Provider-agnostic upload options. native shape ile
  *  yapısal uyumlu: contentType + upsert + cacheControl.
  *  Yeni provider eklenirken alanlar geriye uyumlu genişletilir
  *  (örn. metadata, acl). */

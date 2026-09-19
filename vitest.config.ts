@@ -51,12 +51,7 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html"],
       include: ["lib/**/*.ts", "app/services/**/*.ts"],
-      exclude: [
-        "**/*.d.ts",
-        "**/types/**",
-        "lib/supabase.ts",
-        "lib/supabase-admin.ts",
-      ],
+      exclude: ["**/*.d.ts", "**/types/**"],
     },
   },
 });

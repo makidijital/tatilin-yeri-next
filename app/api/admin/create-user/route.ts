@@ -20,14 +20,14 @@ import {
    Flow:
      1. Caller validation
      2. Input validation
-     3. Email duplicate check (admin_users + auth.users)
-     4. supabase.auth.admin.createUser(email, password, email_confirm: true)
+     3. Email duplicate check (admin_users)
+     4. admin kullanıcı oluşturma(email, password, email_confirm: true)
      5. admin_users insert (auth user id ile)
      6. Insert fail ise: rollback — auth user delete
      7. Structured logging — silent fail YOK
 
    ⚠️ Service role key ASLA browser'a sızmaz; sadece bu route
-   sunucu tarafında getSupabaseAdmin() çağırır.
+   sunucu tarafında dbAdmin çağırır.
    =============================================================== */
 
 type CreateUserBody = {
@@ -116,7 +116,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     }
 
     /* ---------- NATIVE CREATE (FAZ 4) ----------
-       Supabase auth.admin.createUser YOK. adminAuthProvider (native) →
+       eski sağlayıcı auth.admin.createUser YOK. adminAuthProvider (native) →
        Argon2id password_hash + admin_users tek-adım insert (auth_user_id
        gerekmez). "auth user" ile "admin_users" native'de aynı satırdır. */
     const created = await adminAuthProvider.createUser({

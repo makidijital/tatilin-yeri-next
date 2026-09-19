@@ -15,7 +15,7 @@ import type { PaymentAccount } from "@/lib/payment-account.helper";
      • `import "server-only"` direktifi — bu dosya CLIENT bundle'a
        sızarsa Next.js BUILD HATA verir. Defansif net guard.
      • Veri erişimi paymentAccountRepository (→ dbAdmin, service-role,
-       SUPABASE_SERVICE_ROLE_KEY) üzerinden — yalnız server runtime'da
+       service-role kimlik bilgisi) üzerinden — yalnız server runtime'da
        (Node/edge route handler). NEXT_PUBLIC_ prefix yok → client
        bundle'da expose YOK. (Phase 1 repo consolidation; davranış AYNEN.)
 
@@ -26,7 +26,7 @@ import type { PaymentAccount } from "@/lib/payment-account.helper";
      `lib/payment-account.helper.ts` hem types/pure utility (formatIban,
      paymentAccountDisplay) hem DB query barındırıyordu. Admin client
      component'leri pure utility'i import ediyor; aynı dosyaya
-     getSupabaseAdmin eklemek bundle'a service-role import statement
+     dbAdmin eklemek bundle'a service-role import statement
      sokardı (declaration olarak; runtime'da çağrılmasa bile attack
      surface büyür). Split → client bundle helper'dan SADECE pure
      kısmı alır; server file ayrı çağrılır.

@@ -249,7 +249,7 @@ export default function AdminGallery({
 
        NOT: client-side `<input accept="image/*">` MIME tipini
        filter'lar; ek mime guard eklemiyoruz (admin trust + browser
-       filter yeterli; sunucu tarafı Supabase upload'ı `image/webp`
+       filter yeterli; sunucu tarafı eski sağlayıcı upload'ı `image/webp`
        contentType ile zorlar). */
     const selectedFiles = Array.from(files);
 

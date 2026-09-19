@@ -12,7 +12,7 @@ import type {
 /* ===============================================================
    🛡️ FAZ 39 — AUTH PROVIDER INTERFACE
    ===============================================================
-   Auth provider için minimum kontrat. Supabase Auth / NextAuth /
+   Auth provider için minimum kontrat. native auth / NextAuth /
    Clerk / Better Auth / custom JWT aynı interface'i uygular.
 
    ⚠️ KESIN KURAL — METHOD SEMANTIK:
@@ -68,7 +68,7 @@ export interface AuthProvider {
  *  context gerektirir (admin client; herhangi bir kullanıcının
  *  token'ını decode edebilmek için). CLIENT bundle'a sızmaması
  *  için implementation'ı `import "server-only"` ile korunur
- *  (`lib/auth/supabase-auth.server.ts`). authorizeAdminToken/
+ *  (`lib/auth/native/native-auth.server.ts`). authorizeAdminToken/
  *  Caller'da yalnız server-only path'ten kullanılır. */
 export interface AuthTokenVerifier {
   /** Server-side Bearer token doğrula → AuthUser veya error. */

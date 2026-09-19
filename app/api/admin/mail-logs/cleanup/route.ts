@@ -25,7 +25,7 @@ import {
      ile silinen satır sayısı döner.
 
    "all" MODE NOTE — neden TRUNCATE değil:
-     User isteğinde "TRUNCATE" yazıyor ama supabase-js SDK direkt
+     User isteğinde "TRUNCATE" yazıyor ama eski sağlayıcı-js SDK direkt
      TRUNCATE expose etmiyor (ya RPC ya DDL gerekir). Production-
      safe karşılığı `DELETE FROM mail_logs` (no WHERE). SDK güvenlik
      guard'ı için kapsayıcı filter (`.not("id", "is", null)` — PK
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
     result = await mailLogServerRepository.deleteOlderThan(cutoff);
   } else {
     /* "all" — kapsayıcı filter (PK NOT NULL → tüm satırlar match);
-       repo `deleteAll` içindeki resmi supabase-js workaround. */
+       repo `deleteAll` içindeki resmi eski sağlayıcı-js workaround. */
     result = await mailLogServerRepository.deleteAll();
   }
 

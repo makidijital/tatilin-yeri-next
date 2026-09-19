@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-/* 🛡️ FAZ 2 frontend purge — `import { supabase }` KALDIRILDI.
+/* 🛡️ FAZ 2 frontend purge — `import { eski sağlayıcı }` KALDIRILDI.
    villa_locations CRUD artık /api/admin/villa-locations route'u
    üzerinden (GET/POST/PATCH/DELETE; authorizeAdminCaller + dbAdmin). */
 import { adminFetch } from "@/lib/admin-fetch";
@@ -221,7 +221,7 @@ export default function LocationsPage() {
        - başarı sonrası revalidateTaxonomy() (menu invalidate gereksiz)
 
      Locations için ayrı service yok (mevcut convention: sayfa direkt
-     supabase'i kullanıyor) — kategori `setVillaTypeCover` pattern'i
+     eski sağlayıcıyı kullanıyor) — kategori `setVillaTypeCover` pattern'i
      yerine inline `.from("villa_locations").update(...)`. */
   const handleCoverUpload = async (loc: any, file: File) => {
     const slug: string = String(loc?.slug || "").trim();

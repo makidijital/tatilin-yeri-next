@@ -17,17 +17,17 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
    service-role (`dbAdmin`, RLS bypass) gerektirir.
 
    ⚠️ AUTH PATH KORUNUR:
-     `dbAdmin.from` ≡ `getSupabaseAdmin().from` (dbAdmin wrapper) →
+     `dbAdmin.from` ≡ `dbAdmin.from` (dbAdmin wrapper) →
      helper'ın eski inline çağrısıyla BYTE-IDENTICAL. Anon `db`'ye
      düşürmek RLS DENY → boş sonuç olurdu; ASLA yapılmaz.
 
    GÜVENLİK SINIRI (pages/menu/blog .server konvansiyonu):
      • `import "server-only"` — client bundle'a sızarsa BUILD HATA.
-     • `dbAdmin` → service-role (SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_
+     • `dbAdmin` → service-role (service-role kimlik bilgisi, NEXT_PUBLIC_
        prefix yok) → yalnız server runtime.
 
    DAVRANIŞ:
-     - Native Supabase `{ data, error }` döner; repo sessiz (throw/log
+     - Native eski sağlayıcı `{ data, error }` döner; repo sessiz (throw/log
        YOK). Expansion / validation / fail-soft / log caller'da KALIR.
      - SELECT yalnız `start_date, end_date` — PII (summary/description/
        raw_ical) taşınmaz (public consumer yalnız "blocked" görür).

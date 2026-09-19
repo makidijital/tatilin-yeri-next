@@ -16,12 +16,12 @@ import {
      1. authorizeAdminCaller(req) → caller doğrula (active admin)
      2. Self-delete guard → caller.id !== target.id
      3. admin_users target row fetch (auth_user_id, email)
-     4. auth.users delete (auth_user_id varsa)
+     4. bağlı auth kaydının temizliği (auth_user_id varsa)
         - "user not found" gibi orphan durum: tolerate edilir
      5. admin_users row delete
      6. Auth delete fail ise admin_users delete EDİLMEZ → consistency
 
-   Yalnız sunucu — service role client (getSupabaseAdmin) burada,
+   Yalnız sunucu — service role client (dbAdmin) burada,
    ASLA client component'lerde import edilmez.
    =============================================================== */
 
@@ -203,7 +203,7 @@ export async function DELETE(
         : null;
 
     /* ---------- ADMIN_USERS DELETE (FAZ 4 — NATIVE) ----------
-       Supabase auth.admin.deleteUser YOK. Native'de "auth user" = admin_users
+       eski sağlayıcı auth.admin.deleteUser YOK. Native'de "auth user" = admin_users
        satırı → tek delete. İlişkili `admin_sessions` FK `ON DELETE CASCADE`
        ile otomatik temizlenir (aktif oturumlar düşer). */
     const { error: rowDelErr } =

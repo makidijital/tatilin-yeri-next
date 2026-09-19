@@ -30,7 +30,7 @@ import { NextResponse } from "next/server";
    - nodeVersion: pin doğrulama (.nvmrc ile uyumlu mu).
 
    KÜLLENME:
-   - Hiçbir DB query yapmaz; Supabase/external service'a bağlanmaz.
+   - Hiçbir DB query yapmaz; eski sağlayıcı/external service'a bağlanmaz.
    - PII içermez; brand-agnostic.
    - Sadece GET; mutation yok.
    - Public erişilebilir ama hiçbir sensitive bilgi sızdırmaz.

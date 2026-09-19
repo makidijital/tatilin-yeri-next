@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import { pagesServerRepository } from "@/lib/db/pages.repository.server";
 /* 🛡️ Sayfa silmede orphan cover temizliği — server-side storage abstraction
-   (removeServer write-driver'a göre R2/Supabase'e gider; provider seçme
+   (removeServer write-driver'a göre R2'ye gider; provider seçme
    mantığı DEĞİŞMEZ). Cover `site-assets` bucket'ında. */
 import { removeServer } from "@/lib/storage/server";
 import { STORAGE_BUCKETS } from "@/lib/storage";
@@ -15,7 +15,7 @@ import { STORAGE_BUCKETS } from "@/lib/storage";
    PATCH  ?id=<uuid> { show_in_menu } → menu visibility toggle
 
    FAZ 2 frontend purge — daha önce `app/(admin)/maki-admin/pages/page.tsx`
-   client component'i `supabase.from("pages").delete()/.update()` ile
+   client component'i `db.from("pages").delete()/.update()` ile
    ANON client + RLS path'ini kullanıyordu. Bu route adminFetch (Bearer)
    + service_role path'i ile davranış BYTE-IDENTICAL aynen üretir.
 
@@ -58,7 +58,7 @@ export async function GET(req: Request): Promise<NextResponse> {
 }
 
 /* POST — pages.insert delegate. Eski client davranışı:
-     supabase.from("pages").insert(payload).select().single()
+     db.from("pages").insert(payload).select().single()
    BYTE-IDENTICAL: aynı insert + select + single semantic'i; client'a
    inserted row ve error/status field'ları dönülür (eski caller
    `response.data/error/status/statusText` shape'ini kullanıyor;
@@ -190,7 +190,7 @@ export async function PATCH(req: Request): Promise<NextResponse> {
        - menu_order   (number)   → drag/drop persist (page-auto satırları)
        - menu_parent_id (string|null) → drag/drop persist
      Caller alanı geçerse update payload'a girer; davranış BYTE-IDENTICAL
-     (eski client her field için ayrı supabase.update yapardı; route
+     (eski client her field için ayrı db.update yapardı; route
      birleştirir ama runtime semantic aynı). */
   const patch: Record<string, unknown> = {};
   if (typeof body.show_in_menu === "boolean") {

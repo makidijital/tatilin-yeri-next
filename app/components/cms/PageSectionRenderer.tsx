@@ -11,7 +11,7 @@ import { getPageCoverPublicUrl } from "@/lib/storage.helpers";
      1) lib/page-sections.ts > PageSection union'a variant ekle
      2) Aşağıdaki SECTION_RENDERERS map'ine entry ekle
    Renderer SSR-safe (server component). Image section
-   `next/image` kullanır (Supabase Storage remote pattern config
+   `next/image` kullanır (R2 storage remote pattern config
    next.config.ts'te zaten tanımlı).
 
    Spacing: section-arası `space-y-12 md:space-y-16` parent'tan

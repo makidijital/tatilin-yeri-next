@@ -38,10 +38,10 @@ import {
   Sparkles,
 } from "lucide-react";
 
-/* 🛡️ FAZ 2 frontend purge — `import { supabase }` KALDIRILDI.
+/* 🛡️ FAZ 2 frontend purge — `import { eski sağlayıcı }` KALDIRILDI.
    Taxonomy dropdown'ları artık /api/public/taxonomies GET ile fetch'lenir.
    Submit yine mevcut `createOfferRequest` service'i üzerinden. */
-/* 🛡️ Submit artık doğrudan anon Supabase insert yerine sunucu
+/* 🛡️ Submit artık doğrudan anon DB client insert yerine sunucu
    route'una (/api/public/offer-requests) gider: applyRateLimit +
    honeypot/time-trap + service-role insert. Tip korunur. */
 import type { CreateOfferRequestInput } from "@/app/services/offer-request.service";
@@ -190,7 +190,7 @@ export default function OfferRequestForm({
   useEffect(() => {
     let cancelled = false;
     /* 🛡️ FAZ 2 frontend purge — public fetch /api/public/taxonomies.
-       Eski 3 paralel anon supabase fetch tek route response'unda
+       Eski 3 paralel anon DB client fetch tek route response'unda
        birleştirildi. Davranış BYTE-IDENTICAL: aynı select shape'leri,
        aynı Option[] cast, aynı fail-soft semantic (hata → opts boş). */
     (async () => {

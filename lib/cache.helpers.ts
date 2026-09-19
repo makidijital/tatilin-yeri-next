@@ -646,7 +646,7 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
     🛡️ slug field (migration 009): SEO-friendly URL kontratı için
     hem id hem slug seçiyoruz. Eski kayıtlarda slug NULL olabilir
     (FE/URL layer slug NULL'sa UUID'ye düşer).
-    🛡️ cover_image (migration 011): Supabase Storage bucket-relative
+    🛡️ cover_image (migration 011): R2 storage bucket-relative
     path. Public URL runtime'da lib/storage.helpers >
     getLocationCoverPublicUrl ile üretilir. */
 export const getCachedVillaLocations = unstable_cache(

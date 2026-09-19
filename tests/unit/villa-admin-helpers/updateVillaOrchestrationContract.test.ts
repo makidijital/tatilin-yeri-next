@@ -13,7 +13,7 @@
    FREEZE EDİLEN KONTRATLAR:
      1. validate `form.title` (throw)
      2. AWAITED generateUniqueSlug (slug, id exclude)
-     3. AWAITED supabase update
+     3. AWAITED villaAdminRepository.updateVillaById
      4. ALWAYS AWAITED replaceVillaTypeRelations
      5. ALWAYS AWAITED replaceVillaFeatureRelations
      6. ALWAYS AWAITED setVillaDistances
@@ -146,11 +146,16 @@ describe("updateVillaFull — early validation", () => {
   });
 });
 
+/* 🛡️ NATIVE REPOSITORY KONTRATI — villa satırı
+   `villaAdminRepository.updateVillaById(...)` ile güncellenir.
+   Test amacı (sıra / await / tam bir kez) DEĞİŞMEDİ. */
+const VILLA_WRITE = "villaAdminRepository.updateVillaById";
+
 describe("updateVillaFull — orchestration order", () => {
   it("generateUniqueSlug AWAITED with excludeId before villa update", () => {
     const slugIdx = idx("generateUniqueSlug");
     const updateIdx = seq.findIndex(
-      (e) => e.name.includes("supabase") && e.awaited
+      (e) => e.name.includes(VILLA_WRITE) && e.awaited
     );
     expect(slugIdx).toBeGreaterThanOrEqual(0);
     expect(updateIdx).toBeGreaterThanOrEqual(0);
@@ -158,9 +163,9 @@ describe("updateVillaFull — orchestration order", () => {
     expect(seq[slugIdx].awaited).toBe(true);
   });
 
-  it("villa supabase update is AWAITED", () => {
+  it("villa repository update is AWAITED", () => {
     const updateIdx = seq.findIndex(
-      (e) => e.name.includes("supabase") && e.awaited
+      (e) => e.name.includes(VILLA_WRITE) && e.awaited
     );
     expect(seq[updateIdx].awaited).toBe(true);
   });
@@ -236,8 +241,13 @@ describe("updateVillaFull — return invariant", () => {
 });
 
 describe("updateVillaFull — single villa UPDATE", () => {
-  it("calls supabase EXACTLY ONCE (no leaked per-relation supabase)", () => {
-    const supabaseCalls = seq.filter((e) => e.name.includes("supabase"));
-    expect(supabaseCalls.length).toBe(1);
+  it("calls repository update EXACTLY ONCE (no leaked per-relation DB write)", () => {
+    const writes = seq.filter((e) => e.name.includes(VILLA_WRITE));
+    expect(writes.length).toBe(1);
+  });
+
+  it("service body'sinde DOĞRUDAN DB client çağrısı YOK", () => {
+    expect(sourceText).not.toMatch(/\bdbAdmin\s*\.\s*from\(/);
+    expect(sourceText).not.toMatch(/\bdb\s*\.\s*from\(/);
   });
 });

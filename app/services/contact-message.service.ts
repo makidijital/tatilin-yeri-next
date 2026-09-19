@@ -9,7 +9,7 @@ import type { ContactMessageRow } from "@/types/database";
    logging). RLS:
      - createContactMessage anon-friendly (anon INSERT policy)
      - listMessages / markAsRead / archiveMessage authenticated
-       (admin Supabase Auth ile authenticate'lı)
+       (admin native auth ile authenticate'lı)
 
    Pricing / reservation / availability'e SIFIR dokunuş.
    =============================================================== */

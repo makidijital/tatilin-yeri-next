@@ -1,4 +1,4 @@
-/* 🛡️ Payment Migration P5A — anon `payment.repository` (supabaseDbProvider)
+/* 🛡️ Payment Migration P5A — anon `payment.repository` (dbNative)
    yerine native `payment.repository.server` (P5 twin'leri: 6 payment_account
    metodu). Service PA-B1 sonrası hiçbir client tarafından runtime import
    edilmiyor (yalnız server action + type-only) → server-only native repo
@@ -17,7 +17,7 @@ import type { PaymentAccount } from "@/lib/payment-account.helper";
      - Bir hesap aktif edildiğinde diğerleri otomatik pasifleşir.
 
    FAZ 35 (repository extraction):
-     Service artık Supabase'i doğrudan tüketmez; DB I/O
+     Service artık eski sağlayıcıyı doğrudan tüketmez; DB I/O
      `paymentRepository.*` üzerinden delege edilir. Davranış
      BYTE-IDENTICAL:
        - `[payment_account.*]` log tag asimetrisi (payment-method
@@ -27,7 +27,7 @@ import type { PaymentAccount } from "@/lib/payment-account.helper";
        - Single-active toggle ORCHESTRATION service'te kalır
          (post-insert/update conditional `deactivateOthers`).
        - Atomicity DEĞIŞTİRİLMEZ (2-step race window orijinal).
-       - Repository return shape Supabase native `{ data, error, status? }`;
+       - Repository return shape native `{ data, error, status? }`;
          service `status`'u ham geçirerek RLS detection sürdürür.
    =============================================================== */
 
@@ -65,13 +65,11 @@ export async function getPaymentAccounts(): Promise<PaymentAccount[]> {
     return [];
   }
 
-  // 🔥 RLS gizli silent-fail tespiti — error yok ama count=0 ise
-  //    çoğu zaman SELECT policy eksiktir.
+  // Boş sonuç teşhisi — hata yok ama kayıt da yok.
   if (!data || data.length === 0) {
     console.warn("[payment_account.list] EMPTY", {
       status,
-      hint:
-        "Supabase Table Editor'da kayıt varsa muhtemelen RLS açık ve SELECT policy yok.",
+      hint: "payment_accounts tablosunda kayıt bulunamadı.",
     });
   } else {
     console.info("[payment_account.list] OK", {

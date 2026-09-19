@@ -13,7 +13,7 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
    Anon erişim REDDEDİLİR; authenticated-non-admin REDDEDİLİR.
 
    Mail pipeline (`/app/lib/mail/client.ts > getMailConfig`) route
-   handler bağlamında çalışır — anon Supabase client (`@/lib/supabase`)
+   handler bağlamında çalışır — anon DB client client (`@/lib/db`)
    sunucu fetch'lerine session cookie/JWT iliştirmez → RLS DENY →
    `findSingleton` `{ data: null, error: null }` döndürür. Sonuçta
    `apiKey = settings.resend_api_key || env || null`. ENV de yoksa
@@ -29,13 +29,13 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
    GÜVENLİK SINIRI (reservation.repository.server.ts /
    mail-log.repository.server / payment-account.server konvansiyonu):
      • `import "server-only"` — client bundle'a sızarsa BUILD HATA.
-     • `dbAdmin` → `getSupabaseAdmin()` (SUPABASE_SERVICE_ROLE_KEY,
+     • `dbAdmin` → `dbAdmin` (service-role kimlik bilgisi,
        NEXT_PUBLIC_ prefix yok) → yalnız server runtime.
 
    DAVRANIŞ — BYTE-IDENTICAL anon repo `findSingleton()`:
      - `.from("settings").select("*").maybeSingle()` AST aynen.
      - Tek fark: `db` → `dbAdmin` (RLS bypass).
-     - Return shape Supabase native `{ data, error }`. Repository
+     - Return shape native `{ data, error }`. Repository
        sessiz; throw / console / log YOK. Caller (mail/client.ts)
        error → null fallback; başarı → FULL row (resend_api_key dahil).
 

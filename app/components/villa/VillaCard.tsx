@@ -173,7 +173,7 @@ export default function VillaCard({
      soft coral/turquoise accent. Logic (pricing/data/handlers) AYNEN. */
   const isDiscount = variant === "discount";
   /* Cover image: ilk geçerli URL'i seç.
-     Supabase'den null/empty değerler gelebileceği için filter. */
+     eski sağlayıcıdan null/empty değerler gelebileceği için filter. */
   const cover = (images || []).find(
     (u): u is string => typeof u === "string" && u.trim().length > 0
   );
@@ -440,7 +440,7 @@ export default function VillaCard({
                    - Mobile (default ≤640px): 100vw (tek kolon)
                    - sm (≥640): 50vw (2 col)
                    - xl (≥1280): 33vw (3 col)
-                 max-w ~1280px / 3 col ≈ 420px image gen; Supabase Storage
+                 max-w ~1280px / 3 col ≈ 420px image gen; R2 storage
                  + Next image optimizer (cdn-image) bunları auto. */}
               <Image
                 src={cover}

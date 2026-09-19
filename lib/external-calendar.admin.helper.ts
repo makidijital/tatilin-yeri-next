@@ -17,7 +17,7 @@ import {
    > external (violet); engine check sırası priority sağlar.
 
    AUTH:
-     Authenticated supabase client (admin browser session JWT).
+     Authenticated eski sağlayıcı client (admin browser session JWT).
      RLS authenticated SELECT migration 029'da açık. Service-role
      gerekmez.
 

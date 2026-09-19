@@ -10,7 +10,7 @@ import {
    🛡️ POST /api/public/offer-requests — PUBLIC TEKLİF FORMU (server)
    ===============================================================
    AMAÇ:
-     /teklif-al formunun client-side anon Supabase insert'ini sunucu
+     /teklif-al formunun client-side anon DB client insert'ini sunucu
      tarafına taşır. Akış:
        Browser → applyRateLimit("offer") → honeypot/time-trap →
        service validation → native insert → offer_requests

@@ -20,7 +20,7 @@ import { applyRateLimit } from "@/lib/rate-limit";
    AMAÇ:
      VillaCardBookingModal client component'i için BOOKING context
      verilerini server-side TOPLU olarak döner. Modal browser'da
-     `getSupabaseAdmin()` (service role) çağıramaz — bu route
+     `dbAdmin` (service role) çağıramaz — bu route
      server-only helper'ları izolasyon altında kullanır.
 
      ÖNEMLI: Response, BookingSidebar'ın server-side aldığı
@@ -136,7 +136,7 @@ export async function GET(
 
   const { id } = await ctx.params;
 
-  /* Defansif id validation — UUID enforcement yapmıyoruz (Supabase
+  /* Defansif id validation — UUID enforcement yapmıyoruz (eski sağlayıcı
      zaten geçersiz formatta empty döner) ama tip ve boş string
      erken-reddi yapıyoruz. */
   if (!id || typeof id !== "string" || id.trim().length === 0) {

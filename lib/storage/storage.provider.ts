@@ -7,7 +7,7 @@ import type {
 /* ===============================================================
    🛡️ FAZ 38 — STORAGE PROVIDER INTERFACE
    ===============================================================
-   Storage provider için minimum kontrat. Supabase Storage / R2 / S3
+   Storage provider için minimum kontrat. R2 storage / R2 / S3
    / Bunny aynı interface'i uygular. Provider-agnostic; bucket
    isimleri parametre olarak gelir (storage.constants.ts).
 
@@ -17,7 +17,7 @@ import type {
                        iletilir. Başarı/hata Result envelope.
      remove         → bulk remove; "not found" idempotent success
                        sayılır. Retry strategy provider implementation
-                       sorumluluğunda (Supabase impl 3x exponential).
+                       sorumluluğunda (eski sağlayıcı impl 3x exponential).
      getPublicUrl   → senkron; bucket-relative path → absolute URL.
                        Yoksa ya da geçersizse null.
 

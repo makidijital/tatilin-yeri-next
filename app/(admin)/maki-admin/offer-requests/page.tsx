@@ -7,7 +7,7 @@ import OfferRequestList from "./OfferRequestList";
 
    FETCH PATTERN:
      ReviewAdminList paradigması (FAZ 33B): client-side fetch
-     (admin'in browser session JWT'si supabase'e attached → RLS
+     (admin'in browser session JWT'si eski sağlayıcıya attached → RLS
      authenticated CRUD). Service-role kullanılmaz.
    =============================================================== */
 

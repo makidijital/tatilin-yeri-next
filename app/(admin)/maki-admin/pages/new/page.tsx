@@ -13,7 +13,7 @@ import {
   Quote,
 } from "lucide-react";
 
-/* 🛡️ FAZ 2 frontend purge — `import { supabase }` KALDIRILDI.
+/* 🛡️ FAZ 2 frontend purge — `import { eski sağlayıcı }` KALDIRILDI.
    pages.insert artık /api/admin/pages POST route'u üzerinden
    (authorizeAdminCaller + dbAdmin). */
 import { adminFetch } from "@/lib/admin-fetch";
@@ -223,7 +223,7 @@ export default function NewPagePage() {
     setLoading(true);
     /* 🛡️ PAYLOAD NORMALIZATION (debugging-grade):
        - Tüm alanlar explicit `null` veya değer; HİÇBİR ALAN undefined
-         GITMEMELI. Supabase JS v2 undefined alanları bazı durumlarda
+         GITMEMELI. DB client v2 undefined alanları bazı durumlarda
          siliyor, bazı durumlarda "missing column" hatası veriyor.
        - body/content mirror: legacy + yeni alanlar aynı içerikle.
        - sections: array literal `[]` fallback (asla null/undefined).
@@ -256,7 +256,7 @@ export default function NewPagePage() {
        `.select().single()` zinciri. PostgREST `Prefer: return=representation`
        header'ı `.select()` ile ekleniyor → DB hata mesajları HTTP
        body'sinde tam gelir. `.single()` insert sonrası tek row
-       garantili olduğu için kullanılır; hata olursa Supabase JS
+       garantili olduğu için kullanılır; hata olursa DB client
        v2 normalde `error` field'ında PostgrestError döner. */
     /* eslint-disable no-console */
     console.log(

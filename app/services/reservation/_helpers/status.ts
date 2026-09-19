@@ -21,7 +21,7 @@ type ReservationPaidAmountRepository = Pick<
    `assertCanConfirm` fonksiyonunun BYTE-IDENTICAL kopyası.
 
    FAZ 33 (READ extraction):
-     Fallback paid_amount DB fetch artık doğrudan supabase
+     Fallback paid_amount DB fetch artık doğrudan eski sağlayıcı
      client'ı tüketmez; `reservationRepository.findPaidAmount`
      üzerinden delege edilir. Davranış BYTE-IDENTICAL:
        - Aynı tablo (`reservations`)

@@ -8,7 +8,7 @@
      kullanmıyor; eksikliği test runner'ı kırmasın diye defansif
      dynamic ESM import. Component testleri eklendiğinde paket
      zaten devDep'te.
-   • No network: hiçbir test fetch/Supabase tetiklemez.
+   • No network: hiçbir test fetch/eski sağlayıcı tetiklemez.
 =============================================================== */
 
 /* Module marker — top-level await ESM module shape gerektirir. */

@@ -4,7 +4,7 @@ import "server-only";
    🛡️ VILLA IMAGES REPOSITORY — SERVER-ONLY NATIVE TWIN (Migration IMG-P1)
    ===============================================================
    Anon `lib/db/villa-image.repository.ts` (`villaImageRepository`;
-   supabaseDbProvider + DI Supabase client) yerine native PostgreSQL
+   dbNative + DI eski sağlayıcı client) yerine native PostgreSQL
    karşılığı. Provider `dbAdminNative` (native pg, tek privileged rol;
    RLS native'de yok → write authz app-layer'a taşınır — IMG-P2 auth
    gate + IMG-P3 repoint).
@@ -17,7 +17,7 @@ import "server-only";
 
    ⚠️ Method isimleri + SQL + return (`{ data, error }` / maybeSingle) anon
      repo ile BYTE-IDENTICAL; tek fark provider (`db` → `dbAdminNative`) ve
-     DI tipi (`SupabaseClient` → native-agnostik `NativeFromClient`). Row
+     DI tipi (`DB client` → native-agnostik `NativeFromClient`). Row
      generic yalnız service field-access'i tiplenmesi gereken maybeSingle
      method'larında (sort_order aritmetiği, image_url arg) — VR-P5.5 deseni.
    =============================================================== */
@@ -26,7 +26,7 @@ import { dbAdminNative } from "@/lib/db/native";
 import type { VillaImage } from "@/app/services/villa-image/villa-image.types";
 
 /** Provider-agnostik DI tipi (native `.from`). Eski repo'nun
- *  `Pick<SupabaseClient,"from">`'unun native karşılığı; SupabaseClient
+ *  `Pick<DB client,"from">`'unun native karşılığı; DB client
  *  bağımlılığı twin'e taşınmaz. Default privileged native. */
 type NativeFromClient = Pick<typeof dbAdminNative, "from">;
 

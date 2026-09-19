@@ -33,7 +33,7 @@ import VillaListesiClient, {
      - Booking engine, availability merge, reservation create,
        pricing engine, currency conversion DOKUNULMAZ.
      - Mevcut /arama page query'si bağımsız; bu sayfa kendi
-       hafif Supabase fetch'ini yapar (admin scope ~ az villa).
+       hafif eski sağlayıcı fetch'ini yapar (admin scope ~ az villa).
    =============================================================== */
 
 export const dynamic = "force-dynamic";

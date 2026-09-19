@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
 
-/* 🛡️ EXIT HARDENING — sitemap'in inline `supabase.from()` çağrıları
+/* 🛡️ EXIT HARDENING — sitemap'in inline `db.from()` çağrıları
    repository'ye taşındı (Katman A). Davranış AYNEN: villa
    (is_active=true & deleted_at IS NULL, slug+created_at) ve pages
-   (is_active=true) aynı filtre + fail-soft. createSupabaseServerClient
+   (is_active=true) aynı filtre + fail-soft. session-aware DB client
    artık gerekmez (RLS anon context repository `db` üzerinden aynen). */
 /* 🛡️ Villa Migration S8H — listPublicSlugs native twin'e (S8G, byte-
    identical chunked-loop, unwrapped {slug,created_at}[]) repoint. sitemap

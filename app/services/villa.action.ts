@@ -19,7 +19,7 @@ import type { Locale } from "@/lib/i18n/config";
 
    ⚠️ İNCE WRAPPER: iş mantığı YOK — yalnız service'i delege eder.
      İmzalar + dönüş tipleri service'ten türetilir (Parameters/
-     ReturnType → cast/any YOK, birebir). Provider/repository/Supabase
+     ReturnType → cast/any YOK, birebir). Provider/repository/eski sağlayıcı
      DEĞİŞMEDİ; yalnız çağrı sınırı server action'a taşındı.
      Dönüş `VillaDTO[]` — plain (string/number/boolean/string[]),
      server action serialization güvenli.

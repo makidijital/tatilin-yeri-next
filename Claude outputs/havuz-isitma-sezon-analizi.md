@@ -2,7 +2,7 @@
 
 **Kapsam:** Bu doküman SADECE analizdir. Hiçbir dosya değiştirilmedi, migration oluşturulmadı, commit/push yapılmadı. Tüm dosya/fonksiyon/kolon isimleri gerçek kod tabanından (`tatilin-yeri-next`) doğrulanarak alınmıştır.
 
-**Önemli düzeltme:** Talepte "PostgreSQL + Drizzle/pg mimarisi" ifadesi geçiyor — kod tabanında **Drizzle YOK**. Gerçek mimari: ham PostgreSQL (`pg` paketi) üzerine yazılmış, Supabase'in fluent API'sini taklit eden özel bir query builder (`lib/db/query-builder.ts`, `query-compiler.ts`, `native-db.provider.ts`, `pg.client.ts`). Repository'ler `db.from("tablo").select("...").eq(...).maybeSingle()` şeklinde çağrılıyor ama arkada gerçek `pg` çalışıyor. Bu, aşağıdaki DB önerisini doğrudan etkiliyor (bkz. Bölüm 2 ve 10).
+**Önemli düzeltme:** Talepte "PostgreSQL + Drizzle/pg mimarisi" ifadesi geçiyor — kod tabanında **Drizzle YOK**. Gerçek mimari: ham PostgreSQL (`pg` paketi) üzerine yazılmış, fluent (chain) API sunan özel bir query builder (`lib/db/query-builder.ts`, `query-compiler.ts`, `native-db.provider.ts`, `pg.client.ts`). Repository'ler `db.from("tablo").select("...").eq(...).maybeSingle()` şeklinde çağrılıyor ama arkada gerçek `pg` çalışıyor. Bu, aşağıdaki DB önerisini doğrudan etkiliyor (bkz. Bölüm 2 ve 10).
 
 ---
 

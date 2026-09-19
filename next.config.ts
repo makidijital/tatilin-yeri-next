@@ -1,35 +1,10 @@
 import type { NextConfig } from "next";
 
 /* ===============================================================
-   🛡️ NEXT.JS CONFIG
+   🛡️ NEXT.JS CONFIG — next/image remote patterns
    ===============================================================
-   Supabase Storage URL'leri için next/image remote pattern.
-   Hostname `NEXT_PUBLIC_SUPABASE_URL` env'inden build-time'da
-   parse edilir; env yoksa wildcard fallback (`**.supabase.co`)
-   ile preview build'ler de çalışır.
-
-   Path pattern `/storage/v1/object/public/**` → public bucket'ları
-   kapsar (site-assets/category-covers, location-covers, hero, vs.).
-   Private bucket'lar `/storage/v1/object/sign/...` farklı path —
-   ileride gerekirse ayrıca eklenir.
-   =============================================================== */
-const supabaseUrlEnv = process.env.NEXT_PUBLIC_SUPABASE_URL;
-let supabaseHost = "**.supabase.co";
-try {
-  if (supabaseUrlEnv) {
-    supabaseHost = new URL(supabaseUrlEnv).hostname;
-  }
-} catch {
-  // env malformed → wildcard fallback
-}
-
-/* ===============================================================
-   🛡️ FAZ B — CDN HOST'LARI (next/image remote patterns)
-   ===============================================================
-   STORAGE_DRIVER=r2 iken görseller cdn/assets.villayagel.com'dan
-   gelir; next/image bu host'ları tanımalı. Supabase host KORUNUR
-   (dual-host → geçiş + rollback güvenli). Host'lar env'den türetilir;
-   env yoksa proje default'larına düşer.
+   Görseller Cloudflare R2'den, CDN host'ları üzerinden servis edilir.
+   Host'lar env'den türetilir; env yoksa proje default'larına düşer.
    =============================================================== */
 function hostFromBase(
   base: string | undefined,
@@ -54,12 +29,27 @@ const cdnHosts = Array.from(
   new Set([villaImagesCdnHost, siteAssetsCdnHost])
 ).filter(Boolean);
 
+/* ⚠️ LEGACY ASSET HOST — GEÇİCİ, VERİ TEMİZLİĞİ BEKLİYOR
+   Veritabanındaki bazı asset alanları (villa_images.image_url,
+   settings.site_logo/favicon/default_og_image/watermark_logo,
+   pages.cover_image, villa_types/villa_locations.cover_image) hâlâ
+   ESKİ SAĞLAYICININ tam URL'ini tutuyor olabilir; `resolveAssetUrl`
+   ve `parseVillaStorageUrl` bu değerleri bilinçli olarak pass-through
+   eder (bkz. lib/storage.helpers.ts, lib/villa-image.helpers.ts).
+   Bu pattern kaldırılırsa `next/image` o satırlar için HARD ERROR verir.
+
+   KALDIRMA KOŞULU: DB'deki tüm asset alanları R2 bucket-relative
+   path'e normalize edildikten SONRA bu blok silinebilir.
+   Bu blok hiçbir environment variable OKUMAZ; yalnız statik bir
+   wildcard host'tur. */
+const LEGACY_ASSET_HOST = "**.supabase.co";
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: supabaseHost,
+        hostname: LEGACY_ASSET_HOST,
         pathname: "/storage/v1/object/public/**",
       },
       /* CDN host'ları — bucket kökü doğrudan serve edilir (path: /**). */

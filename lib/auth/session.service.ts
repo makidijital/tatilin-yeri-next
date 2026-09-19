@@ -20,7 +20,7 @@ import {
          * auth_user_id öncelikli + email fallback lookup
          * is_active kontrolü
          * permissions normalize
-         * supabase.auth.getUser / signOut çağrıları
+         * native oturum doğrulama / signOut çağrıları
      - Bu service yalnız ince bir re-export katmanı; iç davranış
        AYNEN aynı, identical function reference.
 
@@ -35,13 +35,13 @@ import {
      FAZ 32 sonrası tercih edilen yol (yeni kod için):
        app/* → @/lib/auth/session.service
                  ↓
-              @/lib/admin-auth → @/lib/supabase
+              @/lib/admin-auth → @/lib/db
 
      Mevcut kod path'leri ZORLA değiştirilmedi (minimal diff).
      İleride incremental olarak yeni service'e taşınabilir.
 
    GELECEK MIGRATION ZEMINI:
-     Supabase Auth → başka bir provider (NextAuth, Clerk, custom JWT)
+     native auth → başka bir provider (NextAuth, Clerk, custom JWT)
      geçişinde sadece `lib/admin-auth.ts` ve bu wrapper değişir.
      Service ve route'lar aynı interface ile çalışmaya devam eder.
    =============================================================== */
@@ -78,7 +78,7 @@ export async function requireAdmin(): Promise<AdminAuthRecord> {
    🛡️ WRITE — sign out
    ---------------------------------------------------------------
    Client tarafında çağrılır; cookie + local session temizlenir.
-   Internal davranış lib/admin-auth.ts'te (supabase.auth.signOut). */
+   Internal davranış lib/admin-auth.ts'te (native signOut). */
 export async function signOutAdmin(): Promise<void> {
   return _signOutAdmin();
 }

@@ -1,7 +1,7 @@
 /* ===============================================================
    🛡️ VILLA ROW TYPES — Shared DTO / Embed Shapes
    ===============================================================
-   Bu dosya Supabase embed-select pattern'inde tekrarlanan satır
+   Bu dosya eski sağlayıcı embed-select pattern'inde tekrarlanan satır
    shape'lerini merkezileştirir. Aynı tip /arama, cache.helpers,
    villa.service > mapVilla, VillaList ve homepage collection
    katmanlarında lokal olarak yeniden tanımlanıyordu — drift
@@ -9,8 +9,8 @@
 
    FELSEFE (Faz 9):
      - Bu tipler `types/database.ts` Row'larından TÜRETİLMEZ
-       (Supabase embed-select inference'ı v2.105'te `never` üretiyor;
-       Database generic bind YOK — bkz. lib/supabase.ts).
+       (eski sağlayıcı embed-select inference'ı v2.105'te `never` üretiyor;
+       Database generic bind YOK — bkz. lib/db/index.ts).
      - Bunun yerine MANUAL "embed shape" tipleri: caller'lar zaten
        embedded select sonuçlarını bu shape'lere narrow ediyordu.
        Tek source-of-truth artık burası.
@@ -72,7 +72,7 @@ export type VillaLocationEmbed = {
    ortak alanlarını barındırır. Her caller kendi extra-field'larını
    bu tipi extend ederek tanımlar — DRY + drift-safe.
 
-   Bu tip Supabase'in DÖNDÜRDÜĞÜ shape; `types/database.ts > VillaRow`
+   Bu tip eski sağlayıcının DÖNDÜRDÜĞÜ shape; `types/database.ts > VillaRow`
    ile birebir aynı kolonlar fakat embed alanları + nullable
    tolerans dahil. */
 export type VillaEmbedBase = {

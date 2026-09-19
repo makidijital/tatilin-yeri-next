@@ -1,4 +1,4 @@
-/* 🛡️ Migration ST-P5A — anon `settings.repository` (supabaseDbProvider)
+/* 🛡️ Migration ST-P5A — anon `settings.repository` (dbNative)
    yerine native `settings.repository.server` (ST-P5 twin'leri: findSingleton +
    findPublicViaRpc + updateById). Call-site'lar aynı (settingsServerRepository
    → settingsRepository alias). Envelope + maybeSingle + RPC (get_public_settings
@@ -113,15 +113,15 @@ export async function getPublicSettings(): Promise<Settings | null> {
    ===============================================================
    Return contract netleştirildi:
      - true  → update başarılı (DB'ye yazıldı)
-     - false → settings tablosu boş veya supabase error
-   Önceden `data` döndürüyordu; ancak Supabase `.update().eq()`
+     - false → settings tablosu boş veya eski sağlayıcı error
+   Önceden `data` döndürüyordu; ancak eski sağlayıcı `.update().eq()`
    `.select()` zinciri olmadan başarılı durumda da `data: null`
    döner. Bu, çağıran tarafta "null ⇒ fail" yanılgısına yol
    açabiliyordu. Boolean contract bu belirsizliği kaldırır.
 
    Davranış:
      - getSettings() row yoksa → false
-     - supabase update error → false
+     - repository update error → false
      - row var ve update başarılı → true
    Yeni satır oluşturulmuyor (insert YOK); başlangıç row'unun
    var olduğu varsayımı önceki davranışla aynı.

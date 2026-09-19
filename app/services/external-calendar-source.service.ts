@@ -6,7 +6,7 @@ import { validateExternalUrlStatic } from "@/lib/security/ssrf";
    🛡️ FAZ 56E — EXTERNAL CALENDAR SOURCE (admin CRUD)
    ===============================================================
    admin UI tarafından çağrılan basit CRUD wrapper'ı. Authenticated
-   admin context'ten supabase client üzerinden okur/yazar (RLS
+   admin context'ten eski sağlayıcı client üzerinden okur/yazar (RLS
    policy authenticated full CRUD'a izin veriyor — migration 029).
 
    NOT — events YAZILMAZ:

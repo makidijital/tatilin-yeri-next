@@ -23,7 +23,7 @@ import type { ReservationCreateInput } from "../types";
      - Conflict check kendi yapar
      - Commission rate'i fetch eder, calcCommissionAmount sonucunu
        buraya `reservationCommissionAmount` olarak verir
-     - Bu helper'dan dönen payload'u supabase.insert(...) ile
+     - Bu helper'dan dönen payload'u repository.insert(...) ile
        gönderir
      - SQLSTATE 23P01 catch'i kendi yapar
 =============================================================== */
@@ -36,8 +36,8 @@ export type BuildCreateReservationPayloadInput = {
   reservationCommissionAmount: number;
 };
 
-/** INSERT payload — runtime'da `supabase.from("reservations").insert(...)`
- *  argümanına geçer. Excess property check'i Supabase JS aşırı
+/** INSERT payload — runtime'da `db.from("reservations").insert(...)`
+ *  argümanına geçer. Excess property check'i DB client aşırı
  *  geniştir; pratikte loose accept eder. Burada strict tutmuyoruz
  *  çünkü conditional spread'ler key'lerin opsiyonel varlığını
  *  şart koşar. */

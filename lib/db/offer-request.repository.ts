@@ -3,7 +3,7 @@ import "server-only";
 /* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
    provider'a alındı. Admin okuma/yazma artık offer-requests.action ("use
    server") üzerinden; public create route'tan native default ile.
-   Supabase importu + SupabaseClient DI tamamen kaldırıldı. `server-only`
+   eski sağlayıcı importu + DB client DI tamamen kaldırıldı. `server-only`
    defansif sınır. Method yüzeyi (create/findAll/findById/updateById/
    deleteById) + dönüş şekli AYNEN. */
 import { dbNative as db } from "@/lib/db/native";
@@ -11,7 +11,7 @@ import { dbNative as db } from "@/lib/db/native";
 /* ===============================================================
    🛡️ OFFER REQUESTS REPOSITORY (native)
    ===============================================================
-   `offer-request.service.ts` içindeki inline `supabase.from(...)`
+   `offer-request.service.ts` içindeki inline `db.from(...)`
    çağrılarının BİREBİR taşınmış hali (single table: offer_requests).
    Davranış değişmez:
      - `db` = native provider (`dbNative`); method'lar ham `{ data, error }`

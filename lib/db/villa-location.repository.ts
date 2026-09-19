@@ -7,7 +7,7 @@ import "server-only";
    BUILD HATA). Method yüzeyi + dönüş şekli aynen. */
 import { dbNative as db } from "@/lib/db/native";
 
-/* Native `from()` varsayılan `QueryResultRow` döndürür; anon Supabase
+/* Native `from()` varsayılan `QueryResultRow` döndürür; anon DB client
    `Database` generic'iyle `VillaLocationRow` tipliyordu. Tüketiciler
    (ör. villa-edit action → client setLocations) bu tipi bekliyor →
    sorgular domain row tipiyle parametrelenir (davranış değişmez). */
@@ -17,7 +17,7 @@ import type { VillaLocationRow } from "@/types/database";
    🛡️ VILLA LOCATIONS REPOSITORY (Phase 1 — repo consolidation)
    ===============================================================
    `villa_locations` tablosu — read-side taxonomy. cache.helpers >
-   getCachedVillaLocations'ın inline `supabase.from<VillaLocationRow>("villa_locations")`
+   getCachedVillaLocations'ın inline `db.from<VillaLocationRow>("villa_locations")`
    sorgusunun BİREBİR taşınmış hali.
 
    ⚠️ NEDEN AYRI REPO:
@@ -28,8 +28,8 @@ import type { VillaLocationRow } from "@/types/database";
      dedicated repo (villa_locations için ilk repo).
 
    DAVRANIŞ (villa-type.repository konvansiyonu):
-     - `db` = supabaseDbProvider (anon, RLS) → cache.helpers'ın kullandığı
-       `@/lib/supabase` ile aynı PostgrestQueryBuilder → byte-identical.
+     - `db` = dbNative (anon, RLS) → cache.helpers'ın kullandığı
+       `@/lib/db` ile aynı PostgrestQueryBuilder → byte-identical.
      - Native `{ data, error }` döner; repo sessiz.
      - cover_v cache-bust timestamp + mapping cache.helpers'ta KALIR.
 =============================================================== */

@@ -3,7 +3,7 @@ import "server-only";
 /* ===============================================================
    🛡️ VILLA REVIEWS REPOSITORY — SERVER-ONLY (NATIVE, Migration VR-P5)
    ===============================================================
-   Anon `lib/db/villa-review.repository.ts` (supabaseDbProvider) yerine
+   Anon `lib/db/villa-review.repository.ts` (dbNative) yerine
    native PostgreSQL karşılığı. Provider `dbAdminNative` (native pg, tek
    app rolü; RLS native'de yok, yetki app-katmanında — villa/payment/
    reservation server repo konvansiyonuyla aynı).

@@ -11,7 +11,7 @@
    özelliklerini "event sequence" olarak çıkarıp beklediğimiz
    minimum kontrat sırasına karşı assert ediyoruz.
 
-   NEDEN AST? Bu test runtime'da handleCreate'i ÇAĞIRMAZ — Supabase
+   NEDEN AST? Bu test runtime'da handleCreate'i ÇAĞIRMAZ — eski sağlayıcı
    mock'u yok, RTL render yok, window.location override yok.
    Sadece kaynak kodu okur. Brittle riskini düşürmek için:
      • çağrı argümanları (içeriği) test edilmez
@@ -21,7 +21,7 @@
        "await edildi mi" check'leri yapılır
 
    FREEZE EDİLEN KONTRATLAR (try-block içinde):
-     1. supabase.from("reservations").insert(...).select().single() AWAITED
+     1. db.from("reservations").insert(...).select().single() AWAITED
      2. error check + throw
      3. dispatchReservationRequestMail FIRE-FORGET (NOT awaited)
      4. toast.success AFTER dispatch
@@ -151,7 +151,7 @@ function pushFromExpr(
   if (ts.isAwaitExpression(expr) && ts.isCallExpression(expr.expression)) {
     /* Special case: chained call like `.insert(...).select().single()` —
        the entire chain ends with a single CallExpression. We extract the
-       LEFTMOST identifier in the chain (typically `supabase` here). For
+       LEFTMOST identifier in the chain (typically `db` here). For
        our contract we treat the AWAITED chain as a single insert event. */
     out.push({
       name: chainedCalleeName(expr.expression),
@@ -178,9 +178,9 @@ function pushFromExpr(
 
 /** Walk a chained call expression and return a name that captures the
  *  "leaf" call (last in chain) when it's a property access on a chain,
- *  otherwise the direct callee name. For `supabase.from(...).insert(...).select().single()`
- *  this returns "supabase.from..insert.single" semantics; we just check
- *  for `supabase.from` presence later. */
+ *  otherwise the direct callee name. For `db.from(...).insert(...).select().single()`
+ *  this returns "db.from..insert.single" semantics; we just check
+ *  for `db.from` presence later. */
 function chainedCalleeName(call: ts.CallExpression): string {
   return getCalleeName(call);
 }
@@ -299,8 +299,15 @@ describe("handleCreate — try/catch/finally boundary", () => {
   });
 });
 
+/* 🛡️ DB WRITE SEAM — `handleCreate` artık doğrudan DB'ye yazmaz:
+   `adminFetch("/api/admin/reservations", { method: "POST" })` ile
+   route → `createReservation` service'ine delege eder. Test AMACI
+   DEĞİŞMEDİ (payload-build → AWAITED write → mail → toast sırası ve
+   "tam bir kez" invariantı); yalnız aranan çağrı adı güncellendi. */
+const DB_WRITE = "adminFetch";
+
 describe("handleCreate — try-block orchestration order", () => {
-  it("calls a payload builder (Custom or Normal) BEFORE supabase insert", () => {
+  it("calls a payload builder (Custom or Normal) BEFORE the DB write", () => {
     /* `const payload = data.custom_price ? buildCreateCustomPricePayload(...) : buildCreateNormalPayload(...)` */
     const builderIdx = indexOfCall(
       trySeq,
@@ -310,7 +317,7 @@ describe("handleCreate — try-block orchestration order", () => {
     );
     const insertIdx = indexOfCall(
       trySeq,
-      (e) => e.name.includes("supabase") && e.awaited
+      (e) => e.name.includes(DB_WRITE) && e.awaited
     );
     expect(builderIdx).toBeGreaterThanOrEqual(0);
     expect(insertIdx).toBeGreaterThanOrEqual(0);
@@ -327,10 +334,10 @@ describe("handleCreate — try-block orchestration order", () => {
     expect(hasNormal).toBe(true);
   });
 
-  it("supabase insert is AWAITED (first DB write)", () => {
+  it("DB write is AWAITED (first DB write)", () => {
     const insertIdx = indexOfCall(
       trySeq,
-      (e) => e.name.includes("supabase") && e.awaited
+      (e) => e.name.includes(DB_WRITE) && e.awaited
     );
     expect(insertIdx).toBeGreaterThanOrEqual(0);
     expect(trySeq[insertIdx].awaited).toBe(true);
@@ -339,7 +346,7 @@ describe("handleCreate — try-block orchestration order", () => {
   it("dispatchReservationRequestMail is FIRE-FORGET (NOT awaited) and AFTER insert", () => {
     const insertIdx = indexOfCall(
       trySeq,
-      (e) => e.name.includes("supabase") && e.awaited
+      (e) => e.name.includes(DB_WRITE) && e.awaited
     );
     const mailIdx = indexOfCall(
       trySeq,
@@ -369,12 +376,12 @@ describe("handleCreate — try-block orchestration order", () => {
 });
 
 describe("handleCreate — single-insert invariant", () => {
-  it("calls supabase insert EXACTLY ONCE (no duplicate per-branch insert)", () => {
+  it("calls the DB write EXACTLY ONCE (no duplicate per-branch insert)", () => {
     /* Eski inline kodda her branch ayrı insert çağırıyordu; refactor
        sonrası tek insert + payload builder XOR ile birleşmeli.
        Duplicate insert regression'ı guard'la. */
     const inserts = trySeq.filter(
-      (e) => e.name.includes("supabase") && e.awaited
+      (e) => e.name.includes(DB_WRITE) && e.awaited
     );
     expect(inserts.length).toBe(1);
   });

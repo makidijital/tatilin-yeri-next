@@ -12,7 +12,7 @@ import { pagesServerRepository } from "@/lib/db/pages.repository.server";
    DELETE  ?id=<uuid>                                        → delete
 
    FAZ 2 frontend purge — daha önce client component'lerden
-   doğrudan `supabase.from("menu").insert/delete` çağrılıyordu;
+   doğrudan `db.from("menu").insert/delete` çağrılıyordu;
    Bu route adminFetch (Bearer) + service_role insertion path'i ile
    davranış BYTE-IDENTICAL aynen üretir (row insert/delete; aynı
    audit izi yok — eski path'te de yoktu).
@@ -131,7 +131,7 @@ export async function POST(req: Request): Promise<NextResponse> {
 }
 
 /* PATCH — menu satırı order/parent_id güncellemesi (drag/drop persist).
-   Eski client davranışı: supabase.from("menu").update({ order, parent_id })
+   Eski client davranışı: db.from("menu").update({ order, parent_id })
    .eq("id", id). BYTE-IDENTICAL aynı select/filter şekli route içinde. */
 export async function PATCH(req: Request): Promise<NextResponse> {
   const auth = await authorizeAdminCaller(req);

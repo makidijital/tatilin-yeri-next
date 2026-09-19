@@ -70,7 +70,7 @@ export type Settings = {
      Tümü nullable; eksik alan hardcoded default'a fallback eder
      (lib/hero.helpers.ts > resolveHeroContent).
      hero_enabled === false → tüm hero defaults'a düşer (safety reset).
-     Image Supabase Storage public URL (bucket: site-assets, path: hero/...). */
+     Image R2 storage public URL (bucket: site-assets, path: hero/...). */
   hero_enabled?: boolean | null;
   hero_title?: string | null;
   hero_subtitle?: string | null;
@@ -135,7 +135,7 @@ export type Settings = {
   /* 🛡️ Migration 051 — auto-touch timestamp (BEFORE UPDATE trigger).
      Anasayfa Hero görsel cache-bust kaynağı; admin save sonrası değişir →
      page.tsx heroCacheKey değişir → withCacheBust yeni `?ts=` üretir →
-     browser / Supabase Storage CDN / Next/Image optimizer cache hepsi
+     browser / R2 storage CDN / Next/Image optimizer cache hepsi
      cache-miss eder. get_public_settings() RPC whitelist'inde (mig 051). */
   updated_at?: string | null;
 

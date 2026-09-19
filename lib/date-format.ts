@@ -148,7 +148,7 @@ const MONTHS_TR_SHORT = [
    🛡️ NAIVE-DATETIME → UTC NORMALIZE
    ===============================================================
    GERÇEK BUG KÖKÜ:
-   Supabase tarafından dönen timestamptz değerleri bazı durumlarda
+   eski sağlayıcı tarafından dönen timestamptz değerleri bazı durumlarda
    `2026-05-11T17:41:00.319971` formatında — sonunda `Z` veya
    `+00:00` SUFFIX YOK. ISO 8601 spec'inde böyle bir "naive
    datetime" string'inin TZ'i implementation-defined; JS engine'ler

@@ -3,7 +3,7 @@
    ===============================================================
    Tek import path: `import { db } from "@/lib/db"`.
 
-   ⚠️ BU BARREL CLIENT-SAFE — server-only chain (getSupabaseAdmin)
+   ⚠️ BU BARREL CLIENT-SAFE — server-only chain (dbAdmin)
    içermez. Hem CLIENT hem SERVER tüketicileri tarafından sorunsuz
    import edilebilir. RLS uygulanır (anon context).
 
@@ -13,16 +13,16 @@
        `import "server-only"` ile korunur; client bundle'a sızarsa
        BUILD HATA. RLS bypass (service-role).
 
-   Provider seçimi tek noktada — gelecekte Supabase yerine Drizzle/
+   Provider seçimi tek noktada — gelecekte eski sağlayıcı yerine Drizzle/
    Prisma/raw pg eklenirse burada switch:
      export const db: DbProvider = isDrizzleEnabled
        ? drizzleDbProvider
-       : supabaseDbProvider;
+       : dbNative;
 
    FAZ 1.1 SCOPE:
-     • Sadece foundation: interface + Supabase implementation + barrel.
+     • Sadece foundation: interface + eski sağlayıcı implementation + barrel.
      • Repository migration FAZ 1.2'de (her repo per-PR).
-     • Mevcut repository'ler hâlâ `@/lib/supabase` / `@/lib/supabase-admin`
+     • Mevcut repository'ler hâlâ `@/lib/db` / `@/lib/db/server`
        kullanıyor; davranış değişmedi.
    =============================================================== */
 

@@ -4,7 +4,7 @@ import "server-only";
    provider'a alındı. Admin CRUD artık features/features.action ("use
    server") üzerinden; villa edit read'leri villa-edit.action ("use server")
    üzerinden; public taxonomy read'i api/public/taxonomies route'tan; public
-   villa embed read'i server component'ten. Supabase importu tamamen
+   villa embed read'i server component'ten. eski sağlayıcı importu tamamen
    kaldırıldı. `server-only` defansif sınır. Method yüzeyi + embed select
    string'leri + SQL davranışı AYNEN. */
 import { dbNative as db } from "@/lib/db/native";
@@ -12,7 +12,7 @@ import { dbNative as db } from "@/lib/db/native";
 /* ===============================================================
    🛡️ VILLA FEATURES REPOSITORY (native)
    ===============================================================
-   `villa-feature.service.ts` içindeki inline `supabase.from(...)`
+   `villa-feature.service.ts` içindeki inline `db.from(...)`
    çağrılarının BİREBİR taşınmış hali. Davranış değişmez:
      - `db` = native provider (`dbNative`); tek app rolü → RLS/session-DI
        YOK. Method'lar ham `{ data, error }` döner; embed-map / validation /

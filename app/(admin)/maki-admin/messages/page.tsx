@@ -36,7 +36,7 @@ import { formatDateTimeTr } from "@/lib/date-format";
    Actions: unread toggle, archive/restore, refresh.
 
    RLS authenticated SELECT/UPDATE/DELETE policy'leri sayesinde
-   admin tarafından kullanılır (Supabase Auth ile login'li).
+   admin tarafından kullanılır (native auth ile login'li).
    Cache helper YOK — admin local state-driven refresh.
    =============================================================== */
 

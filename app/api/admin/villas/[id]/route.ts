@@ -10,7 +10,7 @@ import { villaAdminRepository } from "@/lib/db/villa.repository.server";
          id, title, cleaning_fee, cleaning_currency, cleaning_limit,
          custom_prepayment_rate.
 
-   FAZ 2 frontend purge — daha önce client `supabase.from("villa")
+   FAZ 2 frontend purge — daha önce client `db.from("villa")
    .select(...).eq("id", villaId).single()` çağrılıyordu. Aynı
    select shape ve aynı .single() semantic'i korunur.
    =============================================================== */

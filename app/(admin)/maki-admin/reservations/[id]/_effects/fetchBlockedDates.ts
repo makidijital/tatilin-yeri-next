@@ -28,7 +28,7 @@ import type {
    ve Safari ISO parse edge-case'leri için toDateString() eşitliği.
 
    ⚠️ KESIN KURAL:
-     - 2 supabase SELECT sırası aynen (reservations → manual).
+     - 2 eski sağlayıcı SELECT sırası aynen (reservations → manual).
      - 9 grup array'inin doldurulma sırası aynen.
      - confirmed: isFirst → checkin, isEnd → checkout, else blocked.
      - pending: isStart → pCI, isEnd → pCO, else pM.

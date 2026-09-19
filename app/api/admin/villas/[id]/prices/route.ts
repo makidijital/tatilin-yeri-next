@@ -9,7 +9,7 @@ import { villaAdminRepository } from "@/lib/db/villa.repository.server";
    GET → villa_prices satırları (select="*") belirli villa için.
 
    FAZ 2 frontend purge — eski client davranışı:
-     supabase.from("villa_prices").select("*").eq("villa_id", id)
+     db.from("villa_prices").select("*").eq("villa_id", id)
    BYTE-IDENTICAL: aynı select * (tüm kolonlar), aynı filter.
    =============================================================== */
 

@@ -23,7 +23,7 @@ type ReservationStatusRepository = Pick<
    Eski `updateReservationStatus`'un BYTE-IDENTICAL karşılığı.
 
    FAZ 33 (UPDATE extraction):
-     `supabase.from("reservations").update({ status }).eq("id", id)`
+     `db.from("reservations").update({ status }).eq("id", id)`
      artık `reservationRepository.updateById(id, { status })`
      üzerinden delege edilir. Predicate aynen; payload inline
      `{ status }` orchestrator'da kalır (repository payload'a
@@ -37,7 +37,7 @@ type ReservationStatusRepository = Pick<
      ile expose edildi).
 
    ⚠️ ORCHESTRATION SIRASI BYTE-IDENTICAL (FAZ 33 evolution:
-      supabase identifier → repository identifier; diğer iddialar
+      eski sağlayıcı identifier → repository identifier; diğer iddialar
       aynen):
      1. throw "ID gerekli" if !id
      2. if status==="confirmed": await assertCanConfirm(id, undefined)

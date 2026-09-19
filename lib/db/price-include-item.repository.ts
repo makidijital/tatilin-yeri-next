@@ -4,14 +4,14 @@ import "server-only";
    provider'a alındı. Admin CRUD artık price-includes/price-includes.action
    ("use server") üzerinden; villa edit read'leri villa-edit.action ("use
    server") üzerinden; public villa embed read'i server component'ten.
-   Supabase importu tamamen kaldırıldı. `server-only` defansif sınır. Method
+   eski sağlayıcı importu tamamen kaldırıldı. `server-only` defansif sınır. Method
    yüzeyi + embed select string'leri + dönüş şekli AYNEN. */
 import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ PRICE INCLUDE ITEMS REPOSITORY (native)
    ===============================================================
-   `price-include-item.service.ts` içindeki inline `supabase.from(...)`
+   `price-include-item.service.ts` içindeki inline `db.from(...)`
    çağrılarının BİREBİR taşınmış hali. Davranış değişmez:
      - `db` = native provider (`dbNative`); tek app rolü → RLS/session-DI
        YOK. Method'lar ham `{ data, error }` döner; embed-map /

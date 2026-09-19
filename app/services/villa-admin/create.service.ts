@@ -42,7 +42,7 @@ import type { VillaFormPayload } from "./types";
    ⚠️ ORCHESTRATION SIRASI BYTE-IDENTICAL (AST contract FAZ 5):
      1. validate form.title
      2. await generateUniqueSlug(title)            (slug üretimi)
-     3. await supabase.insert(buildVillaCorePayload(...)) (villa row)
+     3. await villaAdminRepository.insertVilla(...) (villa row)
      4. if selectedTypes?.length          → await insertTypes
      5. if selectedFeatures?.length       → await insertFeatures
      6. if distances?.length              → await setVillaDistances

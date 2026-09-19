@@ -32,7 +32,7 @@ import { registerPgTypeParsers } from "./pg-type-parsers";
 
 /* ⚠️ HMR-SAFE SINGLETON — `pool` modül-değişkeni Next.js dev'de her hot
    reload'da SIFIRLANIR → her reload yeni `Pool` (yeni bağlantı seti) açar
-   → Supabase Session Pooler'ın client limiti dolar ("max clients reached
+   → eski sağlayıcı Session Pooler'ın client limiti dolar ("max clients reached
    in session mode" / EMAXCONNSESSION). Bu yüzden Pool referansı `globalThis`
    üzerinde tutulur: HMR modülü yeniden yükleyince bile AYNI Pool kullanılır.
    Production'da modül tek kez yüklenir → davranış aynı (tek singleton). */
@@ -63,9 +63,9 @@ function buildConfig(): PoolConfig {
     connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS || 10_000),
     ssl: resolveSsl(),
     /* DETERMİNİSTİK search_path — query-compiler tabloları ŞEMASIZ
-       ("villa_locations") üretir; PostgREST/Supabase `public` şemasında
+       ("villa_locations") üretir; PostgREST/eski sağlayıcı `public` şemasında
        çalışır. Pooler kullanıcısının default search_path'ine bağlı
-       kalmadan `public` sabitlenir → şemasız çözümleme Supabase ile
+       kalmadan `public` sabitlenir → şemasız çözümleme eski sağlayıcı ile
        BİREBİR. (Tüm tablo + RPC fonksiyonları public'te.) */
     options: "-c search_path=public",
   };
@@ -78,7 +78,7 @@ function buildConfig(): PoolConfig {
  */
 export function getPgPool(): Pool {
   if (globalForPg.__yazVillamPgPool) return globalForPg.__yazVillamPgPool;
-  /* PostgREST/Supabase JSON-shape parity: numeric→number, tarih/zaman
+  /* PostgREST/DB clientON-shape parity: numeric→number, tarih/zaman
      tipleri → string (Date DEĞİL). Pool kurulmadan ÖNCE register. */
   registerPgTypeParsers();
   const created = new Pool(buildConfig());

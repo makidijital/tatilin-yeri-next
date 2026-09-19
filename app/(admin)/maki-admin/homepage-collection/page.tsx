@@ -28,7 +28,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 
-/* 🛡️ FAZ 2 frontend purge — `import { supabase }` KALDIRILDI.
+/* 🛡️ FAZ 2 frontend purge — `import { eski sağlayıcı }` KALDIRILDI.
    Villa list /api/admin/villas?activeOnly=1 üzerinden (aynı select +
    filter + order semantic). */
 import { adminFetch } from "@/lib/admin-fetch";

@@ -18,17 +18,17 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
    repo ONUN DUPLİKASYONU DEĞİL, service-role karşılığıdır.
 
    ⚠️ AUTH PATH:
-     `dbAdmin.rpc` ≡ `getSupabaseAdmin().rpc` (dbAdmin wrapper) →
+     `dbAdmin.rpc` ≡ `dbAdmin.rpc` (dbAdmin wrapper) →
      cron route'unun eski inline çağrısıyla BYTE-IDENTICAL. Anon `db`'ye
      düşürmek execution path'i değiştirir; ASLA yapılmaz.
 
    GÜVENLİK SINIRI (pages/menu/blog .server konvansiyonu):
      • `import "server-only"` — client bundle'a sızarsa BUILD HATA.
-     • `dbAdmin` → service-role (SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_
+     • `dbAdmin` → service-role (service-role kimlik bilgisi, NEXT_PUBLIC_
        prefix yok) → yalnız server runtime.
 
    DAVRANIŞ:
-     - Native Supabase `{ data, error }` döner; repo sessiz. count
+     - Native eski sağlayıcı `{ data, error }` döner; repo sessiz. count
        normalize + error-mapping + log caller (route) tarafında.
    =============================================================== */
 

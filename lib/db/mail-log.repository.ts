@@ -2,7 +2,7 @@ import "server-only";
 
 /* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
    provider'a alındı. Admin okuma artık system-logs/system-logs.action ("use
-   server") üzerinden. Supabase importu tamamen kaldırıldı. `server-only`
+   server") üzerinden. eski sağlayıcı importu tamamen kaldırıldı. `server-only`
    defansif sınır. Method yüzeyi + SQL davranışı AYNEN. */
 import { dbNative as db } from "@/lib/db/native";
 import type { MailLog } from "@/app/services/mail-log.service";

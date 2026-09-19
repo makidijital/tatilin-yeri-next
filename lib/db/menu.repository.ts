@@ -8,7 +8,7 @@ import "server-only";
    sınır. Dönüş şekli aynen. */
 import { dbNative as db } from "@/lib/db/native";
 
-/* Native `from()` varsayılan `QueryResultRow`; anon Supabase `Database`
+/* Native `from()` varsayılan `QueryResultRow`; anon DB client `Database`
    generic'iyle domain row tipliyordu. Tüketiciler (hero-filters.action →
    HeroSearchPanel) alan-tipli erişir → sorgular domain row tipiyle
    parametrelenir (davranış değişmez). */
@@ -42,7 +42,7 @@ type MenuVillaLocationRow = VillaLocationRow & {
      - Promise.all paralel pattern service'te kalır; repository
        tekil metodlar sunar.
 
-   ⚠️ Component-direct supabase çağrıları (admin menu/page +
+   ⚠️ Component-direct eski sağlayıcı çağrıları (admin menu/page +
    menu/new/page) bu cycle scope'unda — `pages.repository`'ye
    benzer şekilde ele alınacak; menu CRUD repo metodları aşağıda.
 =============================================================== */

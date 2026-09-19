@@ -9,7 +9,7 @@ import ReviewAdminList from "./ReviewAdminList";
    ─────────────────────────────────────────────────────────────
    ROOT CAUSE:
      Önceki versiyonda bu sayfa server component olarak
-     `getVillaReviewsForAdmin()`'i çağırıyordu. `@/lib/supabase`
+     `getVillaReviewsForAdmin()`'i çağırıyordu. `@/lib/db`
      server context'te auth cookie/session bilmediği için query
      `anon` role ile çalışıyor; villa_reviews tablosunda public
      SELECT policy `is_approved=true` koşulu uyguladığı için
@@ -19,7 +19,7 @@ import ReviewAdminList from "./ReviewAdminList";
      - Page artık thin server skeleton (header sadece)
      - ReviewAdminList client island olarak mount sonrası
        `getVillaReviewsForAdmin`'i kendi fetch'i ile çağırıyor
-     - Tarayıcıda supabase client otomatik olarak admin'in
+     - Tarayıcıda eski sağlayıcı client otomatik olarak admin'in
        JWT session'ını ekliyor → RLS `authenticated` role policy
        devreye giriyor → pending + approved hepsi görünür
      - Service-role client YOK; mevcut admin auth pattern reuse

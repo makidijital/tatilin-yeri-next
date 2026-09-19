@@ -61,7 +61,7 @@ export async function getMailConfig(): Promise<{
 }> {
   /* 🛡️ SETTINGS READ — SERVER-ONLY, SERVICE-ROLE.
      Migration 042 settings_admin_only RLS sonrası, mail pipeline'ın
-     route handler bağlamında çalıştığı anon Supabase client'a JWT
+     route handler bağlamında çalıştığı anon DB client client'a JWT
      iliştirilmez → anon SELECT REDDEDİLİR (silent null). Server
      repository service-role ile okur (RLS bypass) → resend_api_key /
      mail_from / mail_from_name DB fallback'i yine çalışır. ENV-first

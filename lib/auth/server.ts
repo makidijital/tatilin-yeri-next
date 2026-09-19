@@ -10,17 +10,17 @@ import "server-only";
        oluşturma route'unda).
 
    ⚠️ `import "server-only"` direktifi: bu barrel CLIENT bundle'a
-   sızarsa BUILD HATA. Implementation `./supabase-auth.server`
+   sızarsa BUILD HATA. Implementation `./native/native-auth.server`
    içinde; o dosya da `import "server-only"` korumalı.
 
    Provider seçimi tek noktada — gelecekte farklı auth provider
    eklenirse burada switch:
      export const authVerifier: AuthTokenVerifier = isCustomEnabled
        ? customAuthVerifier
-       : supabaseAuthVerifier;
+       : legacyAuthVerifier;
    =============================================================== */
 
-/* 🛡️ FAZ 4 — Supabase Auth SÖKÜLDÜ. Native tek sağlayıcı; flag/branch YOK. */
+/* Native auth — tek sağlayıcı; flag/branch YOK. */
 import {
   nativeAuthVerifier,
   nativeAdminAuthProvider,

@@ -8,7 +8,7 @@ import { nativeDbProvider, type DbRpcResult } from "./native-db.provider";
 /* ===============================================================
    🛡️ NATIVE DB PROVIDER — from() + rpc() (server-only)
    ===============================================================
-   Supabase DbProvider'ının native PostgreSQL karşılığı. Repository'ler
+   eski sağlayıcı DbProvider'ının native PostgreSQL karşılığı. Repository'ler
    `db`/`dbAdmin` yerine bunu import ederek native yola geçer:
      from(table)  → QueryBuilder (mevcut repo method yüzeyi: select/eq/
                     order/insert/update/delete/single/maybeSingle/...)

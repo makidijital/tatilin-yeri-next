@@ -1,7 +1,7 @@
 "use client";
 
-/* 🛡️ FAZ 2 frontend purge — direct anon supabase import KALDIRILDI.
-   Eskiden 5 ayrı `supabase.from(table).select(...)` useEffect'i vardı:
+/* 🛡️ FAZ 2 frontend purge — direct anon DB client import KALDIRILDI.
+   Eskiden 5 ayrı `db.from(table).select(...)` useEffect'i vardı:
      - villa_locations (select *)
      - villa_types     (select *)
      - villa_features  (select *)
@@ -193,7 +193,7 @@ export default function EditVilla() {
   /* ---------------------------------------------
      🛡️ FAZ 2 frontend purge — tek adminFetch dropdown init
      ---------------------------------------------
-     Eskiden 5 ayrı useEffect vardı (her biri anon supabase
+     Eskiden 5 ayrı useEffect vardı (her biri anon DB client
      query); şimdi `/api/admin/taxonomies` (admin-only, service-role)
      tek round-trip'te 5 paralel fetch'i birleştirir.
 
@@ -212,7 +212,7 @@ export default function EditVilla() {
          daha narrow ama UI consumer set'i değişmiyor (drift yok).
        - Hata path'i: data fallback `[]` aynen (eski `data || []`
          pattern korunur). adminFetch network/auth hatasında state'ler
-         boş kalır (eski supabase hata davranışıyla aynı semantic). */
+         boş kalır (eski eski sağlayıcı hata davranışıyla aynı semantic). */
   useEffect(() => {
     let cancelled = false;
     (async () => {

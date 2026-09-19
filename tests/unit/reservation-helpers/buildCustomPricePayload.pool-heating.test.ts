@@ -4,7 +4,7 @@
    buildCustomPricePayload — custom price kayıt payload'ı havuz
    ısıtmayı her zaman nötrler (0/false) — computeCustomPriceToggle
    TOGGLE ON'daki local-state nötrlemesini save anında DB'ye kalıcı
-   yazar (Supabase partial-update stale değer bırakmasın diye).
+   yazar (eski sağlayıcı partial-update stale değer bırakmasın diye).
    Custom price = tek düz TRY tutar, itemization yok — bu davranış
    YENİDEN TASARLANMADI, mevcut cleaning-fee nötrleme deseni genişletildi.
 =============================================================== */

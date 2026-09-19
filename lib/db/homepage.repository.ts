@@ -3,7 +3,7 @@ import "server-only";
 /* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
    provider'a alındı. Admin CRUD artık homepage-collection/homepage-collection
    .action ("use server") üzerinden; public read cache.helpers/VillaList
-   (server) üzerinden. Supabase importu tamamen kaldırıldı. `server-only`
+   (server) üzerinden. eski sağlayıcı importu tamamen kaldırıldı. `server-only`
    defansif sınır. Embed select string'leri (villa:villa_id nested) + SQL
    davranışı AYNEN; embed relation-metadata (homepage_collections → villa →
    location/villa_images/villa_prices) kaydından çözülür. */

@@ -6,7 +6,7 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
    🛡️ ANALYTICS REPOSITORY (Phase 1 — repo consolidation)
    ===============================================================
    `analytics.service.ts` içindeki inline
-   `getSupabaseAdmin().from("reservations")...` read'inin BİREBİR
+   `dbAdmin.from("reservations")...` read'inin BİREBİR
    taşınmış hali.
 
    GÜVENLİK SINIRI:
@@ -21,7 +21,7 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
      - status allow-list ve `since` date math SERVICE'te kalır
        (ANALYTICS_INCLUDED_STATUSES tek source); buraya parametre
        olarak gelir → drift yok.
-     - Supabase native `{ data, error }` döner; mapping/skeleton/fill
+     - native `{ data, error }` döner; mapping/skeleton/fill
        hepsi SERVICE'te.
 =============================================================== */
 

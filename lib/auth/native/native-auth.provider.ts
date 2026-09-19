@@ -11,14 +11,14 @@ import type {
 /* ===============================================================
    🛡️ FAZ 2 (NATIVE AUTH) — NATIVE CLIENT AUTH PROVIDER (client-safe)
    ===============================================================
-   `AuthProvider` interface'inin native implementasyonu. Supabase JS
+   `AuthProvider` interface'inin native implementasyonu. DB client
    client YERİNE native `/api/auth/*` endpoint'lerine `fetch` atar. Token'lar
    httpOnly cookie'de → JS erişmez; bu yüzden `accessToken` boş string
    döner (Bearer değil, cookie-session kullanılır — Bearer/adminFetch
    cutover'ı FAZ 3).
 
    ⚠️ SADECE `NEXT_PUBLIC_AUTH_PROVIDER=native` iken `lib/auth/index.ts`
-   switch'i bunu seçer. Default supabase → bu dosya kullanılmaz.
+   switch'i bunu seçer. Default eski sağlayıcı → bu dosya kullanılmaz.
 
    ⚠️ onAuthStateChange: native'de client push-event yok → no-op
    subscription. `AdminSessionGuard` mount'ta `getCurrentAdmin` ile

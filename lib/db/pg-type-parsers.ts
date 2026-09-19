@@ -3,15 +3,15 @@ import "server-only";
 import { types } from "pg";
 
 /* ===============================================================
-   🛡️ PG TİP-PARSER'LARI — PostgREST/Supabase JSON-shape PARITY
+   🛡️ PG TİP-PARSER'LARI — PostgREST/DB clientON-shape PARITY
    ===============================================================
    AMAÇ:
-     `pg` sürücüsünün VARSAYILAN tip dönüşleri, Supabase'in kullandığı
-     PostgREST JSON çıktısından FARKLIDIR. Native provider'ın Supabase
+     `pg` sürücüsünün VARSAYILAN tip dönüşleri, eski sağlayıcının kullandığı
+     PostgREST JSON çıktısından FARKLIDIR. Native provider'ın eski sağlayıcı
      ile BİREBİR aynı JS değerlerini üretmesi için bu farklar burada,
      provider seviyesinde kapatılır (repository/consumer'a DOKUNMADAN).
 
-   FARKLAR (pg default → PostgREST/Supabase):
+   FARKLAR (pg default → PostgREST/eski sağlayıcı):
      numeric/decimal (1700)  string   → number
      int8/bigint     (  20)  string   → number   (>2^53 için caveat, altta)
      date            (1082)  JS Date  → "YYYY-MM-DD" (string)
@@ -25,7 +25,7 @@ import { types } from "pg";
      offset "+00" → "+00:00" normalize edilir.
 
    ⚠️ UTC VARSAYIMI:
-     PostgREST timestamptz'i UTC (+00:00) döndürür. Supabase Pooler
+     PostgREST timestamptz'i UTC (+00:00) döndürür. eski sağlayıcı Pooler
      bağlantısı timezone=UTC'dir → ham metin "...+00" gelir, normalize
      "+00:00" olur (birebir). Bağlantı UTC değilse offset yerel gelir;
      Pooler default UTC olduğundan parity korunur.
@@ -36,8 +36,8 @@ import { types } from "pg";
      number seçildi; gerekirse ilgili kolon açıkça string'e alınabilir.
 
    ⚠️ GLOBAL ETKİ SINIRI:
-     `pg.types.setTypeParser` pg modülüne globaldir; ancak Supabase REST
-     istemcisi pg KULLANMAZ → yalnız native yol etkilenir, Supabase yolu
+     `pg.types.setTypeParser` pg modülüne globaldir; ancak eski sağlayıcı REST
+     istemcisi pg KULLANMAZ → yalnız native yol etkilenir, eski sağlayıcı yolu
      ETKİLENMEZ. Idempotent (register bir kez).
    =============================================================== */
 

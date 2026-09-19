@@ -40,7 +40,7 @@ import {
    kararının render-hedefi-yok bulgusu HÂLÂ GEÇERLİ). Yalnız `.in()` +
    `.eq("locale", ...)` — mevcut `QueryBuilder`/`dbNative` primitive'i
    (proje genelinde zaten kanıtlanmış, ör. villa.repository.server.ts),
-   yeni bir Supabase/PostgREST syntax veya DB katmanı YOK.
+   yeni bir eski sağlayıcı/PostgREST syntax veya DB katmanı YOK.
    =============================================================== */
 
 export const translationRepository = {
@@ -84,7 +84,7 @@ export const translationRepository = {
    * `.in(parentIdColumn, parentIds)` + `.eq("locale", locale)` —
    * `QueryBuilder`'ın mevcut, projede zaten kanıtlanmış primitive'leri
    * (ör. villa.repository.server.ts, reservation.repository.ts).
-   * Yeni bir DB katmanı/Supabase/PostgREST syntax'ı YOK; `findOne`/
+   * Yeni bir DB katmanı/eski sağlayıcı/PostgREST syntax'ı YOK; `findOne`/
    * `findAllForParent`'a DOKUNULMADI.
    */
   async findManyForLocale<E extends TranslationEntity>(

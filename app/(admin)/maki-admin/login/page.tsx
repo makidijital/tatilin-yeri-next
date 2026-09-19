@@ -15,7 +15,7 @@ import { getAdminLogoUrl } from "@/lib/admin-branding";
 /* ===============================================================
    🔥 ADMIN LOGIN
    ===============================================================
-   - supabase.auth.signInWithPassword
+   - native login
    - admin_users tablosunda email lookup + is_active kontrolü
    - inactive ise: signOut + "Hesabınız pasif durumda"
    - aksi halde: signOut + generic "Giriş bilgileri hatalı"

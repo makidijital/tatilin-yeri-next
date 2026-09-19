@@ -9,7 +9,7 @@
 
    NEDEN BROWSER-SIDE:
      - Server-side conversion için sharp / Edge runtime gerekir;
-       hosted Supabase Storage'a ek serverless function eklemek
+       hosted R2 storage'a ek serverless function eklemek
        ekstra deploy maliyeti.
      - Browser conversion zero-infrastructure: Canvas API her modern
        tarayıcıda (Chrome 32+, Safari 14+, Firefox 65+) `toBlob` ile

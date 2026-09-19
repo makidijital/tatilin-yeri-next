@@ -23,14 +23,14 @@ import type { TaxonomyNameByLocale } from "@/lib/i18n/taxonomy-name.helper";
 
    AUTH: PUBLIC (RLS-public read; bu tablolar zaten anon erişime
    açık RLS phase 1 / migration 037). Route yalnız client-side
-   `@/lib/supabase` direct erişimini API boundary arkasına alır;
+   `@/lib/db` direct erişimini API boundary arkasına alır;
    güvenlik semantiği değişmez.
 
    FAZ 2 frontend purge — public form'lar (teklif-al vb.) için
    dropdown options. Davranış BYTE-IDENTICAL: aynı select shape'leri
    tek route response'unda birleştirilir.
 
-   RATE-LIMIT: bu route public-read taxonomy; mevcut anon supabase
+   RATE-LIMIT: bu route public-read taxonomy; mevcut anon DB client
    path'inde rate-limit yoktu, korumayı çoğaltmıyor. Üzerine rate-
    limit eklemek behavior değiştirir; eklenmiyor.
 

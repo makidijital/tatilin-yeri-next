@@ -7,9 +7,8 @@ import "server-only";
 
    ⚠️ SERVER-ONLY (`import "server-only"`):
      Bu barrel CLIENT bundle'a sızarsa BUILD HATA. Implementation
-     `./supabase-admin-gateway` ve `./audit.repository` de
-     `import "server-only"` korumalı. adminGateway service-role
-     privilege gerektirir.
+     `./audit-admin-gateway` ve `./audit.repository` de
+     `import "server-only"` korumalı.
 
    KULLANIM (yalnız server-side modüller):
      - Route handler'lar (app/api/.../route.ts)
@@ -18,16 +17,16 @@ import "server-only";
      - Server actions
 
    ⚠️ PRIVILEGE BOUNDARY:
-     `adminGateway` RLS'i atlar (service-role). Çağıran kod
+     Yetkilendirme uygulama katmanındadır; çağıran kod
      `authorizeAdminCaller` arkasında olmalı.
 
-   Provider seçimi tek noktada — gelecekte farklı admin client
+   Implementation seçimi tek noktada — gelecekte farklı bir gateway
    eklenirse burada switch.
    =============================================================== */
 
-import { supabaseAdminGateway } from "./supabase-admin-gateway";
+import { adminGatewayImpl } from "./audit-admin-gateway";
 
 export { adminAuditRepository } from "./audit.repository";
 
-/** Aktif admin gateway (SERVER-ONLY). Service-role boundary. */
-export const adminGateway = supabaseAdminGateway;
+/** Aktif admin gateway (SERVER-ONLY). */
+export const adminGateway = adminGatewayImpl;

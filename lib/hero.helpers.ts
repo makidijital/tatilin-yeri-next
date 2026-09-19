@@ -112,7 +112,7 @@ function pickCta(
 /**
  * Append a cache-busting `?ts=` query param to a URL.
  * Only used for ADMIN-UPLOADED hero images (which sit at a fixed
- * Supabase storage path: `hero/homepage-hero.webp`). DB stores
+ * eski sağlayıcı storage path: `hero/homepage-hero.webp`). DB stores
  * the clean URL; this helper produces the render-time URL.
  *
  * Default fallback (Unsplash) URL is NOT busted — already

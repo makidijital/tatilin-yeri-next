@@ -334,7 +334,7 @@ export class QueryBuilder<T extends QueryResultRow = QueryResultRow>
       const [text, params] = this.compiledCount();
       const r = await nativeDbProvider.query<CountRow>(text, params);
       if (r.error) return { data: null, error: r.error, count: null };
-      /* Supabase `.select(col,{head:true,count})` PARITY: head isteği
+      /* eski sağlayıcı `.select(col,{head:true,count})` PARITY: head isteği
          gövde döndürmez → `data: null` (dizi DEĞİL). Yalnız `count`
          anlamlıdır. */
       return { data: null, error: null, count: r.data?.[0]?.count ?? 0 };

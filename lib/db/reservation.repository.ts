@@ -2,7 +2,7 @@ import "server-only";
 
 /* 🛡️ NATIVE CUTOVER (FAZ 4 S2 — reservation core) — native provider'a
    alındı. Tüm tüketiciler server (reservation/* servisleri, availability.
-   helper, blocked-ranges route, fetchBlockedDates [server-only]). Supabase
+   helper, blocked-ranges route, fetchBlockedDates [server-only]). eski sağlayıcı
    importu tamamen kaldırıldı. `server-only` defansif sınır. Metod gövdeleri +
    RPC (check_villa_availability_conflict / get_villa_blocked_ranges /
    get_blocked_villa_ids) + embed + half-open overlap SQL davranışı AYNEN. */
@@ -17,17 +17,17 @@ import {
    🛡️ FAZ 33 — RESERVATION REPOSITORY (Data Access Layer)
    ===============================================================
    AMAÇ (FAZ 0 mapping raporu, §7):
-     Reservation domain'inde Supabase'i tek katman aşağı it.
-     Service / helper katmanı artık Supabase client'ı doğrudan
+     Reservation domain'inde eski sağlayıcıyı tek katman aşağı it.
+     Service / helper katmanı artık eski sağlayıcı client'ı doğrudan
      tüketmez; bu repository üzerinden delege eder.
 
-     bugün : service → supabase
-     hedef : service → repository → supabase
+     bugün : service → eski sağlayıcı
+     hedef : service → repository → eski sağlayıcı
 
    PRODUCTION-SAFE YAKLAŞIM (villa.repository.ts paralel):
      - Query'ler BİREBİR aynı (filter chain, embed, single() vs.
        maybeSingle(), order pattern).
-     - Return shape: Supabase native `{ data, error }`. Repository
+     - Return shape: native `{ data, error }`. Repository
        sessiz; throw YOK, console.error YOK.
      - SQLSTATE 23P01 / `reservations_no_overlap` mapping bu
        dosyada YOK — service edge'inde (`_helpers/errors.ts`)
@@ -46,7 +46,7 @@ import {
        için sahiplik reservation tarafında)
 
    GELECEK MIGRATION ZEMINI:
-     Bu dosya stabil bir Data Access katmanı. İleride Supabase
+     Bu dosya stabil bir Data Access katmanı. İleride eski sağlayıcı
      yerine başka client (Drizzle, Prisma, direct pg) takılırsa
      sadece bu dosya değişir; service + helper'lar dokunulmaz.
 
@@ -90,7 +90,7 @@ export type OverlapWindow = {
    `SELECT_RESERVATION_DETAIL` ve `SELECT_RESERVATION_LIST`
    constant'ları `_helpers/select-shapes.ts`'de yaşamaya devam
    eder (byte-identical whitespace garantisi için tek nokta).
-   Repository onları import eder — runtime'da Supabase'e geçen
+   Repository onları import eder — runtime'da eski sağlayıcıya geçen
    string aynı reference.
 =============================================================== */
 
@@ -99,14 +99,14 @@ export const reservationRepository = {
      READ — DETAIL (`getReservationById` delege)
      ===============================================================
      Orijinal pattern (read.service.ts > getReservationById):
-       supabase
+       eski sağlayıcı
          .from("reservations")
          .select(SELECT_RESERVATION_DETAIL)
          .eq("id", id)
          .single();
 
      ⚠️ `single()` korundu (maybeSingle DEĞIL). Missing row durumu
-        Supabase tarafında error olarak yansır (`PGRST116`). Bu
+        eski sağlayıcı tarafında error olarak yansır (`PGRST116`). Bu
         davranış orchestrator'da `if (error) throw "Rezervasyon
         getirilemedi"` ile zaten yakalanıyor — byte-identical.
   =============================================================== */
@@ -122,7 +122,7 @@ export const reservationRepository = {
      READ — LIST (`getReservations` delege)
      ===============================================================
      Orijinal pattern (read.service.ts > getReservations):
-       supabase
+       eski sağlayıcı
          .from("reservations")
          .select(SELECT_RESERVATION_LIST)
          .order("created_at", { ascending: false });
@@ -140,7 +140,7 @@ export const reservationRepository = {
      READ — PAID AMOUNT (`assertCanConfirm` fallback delege)
      ===============================================================
      Orijinal pattern (_helpers/status.ts > assertCanConfirm):
-       supabase
+       eski sağlayıcı
          .from("reservations")
          .select("paid_amount")
          .eq("id", id)
@@ -162,7 +162,7 @@ export const reservationRepository = {
      READ — VILLA COMMISSION RATE (cross-table, fail-open caller)
      ===============================================================
      Orijinal pattern (_helpers/commission.ts > fetchCommissionRate):
-       supabase
+       eski sağlayıcı
          .from("villa")
          .select("commission_rate")
          .eq("id", villaId)
@@ -190,7 +190,7 @@ export const reservationRepository = {
      READ — VILLA CLEANING CONFIG (cross-table, price-verify helper)
      ===============================================================
      Orijinal (_helpers/price-verify.ts recompute):
-       supabase.from("villa")
+       db.from("villa")
          .select("cleaning_fee, cleaning_currency, cleaning_limit, custom_prepayment_rate")
          .eq("id", villa_id)
          .maybeSingle();
@@ -237,7 +237,7 @@ export const reservationRepository = {
      half-open overlap RPC içinde; `lib/availability.helper.ts` ile aynı.
      Asıl atomik garanti DB EXCLUDE constraint `reservations_no_overlap`.
 
-     RETURN: Supabase native `{ data: boolean, error }`. Repository sessiz;
+     RETURN: native `{ data: boolean, error }`. Repository sessiz;
      throw/console/TR mesajı caller (`_helpers/conflict.ts`) tarafında.
   =============================================================== */
   async checkAvailabilityConflict(window: OverlapWindow) {
@@ -269,7 +269,7 @@ export const reservationRepository = {
      RPC — BLOCKED VILLA IDS (batch availability, SECURITY DEFINER — mig 039)
      ===============================================================
      Orijinal (lib/availability.helper.ts > getBlockedVillaIds):
-       supabase.rpc("get_blocked_villa_ids", {
+       db.rpc("get_blocked_villa_ids", {
          p_start: start, p_end: end, p_villa_ids: scoped,
        })
 
@@ -296,7 +296,7 @@ export const reservationRepository = {
      READ — ACTIVE BLOCK DATES BY VILLA (edit-page calendar feed)
      ===============================================================
      Orijinal (fetchBlockedDates.ts):
-       supabase.from("reservations")
+       db.from("reservations")
          .select("start_date, end_date, status")
          .eq("villa_id", villaId)
          .in("status", ["pending", "confirmed"])
@@ -347,11 +347,11 @@ export const reservationRepository = {
        - Payload shape'i orchestrator/helper tarafında belirlenir
          (`buildUpdateReservationPayload`, `{ status }`, `{ note }`).
        - Repository payload'a müdahil olmaz — `Record<string, unknown>`
-         olarak alır, supabase update'e direkt geçirir.
+         olarak alır, repository update'e direkt geçirir.
        - Predicate AYNEN: `.eq("id", id)` — başka filter YOK.
        - `.select()` chain YOK (orijinal davranış: update sonrası
          row dönmez; error/success kararı ile yetinilir).
-       - Return shape Supabase native `{ error }`. Repository
+       - Return shape native `{ error }`. Repository
          sessiz; throw/console YOK.
        - Throw mesajlarını orchestrator yönetir
          ("Güncellenemedi", "Durum güncellenemedi", "Not kaydedilemedi").
@@ -382,7 +382,7 @@ export const reservationRepository = {
        - Predicate AYNEN: `.eq("id", id)`.
        - Cascade YOK (service layer'da cascading cleanup yapılmaz;
          DB FK behavior'una bağlı).
-       - Return shape Supabase native `{ error }`. Repository
+       - Return shape native `{ error }`. Repository
          sessiz; throw "Silinemedi" + log tag service'te kalır.
   =============================================================== */
   async deleteById(id: string) {
@@ -396,7 +396,7 @@ export const reservationRepository = {
      WRITE — INSERT (createReservation delege; REVENUE-CRITICAL)
      ===============================================================
      Orijinal pattern (create.service.ts > createReservation):
-       const { data: inserted, error } = await supabase
+       const { data: inserted, error } = await eski sağlayıcı
          .from("reservations")
          .insert(buildCreateReservationPayload({...}))
          .select()
@@ -410,7 +410,7 @@ export const reservationRepository = {
          shape şu an `Row | null`; orijinal davranış aynen).
        - Payload shape orchestrator'da `buildCreateReservationPayload`
          tarafından üretilir; repository payload'a müdahil olmaz.
-       - Return shape Supabase native `{ data, error }`. Service
+       - Return shape native `{ data, error }`. Service
          tarafında:
            const { data: inserted, error } =
              await reservationRepository.insert(payload);
@@ -425,7 +425,7 @@ export const reservationRepository = {
      🔥 EXCLUDE CONSTRAINT REFERANSI (yorum aynen):
        `reservations_no_overlap` DB-level atomik garanti —
        concurrent INSERT'ten ikincisi SQLSTATE 23P01
-       (exclusion_violation) ile fail eder. Supabase JS bunu
+       (exclusion_violation) ile fail eder. DB client bunu
        `error.code` olarak yansıtır. `mapInsertError` service
        edge'inde bu code'u parse eder; repository'nin SQLSTATE
        bilgisi YOK — sadece error'u ham geçirir.

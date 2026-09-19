@@ -20,9 +20,9 @@ import type {
 
    FAZ 2 frontend purge — daha önce `reservations/page.tsx` (CLIENT)
    bu işlemleri DİREKT yapıyordu:
-     - anon `supabase.from("reservations").select(...)` (RLS)
+     - anon `db.from("reservations").select(...)` (RLS)
      - service `updateReservationStatus` (server-only chain'i client'a sızdırıyordu)
-     - anon `supabase.from("reservations").delete()`
+     - anon `db.from("reservations").delete()`
 
    Bu route adminFetch (Bearer) + service-role path'i ile davranış
    BYTE-IDENTICAL aynen üretir.
@@ -67,7 +67,7 @@ export async function GET(req: Request): Promise<NextResponse> {
 /* POST — admin reservation create. createReservation service'i delege
    eder; service tüm validasyonu, EXCLUDE constraint catch + TOCTOU
    overlap guard'ı, audit logging'i yapar. Eski page-level direct
-   `supabase.from("reservations").insert(payload)` davranışı service
+   `db.from("reservations").insert(payload)` davranışı service
    katmanına BYTE-IDENTICAL taşındı:
      - service throw → 400/409 + error message (caller catch'i aynen)
      - başarı → { ok, reservation: { id, reservation_no } } */

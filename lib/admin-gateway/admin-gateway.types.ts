@@ -2,7 +2,7 @@
    🛡️ FAZ 41 — ADMIN GATEWAY TYPES
    ===============================================================
    Privilege boundary için provider-agnostic shape'ler. Gateway
-   tüketicileri Supabase'e özgü tip görmez.
+   tüketicileri eski sağlayıcıya özgü tip görmez.
    =============================================================== */
 
 /** Audit-worthy admin action taxonomy. String literal union;

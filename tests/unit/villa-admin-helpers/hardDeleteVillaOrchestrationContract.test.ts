@@ -8,12 +8,12 @@
      1. Early return when id is missing
      2. AWAITED cleanupVillaStorageForHardDelete (storage cleanup)
      3. AWAITED Promise.all([7 parallel DELETE]) — array içeriği sabit
-     4. AWAITED supabase villa DELETE (final)
+     4. AWAITED eski sağlayıcı villa DELETE (final)
      5. SQLSTATE 23503 (FK) → TR explicit message
      6. return { ok: ... }
 
    ⚠️ PROMISE.ALL ARRAY CONTENT:
-     7 ayrı supabase.from(...).delete().eq("villa_id", id) çağrısı:
+     7 ayrı db.from(...).delete().eq("villa_id", id) çağrısı:
        - villa_images
        - villa_feature_relations
        - villa_rule_relations
@@ -98,7 +98,7 @@ describe("hardDeleteVilla — destructive sequence", () => {
     expect(promiseAllIdx).toBeLessThan(finalDeleteIdx);
   });
 
-  it("Promise.all contains EXACTLY 7 supabase delete calls", () => {
+  it("Promise.all contains EXACTLY 7 ilişkili tablo delete çağrısı", () => {
     /* AST'de Promise.all'ın array argümanını bul, element sayısını assert. */
     let promiseAllExpr: ts.CallExpression | null = null;
     function findPromiseAll(node: ts.Node) {

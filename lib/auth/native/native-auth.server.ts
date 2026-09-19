@@ -19,19 +19,19 @@ import type {
    🛡️ FAZ 1 (NATIVE AUTH) — NATIVE SERVER PROVIDERS
    ===============================================================
    Mevcut `AuthTokenVerifier` + `AdminAuthProvider` interface'lerinin
-   NATIVE implementasyonu. `supabase-auth.server.ts`'in birebir
+   NATIVE implementasyonu. önceki auth implementasyonunun birebir
    yapısal karşılığı → FAZ 2/3'te `lib/auth/server.ts` switch'i
    native'e çevrilerek aktive edilecek.
 
-   ⚠️ HENÜZ WIRE EDİLMEDİ — `lib/auth/server.ts` hâlâ Supabase
+   ⚠️ HENÜZ WIRE EDİLMEDİ — `lib/auth/server.ts` hâlâ eski sağlayıcı
      verifier/admin provider export ediyor. Bu dosyayı kimse import
      etmiyor; altyapı hazır bekliyor.
 
-   FARK (Supabase → native):
-     • verifyToken: `getSupabaseAdmin().auth.getUser(token)` (network)
+   FARK (eski sağlayıcı → native):
+     • verifyToken: `dbAdmin.auth.getUser(token)` (network)
        yerine LOKAL JWT imza doğrulaması (`verifyAccessToken`) → hızlı,
-       Supabase'e round-trip YOK.
-     • createUser: `auth.admin.createUser` (auth.users) YERİNE
+       eski sağlayıcıya round-trip YOK.
+     • createUser: harici auth sağlayıcısı YERİNE
        `admin_users`'a `password_hash` ile tek-adım insert (native'de
        auth user = admin_users satırı).
    =============================================================== */

@@ -3,9 +3,9 @@
 /* ===============================================================
    🛡️ /arama — PREMIUM FILTER SIDEBAR (CLIENT ISLAND)
    ===============================================================
-   Bu component PURE UI. Hiçbir Supabase/business semantic ÜRETMEZ.
+   Bu component PURE UI. Hiçbir eski sağlayıcı/business semantic ÜRETMEZ.
    Tek source-of-truth: URL query params. (Server component page.tsx
-   bu paramları okur ve aynı supabase query'sini kullanır.)
+   bu paramları okur ve aynı eski sağlayıcı query'sini kullanır.)
 
    URL CONTRACT (DEĞİŞMEZ — Hero.tsx ile birebir aynı):
      - categories   : string[]   (virgülle ayrılmış villa_types.id)

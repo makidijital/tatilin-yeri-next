@@ -137,9 +137,9 @@ export async function GET(
     let index = 0;
     for (const row of imageRows) {
       index += 1;
-      /* 🛡️ FAZ B — relative path → absolute URL (CDN veya Supabase).
+      /* 🛡️ FAZ B — relative path → absolute URL (CDN veya eski sağlayıcı).
          image_url artık relative tutuluyor; ham fetch şemasız → geçersiz.
-         resolveVillaImageUrl driver'a göre CDN/Supabase absolute URL üretir;
+         resolveVillaImageUrl driver'a göre CDN/eski sağlayıcı absolute URL üretir;
          FULL URL kayıtları (legacy) pass-through. */
       const rawPath = (row.image_url || "").trim();
       if (!rawPath) continue;

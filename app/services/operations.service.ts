@@ -45,7 +45,7 @@ import { operationsRepository } from "@/lib/db/operations.repository";
      - Tek SELECT (id, dates, name, guests, status, villa.title) —
        7 günlük pencere içinde check-in VEYA check-out olan
        rezervasyonlar.
-     - Supabase `.or()` ile (start_date in [today, +7)) OR
+     - eski sağlayıcı `.or()` ile (start_date in [today, +7)) OR
        (end_date in [today, +7)).
      - JS-side counter + bucket aynı pass içinde — counts ve
        items tek loop'ta üretilir, duplicate query YOK.
@@ -162,7 +162,7 @@ export async function getOperationsSnapshot(): Promise<OperationsSnapshot> {
   const tomorrowKey = toLocalDateKey(tomorrow);
   const windowEndKey = toLocalDateKey(windowEnd); /* exclusive */
 
-  /* Supabase .or() syntax: virgül = OR, and(...) ile branch içi AND. */
+  /* eski sağlayıcı .or() syntax: virgül = OR, and(...) ile branch içi AND. */
   const orFilter =
     `and(start_date.gte.${todayKey},start_date.lt.${windowEndKey}),` +
     `and(end_date.gte.${todayKey},end_date.lt.${windowEndKey})`;
@@ -184,7 +184,7 @@ export async function getOperationsSnapshot(): Promise<OperationsSnapshot> {
     return EMPTY_SNAPSHOT;
   }
 
-  /* Supabase embed select'i `villa` alanını object DA array DA
+  /* eski sağlayıcı embed select'i `villa` alanını object DA array DA
      döndürebilir; ikisini de safe handle ediyoruz. */
   type Row = {
     id: string;

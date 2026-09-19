@@ -17,7 +17,7 @@ import type { MailLog } from "@/app/services/mail-log.service";
 
    GÜVENLİK SINIRI:
      • `import "server-only"` — client bundle'a sızarsa build HATA.
-     • mailLogServerRepository → getSupabaseAdmin (service-role).
+     • mailLogServerRepository → dbAdmin (service-role).
 
    CALLER:
      • app/lib/mail/send.ts (mail pipeline; public + admin mail

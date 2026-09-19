@@ -2,14 +2,14 @@ import "server-only";
 
 /* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
    provider'a alındı. Admin okuma artık maki-finans/finance.action ("use
-   server") üzerinden. Supabase importu tamamen kaldırıldı. `server-only`
+   server") üzerinden. eski sağlayıcı importu tamamen kaldırıldı. `server-only`
    defansif sınır. Method yüzeyi + dönüş şekli AYNEN. */
 import { dbNative as db } from "@/lib/db/native";
 
 /* ===============================================================
    🛡️ FINANCE REPOSITORY (native)
    ===============================================================
-   `finance.service.ts` içindeki inline `supabase.from("reservations")`
+   `finance.service.ts` içindeki inline `db.from("reservations")`
    read'inin BİREBİR taşınmış hali (read-only KPI aggregate kaynağı).
    Davranış değişmez:
      - `db` = native provider (`dbNative`); tek app rolü → RLS/session-DI

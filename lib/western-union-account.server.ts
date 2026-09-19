@@ -14,7 +14,7 @@ import type { WesternUnionAccount } from "@/lib/western-union-account.helper";
    GÜVENLİK:
      • `import "server-only"` — client bundle'a sızarsa build HATA.
      • Veri erişimi westernUnionAccountRepository (→ dbAdmin, service-role,
-       SUPABASE_SERVICE_ROLE_KEY) üzerinden → yalnız server runtime; RLS
+       service-role kimlik bilgisi) üzerinden → yalnız server runtime; RLS
        bypass. (Phase 1 repo consolidation; davranış AYNEN.)
 
    CALLER:

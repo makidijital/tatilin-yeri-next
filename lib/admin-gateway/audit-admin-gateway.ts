@@ -8,20 +8,17 @@ import type {
 import { adminAuditRepository } from "./audit.repository";
 
 /* ===============================================================
-   🛡️ FAZ 41 — SUPABASE ADMIN GATEWAY (Implementation)
+   🛡️ ADMIN GATEWAY — AUDIT IMPLEMENTATION
    ===============================================================
-   AdminGateway interface'inin service-role impl'i. Audit best-effort
-   fire-forget; native `adminAuditRepository` (AUD-P5A) üzerinden yazar.
+   `AdminGateway` kontratının tek implementasyonu. Yalnız `audit`
+   yüzeyi vardır; yazma native `adminAuditRepository` üzerinden
+   PostgreSQL'e gider.
 
-   ⚠️ GW-P2 CLEANUP:
-     Ölü generic CRUD (`insertRow`/`updateRow`/`deleteRow`/`findRows`) +
-     `runRaw` escape hatch KALDIRILDI (GW-P1: 0 runtime call-site, 0
-     reflection, 0 test). Bunlar `getSupabaseAdmin()` kullanan SON yüzeydi
-     → import da kaldırıldı. Gateway artık YALNIZ `audit` içerir; Supabase
-     service-role DB kullanımı YOK. `audit` davranışı DEĞİŞMEDİ.
+   Audit best-effort / fire-forget: caller `void adminGateway.audit(...)`
+   ile çağırır, audit hatası ana akışı ASLA bozmaz.
 =============================================================== */
 
-export const supabaseAdminGateway: AdminGateway = {
+export const adminGatewayImpl: AdminGateway = {
   async audit(action, payload) {
     /* Best-effort fire-forget; caller `void adminGateway.audit(...)`
        pattern'i ile bloklamaz. Audit fail asla ana akışı bozmaz.

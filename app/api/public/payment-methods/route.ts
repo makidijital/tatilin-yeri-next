@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-/* 🛡️ Payment Migration P17 — anon `payment.repository` (supabaseDbProvider)
+/* 🛡️ Payment Migration P17 — anon `payment.repository` (dbNative)
    yerine native `payment.repository.server` (P16.5 twin: findPaymentMethodsPublic,
    order'sız `SELECT *`). Route server-only API handler (`"use client"` yok) →
    server-only native repo güvenli. RLS: payment_methods read policy `using(true)`
@@ -24,7 +24,7 @@ import { getPaymentMethodNamesByLocale } from "@/lib/i18n/get-payment-method-tra
 
    AUTH: PUBLIC. Anon db client kullanılır — RLS bu tabloda anon
    read'i hangi alanlar için açtıysa AYNI semantic'le filtrelenir
-   (eski client-side `supabase.from("payment_methods").select("*")`
+   (eski client-side `db.from("payment_methods").select("*")`
    ile birebir). service_role KULLANILMAZ; aksi halde RLS bypass
    olur ve admin-only alanlar sızabilir.
 

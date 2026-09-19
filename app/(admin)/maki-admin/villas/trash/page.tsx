@@ -14,7 +14,7 @@ import {
 
 /* 🛡️ Villa Migration S1 — client boundary: runtime villa.service import'u
    yerine server action (call-site alias ile değişmez). Provider/repository/
-   Supabase AYNEN; yalnız client bundle'dan villa.service çıkarıldı. */
+   eski sağlayıcı AYNEN; yalnız client bundle'dan villa.service çıkarıldı. */
 import { getTrashedVillasAction as getTrashedVillas } from "@/app/services/villa.action";
 /* 🛡️ FAZ 2 frontend purge — TÜM villa-admin service runtime import'ları
    KALDIRILDI. Önceki turda `restoreVilla` deep import edilmişti
@@ -74,7 +74,7 @@ type TrashedVilla = {
 
 function formatDateTr(s?: string | null): string {
   if (!s) return "—";
-  /* 🛡️ parseUtcDate (central canonical) → naive datetime'ları (Supabase
+  /* 🛡️ parseUtcDate (central canonical) → naive datetime'ları (eski sağlayıcı
      bazen TZ suffix'siz döner) UTC olarak normalize eder. Sonra
      toLocaleDateString Istanbul tz ile Türkçe long-month format. */
   const d = parseUtcDate(s);

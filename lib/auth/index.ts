@@ -3,7 +3,7 @@
    ===============================================================
    Tek import path: `import { authProvider } from "@/lib/auth"`.
 
-   ⚠️ BU BARREL CLIENT-SAFE — server-only chain (getSupabaseAdmin)
+   ⚠️ BU BARREL CLIENT-SAFE — server-only chain (dbAdmin)
    içermez. Bu nedenle hem CLIENT hem SERVER tüketicilerden
    sorunsuz import edilebilir.
 
@@ -16,14 +16,14 @@
        barrel'ından import edilir. `import "server-only"` ile
        korunur; client bundle'a sızarsa BUILD HATA verir.
 
-   Provider seçimi tek noktada — gelecekte Supabase yerine Clerk/
+   Provider seçimi tek noktada — gelecekte Clerk/
    NextAuth/Better Auth/custom JWT eklenirse burada switch:
      export const authProvider: AuthProvider = isClerkEnabled
        ? clerkAuthProvider
-       : supabaseAuthProvider;
+       : legacyAuthProvider;
    =============================================================== */
 
-/* 🛡️ FAZ 4 — Supabase Auth SÖKÜLDÜ. Native tek client provider. */
+/* Native auth — tek client provider. */
 import { nativeAuthProvider } from "./native/native-auth.provider";
 
 export type {

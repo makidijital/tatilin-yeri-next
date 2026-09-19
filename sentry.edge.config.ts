@@ -11,7 +11,7 @@ import * as Sentry from "@sentry/nextjs";
    ⚠️ DAVRANIŞ:
      • DSN yoksa no-op.
      • Tracing/profile KAPALI.
-     • Mevcut middleware logic (Supabase SSR session refresh +
+     • Mevcut middleware logic (native auth session refresh +
        marker cookie redirect) AYNEN.
 =============================================================== */
 

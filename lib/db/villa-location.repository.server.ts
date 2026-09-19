@@ -2,7 +2,7 @@ import "server-only";
 
 /* 🛡️ NATIVE CUTOVER (PILOT) — native provider parity tamamlandı
    (tip-parser'lar, single/maybeSingle, PGRST116, rpc, search_path).
-   Bu repo, native provider'ın gerçek Supabase PostgreSQL'e karşı İLK
+   Bu repo, native provider'ın gerçek eski sağlayıcı PostgreSQL'e karşı İLK
    doğrulama pilotu. Method yüzeyi + dönüş şekli aynen. Runtime testi
    (Admin Bölgeler + insert/update/delete) yeşil olmadan PRODUCTION'a
    deploy EDİLMEMELİ; sorun çıkarsa yalnız native provider düzeltilir. */
@@ -28,7 +28,7 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
    GÜVENLİK SINIRI (pages/menu/blog .server konvansiyonu):
      • `import "server-only"` — client bundle'a sızarsa BUILD HATA.
-     • `dbAdmin` → service-role (SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_
+     • `dbAdmin` → service-role (service-role kimlik bilgisi, NEXT_PUBLIC_
        prefix yok) → yalnız server runtime. Çağıran route
        `authorizeAdminCaller` arkasında.
 

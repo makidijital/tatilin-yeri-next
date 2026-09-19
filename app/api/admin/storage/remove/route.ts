@@ -14,7 +14,7 @@ import { STORAGE_BUCKETS } from "@/lib/storage/storage.constants";
 
    ⚠️ ADIM 1 — DORMANT:
      HENÜZ HİÇBİR akış bağlı DEĞİL. Mevcut delete akışları (deleteVillaImage,
-     hardDeleteVilla, AdminGallery rollback) AYNEN Supabase Storage'tan
+     hardDeleteVilla, AdminGallery rollback) AYNEN R2 storage'tan
      siler. Bağlama sonraki adımda.
 
    REQUEST (application/json):

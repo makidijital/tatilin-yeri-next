@@ -1,8 +1,8 @@
 /* ===============================================================
-   🛡️ STATİK RPC-RETURN METADATA — PostgREST/Supabase rpc() parity
+   🛡️ STATİK RPC-RETURN METADATA — PostgREST/eski sağlayıcı rpc() parity
    ===============================================================
    AMAÇ:
-     Supabase JS `.rpc(fn, args)` çağrısı, fonksiyonun PostgreSQL
+     DB client `.rpc(fn, args)` çağrısı, fonksiyonun PostgreSQL
      RETURNS tipine göre FARKLI `data` şekli döndürür:
        scalar (boolean/int/uuid/jsonb) → data = DEĞER
        setof scalar                    → data = DEĞER[]
@@ -11,7 +11,7 @@
      Native provider ise ham `SELECT * FROM fn(...)` satırlarını
      (`{fn: value}` sarımlı) döndürür → şekil UYUŞMAZ. Bu registry,
      her fonksiyonun dönüş TÜRÜNÜ açıkça tanımlar; provider sonucu
-     buna göre Supabase ile BİREBİR şekle sokar.
+     buna göre eski sağlayıcı ile BİREBİR şekle sokar.
 
    ⚠️ TAHMİN YOK — KAYNAK: db/migrations/*.sql RETURNS cümleleri.
      Yeni RPC eklenirse buraya AÇIKÇA eklenir (relation-metadata

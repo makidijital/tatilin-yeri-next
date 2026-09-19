@@ -3,7 +3,7 @@ import "server-only";
 /* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
    provider'a alındı. Admin okuma/yazma artık faqs/faqs.action ("use
    server") üzerinden; public read cache.helpers/homepage (server) üzerinden.
-   Supabase importu tamamen kaldırıldı. `server-only` defansif sınır.
+   eski sağlayıcı importu tamamen kaldırıldı. `server-only` defansif sınır.
    Method yüzeyi + dönüş şekli AYNEN. */
 import { dbNative as db } from "@/lib/db/native";
 

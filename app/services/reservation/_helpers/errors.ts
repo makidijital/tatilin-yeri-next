@@ -1,12 +1,12 @@
 /* ===============================================================
-   🛡️ FAZ 2 — RESERVATION SUPABASE ERROR MAPPING
+   🛡️ FAZ 2 — RESERVATION ESKİ SAĞLAYICI ERROR MAPPING
    ===============================================================
    Eski `createReservation` INSERT catch bloğu (line 365-378)
    pattern'inin BYTE-IDENTICAL kopyası.
 
    EXCLUDE constraint violation (SQLSTATE 23P01) DB-level atomik
    garanti; concurrent iki INSERT'ten ikincisi bunu alır.
-   Supabase JS error.code olarak yansıtır; bazen `code` undefined
+   DB client error.code olarak yansıtır; bazen `code` undefined
    gelir → message regex fallback.
 
    ⚠️ KESIN KURAL:
@@ -17,7 +17,7 @@
 
    PATTERN:
      try {
-       const { error } = await supabase.insert(...);
+       const { error } = await repository.insert(...);
        if (error) {
          console.error("❌ Create error:", error.message);
          mapInsertError(error);  // throws if known SQLSTATE
@@ -26,7 +26,7 @@
      } ...
 =============================================================== */
 
-/** Supabase insert error → human-friendly TR throw. EXCLUDE
+/** repository insert error → human-friendly TR throw. EXCLUDE
  *  constraint (23P01) durumunda "Bu tarihler artık müsait değil"
  *  throw eder. Diğer durumlarda caller generic throw'a düşer. */
 export function mapInsertError(

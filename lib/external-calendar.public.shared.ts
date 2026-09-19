@@ -5,7 +5,7 @@ import { parseLocalDate } from "@/lib/date-format";
    ===============================================================
    PURPOSE:
      `lib/external-calendar.public.helper.ts` artık server-only
-     (`getSupabaseAdmin` → `import "server-only"` chain). Client
+     (`dbAdmin` → `import "server-only"` chain). Client
      component'ler tip ve pure helper ihtiyacı için bu modülü
      import eder; service-role bundle'a sızmaz.
 

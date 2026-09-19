@@ -1,6 +1,6 @@
 "use client";
 
-/* 🛡️ FAZ 2 frontend purge — `import { supabase }` KALDIRILDI.
+/* 🛡️ FAZ 2 frontend purge — `import { eski sağlayıcı }` KALDIRILDI.
    Tüm DB erişimi /api/admin/* + /api/public/* route'ları arkasında.
    Reservation create artık `createReservation` service'i route içinde
    delege eder (audit + validasyon + EXCLUDE overlap aynen). */
@@ -437,7 +437,7 @@ export default function AdminReservationDetailPage() {
       const _m = manual;
       const dataObj = { reservations: _r, manual: _m };
       /* Aşağıdaki kod `reservations` ve `manual` değişkenlerini kullanır;
-         shape eski supabase response'larına BYTE-IDENTICAL. */
+         shape eski eski sağlayıcı response'larına BYTE-IDENTICAL. */
       void dataObj;
 
       let blocked: Date[] = [];
@@ -761,7 +761,7 @@ export default function AdminReservationDetailPage() {
 
          ⚠️ ORCHESTRATION SIRASI DONDURULDU (AST contract FAZ 5'te):
            1. payload build (sync, pure)
-           2. AWAITED supabase insert
+           2. AWAITED repository insert
            3. error → throw (catch'e düşer)
            4. FIRE-FORGET dispatchReservationRequestMail
            5. toast.success
@@ -795,7 +795,7 @@ export default function AdminReservationDetailPage() {
           });
 
       /* 🛡️ STEP 1 — DB WRITE (AWAITED) via createReservation service.
-         FAZ 2 frontend purge: direct supabase.insert bypass'i kaldırıldı.
+         FAZ 2 frontend purge: doğrudan DB insert bypass'i kaldırıldı.
          adminFetch POST /api/admin/reservations → route içinde
          createReservation service (validasyon + EXCLUDE constraint
          catch + TOCTOU overlap guard + audit) DELEGE. Service throw →

@@ -112,7 +112,7 @@ export default async function SharedListPageBody({
 
         SELECT pattern: `*` + embed — admin /villa-listesi ve /arama
         ile birebir. Açık column listesi + alias embed kombinasyonu
-        Supabase JS'de silent empty result yaratıyordu; FIX. */
+        DB client'de silent empty result yaratıyordu; FIX. */
   const snapshotIds: string[] = Array.isArray(list.villas)
     ? list.villas.map((v) => v.id).filter(Boolean)
     : [];

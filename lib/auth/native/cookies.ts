@@ -132,7 +132,7 @@ export async function clearAuthCookies(): Promise<void> {
    navigasyonda (AdminSessionGuard mount olmadan) da geçer. non-httpOnly
    (client'ın da temizleyebilmesi için — mevcut davranışla uyumlu).
    ⚠️ FAZ 3: native middleware marker'a BAĞLI DEĞİL (native cookie'leri
-   doğrular); marker yalnız supabase-mode middleware için. Tam kaldırma FAZ 4. */
+   doğrular); marker yalnız eski sağlayıcı-mode middleware için. Tam kaldırma FAZ 4. */
 
 export async function setMarkerCookie(): Promise<void> {
   const jar = await cookies();

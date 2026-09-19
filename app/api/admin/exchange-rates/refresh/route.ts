@@ -24,7 +24,7 @@ import {
      4) JSON yanıt: { ok, rates, updated_at }
 
    GÜVENLİK:
-     - Yalnız authenticated admin (Supabase JWT + admin_users lookup)
+     - Yalnız authenticated admin (eski sağlayıcı JWT + admin_users lookup)
      - Service-role key sadece sunucu tarafında; client'a hiç çıkmaz
      - TCMB token gerektirmiyor — public veri kaynağı
      - Rate limit YOK (manuel admin tetiklemesi; sayfa yenilemekle

@@ -12,7 +12,7 @@ import { compare as bcryptCompare } from "bcryptjs";
    TEKNOLOJİ (kalıcı):
      • Yeni hash'ler → **Argon2id** (`@node-rs/argon2`, OWASP #1; prebuilt
        binary → native derleme derdi yok). Kripto elle YAZILMAZ.
-     • Legacy doğrulama → **bcryptjs** (Supabase/GoTrue `$2a$/$2b$/$2y$`
+     • Legacy doğrulama → **bcryptjs** (eski auth sağlayıcısı `$2a$/$2b$/$2y$`
        hash'lerini reset ETTİRMEDEN doğrular).
 
    ALGORİTMA ÇEVİKLİĞİ (self-describing prefix):
@@ -73,7 +73,7 @@ export async function verifyPassword(
     return { ok, needsRehash: false };
   }
 
-  // Legacy — Supabase/GoTrue bcrypt. Başarılı ise upgrade-on-login için
+  // Legacy — eski auth sağlayıcısı bcrypt. Başarılı ise upgrade-on-login için
   // needsRehash=true (caller Argon2id'e yeniden yazar).
   if (
     hash.startsWith("$2a$") ||

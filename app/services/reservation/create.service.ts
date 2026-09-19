@@ -26,7 +26,7 @@ import type { ReservationCreateInput } from "./types";
    sırasını yönetir.
 
    FAZ 33 (INSERT extraction — revenue-critical):
-     `supabase.from("reservations").insert(payload).select().single()`
+     `db.from("reservations").insert(payload).select().single()`
      artık `reservationRepository.insert(payload)` üzerinden
      delege edilir. Chain `.select().single()` repository içine
      taşındı (caller bekleyen `inserted` row return shape aynen).
@@ -34,7 +34,7 @@ import type { ReservationCreateInput } from "./types";
      generic throw fallback BYTE-IDENTICAL service edge'inde.
 
    ⚠️ ORCHESTRATION SIRASI BYTE-IDENTICAL (AST contract FAZ 5;
-      FAZ 33 evolution: supabase identifier → repository
+      FAZ 33 evolution: eski sağlayıcı identifier → repository
       identifier; diğer iddialar aynen):
      1. throw "Villa zorunlu" if !data.villa_id
      2. throw "Tarih zorunlu" if !start_date || !end_date
@@ -134,7 +134,7 @@ export async function createReservation(
     // 🔥 EXCLUDE CONSTRAINT VIOLATION — concurrent rezervasyon
     // race koşulu DB seviyesinde yakalandı.
     // Postgres SQLSTATE 23P01 = exclusion_violation.
-    // Supabase JS bunu error.code olarak yansıtır.
+    // DB client bunu error.code olarak yansıtır.
     mapInsertError(error);
     throw new Error(error.message);
   }

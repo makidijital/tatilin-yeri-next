@@ -3,9 +3,9 @@
    ===============================================================
    Bu dosya, lib/availability.helper.ts içinden ÇIKARILDI ama
    davranış BYTE-IDENTICAL. Sebep:
-     helper Supabase client import ediyor → modül load anında
-     env (NEXT_PUBLIC_SUPABASE_URL) zorunlu → test ortamında
-     "supabaseUrl is required" patlaması.
+     helper eski sağlayıcı client import ediyor → modül load anında
+     env (storage base URL) zorunlu → test ortamında
+     DB client init hatası.
    Pure validatorlar burada artık IO bağımsız; test ortamında
    env olmadan import edilebilir.
 

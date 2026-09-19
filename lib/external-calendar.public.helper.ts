@@ -16,7 +16,7 @@ import {
    external_calendar_events tablosundan service-role ile date range
    fetch + half-open [start, end) → engine array expansion.
 
-   🛡️ SERVER-ONLY: `import "server-only"` direktifi + getSupabaseAdmin
+   🛡️ SERVER-ONLY: `import "server-only"` direktifi + dbAdmin
    transitive guard. Bu modül CLIENT bundle'a sızarsa BUILD HATA.
    Client component'ler tip ve pure helper için
    `lib/external-calendar.public.shared.ts`'i import etmeli.

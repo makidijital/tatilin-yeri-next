@@ -12,7 +12,7 @@ import { villaLocationServerRepository } from "@/lib/db/villa-location.repositor
    DELETE ?id=<uuid>                    → silme
 
    FAZ 2 frontend purge — admin/locations/page.tsx daha önce direkt
-   anon supabase ile CRUD yapıyordu. Bu route adminFetch (Bearer) +
+   anon DB client ile CRUD yapıyordu. Bu route adminFetch (Bearer) +
    service_role ile davranış BYTE-IDENTICAL üretir. Slug üretimi
    client'ta `slugifyTr(name)` ile yapılıyor (mevcut davranış); payload
    route'a gönderilirken slug zaten içinde olur. Unique slug constraint

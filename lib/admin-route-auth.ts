@@ -1,11 +1,11 @@
 import "server-only";
 
 import { authVerifier } from "@/lib/auth/server";
-/* 🛡️ FAZ 4 — Supabase Auth SÖKÜLDÜ. Native tek yol: access JWT httpOnly
+/* 🛡️ Native auth: access JWT httpOnly
    cookie'den okunur, `authorizeAdminToken` (native jose verify) doğrular. */
 import { readAccessCookie } from "@/lib/auth/native/cookies";
-/* 🛡️ AR-P2 — admin_users lookup native repo'ya repoint (getSupabaseAdmin
-   service-role SELECT yerine dbAdminNative). verifyToken (Supabase Auth)
+/* 🛡️ AR-P2 — admin_users lookup native repo'ya repoint (dbAdmin
+   service-role SELECT yerine dbAdminNative). verifyToken (native auth)
    DEĞİŞMEDİ; yalnız DB lookup native. */
 import { adminUserServerRepository } from "@/lib/db/admin-user.repository.server";
 
@@ -17,7 +17,7 @@ import { adminUserServerRepository } from "@/lib/db/admin-user.repository.server
 
    Flow:
      1. Bearer token parse
-     2. supabase.auth.getUser(token) → auth user
+     2. native oturum doğrulama(token) → auth user
      3. admin_users lookup:
           - önce auth_user_id ile (yeni kayıtlar)
           - bulunamazsa email ile (eski kayıtlar — backward compat)
@@ -31,7 +31,7 @@ import { adminUserServerRepository } from "@/lib/db/admin-user.repository.server
 export type AuthorizedAdminCaller = {
   /** admin_users.id (uuid) */
   id: string;
-  /** auth.users.id (uuid) */
+  /** admin_users.auth_user_id (uuid) */
   authUserId: string;
   email: string;
   is_active: boolean;
@@ -56,7 +56,7 @@ export async function authorizeAdminToken(
   }
 
   /* FAZ 39: authVerifier.verifyToken delege; service-role context
-     provider içinde (getSupabaseAdmin); "Oturum doğrulanamadı"
+     provider içinde (dbAdmin); "Oturum doğrulanamadı"
      mesajı route-edge'de aynen. authVerifier `@/lib/auth/server`
      barrel'ından gelir; `import "server-only"` chain'i ile korunur. */
   const verify = await authVerifier.verifyToken(token);

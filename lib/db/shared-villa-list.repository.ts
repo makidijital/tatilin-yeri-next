@@ -3,7 +3,7 @@ import "server-only";
 /* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
    provider'a alındı. Admin create artık villa-listesi/_components/
    shared-villa-list.action ("use server") üzerinden; token read server
-   component'ten. Supabase importu tamamen kaldırıldı. `server-only`
+   component'ten. eski sağlayıcı importu tamamen kaldırıldı. `server-only`
    defansif sınır. Method yüzeyi (create/findByToken) + dönüş şekli AYNEN. */
 import { dbNative as db } from "@/lib/db/native";
 
@@ -11,7 +11,7 @@ import { dbNative as db } from "@/lib/db/native";
    🛡️ SHARED VILLA LISTS REPOSITORY (native)
    ===============================================================
    `shared-villa-list.service.ts` içindeki inline
-   `supabase.from("shared_villa_lists")...` çağrılarının BİREBİR
+   `db.from("shared_villa_lists")...` çağrılarının BİREBİR
    taşınmış hali. Davranış değişmez:
      - `db` = native provider (`dbNative`); method'lar ham `{ data, error }`
        döner. Tek app rolü → RLS/session-DI YOK.

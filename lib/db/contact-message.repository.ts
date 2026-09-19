@@ -3,7 +3,7 @@ import "server-only";
 /* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
    provider'a alındı. Admin okuma/yazma artık messages.action ("use
    server") üzerinden; public create route'tan native default ile.
-   Supabase importu + SupabaseClient DI tamamen kaldırıldı. `server-only`
+   eski sağlayıcı importu + DB client DI tamamen kaldırıldı. `server-only`
    defansif sınır. Method yüzeyi (create/findAll/updateById) + dönüş şekli
    aynen. */
 import { dbNative as db } from "@/lib/db/native";
@@ -11,7 +11,7 @@ import { dbNative as db } from "@/lib/db/native";
 /* ===============================================================
    🛡️ CONTACT MESSAGES REPOSITORY (Phase 1 — repo consolidation)
    ===============================================================
-   `contact-message.service.ts` içindeki inline `supabase.from(...)`
+   `contact-message.service.ts` içindeki inline `db.from(...)`
    çağrılarının BİREBİR taşınmış hali (single table: contact_messages).
    Davranış değişmez:
      - `db` = native provider (`dbNative`); method'lar ham `{ data, error }`

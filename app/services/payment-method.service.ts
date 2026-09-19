@@ -15,7 +15,7 @@ import type { PaymentMethodRow } from "@/types/database";
    hazır; runtime davranışı identical.
 
    FAZ 35 (repository extraction):
-     Service artık Supabase'i doğrudan tüketmez; DB I/O
+     Service artık eski sağlayıcıyı doğrudan tüketmez; DB I/O
      `paymentRepository.*` üzerinden delege edilir. Davranış
      BYTE-IDENTICAL — throw-style asimetrisi (payment-account
      ile fark) AYNEN korunur.

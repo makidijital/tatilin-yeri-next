@@ -9,7 +9,7 @@ import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 
    NEDEN ROUTE HANDLER:
      admin_users RLS (mig 038) `authenticated + is_active_admin()`;
-     anon erişim yok. Anon `db` server-side SILENT-ANON (lib/supabase.ts
+     anon erişim yok. Anon `db` server-side SILENT-ANON (lib/db/index.ts
      FAZ 4 notu) → RLS reddeder. Bu yüzden panel list/update işlemleri
      server boundary'ye taşınır ve native (RLS-free) `dbAdmin` üzerinden
      yürür; authz `authorizeAdminCaller` ile (RLS `is_active_admin()`

@@ -13,7 +13,7 @@ import {
 import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
 /* 🛡️ IMG-P2B/P3R — app-layer admin gate (native RLS-free write authz).
    Yalnız gate; auth.caller kullanılmaz. Service'ler native (dbAdminNative);
-   Supabase session client injection IMG-P3R'de kaldırıldı. */
+   eski sağlayıcı session client injection IMG-P3R'de kaldırıldı. */
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
 
 /* ===============================================================

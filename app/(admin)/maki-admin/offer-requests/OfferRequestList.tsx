@@ -117,7 +117,7 @@ export default function OfferRequestList() {
   useEffect(() => {
     let cancelled = false;
     /* 🛡️ FAZ 2 frontend purge — adminFetch GET /api/admin/taxonomies.
-       Eski 3 paralel anon supabase fetch tek route response'unda
+       Eski 3 paralel anon DB client fetch tek route response'unda
        birleştirildi. Davranış BYTE-IDENTICAL: aynı select shape'leri
        ({ id, name, slug } / { id, name }) → aynı label map build. */
     (async () => {

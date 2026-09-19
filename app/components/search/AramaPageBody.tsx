@@ -103,7 +103,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
    ===============================================================
    KORUNAN MEVCUT MANTIK (DEĞİŞMEZ):
      - searchParams shape: { categories, regions, start, end, guests }
-     - Supabase query: villa where is_active=true & deleted_at IS NULL
+     - eski sağlayıcı query: villa where is_active=true & deleted_at IS NULL
        + .in("location", regions) eğer regions varsa
        + .gte("guests", guests) eğer guests varsa
      - JSON-LD: BreadcrumbList + ItemList
@@ -115,7 +115,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
      - <FilterSidebar /> client island (URL push'lar buradan)
 
    YENİ BUSINESS LOGIC YOK. Sidebar URL'e push eder → bu server
-   component aynı eski supabase query'siyle yeniden render olur.
+   component aynı eski eski sağlayıcı query'siyle yeniden render olur.
    =============================================================== */
 
 /* ===============================================================
@@ -332,7 +332,7 @@ export default async function AramaPageBody({
          tüm match satırları); JS-side Map<vid, Set<tid>> ile
          O(N) sayım. Yeni index gerekmez.
        - Sıfır match olursa main query'ye `.in("id", [])` koyup
-         supabase'in boş set döndürmesini bekleme yerine kısa-devre:
+         eski sağlayıcının boş set döndürmesini bekleme yerine kısa-devre:
          hiç villa yok → erken empty list, downstream pipeline
          doğru biçimde 0 sonuç render eder.
 
@@ -460,7 +460,7 @@ export default async function AramaPageBody({
   const { data: villasRaw, error } = villaRes;
 
   /* 🛡️ Error TUTUMU (UX FIX):
-     Gerçek query exception (Supabase/network/runtime) tek başına
+     Gerçek query exception (eski sağlayıcı/network/runtime) tek başına
      **layout'u parçalamaz**. Daha önce buradaki `return <section>...`
      full-page error full sayfayı kaplıyor ve sidebar tamamen
      kayboluyordu → kullanıcı filtreyi değiştiremiyordu. Şimdi
@@ -489,7 +489,7 @@ export default async function AramaPageBody({
      hiç koşturmadık; sonuç boş kabul edilir.
      queryFailed = exception → sonuç boş; ErrorState gösterilecek. */
 
-  /* AramaVillaRaw: Supabase embed select sonucunda dönen shape'in
+  /* AramaVillaRaw: eski sağlayıcı embed select sonucunda dönen shape'in
      minimum tip karşılığı. v2.105+ embed inference gevşek olduğu için
      explicit local type ile narrow ediliyor. */
   type AramaVillaRaw = {
@@ -1067,7 +1067,7 @@ export default async function AramaPageBody({
               ===================================================== */}
           <div className="min-w-0">
             {queryFailed ? (
-              /* GERÇEK EXCEPTION — Supabase/network/runtime hatası.
+              /* GERÇEK EXCEPTION — eski sağlayıcı/network/runtime hatası.
                  Sadece bu durumda "Arama yüklenemedi" mesajı çıkar.
                  Sidebar dokunulmaz; sağda kart gibi premium error. */
               <div className="rounded-2xl border border-[var(--color-stone-100)] bg-white px-6 py-16 md:px-10 md:py-20 text-center max-w-xl mx-auto">

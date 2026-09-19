@@ -13,7 +13,7 @@ import type { VillaFormPayload } from "@/app/services/villa-admin/types";
          (reservation detail villa selector, vb.).
 
    FAZ 2 frontend purge — daha önce client component'ler
-   `supabase.from("villa").select("id, title")` ile anon read
+   `db.from("villa").select("id, title")` ile anon read
    yapıyordu. Bu route adminFetch (Bearer) + service-role ile
    davranış BYTE-IDENTICAL.
    =============================================================== */

@@ -62,10 +62,10 @@
        → /rezervasyon/[slug]?... navigation (aynı URL formatı)
 
    ARCHITECTURE BOUNDARY:
-     `fetchExternalCalendarStringsForVilla` SERVER-ONLY (getSupabaseAdmin
+     `fetchExternalCalendarStringsForVilla` SERVER-ONLY (dbAdmin
      kullanır). Modal client component olduğu için bu helper'ı doğrudan
      import EDEMEZ — service role key client bundle'a sızar / browser'da
-     "SUPABASE_SERVICE_ROLE_KEY tanımlı değil" exception atar.
+     "service-role kimlik bilgisi tanımlı değil" exception atar.
      Çözüm: yalnız TYPE + EMPTY constant import. Veri için server-side
      API route çağrılır.
    =============================================================== */

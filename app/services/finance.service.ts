@@ -29,7 +29,7 @@ import {
      - Tek SELECT, in('status',...) filter ile rejected/cancelled
        DB-side elenir.
      - JS-side aggregate (sum/count). Foundation kapasite (~5k row
-       milestone'una kadar trivial). Volume artarsa Supabase RPC
+       milestone'una kadar trivial). Volume artarsa eski sağlayıcı RPC
        aggregate function'a geçiş kolay (signature aynı kalır).
      - N+1 yok: single query.
    =============================================================== */

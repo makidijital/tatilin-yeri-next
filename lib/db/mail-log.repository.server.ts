@@ -17,13 +17,13 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
    GÜVENLİK SINIRI (lib/payment-account.server.ts ile aynı konvansiyon):
      • `import "server-only"` — bu dosya CLIENT bundle'a sızarsa Next.js
        BUILD HATA verir. Net defansif guard.
-     • `getSupabaseAdmin()` SUPABASE_SERVICE_ROLE_KEY okur (NEXT_PUBLIC_
+     • `dbAdmin` service-role kimlik bilgisi okur (NEXT_PUBLIC_
        prefix YOK) → yalnız server runtime. Client bundle'da expose YOK.
 
    NEDEN AYRI DOSYA (read repo'dan ayrıştırma):
      `lib/db/mail-log.repository.ts` READ (findRecent) için anon client
      kullanır ve admin `system-logs` CLIENT component'inden import edilir.
-     Service-role insert'i aynı dosyaya koymak getSupabaseAdmin import'unu
+     Service-role insert'i aynı dosyaya koymak dbAdmin import'unu
      client bundle'a sokardı (attack surface). Split → write yalnız bu
      server dosyasında.
 
@@ -33,7 +33,7 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
    DAVRANIŞ:
      - INSERT payload shape DEĞİŞMEZ (caller mapping aynen).
-     - Supabase native `{ data, error }` döner; throw YOK, log YOK
+     - native `{ data, error }` döner; throw YOK, log YOK
        (üst katman insertMailLog console tag + boolean döner).
 =============================================================== */
 
@@ -48,7 +48,7 @@ export const mailLogServerRepository = {
      mail_logs admin-only RLS (mig 038) → anon SELECT boş döner; admin
      stats kartı service-role ile sayar/okur. `head: true, count:
      "exact"` gövde döndürmez; native `{ count, error }` caller'da
-     kullanılır. BYTE-IDENTICAL eski inline getSupabaseAdmin().from
+     kullanılır. BYTE-IDENTICAL eski inline dbAdmin.from
      çağrıları. */
 
   /** Count — tüm satırlar (head:true, count exact; gövde gelmez). */
@@ -81,7 +81,7 @@ export const mailLogServerRepository = {
      ---------------------------------------------------------------
      `delete({ count: "exact" })` → silinen satır sayısını döndürür
      (native `{ count, error }`). Cutoff ISO string + mode kararı
-     caller'da. BYTE-IDENTICAL eski inline getSupabaseAdmin().from
+     caller'da. BYTE-IDENTICAL eski inline dbAdmin.from
      çağrıları. */
 
   /** "30d" mode — created_at < cutoff satırları sil (count exact). */
@@ -93,7 +93,7 @@ export const mailLogServerRepository = {
   },
 
   /** "all" mode — kapsayıcı filter (PK NOT NULL → tüm satırlar match;
-   *  SDK no-filter delete'i reddettiği için resmi supabase-js
+   *  SDK no-filter delete'i reddettiği için resmi eski sağlayıcı-js
    *  workaround). Net etki TRUNCATE ile aynı; count exact. */
   async deleteAll() {
     return await dbAdmin

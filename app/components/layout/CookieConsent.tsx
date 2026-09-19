@@ -4,7 +4,7 @@
    🍪 COOKIE CONSENT — ultra-minimal, client-only banner
    ===============================================================
    - localStorage `cookie_consent=accepted` → bir daha gösterilmez.
-   - DB/Supabase/API/analytics çağrısı YOK. Storage = yalnız localStorage.
+   - DB/eski sağlayıcı/API/analytics çağrısı YOK. Storage = yalnız localStorage.
    - SSR/hydration-safe: ilk render (server + client) NULL döner; banner
      yalnız mount sonrası (useEffect) localStorage okunup gösterilir →
      hydration mismatch YOK.

@@ -14,7 +14,7 @@ import { taxonomyServerRepository } from "@/lib/db/taxonomy.repository.server";
      - price_include_items{ id, title }          (ORDER created_at asc)
 
    FAZ 2 frontend purge — daha önce admin client component'ler bu
-   query'leri DOĞRUDAN anon supabase ile çekiyordu (RLS-public read).
+   query'leri DOĞRUDAN anon DB client ile çekiyordu (RLS-public read).
    Bu route adminFetch (Bearer) + service-role ile davranış
    BYTE-IDENTICAL: aynı select shape'leri tek route response'unda
    birleştirilir. UI tarafı taxonomy label map'ini build eder.
@@ -38,7 +38,7 @@ export async function GET(req: Request): Promise<NextResponse> {
   }
 
   /* 🛡️ FAZ 2 — rule_items + price_include_items query shape'i
-     villas/ekle/page.tsx legacy supabase çağrılarıyla BYTE-IDENTICAL:
+     villas/ekle/page.tsx legacy eski sağlayıcı çağrılarıyla BYTE-IDENTICAL:
        .select("id, title").order("created_at", { ascending: true })
      Master fetch (admin dropdown). RLS-public read aynı semantic. */
   const [locsRes, typesRes, featsRes, rulesRes, includesRes] =

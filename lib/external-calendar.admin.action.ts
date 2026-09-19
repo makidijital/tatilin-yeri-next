@@ -8,7 +8,7 @@ import type { ExternalCalendarAdminArrays } from "@/lib/external-calendar.admin.
    ===============================================================
    Reservation-form client component'leri (ManualReservationForm,
    reservations ekle/[id]) → bu server action → `admin.helper` (server) →
-   native repo. Eskiden client-side anon Supabase read'iydi; native repo
+   native repo. Eskiden client-side anon DB client read'iydi; native repo
    server-only olduğu için server boundary arkasına alındı. Dönüş
    (`ExternalCalendarAdminArrays`: Date[] + detailByDate) BİREBİR.
    =============================================================== */

@@ -1,4 +1,4 @@
-/* 🛡️ FAZ 2 frontend purge — `import { supabase }` KALDIRILDI.
+/* 🛡️ FAZ 2 frontend purge — `import { eski sağlayıcı }` KALDIRILDI.
    `get_villa_blocked_ranges` RPC artık /api/public/villas/[id]/blocked-ranges
    fetch boundary'sinden delege edilir; SECURITY DEFINER semantic ve
    PII-safe payload aynen korunur. */
@@ -9,7 +9,7 @@ import { parseLocalDate } from "@/lib/date-format";
    ===============================================================
    PURPOSE:
      Public `AvailabilityInlineCalendar` ve BookingSidebar inline
-     olarak aynı Supabase fetch + date expansion mantığını
+     olarak aynı eski sağlayıcı fetch + date expansion mantığını
      tekrarlıyordu. Bu helper o mantığı **pure, framework-free**
      bir adapter olarak dışarı çıkarır.
 
@@ -39,7 +39,7 @@ import { parseLocalDate } from "@/lib/date-format";
        dahil olur; çağrılmazsa tree-shake.
    =============================================================== */
 
-/** Raw row shape — Supabase'den dönen minimum alan. */
+/** Raw row shape — eski sağlayıcıdan dönen minimum alan. */
 type ReservationRow = {
   start_date: string;
   end_date: string;
@@ -89,7 +89,7 @@ const EMPTY_ARRAYS: VillaAvailabilityArrays = {
 };
 
 /* ---------------------------------------------
-   🔥 fetchVillaAvailability — Supabase READ
+   🔥 fetchVillaAvailability — eski sağlayıcı READ
    ---------------------------------------------
    AVAILABILITY ALLOW-LIST (Faz 2B'den korunur):
      reservations.status IN ("pending", "confirmed") → blocking
@@ -107,9 +107,9 @@ export async function fetchVillaAvailability(
   }
 
   /* 🛡️ PII-SAFE AVAILABILITY — SECURITY DEFINER RPC (migration 039).
-     ESKİ: anon `supabase.from("reservations"/"manual_reservations")
+     ESKİ: anon `db.from("reservations"/"manual_reservations")
      .select(...)`. 040 admin-only RLS sonrası anon SELECT reddedilir.
-     FAZ 2 frontend purge: anon `supabase.rpc(...)` çağrısı kaldırıldı;
+     FAZ 2 frontend purge: anon `db.rpc(...)` çağrısı kaldırıldı;
      aynı `get_villa_blocked_ranges` RPC artık /api/public/villas/[id]/
      blocked-ranges fetch boundary'sinden delege edilir. SECURITY DEFINER
      semantic + PII-safe payload aynen korunur. Return shape

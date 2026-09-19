@@ -4,7 +4,7 @@ import { convertPrice, formatCurrency } from "@/lib/currency";
 import { useCurrency } from "@/app/context/CurrencyContext";
 
 import { useState, useEffect } from "react";
-/* 🛡️ FAZ 2 frontend purge — `import { supabase }` KALDIRILDI.
+/* 🛡️ FAZ 2 frontend purge — `import { eski sağlayıcı }` KALDIRILDI.
    payment_methods fetch artık /api/public/payment-methods route'u
    üzerinden (aynı anon RLS bağlamı, aynı select shape). */
 import { getPublicSettingsAction as getPublicSettings } from "@/app/services/settings.action";
@@ -190,7 +190,7 @@ export default function ReservationForm({
 
   useEffect(() => {
     /* 🛡️ FAZ 2 frontend purge — public fetch /api/public/payment-methods.
-       Eski anon supabase `select("*")` aynı select shape ile route içinde
+       Eski anon DB client `select("*")` aynı select shape ile route içinde
        (anon db; RLS bağlamı aynı). Fail-soft: hata → boş state (eski
        davranış da öyle, `data || []`). */
     const fetchPaymentMethods = async () => {

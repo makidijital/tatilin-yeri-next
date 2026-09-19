@@ -3,7 +3,7 @@
 import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { parseVillaStorageUrl } from "@/lib/villa-image.helpers";
 /* 🛡️ FAZ C / ADIM 3 — server remove write-driver-aware (write=r2→S3,
-   write=supabase→Supabase bugünküyle aynı). HTTP route değil, server
+   write=eski sağlayıcı→eski sağlayıcı bugünküyle aynı). HTTP route değil, server
    provider doğrudan; hard delete zinciri korunur. */
 import { removeServer } from "@/lib/storage/server";
 

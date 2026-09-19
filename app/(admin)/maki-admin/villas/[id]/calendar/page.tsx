@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Sparkles } from "lucide-react";
 
-/* 🛡️ FAZ 2 frontend purge — `import { supabase }` KALDIRILDI.
+/* 🛡️ FAZ 2 frontend purge — `import { eski sağlayıcı }` KALDIRILDI.
    Villa title fetch /api/admin/villas/[id] üzerinden (mevcut route,
    `title` field zaten dahil). */
 import { adminFetch } from "@/lib/admin-fetch";

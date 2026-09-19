@@ -30,7 +30,7 @@ import ManualReservationForm from "../ekle/ManualReservationForm";
      - ManualReservationForm props (`villas`, `mode="edit"`,
        `initialData`) aynen besleniyor.
      - Geri linki + başlıklar + açıklama metni AYNEN.
-     - villas listesi anon supabase select işliyordu; villa tablosu
+     - villas listesi anon DB client select işliyordu; villa tablosu
        RLS anon-readable (mig 037) → davranış değişmedi; ama
        client-side fetch'e geçti (UX flicker hafif, parity korunur).
    =============================================================== */

@@ -1,6 +1,6 @@
 import "server-only";
 
-/* 🛡️ Migration AUD-P5A — service-role Supabase provider (`@/lib/db/server`)
+/* 🛡️ Migration AUD-P5A — service-role eski sağlayıcı provider (`@/lib/db/server`)
    yerine native privileged provider (`dbAdminNative`). İkisi de RLS-bypass;
    insert byte-identical. `dbAdmin` alias korunur → insert() gövdesi + kolonlar
    + jsonb alanları + try/catch best-effort DEĞİŞMEDİ. jsonb parity: native

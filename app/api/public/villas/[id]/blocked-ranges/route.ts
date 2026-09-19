@@ -12,7 +12,7 @@ import { applyRateLimit } from "@/lib/rate-limit";
    039).
 
    FAZ 2 frontend purge — daha önce `useBookingEngine.ts` ve
-   `lib/villa-availability.helper.ts` DOĞRUDAN anon `supabase.rpc(...)`
+   `lib/villa-availability.helper.ts` DOĞRUDAN anon `db.rpc(...)`
    çağırıyordu. Bu route fetch boundary arkasında aynı RPC'yi delege
    eder; davranış BYTE-IDENTICAL:
      - Aynı RPC, aynı `p_villa_id` argümanı

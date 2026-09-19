@@ -38,7 +38,7 @@ export type AdminUserInput = {
 
 /* ----- CREATE -----
    ===============================================================
-   🔥 SUPABASE AUTH ENTEGRASYONU
+   🔥 ESKİ SAĞLAYICI AUTH ENTEGRASYONU
    ===============================================================
    Eskiden: admin_users tablosuna doğrudan insert (password plaintext)
    Şimdi:   /api/admin/create-user route'una POST
@@ -48,7 +48,7 @@ export type AdminUserInput = {
    🛡️ Native cookie-based auth — httpOnly access cookie adminFetch
    (same-origin fetch) ile otomatik gönderilir; manuel Bearer header
    YOK. Route içeride authorizeAdminCaller ile doğrular.
-   Password admin_users tablosunda TUTULMAZ — yalnız auth.users'da.
+   Password `admin_users.password_hash` kolonunda Argon2 ile tutulur.
 ================================================================= */
 export async function createAdminUser(
   input: AdminUserInput
@@ -119,9 +119,9 @@ export async function createAdminUser(
 
 /* ----- DELETE ----- */
 /* ===============================================================
-   🔥 DELETE — auth.users + admin_users senkron silme
+   🔥 DELETE — admin_users silme
    ===============================================================
-   Eskiden: yalnız admin_users row delete (auth.users'da orphan)
+   Native auth: şifre/oturum verisi de admin_users/admin_sessions'ta
    Şimdi:   /api/admin-users/[id] route'una DELETE
             - Server: auth.admin.deleteUser → admin_users delete
             - Self-delete koruması route içinde

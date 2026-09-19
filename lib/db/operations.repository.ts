@@ -6,7 +6,7 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
    🛡️ OPERATIONS REPOSITORY (Phase 1 — repo consolidation)
    ===============================================================
    `operations.service.ts` içindeki inline
-   `getSupabaseAdmin().from("reservations")...` read'inin BİREBİR
+   `dbAdmin.from("reservations")...` read'inin BİREBİR
    taşınmış hali.
 
    GÜVENLİK SINIRI:
@@ -21,7 +21,7 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
      - status allow-list ve `.or(...)` window filter SERVICE'te üretilir
        (date math + OPERATIONS_INCLUDED_STATUSES tek source) → parametre
        olarak gelir; drift yok.
-     - Supabase native `{ data, error }` döner; classify/count/sort/
+     - native `{ data, error }` döner; classify/count/sort/
        fallback hepsi SERVICE'te.
 =============================================================== */
 

@@ -8,7 +8,7 @@
      • normalizeDate
      • calculatePoolHeatingFee (Havuz Isıtma — 2. adım)
      • accommodationBase (Havuz Isıtma — 2. adım genişletmesi)
-   Hiçbir DB / Supabase mock'u yok — pure math + date.
+   Hiçbir DB / eski sağlayıcı mock'u yok — pure math + date.
 =============================================================== */
 
 import { describe, it, expect } from "vitest";

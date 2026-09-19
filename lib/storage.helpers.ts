@@ -1,7 +1,7 @@
 import { storageProvider, STORAGE_BUCKETS } from "@/lib/storage";
 
 /* ===============================================================
-   🛡️ STORAGE HELPERS — Supabase Storage public URL üretici
+   🛡️ STORAGE HELPERS — R2 storage public URL üretici
    ===============================================================
    DB'de FULL public URL tutmuyoruz; sadece bucket-relative path
    (örn. "category-covers/balayi-villalari.webp"). Runtime'da
@@ -38,7 +38,7 @@ const SITE_ASSETS_BUCKET = STORAGE_BUCKETS.SITE_ASSETS;
 /**
  * Verilen bucket-relative path için public URL üretir.
  * NULL/empty input → null (caller fallback'e düşsün).
- * Path bozuksa Supabase yine bir URL döner ama 404 verir — bu
+ * Path bozuksa eski sağlayıcı yine bir URL döner ama 404 verir — bu
  * davranış admin upload sonrası tipik race condition'da kabul
  * edilebilir (sonraki render fresh URL alır).
  */
@@ -73,7 +73,7 @@ export function buildCategoryCoverPath(
    🛡️ LOCATION COVERS — kategori cover paterninin birebir paraleli.
    ===============================================================
    `getLocationCoverPublicUrl` internal'i `getCategoryCoverPublicUrl`
-   ile aynı (`supabase.storage.from(bucket).getPublicUrl(path)`);
+   ile aynı (`storageProvider(bucket).getPublicUrl(path)`);
    `buildLocationCoverPath` aynı slug-deterministik path builder
    ama "location-covers/" prefix'iyle. Üretim semantic'i, overwrite
    davranışı, immune-to-bucket-rename özelliği — hepsi kategori
@@ -171,7 +171,7 @@ export function buildDefaultOgPath(): string {
    🛡️ RESOLVE ASSET URL — backward-compat normalizer
    ===============================================================
    DB'de değer iki şekilde olabilir:
-     1) FULL URL: "https://<proj>.supabase.co/storage/v1/object/public/..."
+     1) FULL URL: "https://<proj>.eski storage host/storage/v1/object/public/..."
         → direkt döndür (legacy ve current default contract)
      2) Bucket-relative path: "logo/logo.webp" / "page-covers/..."
         → getPublicUrl ile full URL üret

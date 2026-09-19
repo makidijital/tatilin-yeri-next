@@ -3,7 +3,7 @@ import "server-only";
 /* ===============================================================
    🛡️ PAYMENT REPOSITORY — SERVER-ONLY (NATIVE, Migration P2)
    ===============================================================
-   Anon `lib/db/payment.repository.ts` (supabaseDbProvider) yerine native
+   Anon `lib/db/payment.repository.ts` (dbNative) yerine native
    PostgreSQL karşılığı. Provider `dbAdminNative` (native pg, tek app rolü;
    RLS native'de yok, yetki app-katmanında — villa/settings/reservation
    server repo konvansiyonuyla aynı).

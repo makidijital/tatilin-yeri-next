@@ -15,7 +15,7 @@
      7. AWAITED fetchCommissionRate
      8. calcCommissionAmount (sync helper)
      9. AWAITED reservationRepository.insert(buildCreateReservationPayload(...))
-        (FAZ 33: önceden `supabase.from("reservations").insert(...).select().single()`;
+        (FAZ 33: önceden `db.from("reservations").insert(...).select().single()`;
          `.select().single()` chain repository içine taşındı; caller `inserted`
          return shape'i aynen.)
     10. on error: console.error + mapInsertError + throw error.message
@@ -27,7 +27,7 @@
      - commission fetch BEFORE INSERT
      - mapInsertError BEFORE throw error.message
 
-   ⚠️ FAZ 33: DB I/O kanalı `supabase.from(...).insert().select().single()`
+   ⚠️ FAZ 33: DB I/O kanalı `db.from(...).insert().select().single()`
    chain'inden tek metod çağrısına (`reservationRepository.insert`)
    indi. `mapInsertError` (SQLSTATE 23P01 parse) service edge'inde
    aynen. EXCLUDE constraint atomic guarantee DB-level — değişmedi.
@@ -237,7 +237,7 @@ describe("createReservation — return invariant", () => {
 
 describe("createReservation — single-INSERT invariant", () => {
   it("calls reservationRepository.insert EXACTLY ONCE", () => {
-    /* FAZ 33: önceden `supabase` identifier'ı sayılıyordu; artık
+    /* FAZ 33: önceden `db` identifier'ı sayılıyordu; artık
        repository identifier sayılıyor — INSERT atomicity invariant
        aynı (tek round-trip, tek EXCLUDE constraint check). */
     const repoCalls = seq.filter(
@@ -246,11 +246,11 @@ describe("createReservation — single-INSERT invariant", () => {
     expect(repoCalls.length).toBe(1);
   });
 
-  it("does NOT call supabase directly (FAZ 33 repository delegation)", () => {
-    /* Service body'sinde doğrudan `supabase.*` çağrısı bulunmamalı.
+  it("does NOT touch the DB client directly (repository delegation)", () => {
+    /* Service body'sinde doğrudan `db.*` çağrısı bulunmamalı.
        Tüm DB I/O repository üzerinden. */
-    const supabaseCalls = seq.filter((e) => e.name.includes("supabase"));
-    expect(supabaseCalls.length).toBe(0);
+    const directDbCalls = seq.filter((e) => /^db(Admin)?\./.test(e.name));
+    expect(directDbCalls.length).toBe(0);
   });
 
   it("calls checkReservationConflict EXACTLY ONCE", () => {

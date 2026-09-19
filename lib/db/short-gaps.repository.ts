@@ -3,7 +3,7 @@ import "server-only";
 /* 🛡️ NATIVE CUTOVER (FAZ 2 — anon repo) — importer zinciri KANITLI
    client-safe (ShortGapsSection RSC + public sayfalar; hiçbir "use
    client" yok). rpc get_short_gap_counts → rpc-metadata "table" (satır
-   dizisi, Supabase parity) + düz okuma; write/embed/jsonb yok →
+   dizisi, eski sağlayıcı parity) + düz okuma; write/embed/jsonb yok →
    provider değişmedi. `server-only` defansif sınır. Dönüş şekli aynen. */
 import { dbNative as db } from "@/lib/db/native";
 
@@ -15,14 +15,14 @@ import { dbNative as db } from "@/lib/db/native";
    `/kisa-sureli-tarihler` sayfası bu repo üzerinden okur.
 
    ⚠️ AUTH PATH:
-     `db` = supabaseDbProvider (anon). `get_short_gap_counts` public
+     `db` = dbNative (anon). `get_short_gap_counts` public
      homepage aggregate RPC'sidir (villa count DISTINCT; PII yok,
      user-scope yok) → anon `db.rpc` ile çağrılır. Service-role GEREKMEZ.
      Refresh (`refresh_villa_short_gaps`, cron) service-role'dür ve
      `.server` sibling'ında yaşar (bu dosya değil).
 
    DAVRANIŞ:
-     - Native Supabase `{ data, error }` döner; repo sessiz. Grouping /
+     - Native eski sağlayıcı `{ data, error }` döner; repo sessiz. Grouping /
        null-fallback caller'da (component). RPC adı + arg'lar BİREBİR.
    =============================================================== */
 

@@ -13,7 +13,7 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
    manual_reservations PHASE 3 (migration 040) sonrası admin-only
    RLS: `FOR ALL TO authenticated USING (public.is_active_admin())`.
    Anon SELECT REDDEDILIR. Bu durumda, Next.js Server Component
-   (RSC) içinden anon `db` (lib/db/index.ts → @/lib/supabase) ile
+   (RSC) içinden anon `db` (lib/db/index.ts → @/lib/db) ile
    yapılan SELECT'ler **session cookie/JWT taşımaz** → RLS DENY →
    liste sessizce boş döner (`{ data: [], error: ... }`).
 
@@ -24,20 +24,20 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
    GÜVENLİK SINIRI (reservation.repository.server.ts /
    mail-log.repository.server / payment-account.server konvansiyonu):
      • `import "server-only"` — client bundle'a sızarsa build HATA.
-     • getSupabaseAdmin() SUPABASE_SERVICE_ROLE_KEY okur (NEXT_PUBLIC_
+     • dbAdmin service-role kimlik bilgisi okur (NEXT_PUBLIC_
        prefix YOK) → yalnız server runtime.
 
    DAVRANIŞ — BYTE-IDENTICAL anon repo `findList()`:
      - SELECT shape (`SELECT_MANUAL_LIST_WITH_VILLA`) aynen.
      - `.order("created_at", { ascending: false })` aynen.
-     - Return shape Supabase native `{ data, error }`. Repository
+     - Return shape native `{ data, error }`. Repository
        sessiz; throw / console / log YOK. Caller (route handler)
        error → 500, başarı → `{ ok: true, manual_reservations }`.
 
    ⚠️ KAPSAM:
      Bu dosya sadece **READ list** içerir. Diğer manual flow'lar
      (form / detail / create / update / delete) admin browser
-     session JWT taşır (CLIENT-side anon supabase), `is_active_admin()`
+     session JWT taşır (CLIENT-side anon DB client), `is_active_admin()`
      true → RLS allow → çalışmaya devam eder; bu yüzden onlar
      `lib/db/manual-reservation.repository.ts` (anon) altında kalır.
      RSC veya server-side helper'dan çağrılan tek path liste idi;

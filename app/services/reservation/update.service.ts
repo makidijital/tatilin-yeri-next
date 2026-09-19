@@ -8,7 +8,7 @@ import type { ReservationUpdateInput } from "./types";
 
 /* 🛡️ WRITE repository INJECTION (mig 040 hardening):
    Admin update route'u server-context'te çalışır; anon `db` JWT
-   taşımaz → RLS DENY → UPDATE 0 row etkiler (Supabase silent başarı,
+   taşımaz → RLS DENY → UPDATE 0 row etkiler (eski sağlayıcı silent başarı,
    data değişmez). Route service-role variant'ını geçer → byte-identical
    chain RLS bypass ile çalışır. Default anon repo korunur. Pattern
    `createReservation` (insertRepository) ile aynı.
@@ -33,13 +33,13 @@ type ReservationWriteRepository = Pick<
    sırasını yönetir.
 
    FAZ 33 (UPDATE extraction):
-     `supabase.from("reservations").update(payload).eq("id", id)`
+     `db.from("reservations").update(payload).eq("id", id)`
      artık `reservationRepository.updateById(id, payload)`
      üzerinden delege edilir. Predicate (`.eq("id", id)`) ve
      UPDATE semantic'i repository içinde aynen.
 
    ⚠️ ORCHESTRATION SIRASI BYTE-IDENTICAL (AST contract FAZ 5;
-      FAZ 33 evolution: supabase identifier → repository identifier,
+      FAZ 33 evolution: eski sağlayıcı identifier → repository identifier,
       diğer iddialar aynen):
      1. throw "ID gerekli" if !id
      2. throw "Tarih aralığı hatalı" if start_date+end_date and start >= end

@@ -3,7 +3,7 @@ import "server-only";
 /* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
    provider'a alındı. Admin CRUD artık rules/rules.action ("use server")
    üzerinden; villa edit read'leri villa-edit.action ("use server")
-   üzerinden; public villa embed read'i server component'ten. Supabase
+   üzerinden; public villa embed read'i server component'ten. eski sağlayıcı
    importu tamamen kaldırıldı. `server-only` defansif sınır. Method yüzeyi
    + embed select string'leri + dönüş şekli AYNEN. */
 import { dbNative as db } from "@/lib/db/native";
@@ -11,7 +11,7 @@ import { dbNative as db } from "@/lib/db/native";
 /* ===============================================================
    🛡️ RULE ITEMS REPOSITORY (native)
    ===============================================================
-   `rule-item.service.ts` içindeki inline `supabase.from(...)`
+   `rule-item.service.ts` içindeki inline `db.from(...)`
    çağrılarının BİREBİR taşınmış hali. Davranış değişmez:
      - `db` = native provider (`dbNative`); tek app rolü → RLS/session-DI
        YOK. Method'lar ham `{ data, error }` döner; embed-map /

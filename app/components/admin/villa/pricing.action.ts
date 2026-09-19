@@ -33,7 +33,7 @@ import { getStartingPrice } from "@/lib/price.engine";
      - Read (villa + fiyatlar): public RLS okuması, server tarafında
        anon ile birebir çalışır.
      - Write (setVillaPrices): admin RLS yazması. Server action'da
-       `createSupabaseServerClient` (session-aware) client'ı geçilir →
+       `session-aware DB client` (session-aware) client'ı geçilir →
        admin session server tarafında da taşınır → RLS `is_active_admin`
        BUGÜNKÜ gibi uygulanır (yetki aynen korunur, değişmez).
    =============================================================== */

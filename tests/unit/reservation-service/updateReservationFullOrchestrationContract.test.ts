@@ -7,14 +7,14 @@
      3. CONDITIONAL AWAITED assertCanConfirm  (if status==="confirmed")
      4. buildUpdateReservationPayload (sync helper)
      5. AWAITED reservationRepository.updateById(id, payload)
-        (FAZ 33: önceden `supabase.update(payload).eq("id", id)`)
+        (FAZ 33: önceden `db.update(payload).eq("id", id)`)
      6. on error: console.error + throw "Güncellenemedi"
      7. return true
 
-   ⚠️ FAZ 33: DB I/O kanalı `supabase.from(...)` chain'inden tek
+   ⚠️ FAZ 33: DB I/O kanalı `db.from(...)` chain'inden tek
    metod çağrısına (`reservationRepository.updateById`) indi.
    Predicate `.eq("id", id)` repository içine taşındı; AST
-   contract'taki "supabase" iddiası "reservationRepository"
+   contract'taki "eski sağlayıcı" iddiası "reservationRepository"
    iddiasına evolve oldu. Diğer iddialar (validate sırası,
    conditional assertCanConfirm, throw mesajı, return true)
    AYNEN.
@@ -178,8 +178,8 @@ describe("updateReservationFull — single-UPDATE invariant", () => {
        ama bu test sadece update.service.ts'in own body'sini AST'le
        parse ediyor. Helper'ın iç davranışı testte görünmez.
 
-       FAZ 33: önceden bu iddia `e.name.includes("supabase")` ile
-       supabase chain'i sayıyordu; artık repository identifier'ı
+       FAZ 33: önceden bu iddia `e.name.includes("eski sağlayıcı")` ile
+       eski sağlayıcı chain'i sayıyordu; artık repository identifier'ı
        sayıyor — orchestration sırası invariant'ı aynı. */
     const repoCalls = seq.filter(
       (e) => e.name === "reservationRepository.updateById"
@@ -187,11 +187,11 @@ describe("updateReservationFull — single-UPDATE invariant", () => {
     expect(repoCalls.length).toBe(1);
   });
 
-  it("does NOT call supabase directly (FAZ 33 repository delegation)", () => {
-    /* Service body'sinde doğrudan `supabase.*` çağrısı bulunmamalı.
+  it("does NOT touch the DB client directly (repository delegation)", () => {
+    /* Service body'sinde doğrudan `db.*` çağrısı bulunmamalı.
        Tüm DB I/O repository üzerinden olmalı. */
-    const supabaseCalls = seq.filter((e) => e.name.includes("supabase"));
-    expect(supabaseCalls.length).toBe(0);
+    const directDbCalls = seq.filter((e) => /^db(Admin)?\./.test(e.name));
+    expect(directDbCalls.length).toBe(0);
   });
 
   it("calls buildUpdateReservationPayload EXACTLY ONCE", () => {

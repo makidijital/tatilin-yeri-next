@@ -11,7 +11,7 @@ import { manualReservationRepository } from "@/lib/db/manual-reservation.reposit
    Mevcut create flow (createManualReservation) dokunulmadı.
 
    FAZ 34 (repository extraction):
-     Service artık Supabase'i doğrudan tüketmez; DB I/O
+     Service artık eski sağlayıcıyı doğrudan tüketmez; DB I/O
      `manualReservationRepository.*` üzerinden delege edilir.
      Davranış BYTE-IDENTICAL — query'ler, select string'leri,
      resolver semantic'i, throw mesajları, console.error tag'leri,
@@ -41,7 +41,7 @@ export const MANUAL_AVAILABILITY_BLOCKING_STATUSES = [
 /* ---------------------------------------------------------------
    📦 GET single — admin edit form için
    ---------------------------------------------------------------
-   FAZ 34: `supabase.from("manual_reservations")...` →
+   FAZ 34: `db.from("manual_reservations")...` →
    `manualReservationRepository.findById(id)`. Davranış aynen:
      - !id → null (early return)
      - error → console.error tag + null return
@@ -268,7 +268,7 @@ export const updateManualReservation = async (
 /* ---------------------------------------------------------------
    🗑️ DELETE — admin list component için
    ---------------------------------------------------------------
-   FAZ 34: ManualReservationList.tsx > handleDelete inline supabase
+   FAZ 34: ManualReservationList.tsx > handleDelete inline eski sağlayıcı
    call'ı service'e taşındı. Component artık service'ten tüketir;
    audit log + toast + UI state component'te kalır (UI concerns).
    Davranış BYTE-IDENTICAL:

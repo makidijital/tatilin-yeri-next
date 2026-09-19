@@ -237,7 +237,7 @@ export type VillaFormDataSetter = Dispatch<
 
 /* ---------------- COMPANION STATE TYPES (hand-narrow) ----------------
    Page'deki `useState<any[]>` state'leri için narrow shape'ler.
-   Supabase `.from(table).select("*")` döner; child component'ler
+   eski sağlayıcı `.from(table).select("*")` döner; child component'ler
    yalnız `id + name/title` okur. Repository write-side genişletme
    bu refactor scope'unun DIŞINDA; sadece UI tarafında typing.
 

@@ -3,7 +3,7 @@ import "server-only";
 /* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
    provider'a alındı. Admin CRUD artık types/types.action ("use server")
    üzerinden; villa edit + villa-listesi + public taxonomy/arama/kısa-gap +
-   cache.helpers read'leri server modüllerinden. Supabase importu tamamen
+   cache.helpers read'leri server modüllerinden. eski sağlayıcı importu tamamen
    kaldırıldı. `server-only` defansif sınır. Method yüzeyi + SQL davranışı +
    RPC (`set_villa_type_sort_orders`) AYNEN. */
 import { dbNative as db } from "@/lib/db/native";
@@ -11,7 +11,7 @@ import { dbNative as db } from "@/lib/db/native";
 /* ===============================================================
    🛡️ VILLA TYPES REPOSITORY (native)
    ===============================================================
-   `villa-type.service.ts` içindeki inline `supabase.from(...)`
+   `villa-type.service.ts` içindeki inline `db.from(...)`
    çağrılarının BİREBİR taşınmış hali. Davranış değişmez:
      - `db` = native provider (`dbNative`); tek app rolü → RLS/session-DI
        YOK. Method'lar ham `{ data, error }` döner.

@@ -1,4 +1,4 @@
-/* 🛡️ Payment Migration WU-P5A — anon `payment.repository` (supabaseDbProvider)
+/* 🛡️ Payment Migration WU-P5A — anon `payment.repository` (dbNative)
    yerine native `payment.repository.server` (WU-P5 twin'leri: 6 western_union
    metodu). Service WU-B1 sonrası hiçbir client tarafından runtime import
    edilmiyor (yalnız server action + type-only) → server-only native repo

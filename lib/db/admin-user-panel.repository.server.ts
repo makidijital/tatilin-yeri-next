@@ -4,7 +4,7 @@ import "server-only";
    🛡️ ADMIN USERS — PANEL NATIVE TWIN (SERVER-ONLY, Migration AU-P1)
    ===============================================================
    Anon `lib/db/admin-user.repository.ts` (`adminUserRepository`;
-   supabaseDbProvider, RLS-authenticated browser CRUD) yerine native
+   dbNative, RLS-authenticated browser CRUD) yerine native
    PostgreSQL karşılığı. Provider `dbAdminNative` (native pg, tek app
    rolü; RLS-free — admin_users authz app-layer'a taşınır).
 

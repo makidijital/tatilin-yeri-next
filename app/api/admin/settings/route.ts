@@ -12,7 +12,7 @@ import { settingsServerRepository } from "@/lib/db/settings.repository.server";
    field'lar gelecek caller'lar için).
 
    FAZ 2 frontend purge — eski client davranışı:
-     supabase.from("settings").select("prepayment_rate").single()
+     db.from("settings").select("prepayment_rate").single()
    Davranış BYTE-IDENTICAL: `.single()` semantic'i korunur (tek
    satır), service-role read.
    =============================================================== */
@@ -43,7 +43,7 @@ export async function GET(req: Request): Promise<NextResponse> {
 
     return NextResponse.json({ ok: true, settings: data });
   } catch (err) {
-    /* 🛡️ SON KAPI — authorizeAdminCaller (verifyToken/getSupabaseAdmin)
+    /* 🛡️ SON KAPI — authorizeAdminCaller (verifyToken/dbAdmin)
        veya beklenmedik bir throw route'tan kaçarsa Next HTML 500 döner
        ve client `res.json()` → JSON.parse `<` üzerinde patlar. Bu catch
        her durumda JSON zarfı garanti eder (davranış: yetki/okuma hatası

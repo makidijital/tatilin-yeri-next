@@ -11,7 +11,7 @@ import type { ReservationConflictWindow } from "../types";
      2) manual_reservations: half-open overlap (status filtresi yok)
 
    FAZ 33 (CONFLICT extraction):
-     DB I/O artık doğrudan supabase client'ı değil
+     DB I/O artık doğrudan eski sağlayıcı client'ı değil
      `reservationRepository.findOverlappingReservations` ve
      `reservationRepository.findOverlappingManualBlocks` üzerinden
      delege edilir. Davranış BYTE-IDENTICAL:

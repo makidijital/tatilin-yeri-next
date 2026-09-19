@@ -1,33 +1,30 @@
 /* ===============================================================
-   🛡️ DATABASE TYPE — manual mirror of the Supabase schema
+   🛡️ DATABASE TYPE — PostgreSQL şemasının elle tutulan aynası
    ===============================================================
-   Bu dosya `supabase gen types typescript` çıktısının manuel
-   mirror'ı. Mevcut altyapıda CLI generation pipeline kurulmadığı
-   için (local-dev aşaması), aktif kullanılan tabloların Row /
-   Insert / Update tipleri burada elle tutulur. Schema değişiminde
-   bu dosya da güncellenmek zorunda — yorum işareti olarak her
-   tablonun başında migration referansı var.
+   Projede tip üretimi (codegen) pipeline'ı yoktur; aktif kullanılan
+   tabloların Row / Insert / Update tipleri bu dosyada ELLE tutulur.
+   Şema değiştiğinde bu dosya da güncellenmelidir — her tablonun
+   başında ilgili migration referansı vardır (`db/migrations/NNN`).
 
    PHILOSOPHY:
      - Row: read tarafı; nullable kolonlar `| null` ile işaretli.
        Bilinmeyen alanlar için defansif geniş tipler kullanıldı
-       (örn. enumlar `string`, daterange'lar `string`). DB'nin
-       runtime davranışı değişmedi.
-     - Insert / Update: Partial<Row>. Strict Supabase generated
-       output'tan bilinçli olarak daha gevşek — service layer'da
-       zaten partial payload geçiliyor (örn. updateSettings
-       Partial<Settings>).
-     - Functions: yalnız uygulamada çağrılan RPC'ler tanımlı;
-       Args + Returns shape'i ile.
+       (örn. enumlar `string`, daterange'lar `string`).
+     - Insert / Update: `Partial<Row>` — service layer zaten partial
+       payload geçiyor (örn. `updateSettings(Partial<Settings>)`).
+     - Functions: yalnız uygulamada çağrılan PL/pgSQL fonksiyonları
+       (RPC) tanımlı; Args + Returns shape'i ile.
 
    USE:
-     lib/supabase.ts → createClient<Database>(url, key)
-     downstream:
-       const { data } = await supabase.from("villa").select("*");
-       data?.[0]?.title  // typed as string | null
+     Repository katmanı (`lib/db/*.repository*.ts`) native `pg`
+     üzerinden çalışır; bu tipler QueryBuilder sonuçlarını
+     daraltmak ve dokümantasyon için kullanılır:
+
+       const { data } = await db.from("villa").select("*");
+       data?.[0]?.title  // string | null
 
      Embedded select (`*, location:villa_locations(name)`) için
-     Supabase JS inference karmaşık; gerek olan call-site'larda
+     otomatik tip çıkarımı yapılmaz; gerek olan call-site'larda
      local interface ile narrow edilir.
    =============================================================== */
 
@@ -131,7 +128,7 @@ export interface VillaLocationRow {
   /** SEO-friendly slug (migration 009). Eski kayıtlar için NULL
    *  olabilir; FE/URL layer NULL'da UUID fallback'ine düşer. */
   slug: string | null;
-  /** Supabase Storage relative path (migration 011) — bucket
+  /** R2 bucket-relative path (migration 011) — bucket
    *  `site-assets`. Örnek: "location-covers/kalkan.webp".
    *  Public URL runtime'da getPublicUrl ile üretilir; bucket/domain
    *  değişimine immune. NULL → bölge görseli yok. Migration 010
@@ -199,7 +196,7 @@ export interface VillaTypeRow {
   /** SEO-friendly slug (migration 008). Eski kayıtlar için NULL
    *  olabilir; FE/URL layer NULL'da UUID fallback'ine düşer. */
   slug: string | null;
-  /** Supabase Storage relative path (migration 010) — bucket
+  /** R2 bucket-relative path (migration 010) — bucket
    *  `site-assets`. Örnek: "category-covers/balayi-villalari.webp".
    *  Public URL runtime'da getPublicUrl ile üretilir; bucket/domain
    *  değişimine immune. NULL → kategori görseli yok. */
@@ -369,7 +366,7 @@ export interface PageRow {
   body: string | null;
   /** Migration 014 — hero altı kısa açıklama (lead/excerpt). */
   excerpt: string | null;
-  /** Migration 014 — Supabase Storage bucket-relative path
+  /** Migration 014 — R2 bucket-relative path
    *  ("page-covers/..."). Public URL runtime'da getPublicUrl ile. */
   cover_image: string | null;
   /** Migration 014 — typed section array (JSONB).
@@ -450,7 +447,7 @@ export interface SettingsRow {
    *  ile auto-touch. Anasayfa Hero görsel cache-bust mekanizmasının
    *  kaynağı: page.tsx > heroCacheKey > lib/hero.helpers.ts >
    *  withCacheBust. Admin save sonrası bu değer değişir → `?ts=` query
-   *  param yenilenir → browser / Supabase Storage CDN / Next/Image
+   *  param yenilenir → browser / CDN / Next/Image
    *  optimizer cache hepsi cache-miss eder. get_public_settings() RPC
    *  whitelist'inde mevcut (mig 051). */
   updated_at: string | null;
@@ -478,10 +475,10 @@ export interface PaymentAccountRow {
 /* FAZ 53A — Stale shape (id/base/quote/fetched_at) düzeltildi.
    Gerçek DB ve mevcut /api/exchange-rates upsert payload pattern'i:
      code (PK, text), rate (numeric), updated_at (timestamptz)
-   Davranışsal etki YOK: supabase client `<Database>` generic-bound
-   değil (lib/supabase.ts) — runtime sözleşmesi PostgREST tarafında.
-   Bu type sadece dokümantasyon + isteğe bağlı tip-aware service
-   helper'ları için doğru shape'i bildirir. */
+   Davranışsal etki YOK: DB client `<Database>` generic'ine bağlı
+   değildir — runtime sözleşmesi SQL tarafındadır. Bu type yalnız
+   dokümantasyon + isteğe bağlı tip-aware service helper'ları için
+   doğru shape'i bildirir. */
 export interface ExchangeRateRow {
   code: string;
   rate: number;
@@ -580,7 +577,7 @@ export interface OfferRequestRow {
 }
 
 /* ===============================================================
-   DATABASE — Supabase JS createClient<Database>() generic input.
+   DATABASE — tablo/fonksiyon şemasının toplu tip haritası.
    =============================================================== */
 
 export type Database = {

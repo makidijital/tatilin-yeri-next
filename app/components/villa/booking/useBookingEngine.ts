@@ -16,7 +16,7 @@
    BYTE-IDENTICAL KONTRAT:
      - useState init values: AYNI
      - useEffect deps + body: AYNI
-     - Supabase query'leri: AYNI
+     - eski sağlayıcı query'leri: AYNI
        (reservations.in(['pending','confirmed']) + manual_reservations
         — Faz 2B allow-list contract)
      - parse/merge/expand logic: AYNI
@@ -60,7 +60,7 @@
 
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 
-/* 🛡️ FAZ 2 frontend purge — `import { supabase }` KALDIRILDI.
+/* 🛡️ FAZ 2 frontend purge — `import { eski sağlayıcı }` KALDIRILDI.
    `get_villa_blocked_ranges` RPC artık /api/public/villas/[id]/blocked-ranges
    fetch boundary'sinden çekilir; SECURITY DEFINER semantic ve PII-safe
    payload aynen korunur. */
@@ -491,7 +491,7 @@ export function useBookingEngine(
          rezervasyonların tarihlerini calendar'da blocking olarak
          göstermeli. `rejected` / `cancelled` müsait sayılır. */
       /* 🛡️ PII-SAFE AVAILABILITY — SECURITY DEFINER RPC (migration 039).
-         ESKİ: anon `supabase.from("reservations"/"manual_reservations")
+         ESKİ: anon `db.from("reservations"/"manual_reservations")
          .select(...)`. 040 admin-only RLS sonrası anon SELECT reddedilir.
          YENİ: `get_villa_blocked_ranges` — yalnız kind/status/start_date/
          end_date döner; PII browser'a ASLA gelmez. Allow-list (pending+
@@ -499,7 +499,7 @@ export function useBookingEngine(
          `data` (reservation) ve `manual` shape'leri üzerinden BYTE-IDENTICAL
          çalışır. */
       /* 🛡️ FAZ 2 frontend purge — public fetch /api/public/villas/[id]/blocked-ranges.
-         Eski anon `supabase.rpc("get_villa_blocked_ranges", { p_villa_id })`
+         Eski anon `db.rpc("get_villa_blocked_ranges", { p_villa_id })`
          route içinde delege; aynı RPC, aynı return shape. Davranış
          BYTE-IDENTICAL: empty array fallback aynen, error path da. */
       type BlockedRange = {

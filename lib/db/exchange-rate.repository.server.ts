@@ -21,15 +21,15 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
      `exchange_rates` admin-only RLS pattern'ine uyduğunda anon SELECT
      BOŞ döner (route yorumu). Bu yüzden bu path'ler service-role
      (`dbAdmin`, RLS bypass) kullanır; anon `db`'ye düşürmek public
-     endpoint'i kırar. `dbAdmin.from` ≡ `getSupabaseAdmin().from`
+     endpoint'i kırar. `dbAdmin.from` ≡ `dbAdmin.from`
      (dbAdmin wrapper) → route inline çağrısıyla byte-identical.
 
    GÜVENLİK SINIRI (pages/menu/blog .server konvansiyonu):
      • `import "server-only"` — client bundle'a sızarsa BUILD HATA.
-     • `dbAdmin` → service-role (SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_
+     • `dbAdmin` → service-role (service-role kimlik bilgisi, NEXT_PUBLIC_
        prefix yok) → yalnız server runtime.
 
-   DAVRANIŞ — BYTE-IDENTICAL eski inline `getSupabaseAdmin().from(
+   DAVRANIŞ — BYTE-IDENTICAL eski inline `dbAdmin.from(
    "exchange_rates")` çağrıları:
      - Native `{ data, error }` döner; repo sessiz. Map / fallback /
        error-mapping / status / log / rate-limit caller (route)

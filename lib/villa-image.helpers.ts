@@ -72,7 +72,7 @@ const DEFAULT_EXT = "webp";
 const MAX_FILENAME_SLUG_LEN = 60;
 
 /* FAZ 38: Retry budget provider implementation içinde tutulur
-   (lib/storage/supabase-storage.provider.ts). Buradaki sabitler
+   (lib/storage/eski sağlayıcı-storage.provider.ts). Buradaki sabitler
    diagnostic comment olarak yorum satırına dönüştürüldü; provider
    davranışıyla byte-identical (3 deneme, 200ms / 400ms backoff). */
 // const STORAGE_REMOVE_MAX_ATTEMPTS = 3;
@@ -208,7 +208,7 @@ export function buildVillaImageFilename(
 }
 
 /** Tam bucket-relative path (folder + filename). Upload caller'ı bunu
- *  Supabase Storage'a yazar; aynı path'in public URL'i DB'ye yazılır.
+ *  R2 storage'a yazar; aynı path'in public URL'i DB'ye yazılır.
  *
  *  Slug iki yerde:
  *    1) Folder: villas/{slug}__{shortId}/  ← stable identity
@@ -294,7 +294,7 @@ export function getVillaImagePublicUrl(path: string): string | null {
  * değil** — backward-compat refactor'ı için hazır altyapı.
  *
  * KABUL EDİLEN INPUT:
- *   1) "https://{proj}.supabase.co/storage/v1/object/public/{bucket}/{path}"
+ *   1) "https://{proj}.eski storage host/storage/v1/object/public/{bucket}/{path}"
  *      → eski + yeni pattern hepsi bu formata uyar.
  *   2) Bucket-relative ("villas/{folder}/gallery-...webp" gibi)
  *      → assumed VILLA_IMAGES_BUCKET.
@@ -322,9 +322,9 @@ export function parseVillaStorageUrl(
   }
 
   /* 🛡️ FAZ B — Pattern 1b: CDN host (cdn./assets.villayagel.com).
-     CDN path R2'ye Supabase path'i ile BİREBİR kopyalandığı için,
-     CDN URL'inin pathname'i hem R2 hem Supabase bucket-relative
-     path'ine eşittir → remove (Supabase) doğru hedefi bulur. */
+     CDN path R2'ye eski sağlayıcı path'i ile BİREBİR kopyalandığı için,
+     CDN URL'inin pathname'i hem R2 hem eski sağlayıcı bucket-relative
+     path'ine eşittir → remove (eski sağlayıcı) doğru hedefi bulur. */
   if (/^https?:\/\//i.test(v)) {
     try {
       const u = new URL(v);

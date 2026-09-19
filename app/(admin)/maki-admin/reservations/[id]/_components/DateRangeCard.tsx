@@ -6,7 +6,7 @@
    state/handler'lar prop'tan gelir.
 
    excludeDisabledDates = currentReservationDates (edit-mode self-
-   exclusion) + .neq("id", id) Supabase query'si AYNEN korunuyor.
+   exclusion) + .neq("id", id) eski sağlayıcı query'si AYNEN korunuyor.
    onSelectRange semantic: getValidEndDate + setStartDate/setEndDate —
    safeEnd clamp davranışı değişmedi.
 =============================================================== */
@@ -84,7 +84,7 @@ export default function DateRangeCard({
     >
       {/* Inline embedded calendar (sol) + Live price summary (sağ).
           EDIT mode self-exclusion (excludeDisabledDates =
-          currentReservationDates) ve .neq("id", id) Supabase
+          currentReservationDates) ve .neq("id", id) eski sağlayıcı
           query'si AYNEN korunuyor.
           onSelectRange: pre-existing davranış AYNEN — getValidEndDate
           çağrılır ama setEndDate(to) raw `to` ile yazılır

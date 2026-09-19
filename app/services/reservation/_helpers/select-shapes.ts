@@ -6,7 +6,7 @@
    olarak buraya alındı.
 
    ⚠️ KESIN KURAL — STRING SEMANTIK:
-     - Whitespace + indentation BYTE-IDENTICAL korundu (Supabase
+     - Whitespace + indentation BYTE-IDENTICAL korundu (eski sağlayıcı
        parser whitespace tolere eder ama exact-string semantic
        diff için sabit).
      - Embed alanları + sıraları aynen.

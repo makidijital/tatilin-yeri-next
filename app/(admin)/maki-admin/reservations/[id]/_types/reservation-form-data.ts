@@ -48,7 +48,7 @@ export type Currency = "TRY" | "USD" | "EUR" | "GBP";
    getReservationById query'sinde villa şu alanlar ile embed edilir:
      villa:villa_id (title, cleaning_fee, cleaning_currency,
                      cleaning_limit, custom_prepayment_rate)
-   Supabase JS embed bazen tek object, bazen array döndürür;
+   DB client embed bazen tek object, bazen array döndürür;
    pratikte tek object beklenir. Defansif olarak ikisini de
    şu noktada tolere edebiliriz, ama page.tsx mevcut kodu
    `.villa?.title` pattern'i kullandığı için object varsayalım. */

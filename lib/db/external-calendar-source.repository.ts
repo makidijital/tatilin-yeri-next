@@ -2,7 +2,7 @@ import "server-only";
 
 /* 🛡️ NATIVE CUTOVER (FAZ 4 S1 — external-calendar domaini) — native
    provider'a alındı. CRUD yolları artık server action arkasında
-   (ical-sync.action / external-reservations.action). Supabase importu
+   (ical-sync.action / external-reservations.action). eski sağlayıcı importu
    tamamen kaldırıldı. `server-only` defansif sınır. Method yüzeyi +
    embed (villa:villa_id) + count/head/not/maybeSingle/single + SQL AYNEN. */
 import { dbNative as db } from "@/lib/db/native";
@@ -14,13 +14,13 @@ import { dbNative as db } from "@/lib/db/native";
    (`dbNative`); tek app rolü → RLS/session-DI YOK.
 
    ⚠️ AUTH PATH KORUNUR:
-     `db` = supabaseDbProvider (anon, RLS aktif) → service'in kullandığı
-     `@/lib/supabase` ile aynı PostgrestQueryBuilder → BYTE-IDENTICAL.
+     `db` = dbNative (anon, RLS aktif) → service'in kullandığı
+     `@/lib/db` ile aynı PostgrestQueryBuilder → BYTE-IDENTICAL.
      Bu repo, sync pipeline / admin route'ların kullandığı service-role
      `.server` repo'nun KARŞITIDIR (upgrade/downgrade YOK).
 
    DAVRANIŞ:
-     - Native Supabase `{ data, error }` döner; repo sessiz (throw/log
+     - Native eski sağlayıcı `{ data, error }` döner; repo sessiz (throw/log
        YOK). Validation / sanitize / timestamp / dup-mesaj / fallback /
        aggregation caller'da KALIR. `source_type`/`is_active` sabitleri
        ve `updated_at` üretimi caller'da.

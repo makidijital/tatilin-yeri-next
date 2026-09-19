@@ -16,8 +16,8 @@ import {
    ===============================================================
    Service DI interface'leri `Pick<typeof reservationRepository, ...>`
    (app/services/reservation/*.service.ts) ANON repository'ye bağlıdır;
-   anon repo HENÜZ Supabase-tipli olduğundan bu 5 paylaşılan method'un
-   dönüş tipi Supabase response şeklindedir. Server repo (native) bu
+   anon repo HENÜZ eski sağlayıcı-tipli olduğundan bu 5 paylaşılan method'un
+   dönüş tipi eski sağlayıcı response şeklindedir. Server repo (native) bu
    method'ları aynı dönüş tipiyle yüzeyler → DI kontratı (route call
    site'ları) DEĞİŞMEDEN sağlanır. Consumer'lar yalnız `{ data, error }`
    (+ `error.message`/`error.code`) okur; native runtime bunları birebir
@@ -44,13 +44,13 @@ type SharedReturn<
    GÜVENLİK SINIRI (mail-log.repository.server / payment-account.server
    ile aynı konvansiyon):
      • `import "server-only"` — client bundle'a sızarsa build HATA.
-     • getSupabaseAdmin() SUPABASE_SERVICE_ROLE_KEY okur (NEXT_PUBLIC_
+     • dbAdmin service-role kimlik bilgisi okur (NEXT_PUBLIC_
        prefix YOK) → yalnız server runtime.
 
    DAVRANIŞ:
      - INSERT chain `.insert(payload).select().single()` —
        reservation.repository.ts (anon) INSERT'i ile BYTE-IDENTICAL.
-     - Supabase native `{ data, error }` döner; error.code (SQLSTATE
+     - native `{ data, error }` döner; error.code (SQLSTATE
        23P01 = exclusion_violation) korunur → caller `mapInsertError`
        ile "Bu tarihler dolu"a map eder. Double-booking EXCLUDE
        constraint garantisi aynen.
@@ -105,7 +105,7 @@ export const reservationServerRepository = {
 
      Admin update/status/note route'ları aynı server-side bağlamda
      çalışır (anon `db` JWT taşımaz → mig 040 DENY → UPDATE 0 row
-     etkiler, Supabase silent başarı döner; data değişmez). Bu metod
+     etkiler, eski sağlayıcı silent başarı döner; data değişmez). Bu metod
      dependency injection ile services'e geçer → byte-identical
      UPDATE artık service-role ile yapılır.
   =============================================================== */

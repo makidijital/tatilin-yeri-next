@@ -1,4 +1,4 @@
-/* 🛡️ Migration VR-P5A — anon `villa-review.repository` (supabaseDbProvider)
+/* 🛡️ Migration VR-P5A — anon `villa-review.repository` (dbNative)
    yerine native `villa-review.repository.server` (VR-P5 twin'leri: 11 method;
    VR-P5.5 findFeaturedStateById row bridge). Call-site'lar aynı
    (villaReviewServerRepository → villaReviewRepository alias). SELECT/embed/

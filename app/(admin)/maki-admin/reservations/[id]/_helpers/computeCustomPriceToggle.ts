@@ -181,7 +181,7 @@ export function computeCustomPriceToggle(
     // 🔥 HAVUZ ISITMA — 8. adım. Custom price = tek düz TRY tutar,
     // itemization yok; cleaning-fee nötrleme deseninin AYNI mantıkla
     // genişletilmesi (redesign DEĞİL). buildCustomPricePayload bu
-    // nötrlemeyi DB'ye kalıcı yazar (Supabase partial-update stale
+    // nötrlemeyi DB'ye kalıcı yazar (eski sağlayıcı partial-update stale
     // değer bırakmasın diye).
     pool_heating_selected: false,
     pool_heating_total_try: 0,

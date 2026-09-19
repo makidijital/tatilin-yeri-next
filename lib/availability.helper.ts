@@ -5,7 +5,7 @@ import { reservationRepository } from "@/lib/db/reservation.repository";
    içinde. Bu dosya onları RE-EXPORT eder; mevcut tüm consumer
    import path'leri (`@/lib/availability.helper`) byte-identical
    çalışmaya devam eder. Test ortamı pure validatorları doğrudan
-   `@/lib/availability.validator`'dan import ederek Supabase
+   `@/lib/availability.validator`'dan import ederek eski sağlayıcı
    module-load yan etkisini atlar.
 
    ⚠️ `export { x } from "..."` re-export sözdizimi local scope'a
@@ -51,7 +51,7 @@ export {
           is_active=true satırlar blocking (Airbnb/Booking/VRBO sync).
           source/raw_ical join YOK — yalnız villa_id okunur.
           RLS authenticated-only olduğu için service-role client
-          kullanılır (lib/supabase-admin). Çıktıda yalnız villa_id
+          kullanılır (lib/eski sağlayıcı-admin). Çıktıda yalnız villa_id
           Set'i yer alır → PII expose YOK.
      4) Overlap test (half-open [) interval intersection):
           existing.start_date <  range.end
@@ -131,7 +131,7 @@ export async function getBlockedVillaIds(
 
   /* 🛡️ PII-SAFE AVAILABILITY — SECURITY DEFINER RPC (migration 039).
      ----------------------------------------------------------------
-     ESKİ: anon `supabase.from("reservations"/"manual_reservations")
+     ESKİ: anon `db.from("reservations"/"manual_reservations")
      .select("villa_id")` + service-role external query. 040 admin-only
      RLS sonrası anon SELECT reddedilirdi.
      YENİ: tek RPC `get_blocked_villa_ids` — reservations(pending/

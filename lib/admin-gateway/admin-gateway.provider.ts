@@ -7,7 +7,7 @@ import type {
    🛡️ FAZ 41 — ADMIN GATEWAY INTERFACE
    ===============================================================
    Service-role privileged audit boundary. Tüketici modüller
-   `getSupabaseAdmin()` import etmez; gateway üzerinden geçer.
+   `dbAdmin` import etmez; gateway üzerinden geçer.
    Audit log fire-forget.
 
    ⚠️ GW-P2 CLEANUP:

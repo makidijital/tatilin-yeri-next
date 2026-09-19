@@ -16,7 +16,7 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
    GÜVENLİK SINIRI (diğer .server repo'larla aynı konvansiyon):
      • `import "server-only"` — client bundle'a sızarsa BUILD HATA.
-     • `dbAdmin` → service-role (SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_
+     • `dbAdmin` → service-role (service-role kimlik bilgisi, NEXT_PUBLIC_
        prefix YOK) → RLS bypass, yalnız server runtime.
 
    DAVRANIŞ:

@@ -1,4 +1,4 @@
-/* 🛡️ Migration IMG-P3R — anon repo + Supabase session client injection yerine
+/* 🛡️ Migration IMG-P3R — anon repo + eski sağlayıcı session client injection yerine
    native `villa-image.repository.server`. Write authz app-layer gate'inde
    (authorizeAdminSession, IMG-P2B); native default (dbAdminNative, RLS-free).
    Storage (R2) akışı + DB-first sıra DEĞİŞMEDİ. */
@@ -22,7 +22,7 @@ import {
    ⚠️ BAĞLAM (server-side, session-aware DI):
      Bu fonksiyonlar artık galeri write SERVER ACTION'larından
      çağrılır (`gallery.action.ts`). Opsiyonel `client` parametresiyle
-     server tarafında `createSupabaseServerClient` (session-aware)
+     server tarafında `session-aware DB client` (session-aware)
      geçilir → admin RLS session'ı server tarafında da taşınır →
      `is_active_admin()` BUGÜNKÜ gibi geçer (yetki aynen). Storage
      temizliği `villa-image.storage.server.ts` (server-only) →

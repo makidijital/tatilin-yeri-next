@@ -12,15 +12,15 @@ import "server-only";
      • Doğru → null (caller devam eder)
 
    ⚠️ ADMIN AUTH İLE KARIŞTIRMA YOK:
-     Bu guard `authorizeAdminCaller` (Supabase JWT + admin_users.
+     Bu guard `authorizeAdminCaller` (eski sağlayıcı JWT + admin_users.
      is_active) ile İLGİSİZ. Cron route'ları admin route'larından
      izole; admin Bearer secret ile cron Bearer secret farklı namespace.
      Yanlışlıkla public access olmasın diye fail-closed default.
 
    ⚠️ SERVICE-ROLE LEAK YOK:
      Bu fonksiyon yalnız header check; downstream kullanılan
-     `getSupabaseAdmin()` zaten server-only ve service-role key
-     `SUPABASE_SERVICE_ROLE_KEY` (NEXT_PUBLIC_ prefix YOK) ile
+     `dbAdmin` zaten server-only ve service-role key
+     `service-role kimlik bilgisi` (NEXT_PUBLIC_ prefix YOK) ile
      korunur. Cron route'lar sadece env CRON_SECRET'i doğrular,
      service-role key'i export etmez.
 =============================================================== */

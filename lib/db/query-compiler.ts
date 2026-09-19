@@ -162,14 +162,14 @@ class ParamBag {
 }
 
 /* ---------------------------------------------------------------
-   INSERT/UPDATE DEĞER KODLAYICI — jsonb parity (Supabase/PostgREST)
+   INSERT/UPDATE DEĞER KODLAYICI — jsonb parity (eski sağlayıcı/PostgREST)
    ---------------------------------------------------------------
    node-pg JS dizisini array-literal (`{a,b}`), plain objeyi ise JSON'a
    serialize eder. Dizi tutan `jsonb` kolonlar (ör. sidebar_permissions)
    JSON bekler → array-literal HATA verir. Bu yüzden:
      • JS dizisi → GERÇEK array kolonuysa (registry) pg-literal; değilse
        jsonb kabul edilip JSON metni + `::jsonb`.
-     • plain obje → jsonb (JSON metni + `::jsonb`) — Supabase ile birebir.
+     • plain obje → jsonb (JSON metni + `::jsonb`) — eski sağlayıcı ile birebir.
      • null/undefined/scalar/Date → node-pg default (dokunulmaz).
    Böylece jsonb (dizi+obje) doğru, gerçek text[]/uuid[] korunur. */
 function isPlainObject(v: unknown): boolean {

@@ -11,7 +11,7 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
    🛡️ VOUCHER REPOSITORY (Phase 1 — repo consolidation)
    ===============================================================
    `app/lib/voucher/data.ts` içindeki inline
-   `getSupabaseAdmin().from("reservations")...maybeSingle()` read'inin
+   `dbAdmin.from("reservations")...maybeSingle()` read'inin
    BİREBİR taşınmış hali.
 
    GÜVENLİK SINIRI:
@@ -25,7 +25,7 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
        payment_method:payment_method_id ( name )) AYNEN (byte-identical;
        alias / field list / whitespace değişmez).
      - `.eq("id", ...)` + `.maybeSingle()` AYNEN.
-     - Supabase native `{ data, error }` döner; confirmed-guard, PII
+     - native `{ data, error }` döner; confirmed-guard, PII
        mapping, payment helper, logging, fallback hepsi CALLER'da.
 =============================================================== */
 

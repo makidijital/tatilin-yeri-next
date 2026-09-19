@@ -2,7 +2,7 @@
 
 Bu klasör **deploy ile birlikte sürümlenen statik asset'leri** tutar.
 Admin runtime'da yönetilen her şey (logo, favicon, hero, kategori cover,
-villa fotoğrafı, OG image vs.) **Supabase Storage**'tadır — buraya
+villa fotoğrafı, OG image vs.) **Cloudflare R2**'dedir — buraya
 kopyalanmamalı.
 
 > Karar mekanizması: admin yönetimine açık mı? **Evet → Storage. Hayır → public/**
@@ -97,7 +97,7 @@ public/
 - ❌ Aynı asseti hem `public/` hem Storage'a koyma — kaynak belirsizleşir
 - ❌ Root level `assets/`, `images/`, `uploads/` klasörü açma — Next convention'ı
   yalnız `public/`
-- ❌ Bu dizinleri Supabase Storage path'leri için kopya kanal olarak kullanma
+- ❌ Bu dizinleri R2 bucket path'leri için kopya kanal olarak kullanma
 
 ---
 
@@ -105,7 +105,7 @@ public/
 
 Public asset'ler direkt `<Image src="/brand/trust/visa.svg" ... />` ile
 çağrılır. **`storage.helpers.ts` içindeki `getPublicUrl` / `resolveAssetUrl`
-fonksiyonları YALNIZ Supabase Storage path'leri içindir** — public asset
+fonksiyonları YALNIZ R2 bucket path'leri içindir** — public asset
 yolları onlara verilmez.
 
 Doğru:
@@ -115,7 +115,7 @@ Doğru:
 
 Yanlış:
 ```tsx
-// Bu Supabase Storage'a gider; "brand/trust/visa.svg" diye bucket path'i
+// Bu R2'ye gider; "brand/trust/visa.svg" diye bucket path'i
 // olmadığı için 404 verir.
 <Image src={getCategoryCoverPublicUrl("brand/trust/visa.svg") || ""} />
 ```

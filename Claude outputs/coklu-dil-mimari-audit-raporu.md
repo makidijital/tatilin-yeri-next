@@ -24,7 +24,7 @@
 
 **Tek gerçek "hardcoded locale" bulgusu:** `app/layout.tsx:157` içinde `<html lang="tr">` sabit yazılı. Bu, bir i18n sistemi değil ama dinamik hale getirilmesi gereken tek somut satır — `public_default_locale` ayarına bağlanmalı.
 
-`next.config.js` yalnızca `images.remotePatterns` (Supabase Storage + R2/CDN host'ları) içeriyor; Next.js'in eski Pages-Router tarzı yerleşik `i18n` config bloğu **yok**.
+`next.config.js` yalnızca `images.remotePatterns` (R2/CDN host'ları + legacy asset host) içeriyor; Next.js'in eski Pages-Router tarzı yerleşik `i18n` config bloğu **yok**.
 
 `middleware.ts` (repo kökü) — projedeki **tek** routing middleware'i, `matcher: ["/maki-admin/:path*"]` ile **yalnız admin auth** yapıyor (JWT doğrulama, `/maki-admin/login` yönlendirmesi). Public route'larla veya locale tespitiyle **hiçbir ilgisi yok**. Bu, locale-routing için middleware'i genişletmek istersek (Seçenek 1 veya 3) temiz bir zeminimiz olduğu, ama şu anda çakışacak hiçbir şey de olmadığı anlamına geliyor.
 
@@ -86,7 +86,7 @@ Ayrıca kullanıcının belirttiği `PriceList`, `BookingSidebar`, `BookingSumma
 
 ## Bölüm D — Villa/İçerik DB Audit
 
-`types/database.ts` (799 satır, Supabase şemasının elle tutulan mirror'ı) üzerinden çıkarılan **çeviri-adayı metin kolonları**:
+`types/database.ts` (799 satır, PostgreSQL şemasının elle tutulan mirror'ı) üzerinden çıkarılan **çeviri-adayı metin kolonları**:
 
 | Tablo | Interface | Çeviri gerektiren alanlar |
 |---|---|---|
@@ -108,7 +108,7 @@ Kullanıcının sorduğu iki mimari — **kolon-başına-dil** (`villa.title`, `
 
 **Ayrı çeviri tabloları (`villa_translations(villa_id, locale, title, description, seo_title, seo_description)` gibi):**
 - Artı: Yeni dil eklemek **tek satır INSERT**, migration gerekmez; şema temiz kalır (`villa` tablosu şişmez); fallback mantığı (Bölüm P) tek bir generic repository fonksiyonuyla tüm tablolara uygulanabilir (`findTranslation(table, id, locale)` gibi ortak bir yardımcı yazılabilir); mevcut `villa` tablosundaki TR içerik **hiç taşınmadan** "default/kaynak dil" olarak kalabilir (bkz. Bölüm O — sıfır veri kaybı riski).
-- Eksi: Her sorguya bir `JOIN` (veya ayrı bir ikinci sorgu) eklenir — performans etkisi ölçülmeli, ama mevcut mimaride zaten `LIST_SELECT`/embed pattern'i (Supabase `select("*, villa_locations(name)")` tarzı) yaygın kullanıldığından (`discount.repository.ts`'te görüldüğü gibi) bu pattern'e **doğal olarak uyuyor**; migration sayısı köken tablo başına 1 yeni tablo demek (9 yeni tablo).
+- Eksi: Her sorguya bir `JOIN` (veya ayrı bir ikinci sorgu) eklenir — performans etkisi ölçülmeli, ama mevcut mimaride zaten `LIST_SELECT`/embed pattern'i (`select("*, villa_locations(name)")` tarzı) yaygın kullanıldığından (`discount.repository.ts`'te görüldüğü gibi) bu pattern'e **doğal olarak uyuyor**; migration sayısı köken tablo başına 1 yeni tablo demek (9 yeni tablo).
 
 **Bu audit'in önerisi (karar verilmedi, öneri):** Ayrı çeviri tabloları — çünkü (a) mevcut TR içerik hiç dokunulmadan kalır (migration riski minimum, geri dönüş kolay), (b) mevcut `LIST_SELECT`/embed sorgu pattern'iyle mimari olarak tutarlı, (c) gelecekte 4. bir dil eklenmesi şema değişikliği gerektirmez. Kolon-başına-dil yaklaşımı yalnız "asla 3'ten fazla dil olmayacak" kesinliği varsa daha basit bir alternatif olarak düşünülebilir.
 

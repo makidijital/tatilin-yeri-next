@@ -2,7 +2,7 @@ import "server-only";
 
 /* 🛡️ NATIVE CUTOVER (FAZ 4 S1 — external-calendar domaini) — native
    provider'a alındı. READ yolları artık server action arkasında
-   (external-reservations.action / external-calendar.admin.action). Supabase
+   (external-reservations.action / external-calendar.admin.action). eski sağlayıcı
    importu tamamen kaldırıldı. `server-only` defansif sınır. Method yüzeyi +
    embed select string'leri (source:source_id, villa:villa_id — relation-
    metadata'da kayıtlı) + count/head/range/gt/lt/ilike + SQL davranışı AYNEN. */
@@ -15,13 +15,13 @@ import { dbNative as db } from "@/lib/db/native";
    (`dbNative`); tek app rolü → RLS/session-DI YOK.
 
    ⚠️ AUTH PATH KORUNUR:
-     `db` = supabaseDbProvider (anon, RLS aktif) → helper/service'in
-     kullandığı `@/lib/supabase` ile aynı PostgrestQueryBuilder →
+     `db` = dbNative (anon, RLS aktif) → helper/service'in
+     kullandığı `@/lib/db` ile aynı PostgrestQueryBuilder →
      BYTE-IDENTICAL. Bu repo service-role `.server` repo'nun
      KARŞITIDIR (upgrade/downgrade YOK): read yolları anon kalır.
 
    DAVRANIŞ:
-     - Native Supabase `{ data, error }` döner; repo sessiz (throw/log
+     - Native eski sağlayıcı `{ data, error }` döner; repo sessiz (throw/log
        YOK). Embed narrowing / expansion / detail-map / fail-soft
        caller'da KALIR. Embedded select string AYNEN (byte-identical).
    =============================================================== */

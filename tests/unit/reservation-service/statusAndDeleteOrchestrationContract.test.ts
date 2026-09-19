@@ -9,7 +9,7 @@
      2. CONDITIONAL AWAITED assertCanConfirm  (if status==="confirmed")
         — paid_amount argument: undefined (DB fetch fallback)
      3. AWAITED reservationRepository.updateById(id, { status })
-        (FAZ 33: önceden `supabase.update({status}).eq("id", id)`)
+        (FAZ 33: önceden `db.update({status}).eq("id", id)`)
      4. console.error "❌ Status error:"
      5. throw "Durum güncellenemedi"
      6. return true
@@ -17,12 +17,12 @@
    deleteReservationById:
      1. throw "ID gerekli" if !id
      2. AWAITED reservationRepository.deleteById(id)
-        (FAZ 33: önceden `supabase.delete().eq("id", id)`)
+        (FAZ 33: önceden `db.delete().eq("id", id)`)
      3. console.error "❌ Delete error:"
      4. throw "Silinemedi"
      5. return true
 
-   ⚠️ FAZ 33: DB I/O kanalı `supabase.from(...)` chain'inden tek
+   ⚠️ FAZ 33: DB I/O kanalı `db.from(...)` chain'inden tek
    metod çağrısına (`reservationRepository.updateById` /
    `deleteById`) indi. Predicate `.eq("id", id)` repository
    içine taşındı; service body'sinde artık görünmez.
@@ -92,9 +92,9 @@ describe("updateReservationStatus — orchestration contract", () => {
     expect(text).toMatch(/reservationRepository\.updateById\(\s*id\s*,\s*\{\s*status\s*\}\s*\)/);
   });
 
-  it("does NOT call supabase directly (FAZ 33 repository delegation)", () => {
-    /* Service body'sinde doğrudan `supabase` çağrısı bulunmamalı. */
-    expect(text).not.toMatch(/\bsupabase\b/);
+  it("does NOT touch the DB client directly (repository delegation)", () => {
+    /* Service body'sinde doğrudan `db` çağrısı bulunmamalı. */
+    expect(text).not.toMatch(/\bdb(Admin)?\s*\.\s*(from|rpc)\(/);
   });
 
   it("console.error tag '❌ Status error:' aynen", () => {
@@ -147,8 +147,8 @@ describe("deleteReservationById — orchestration contract", () => {
     expect(text).toMatch(/reservationRepository\.deleteById\(\s*id\s*\)/);
   });
 
-  it("does NOT call supabase directly (FAZ 33 repository delegation)", () => {
-    expect(text).not.toMatch(/\bsupabase\b/);
+  it("does NOT touch the DB client directly (repository delegation)", () => {
+    expect(text).not.toMatch(/\bdb(Admin)?\s*\.\s*(from|rpc)\(/);
   });
 
   it("console.error tag '❌ Delete error:' aynen", () => {

@@ -261,7 +261,7 @@ export function SaveButton({
   );
 }
 
-/* ---------- UploadField — generic image uploader (WebP + Supabase Storage)
+/* ---------- UploadField — generic image uploader (WebP + R2 storage)
    ----------
    Settings sayfalarında logo / watermark / hero gibi tek image
    alanlarını yöneten reusable component.

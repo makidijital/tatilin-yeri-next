@@ -10,14 +10,14 @@ import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 
-/* 🛡️ Submit artık doğrudan anon Supabase insert yerine sunucu
+/* 🛡️ Submit artık doğrudan anon DB client insert yerine sunucu
    route'una (/api/public/contact) gider: applyRateLimit + honeypot/
    time-trap + service-role insert. UX/validation davranışı aynen. */
 
 /* ===============================================================
    🛡️ ContactForm — production submit (migration 015)
    ===============================================================
-   /iletisim public form. Supabase RLS: anon INSERT allowed
+   /iletisim public form. eski sağlayıcı RLS: anon INSERT allowed
    policy ile contact_messages tablosuna doğrudan yazılır.
    Reservation/pricing/availability bu akışla bağlantısız.
 

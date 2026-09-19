@@ -37,7 +37,7 @@ export async function getVillaFeaturesByVilla(
   }
 
   /* 🔥 TYPE SAFE MAP (Faz 9 hardening):
-     Supabase embed-select inference'ı `never` üretebildiği için
+     eski sağlayıcı embed-select inference'ı `never` üretebildiği için
      local row shape ile narrow ediyoruz. `any` kaldırıldı; runtime
      mantığı birebir aynı. */
   type Row = { villa_features: Feature | null };

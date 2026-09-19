@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from "react";
    AMAÇ:
      Login sistemi olmadan, public kullanıcının villa favorilerini
      tarayıcısında saklamak. DB tablosu YOK, server action YOK,
-     API endpoint YOK, Supabase'e bir şey yazılmaz.
+     API endpoint YOK, eski sağlayıcıya bir şey yazılmaz.
 
    STORAGE:
      localStorage key   : "maki_favorites"

@@ -14,7 +14,7 @@ import { normalizeReservationNo } from "@/lib/reservation-code.helper";
    MİMARİ:
      reservations PHASE 3 (migration 040) sonrası admin-only RLS:
      anon SELECT REDDEDİLİR. Bu yüzden okuma SERVICE ROLE ile yapılır
-     (getSupabaseAdmin → SUPABASE_SERVICE_ROLE_KEY, yalnız server).
+     (dbAdmin → service-role kimlik bilgisi, yalnız server).
 
    GÜVENLİK:
      - Sadece reservation_no + email BİRLİKTE eşleşirse veri döner.

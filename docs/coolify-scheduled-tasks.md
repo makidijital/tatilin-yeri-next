@@ -132,7 +132,7 @@ curl -fsS --max-time 300 \
 
 ### Yol A (önerilen) — Endpoint ekle, sonra task tanımla
 Mevcut 4 cron ile birebir aynı desende küçük bir route:
-`authorizeCronRequest(req)` + `supabase.rpc("refresh_villa_short_gaps")`.
+`authorizeCronRequest(req)` + `dbNative.rpc("refresh_villa_short_gaps")`.
 Eklendikten sonra aşağıdaki task'ı kur:
 
 - **Frequency:** `0 4 * * *`  (her gün 04:00 UTC — veri oturduktan sonra; ufku
@@ -204,7 +204,7 @@ curl -i -H "Authorization: Bearer yanlis" "$DOMAIN/api/cron/exchange-rates-refre
 `403/401` dönüyorsa auth çalışıyor. **503** dönüyorsa → `CRON_SECRET` env
 deploy'da tanımsız (önce onu ekle + redeploy).
 
-### 6.3 "Gerçekten çalıştı mı?" — veri yan etkisi (Supabase SQL)
+### 6.3 "Gerçekten çalıştı mı?" — veri yan etkisi (PostgreSQL SQL)
 
 Cron'un kalıcı run-log'u yok; veri sinyaliyle doğrula:
 

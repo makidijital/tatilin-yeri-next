@@ -12,17 +12,17 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
    🛡️ WESTERN UNION ACCOUNT — SERVER-ONLY READ REPOSITORY (service-role)
    ===============================================================
    `western-union-account.server.ts` içindeki inline
-   `getSupabaseAdmin().from("western_union_accounts")...` çağrısının
+   `dbAdmin.from("western_union_accounts")...` çağrısının
    BİREBİR taşınmış hali (Phase 1 repo consolidation).
 
    GÜVENLİK SINIRI (mail-log / admin-activity-log repo'ları ile aynı):
      • `import "server-only"` — client bundle'a sızarsa BUILD HATA.
-     • `dbAdmin` (service-role, SUPABASE_SERVICE_ROLE_KEY) → RLS bypass
+     • `dbAdmin` (service-role, service-role kimlik bilgisi) → RLS bypass
        (migration 060: western_union_accounts anon erişim yok).
 
    DAVRANIŞ:
      - select / eq / order / limit / maybeSingle AYNEN.
-     - Supabase native cevabı OLDUĞU GİBİ döner: `{ data, error, status,
+     - native cevabı OLDUĞU GİBİ döner: `{ data, error, status,
        ... }`. `status` DROP EDİLMEZ — caller log'unda kullanılıyor.
      - throw YOK, log YOK; fail-safe try/catch + logging SERVICE'te.
 =============================================================== */

@@ -15,7 +15,7 @@ export const COOKIE_SECURE =
 export const ACCESS_COOKIE = COOKIE_SECURE ? "__Host-admin_at" : "admin_at";
 export const REFRESH_COOKIE = COOKIE_SECURE ? "__Host-admin_rt" : "admin_rt";
 
-/** Middleware redirect-hint marker (supabase modunda kullanılır; native
+/** Middleware redirect-hint marker (eski sağlayıcı modunda kullanılır; native
  *  middleware buna bağlı DEĞİL — native cookie'leri doğrular). */
 export const MARKER_COOKIE = "admin-session";
 

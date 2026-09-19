@@ -5,7 +5,7 @@
      `node-pg` bir JS dizisini Postgres ARRAY LİTERALİ (`{a,b}`) olarak
      serialize eder. Bu, gerçek `text[]`/`uuid[]` kolonlar için DOĞRU;
      ancak dizi tutan `jsonb` kolonlar (ör. admin_users.sidebar_permissions)
-     için YANLIŞTIR — jsonb JSON bekler (`["a","b"]`). Supabase/PostgREST
+     için YANLIŞTIR — jsonb JSON bekler (`["a","b"]`). eski sağlayıcı/PostgREST
      her ikisini de kolon tipine göre doğru serialize eder.
 
    ÇÖZÜM (query-compiler):

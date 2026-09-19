@@ -7,8 +7,8 @@ import "server-only";
 
    ⚠️ SERVER-ONLY (`import "server-only"`):
      Bu barrel CLIENT bundle'a sızarsa BUILD HATA. Implementation
-     `./supabase-db.server` içinde de `import "server-only"` korumalı.
-     `dbAdmin` `getSupabaseAdmin()` arkasındadır — RLS bypass.
+     `./eski sağlayıcı-db.server` içinde de `import "server-only"` korumalı.
+     `dbAdmin` `dbAdmin` arkasındadır — RLS bypass.
 
    KULLANIM (yalnız server-side modüller):
      - `*.repository.server.ts` dosyaları

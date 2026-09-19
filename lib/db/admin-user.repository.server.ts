@@ -17,10 +17,10 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
    ⚠️ NEDEN SERVICE-ROLE:
      Route'lar aynı zamanda `admin.auth.admin.createUser/deleteUser`
-     (Supabase Auth Admin API) çağırır — bu service-role gerektirir ve
+     (native auth Admin API) çağırır — bu service-role gerektirir ve
      route sunucu context'inde browser JWT taşımaz. DB query'leri de
      aynı service-role client ile gitmeli. `dbAdmin.from` ≡
-     `getSupabaseAdmin().from` (dbAdmin wrapper) → route'ların eski
+     `dbAdmin.from` (dbAdmin wrapper) → route'ların eski
      inline çağrılarıyla BYTE-IDENTICAL. Anon `db`'ye düşürmek EXECUTION
      PATH / permission semantiğini değiştirir; ASLA yapılmaz.
 
@@ -30,18 +30,18 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
    GÜVENLİK SINIRI (pages/menu/blog .server konvansiyonu):
      • `import "server-only"` — client bundle'a sızarsa BUILD HATA.
-     • `dbAdmin` → service-role (SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_
+     • `dbAdmin` → service-role (service-role kimlik bilgisi, NEXT_PUBLIC_
        prefix yok) → yalnız server runtime.
 
    DAVRANIŞ:
-     - Native Supabase `{ data, error }` döner; repo sessiz (throw/log
+     - Native eski sağlayıcı `{ data, error }` döner; repo sessiz (throw/log
        YOK). Self-delete guard / rollback / dup-check kararı / audit /
        status / log caller'da (route) KALIR.
    =============================================================== */
 
 export const adminUserServerRepository = {
   /** DELETE route — target fetch (id, auth_user_id, email),
-   *  .maybeSingle(). auth.users delete kararı için auth_user_id lazım. */
+   *  .maybeSingle(). Bağlı auth kaydı temizliği için auth_user_id lazım. */
   async findByIdForDelete(id: string) {
     return await dbAdmin
       .from("admin_users")
@@ -84,7 +84,7 @@ export const adminUserServerRepository = {
   },
 
   /* 🛡️ AR-P1 — admin auth lookup (native twin). authorizeAdminToken'ın
-     `getSupabaseAdmin().from("admin_users").select("id, email, is_active")`
+     `dbAdmin.from("admin_users").select("id, email, is_active")`
      lookup'ının BYTE-IDENTICAL native karşılıkları (auth_user_id öncelik +
      email fallback). Row generic authorizeAdminToken'ın `row` tipiyle uyumlu
      → repoint'te (AR-P2) tip köprüsü gerekmez. maybeSingle davranışı aynen.
@@ -112,7 +112,7 @@ export const adminUserServerRepository = {
   /* 🛡️ FAZ 1 (NATIVE AUTH) — ADDITIVE, henüz wire edilmedi.
      Native login için kimlik + parola state projeksiyonu. `password_hash`
      ve login-state kolonları migration 068 ile eklendi (nullable →
-     mevcut Supabase yolu etkilenmez). */
+     mevcut eski sağlayıcı yolu etkilenmez). */
   async findCredentialsByEmail(email: string) {
     return await dbAdmin
       .from<{
@@ -140,8 +140,8 @@ export const adminUserServerRepository = {
   },
 
   /* 🛡️ FAZ 1 (NATIVE AUTH) — ADDITIVE. Native admin oluşturma:
-     Supabase auth.admin.createUser YOK; parola `password_hash` olarak
-     yerel saklanır (auth_user_id gerekmez). Mevcut `insert()` (Supabase
+     eski sağlayıcı auth.admin.createUser YOK; parola `password_hash` olarak
+     yerel saklanır (auth_user_id gerekmez). Mevcut `insert()` (eski sağlayıcı
      yolu) AYNEN korunur; bu ayrı native yol. */
   async insertNative(payload: {
     full_name: string;

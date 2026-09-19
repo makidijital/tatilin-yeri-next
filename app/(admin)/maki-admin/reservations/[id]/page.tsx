@@ -932,7 +932,7 @@ export default function AdminReservationDetailPage() {
         });
 
         /* 🛡️ SERVER-SIDE GUARD (Faz 4B):
-           Direkt supabase.update yerine updateReservationFull
+           Direkt db.update yerine updateReservationFull
            kullan; servis 'confirmed' transition'ında paid_amount
            kuralını enforce ediyor. Valid akış byte-identical;
            invalid akışta service throw → catch alert. */
@@ -1027,7 +1027,7 @@ export default function AdminReservationDetailPage() {
       });
 
       /* 🛡️ SERVER-SIDE GUARD (Faz 4B):
-         Direkt supabase.update yerine updateReservationFull
+         Direkt db.update yerine updateReservationFull
          kullan; servis 'confirmed' transition'ında paid_amount
          kuralını enforce ediyor. Valid akış byte-identical;
          invalid akışta service throw → catch alert. */

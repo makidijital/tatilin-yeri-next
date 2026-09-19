@@ -13,14 +13,14 @@
 
    🛡️ FAZ 33B — CLIENT-SIDE FETCH
    ─────────────────────────────────────────────────────────────
-   Veri tarayıcıda fetch edilir; supabase client otomatik olarak
+   Veri tarayıcıda fetch edilir; eski sağlayıcı client otomatik olarak
    admin'in JWT session'ını ekler → RLS `authenticated` role policy
    devreye girer → pending + approved hepsi görünür.
 
    Server fetch denenirse anon role uygulanır ve villa_reviews'in
    public SELECT policy'si `is_approved=true` koşuluyla pending
    yorumları gizler. Service-role kullanılmaz; mevcut admin auth
-   pattern (client'ta Supabase session) reuse edilir.
+   pattern (client'ta eski sağlayıcı session) reuse edilir.
 
    POST-MUTATION:
      - useNotify ile premium toast
@@ -78,7 +78,7 @@ export default function ReviewAdminList() {
   const [loading, setLoading] = useState(true);
 
   /* Authoritative refetch — mount + her mutation sonrası çağrılır.
-     Tarayıcı supabase oturumu authenticated → pending + approved gelir. */
+     Tarayıcı eski sağlayıcı oturumu authenticated → pending + approved gelir. */
   const refresh = useCallback(async () => {
     const fresh = await getVillaReviewsForAdmin();
     setData(fresh);

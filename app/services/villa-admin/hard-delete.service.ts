@@ -17,7 +17,7 @@ import { cleanupVillaStorageForHardDelete } from "./_helpers/storage-cleanup";
    sırasını yönetir.
 
    ⚠️ TEMİZLİK SIRASI (atomik değil; en kötü durum partial-cleanup):
-     1) Storage: villa_images.image_url'lerinden Supabase storage
+     1) Storage: villa_images.image_url'lerinden eski sağlayıcı storage
         path'lerini parse edip toplu remove. Hata loglanır, devam.
      2) Relation tabloları (presentation): paralel DELETE
           - villa_images

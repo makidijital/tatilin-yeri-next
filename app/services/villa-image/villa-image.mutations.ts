@@ -1,4 +1,4 @@
-/* 🛡️ Migration IMG-P3R — anon `villa-image.repository` (+ Supabase session
+/* 🛡️ Migration IMG-P3R — anon `villa-image.repository` (+ eski sağlayıcı session
    client injection) yerine native `villa-image.repository.server`. Write authz
    artık app-layer `authorizeAdminSession` gate'inde (IMG-P2B); RLS-session
    client injection'ı kaldırıldı → native default (`dbAdminNative`, RLS-free).

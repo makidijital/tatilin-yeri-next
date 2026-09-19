@@ -1,7 +1,7 @@
 /* ===============================================================
    🛡️ FAZ 32 — REPOSITORY-DRIVEN VILLA SERVICE
    ===============================================================
-   Bu dosya artık doğrudan `supabase.from("villa")` çağırmaz.
+   Bu dosya artık doğrudan `db.from("villa")` çağırmaz.
    Tüm read-side query'ler `lib/db/villa.repository.ts` üzerinden
    geçer. Service katmanı şu sorumlulukları korur:
      - Raw row → VillaDTO mapping (mapVilla)
@@ -17,8 +17,8 @@
      - Public listing visibility: değişmedi
 
    IMPORT GRAFIĞI:
-     Önce:  villa.service → @/lib/supabase
-     Sonra: villa.service → @/lib/db/villa.repository → @/lib/supabase
+     Önce:  villa.service → @/lib/db
+     Sonra: villa.service → @/lib/db/villa.repository → @/lib/db
    =============================================================== */
 
 /* 🛡️ Villa Migration S4A–S8P — villa.service'in TÜM villa read'leri native'e

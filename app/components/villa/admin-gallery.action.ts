@@ -6,7 +6,7 @@ import {
 } from "@/app/services/villa-image/villa-image.mutations";
 /* 🛡️ IMG-P2B/P3R — app-layer admin gate (native RLS-free write authz).
    Yalnız gate; auth.caller kullanılmaz. Service'ler native (dbAdminNative);
-   Supabase session client injection IMG-P3R'de kaldırıldı. */
+   eski sağlayıcı session client injection IMG-P3R'de kaldırıldı. */
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
 
 /* ===============================================================
@@ -18,7 +18,7 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
 
    ⚠️ ORCHESTRATION-ONLY: mevcut `updateImageOrder` / `setCoverImage`
    fonksiyonları tek gerçek kaynak; session-aware client geçilir →
-   admin write RLS'i BUGÜNKÜ Supabase session ile birebir korunur.
+   admin write RLS'i BUGÜNKÜ eski sağlayıcı session ile birebir korunur.
    =============================================================== */
 
 export async function reorderGalleryImages(

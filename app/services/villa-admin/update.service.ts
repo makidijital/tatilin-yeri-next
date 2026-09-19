@@ -36,7 +36,7 @@ import type { VillaUpdatePayload } from "./types";
    ⚠️ ORCHESTRATION SIRASI BYTE-IDENTICAL (AST contract FAZ 5):
      1. validate form.title
      2. await generateUniqueSlug(title, id)
-     3. await supabase.update(buildVillaCorePayload(...))
+     3. await db.update(buildVillaCorePayload(...))
      4. ALWAYS await replaceVillaTypeRelations(id, typeIds)
      5. ALWAYS await replaceVillaFeatureRelations(id, featureIds)
      6. ALWAYS await setVillaDistances(id, sanitizeDistances(...))

@@ -96,7 +96,7 @@ export async function updateVillaType(
 /* ===============================================================
    🛡️ COVER IMAGE — villa_types.cover_image (migration 010)
    ===============================================================
-   `path` parametresi Supabase Storage bucket-relative path
+   `path` parametresi R2 storage bucket-relative path
    (örn. "category-covers/balayi-villalari.webp"). Full public URL
    DEĞİL — bucket/domain değişimine immune. NULL geçilirse cover
    kaldırılır (DB NULL). Caller başarı sonrası revalidateTaxonomy()

@@ -14,7 +14,7 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
    native→anon ters bağımlılık yaratmamak için helper burada; yalnız pure
    `normalizeSearchText` import edilir (client-safe TR-fold). */
 import { normalizeSearchText, escapeLikePattern } from "@/lib/search";
-/* 🛡️ Villa Migration S7C2 — YALNIZ tip (erased; runtime Supabase bağımlılığı
+/* 🛡️ Villa Migration S7C2 — YALNIZ tip (erased; runtime eski sağlayıcı bağımlılığı
    YOK). `rpcReplaceVillaPrices`'ın anon ile byte-identical imzası için
    opsiyonel `client?` parametresinin tipi. Native gövde client'ı KULLANMAZ
    (dbAdminNative sabit) — yalnız API/imza uyumluluğu (S7C1 DECISION A). */
@@ -32,17 +32,17 @@ import { normalizeSearchText, escapeLikePattern } from "@/lib/search";
        for all to authenticated
        using  (public.is_active_admin())
        with check (public.is_active_admin())
-     `is_active_admin()` `auth.uid()`'i admin_users.auth_user_id ile
+     `is_active_admin()` oturum kimliğini admin_users.auth_user_id ile
      matchler.
 
      ESKİ DAVRANIŞ — browser context:
-       Client component → @/lib/supabase (anon JS client, browser)
-       → LocalStorage'dan admin session JWT → auth.uid() set
+       Client component → @/lib/db (anon JS client, browser)
+       → admin session JWT → oturum kimliği set
        → is_active_admin() = true → RLS PASS.
 
      YENİ DAVRANIŞ — server route context:
-       API route → service → @/lib/db (anon supabase singleton, Node)
-       → JWT bağlamı YOK → auth.uid() = NULL
+       API route → service → @/lib/db (anon DB client singleton, Node)
+       → JWT bağlamı YOK → oturum kimliği NULL
        → is_active_admin() = false → RLS RESEKT.
 
      PostgREST UPDATE/DELETE için RLS reject davranışı **401 değil,
@@ -123,7 +123,7 @@ export const villaAdminRepository = {
   /* ===============================================================
      READ — active villa location_id list (NATIVE twin, Migration S2)
      ===============================================================
-     Anon `villaRepository.findActiveLocationIds` (Supabase) karşılığı.
+     Anon `villaRepository.findActiveLocationIds` karşılığı.
      BYTE-IDENTICAL sorgu — tek fark `db` (anon) → `dbAdmin` (native):
        .from("villa").select("location_id")
          .eq("is_active", true).is("deleted_at", null)
@@ -147,7 +147,7 @@ export const villaAdminRepository = {
   /* ===============================================================
      READ — public availability config by id (NATIVE twin, Migration S3)
      ===============================================================
-     Anon `villaRepository.findAvailabilityConfigById` (Supabase) karşılığı.
+     Anon `villaRepository.findAvailabilityConfigById` (eski sağlayıcı) karşılığı.
      BYTE-IDENTICAL — tek fark `db` (anon) → `dbAdmin` (native):
        .select("deposit, cleaning_fee, cleaning_currency, cleaning_limit,
                 custom_prepayment_rate, minimum_stay_nights")
@@ -210,7 +210,7 @@ export const villaAdminRepository = {
      PARITY (RLS): villa base'de restrictive RLS YOK (mig 019) + sorgu
      `is_active=true AND deleted_at IS NULL` explicit → dbAdmin bypass
      inert; anon (blanket SELECT + filtre) ile satır kümesi birebir.
-     maybeSingle: 0→null, 1→row, >1→error (native queryMaybeOne = Supabase).
+     maybeSingle: 0→null, 1→row, >1→error (native queryMaybeOne = eski sağlayıcı).
   =============================================================== */
   async findBySlug(slug: string): Promise<Record<string, unknown> | null> {
     const { data, error } = await dbAdmin
@@ -810,7 +810,7 @@ export const villaAdminRepository = {
 
      ⚠️ COUNT: native builder headOnly branch (query-builder:333-341) →
         `SELECT count(*)::int AS "count" FROM villa WHERE …` (embed/order YOK,
-        compiler:343-345) → `{ data:null, error, count:N }`. Supabase
+        compiler:343-345) → `{ data:null, error, count:N }`. eski sağlayıcı
         `.select(col,{head:true,count:"exact"})` ile BİREBİR. EXACT count
         (count(*)::int; planned/estimated DEĞİL). Order/pagination YOK →
         gereksiz ORDER BY eklenmez. Filtre → dbAdmin bypass inert.

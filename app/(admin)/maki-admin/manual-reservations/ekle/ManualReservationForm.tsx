@@ -61,7 +61,7 @@ type InitialData = {
    shared `ReservationCalendar` component'ine extract edildi.
    Reservation engine semantiği BİREBİR korundu:
 
-     - fetchBlockedDates → Supabase queries + day-walk loop
+     - fetchBlockedDates → eski sağlayıcı queries + day-walk loop
      - confirmed/pending half-day classification
      - manual single-day fallback (isFirstDay && isLastDay → blocked)
      - getValidEndDate(start, end, blockedDates)
@@ -159,7 +159,7 @@ export default function ManualReservationForm({
   /* ---------------------------------------------
      🔥 BLOCKED DATES FETCH — birebir korundu (FAZ 34 service delege)
      ---------------------------------------------
-     FAZ 34: iki inline supabase çağrısı service'in
+     FAZ 34: iki inline eski sağlayıcı çağrısı service'in
      `getVillaAvailabilitySnapshot(villaId)` export'una taşındı.
      Service repo'ya delege ediyor; status allow-list
      `["pending","confirmed"]` + manual blokların tamamı

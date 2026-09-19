@@ -16,7 +16,7 @@ type ReservationNoteRepository = Pick<
    Sadece note alanını günceller; başka side-effect yok.
 
    FAZ 33 (UPDATE extraction):
-     `supabase.from("reservations").update({ note }).eq("id", id)`
+     `db.from("reservations").update({ note }).eq("id", id)`
      artık `reservationRepository.updateById(id, { note })`
      üzerinden delege edilir.
 

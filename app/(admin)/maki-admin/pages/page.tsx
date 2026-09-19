@@ -34,14 +34,14 @@ import { DEFAULT_LOCALE } from "@/lib/i18n/config";
                        outside-click reject, mobile parity)
      - useNotify()   → success/error toast'ları (server action'da
                        toast tetiklenemiyordu)
-     - supabase delete → DB davranışı byte-identical
+     - delete → DB davranışı byte-identical
      - router.refresh → menu/auto-include gibi türev kaynakları
                         invalidate eder
 
    DOKUNULMADI:
      - JSX layout, CSS classes, design language (card-premium,
        champagne/stone palette, button stilleri)
-     - getPages() service'i (anon supabase ile hem server hem client
+     - getPages() service'i (anon DB client ile hem server hem client
        tarafında çalışır)
      - Diğer route/component/service
    =============================================================== */

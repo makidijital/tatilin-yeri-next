@@ -143,7 +143,7 @@ export default function MenuPage() {
 
   async function fetchAll() {
     /* 🛡️ FAZ 2 frontend purge — adminFetch GET /api/admin/menu.
-       Eski 4 paralel anon supabase fetch tek route response'unda
+       Eski 4 paralel anon DB client fetch tek route response'unda
        birleştirildi. Davranış BYTE-IDENTICAL: aynı select shape'leri
        repository üzerinden (menuRepository.findAll/findActivePagesForMenu/
        findAllVillaTypes/findAllVillaLocations), aynı filter (pages
@@ -216,7 +216,7 @@ export default function MenuPage() {
        görüp temizleyebilsin. Resolver null döndürdüyse manual fallback
        ile satırı orphan olarak işaretle.
 
-       NOTE: Supabase JS embed-select inference v2.105+ gevşek; select
+       NOTE: DB client embed-select inference v2.105+ gevşek; select
        string'i ile dönen tipler `unknown` benzeri. Burada satır-bazlı
        narrow için minimum DB shape tanımlı. */
     type MenuFetchRow = {

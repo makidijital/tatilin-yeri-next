@@ -7,7 +7,7 @@
    FREEZE EDİLEN KONTRATLAR:
      1. validate `form.title` (throw)
      2. AWAITED generateUniqueSlug (slug üretimi)
-     3. AWAITED supabase insert (villa row)
+     3. AWAITED villaAdminRepository.insertVilla (villa row)
      4. CONDITIONAL await insertVillaTypeRelations (if selectedTypes?.length)
      5. CONDITIONAL await insertVillaFeatureRelations
      6. CONDITIONAL await setVillaDistances
@@ -145,11 +145,18 @@ describe("createVillaFull — early validation", () => {
   });
 });
 
+/* 🛡️ NATIVE REPOSITORY KONTRATI
+   Villa satırı artık `villaAdminRepository.insertVilla(...)` ile yazılır
+   (native PostgreSQL). Test AMACI DEĞİŞMEDİ — sıra / await / "tam bir kez"
+   invariantları aynen korunur; yalnız aranan çağrı adı gerçek
+   implementasyona göre güncellendi. */
+const VILLA_WRITE = "villaAdminRepository.insertVilla";
+
 describe("createVillaFull — orchestration order", () => {
   it("calls generateUniqueSlug AWAITED before villa insert", () => {
     const slugIdx = idx("generateUniqueSlug");
     const insertIdx = seq.findIndex(
-      (e) => e.name.includes("supabase") && e.awaited
+      (e) => e.name.includes(VILLA_WRITE) && e.awaited
     );
     expect(slugIdx).toBeGreaterThanOrEqual(0);
     expect(insertIdx).toBeGreaterThanOrEqual(0);
@@ -157,9 +164,9 @@ describe("createVillaFull — orchestration order", () => {
     expect(seq[slugIdx].awaited).toBe(true);
   });
 
-  it("villa supabase insert is AWAITED", () => {
+  it("villa repository insert is AWAITED", () => {
     const insertIdx = seq.findIndex(
-      (e) => e.name.includes("supabase") && e.awaited
+      (e) => e.name.includes(VILLA_WRITE) && e.awaited
     );
     expect(insertIdx).toBeGreaterThanOrEqual(0);
     expect(seq[insertIdx].awaited).toBe(true);
@@ -229,8 +236,13 @@ describe("createVillaFull — return invariant", () => {
 });
 
 describe("createVillaFull — no extra DB writes", () => {
-  it("calls supabase insert EXACTLY ONCE (no per-relation supabase calls leaked)", () => {
-    const supabaseCalls = seq.filter((e) => e.name.includes("supabase"));
-    expect(supabaseCalls.length).toBe(1);
+  it("calls repository insert EXACTLY ONCE (no per-relation DB write leaked)", () => {
+    const writes = seq.filter((e) => e.name.includes(VILLA_WRITE));
+    expect(writes.length).toBe(1);
+  });
+
+  it("service body'sinde DOĞRUDAN DB client çağrısı YOK (repository delegation)", () => {
+    expect(sourceText).not.toMatch(/\bdbAdmin\s*\.\s*from\(/);
+    expect(sourceText).not.toMatch(/\bdb\s*\.\s*from\(/);
   });
 });

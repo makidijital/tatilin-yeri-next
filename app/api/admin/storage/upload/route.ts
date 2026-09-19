@@ -15,7 +15,7 @@ import { STORAGE_BUCKETS } from "@/lib/storage/storage.constants";
 
    ⚠️ ADIM 1 — DORMANT:
      Bu route'a HENÜZ HİÇBİR ekran/akış bağlı DEĞİL. Eklenmesi yalnız
-     altyapı; mevcut upload akışları AYNEN Supabase Storage'a gider.
+     altyapı; mevcut upload akışları AYNEN R2 storage'a gider.
      Bağlama (seam switch + dual-write) sonraki adımda yapılacak.
      Bu route çağrılmadığı sürece davranış değişmez.
 

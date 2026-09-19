@@ -1,7 +1,7 @@
 import "server-only";
 
 /* 🛡️ NATIVE-ONLY — bu repository baştan native provider ile yazıldı,
-   Supabase-js bağımlılığı hiç eklenmedi (mevcut mimarideki "NATIVE
+   eski sağlayıcı-js bağımlılığı hiç eklenmedi (mevcut mimarideki "NATIVE
    CUTOVER" ilkesiyle tutarlı — bkz. lib/db/villa-price.repository.server.ts,
    lib/db/discount.repository.ts). `dbAdminNative` = `dbNative` (native
    runtime'da tek app rolü; anon/service-role ayrımı yok, RLS bypass —

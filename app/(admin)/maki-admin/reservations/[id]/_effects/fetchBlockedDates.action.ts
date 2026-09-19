@@ -11,7 +11,7 @@ import type {
    ===============================================================
    Client component'ler (ManualReservationForm, reservations/[id]/page) →
    bu server action → `fetchBlockedDates` (server-only) → native repo.
-   Eskiden client-side anon Supabase read'iydi; native repo server-only
+   Eskiden client-side anon DB client read'iydi; native repo server-only
    olduğu için server boundary arkasına alındı.
 
    ⚠️ İNCE WRAPPER: iş mantığı YOK — grup üretimi (confirmed/pending/manual

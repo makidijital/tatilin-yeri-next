@@ -1,6 +1,6 @@
 /* 🛡️ FAZ 2 STABILIZATION — server-role villaAdminRepository (dbAdmin).
    Mutation service'leri server-side route context'inde anon RLS'in
-   `villa_admin_write` policy'ini geçemediği için (auth.uid()=NULL →
+   yetkilendirme uygulama katmanında yapıldığı için (
    is_active_admin()=false), bu service'ler SAME symbol adıyla ama
    service-role kullanan `villa.repository.server` modülünden import
    eder. Method imzaları + return shape + error shape BYTE-IDENTICAL;

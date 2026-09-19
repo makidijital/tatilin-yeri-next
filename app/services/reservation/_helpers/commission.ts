@@ -11,7 +11,7 @@ import { reservationRepository } from "@/lib/db/reservation.repository";
    BYTE-IDENTICAL bu dosyaya alındı.
 
    FAZ 33 (READ extraction):
-     `fetchCommissionRate` DB call'ı artık doğrudan supabase
+     `fetchCommissionRate` DB call'ı artık doğrudan eski sağlayıcı
      client'ı tüketmez; `reservationRepository.findVillaCommissionRate`
      üzerinden delege edilir. Davranış BYTE-IDENTICAL:
        - Aynı tablo (`villa`)

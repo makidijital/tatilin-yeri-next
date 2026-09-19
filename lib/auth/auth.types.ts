@@ -1,7 +1,7 @@
 /* ===============================================================
    🛡️ FAZ 39 — AUTH PROVIDER TYPES
    ===============================================================
-   Provider-agnostic shape'ler. Supabase Auth'a özgü hiçbir field
+   Provider-agnostic shape'ler. native auth'a özgü hiçbir field
    yok; gelecekteki adapter'lar (NextAuth, Clerk, Better Auth,
    custom JWT) aynı kontratı uygular.
    =============================================================== */
@@ -43,7 +43,7 @@ export type AuthResult<T> =
   | { ok: false; error: string; code?: string };
 
 /** onAuthStateChange event — minimum şart: SIGNED_IN / SIGNED_OUT
- *  / TOKEN_REFRESHED. Supabase native ek event'ler (USER_UPDATED,
+ *  / TOKEN_REFRESHED. native ek event'ler (USER_UPDATED,
  *  PASSWORD_RECOVERY) string passthrough; caller `event` üzerine
  *  switch yapmıyor (sadece "var/yok" semantic'ine bakıyor). */
 export type AuthStateEvent =
@@ -73,14 +73,14 @@ export type CreateAdminUserInput = {
   email: string;
   password: string;
   emailConfirm?: boolean;
-  /* 🛡️ FAZ 1 (NATIVE AUTH) — ADDITIVE optional alanlar. Supabase
+  /* 🛡️ FAZ 1 (NATIVE AUTH) — ADDITIVE optional alanlar. eski sağlayıcı
      provider bunları YOK SAYAR (yalnız email/password/emailConfirm
      kullanır) → mevcut davranış birebir korunur. Native provider,
      admin_users satırını tek adımda kurarken kullanır (native'de
      "auth user" ile "admin_users" aynı tablodur). */
   fullName?: string;
   sidebarPermissions?: string[];
-  /* 🛡️ FAZ 4 — is_active (native admin_users). Supabase provider silindi;
+  /* 🛡️ FAZ 4 — is_active (native admin_users). eski sağlayıcı provider silindi;
      native provider bunu insertNative'e geçirir (default true). */
   isActive?: boolean;
 };

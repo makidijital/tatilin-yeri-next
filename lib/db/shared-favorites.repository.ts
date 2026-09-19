@@ -2,7 +2,7 @@ import "server-only";
 
 /* 🛡️ NATIVE CUTOVER (FAZ 3 — anon repo) — client-sever sonrası native
    provider'a alındı. Public create artık favoriler/shared-favorites.action
-   ("use server") üzerinden; token read server component'ten. Supabase
+   ("use server") üzerinden; token read server component'ten. eski sağlayıcı
    importu tamamen kaldırıldı. `server-only` defansif sınır. Method yüzeyi
    (create/findByToken) + dönüş şekli AYNEN. */
 import { dbNative as db } from "@/lib/db/native";
@@ -10,7 +10,7 @@ import { dbNative as db } from "@/lib/db/native";
 /* ===============================================================
    🛡️ SHARED FAVORITES REPOSITORY (native)
    ===============================================================
-   `shared-favorites.service.ts` içindeki inline `supabase.from(...)`
+   `shared-favorites.service.ts` içindeki inline `db.from(...)`
    çağrılarının BİREBİR taşınmış hali (single table:
    shared_favorite_lists). Davranış değişmez:
      - `db` = native provider (`dbNative`); method'lar ham `{ data, error }`

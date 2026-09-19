@@ -8,7 +8,7 @@ import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/auth/native/cookie-names";
    ===============================================================
    Korunan path: /maki-admin/:path*
 
-   Supabase SSR (createServerClient / auth.getUser / session refresh) ve
+   native auth (createServerClient / auth.getUser / session refresh) ve
    marker-cookie (admin-session) TAMAMEN KALDIRILDI. Tek gerçek middleware:
      • Native access JWT (jose, edge-safe) doğrulanır.
      • Access geçerli → geçir. Access süresi dolmuş ama refresh cookie var

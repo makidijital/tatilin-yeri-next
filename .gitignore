@@ -36,6 +36,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Supabase CLI artifacts — proje Supabase kullanmıyor (native PostgreSQL).
+# Yanlışlıkla `supabase link` çalıştırılırsa credential içeren
+# `.temp/pooler-url` commit'lenmesin diye ignore edilir.
+# ⚠️ `db/migrations/` IGNORE EDİLMEZ — şema geçmişi versiyonlanır.
+supabase/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

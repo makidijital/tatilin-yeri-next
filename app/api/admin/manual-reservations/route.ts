@@ -15,10 +15,10 @@ import { manualReservationServerRepository } from "@/lib/db/manual-reservation.r
        app/(admin)/maki-admin/manual-reservations/page.tsx (RSC)
          └─→ getManualReservations() (service)
               └─→ manualReservationRepository.findList()  // db (anon)
-                   └─→ supabase.from("manual_reservations").select(...)
+                   └─→ db.from("manual_reservations").select(...)
                         └─→ ❌ RLS DENY (RSC no JWT) → [] silent fail
 
-     RSC içinden anon `db` (module-level @/lib/supabase) session
+     RSC içinden anon `db` (module-level @/lib/db) session
      cookie/JWT TAŞIMAZ → RLS reddeder → liste sessizce boş döner;
      hata UI'a yansımaz.
 

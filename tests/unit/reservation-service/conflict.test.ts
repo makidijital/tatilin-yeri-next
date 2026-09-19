@@ -26,7 +26,7 @@ import {
        RPC kapsıyor) → her zaman resolve, repository ÇAĞIRMAZ.
      - AVAILABILITY_BLOCKING_STATUSES allow-list regression guard korunur.
 
-   ⚠️ Repository MOCK'lanır — gerçek Supabase/RPC çağrısı yapılmaz.
+   ⚠️ Repository MOCK'lanır — gerçek eski sağlayıcı/RPC çağrısı yapılmaz.
 =============================================================== */
 
 vi.mock("@/lib/db/reservation.repository", () => ({

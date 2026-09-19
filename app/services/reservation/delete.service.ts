@@ -18,7 +18,7 @@ type ReservationDeleteRepository = Pick<
    Hard delete; reservation row'unu DB'den kaldırır.
 
    FAZ 33 (DELETE extraction):
-     `supabase.from("reservations").delete().eq("id", id)` artık
+     `db.from("reservations").delete().eq("id", id)` artık
      `reservationRepository.deleteById(id)` üzerinden delege
      edilir. Predicate (`.eq("id", id)`) repository içinde
      aynen; cascade davranışı YOK (orijinal davranış).

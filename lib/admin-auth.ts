@@ -3,11 +3,11 @@ import { authProvider } from "@/lib/auth";
 /* ===============================================================
    🔥 ADMIN AUTH — TEK SOURCE-OF-TRUTH
    ===============================================================
-   Authentication: Supabase Auth (auth.users) — şifre/session burada.
+   Authentication: native auth — şifre `admin_users`, oturum `admin_sessions`.
    Authorization:  public.admin_users — is_active + permissions.
 
    Flow:
-     supabase.auth.getUser()
+     native oturum doğrulama()
        ↓
      admin_users lookup (email match, lowercased)
        ↓
@@ -152,7 +152,7 @@ export async function requireAdmin(): Promise<AdminAuthRecord> {
 }
 
 /* ---------------------------------------------
-   signOutAdmin — supabase signOut wrapper
+   signOutAdmin — eski sağlayıcı signOut wrapper
 ---------------------------------------------- */
 export async function signOutAdmin(): Promise<void> {
   /* FAZ 39: authProvider.signOut delege; idempotent. Result envelope

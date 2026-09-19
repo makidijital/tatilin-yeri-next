@@ -63,12 +63,12 @@ export type DbSingleResult<T> = {
  *  `error`). 0 veya >1 satır burada hatadır (yokluk tolere edilmez).
  *  Discriminated union olduğundan `error` guard'ından sonra `data`
  *  non-null'a DARALIR — bu, tek-satır sorgusunun doğal değişmezidir
- *  (vendor-bağımsız `Result<T, E>` modeli; PostgREST/Supabase alanı YOK). */
+ *  (vendor-bağımsız `Result<T, E>` modeli; PostgREST/eski sağlayıcı alanı YOK). */
 export type DbEnforcedSingleResult<T> =
   | { data: T; error: null; status?: number }
   | { data: null; error: DbError; status?: number };
 
-/** RPC sonuç zarfı — Supabase `.rpc()` parity'si. `data` fonksiyonun
+/** RPC sonuç zarfı — eski sağlayıcı `.rpc()` parity'si. `data` fonksiyonun
  *  RETURNS türüne göre şekillenir (scalar→değer, setof→dizi,
  *  table→satır dizisi, void→null); satır-dizisi DEĞİL. `T` çağıranın
  *  beklediği tam dönüş tipidir (ör. `boolean`, `string[]`, `Row[]`). */
@@ -100,7 +100,7 @@ export interface NativeDbProvider {
   ): Promise<DbSingleResult<T>>;
 
   /** PostgreSQL fonksiyon çağrısı (named-arg). Sonuç, fonksiyonun
-   *  RETURNS türüne göre Supabase `.rpc()` ile aynı şekle sokulur
+   *  RETURNS türüne göre eski sağlayıcı `.rpc()` ile aynı şekle sokulur
    *  (scalar→değer, setof→dizi, table→satır dizisi, void→null). */
   rpc<T = unknown>(
     fn: string,
@@ -133,7 +133,7 @@ function toError(err: unknown): DbError {
   return dbErr;
 }
 
-/** Supabase `.single()` PARITY: 0 veya >1 satırda PostgREST `PGRST116`
+/** eski sağlayıcı `.single()` PARITY: 0 veya >1 satırda PostgREST `PGRST116`
  *  hatası döndürür (`error.code === "PGRST116"`, sabit mesaj). Tüketiciler
  *  (pages/blog/settings/reservation) bu koda/branch'e bağlı → native
  *  `queryOne` de birebir aynı zarfı üretir. */
@@ -158,7 +158,7 @@ function isPlainObjectArg(v: unknown): boolean {
   );
 }
 
-/** RPC ham satırlarını fonksiyonun RETURNS türüne göre Supabase
+/** RPC ham satırlarını fonksiyonun RETURNS türüne göre eski sağlayıcı
  *  `.rpc()` şekline sokar (rpc-metadata registry'sinden):
  *    void       → null
  *    scalar     → tek satır/tek kolon değeri (yoksa null)
@@ -270,7 +270,7 @@ export const nativeDbProvider: NativeDbProvider = {
     const text = `SELECT * FROM ${fn}(${named.join(", ")})`;
     const { data: rows, error } = await runQuery(text, params);
     if (error) return { data: null, error };
-    /* Supabase `.rpc()` PARITY: fonksiyonun RETURNS türüne göre şekil.
+    /* eski sağlayıcı `.rpc()` PARITY: fonksiyonun RETURNS türüne göre şekil.
        scalar→değer, setof→dizi, table→satır dizisi, void→null. */
     return { data: shapeRpcResult<T>(fn, rows ?? []), error: null };
   },

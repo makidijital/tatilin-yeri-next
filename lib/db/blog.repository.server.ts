@@ -26,13 +26,13 @@ import { dbAdminNative as dbAdmin } from "@/lib/db/native";
 
    GÜVENLİK SINIRI (pages/menu/settings .server konvansiyonu):
      • `import "server-only"` — client bundle'a sızarsa BUILD HATA.
-     • `dbAdmin` → service-role (SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_
+     • `dbAdmin` → service-role (service-role kimlik bilgisi, NEXT_PUBLIC_
        prefix yok) → yalnız server runtime. Çağıran route
        `authorizeAdminCaller` arkasında.
 
    DAVRANIŞ — BYTE-IDENTICAL eski inline `dbAdmin.from("blog_posts")`
    çağrıları:
-     - Her metod native Supabase `{ data, error }` döndürür; repo sessiz
+     - Her metod native eski sağlayıcı `{ data, error }` döndürür; repo sessiz
        (throw / console / log YOK). sanitizeHtml / published_at /
        error-mapping / status / log caller (route handler) tarafında
        AYNEN kalır.
