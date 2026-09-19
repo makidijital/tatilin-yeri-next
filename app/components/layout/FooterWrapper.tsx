@@ -1,6 +1,19 @@
 import Footer from "./Footer";
 
-import { getPublicSettings } from "@/app/services/settings.service";
+/* 🔄 CACHE KULLANIMI — `getPublicSettings()` doğrudan çağrılıyordu;
+   `getCachedSettings` ZATEN bu fonksiyonun `unstable_cache`
+   sarmalayıcısı (lib/cache.helpers.ts). Dönen veri/tip/null
+   davranışı BİREBİR aynı; tag "settings", invalidation
+   `revalidateSettings()` ile AYNEN çalışıyor. Header ile birlikte
+   aynı request içindeki İKİ ayrı settings sorgusu ortadan kalkar.
+
+   ⚠️ `menuRepository.findAllVillaLocations/Types` BİLİNÇLİ OLARAK
+   DEĞİŞTİRİLMEDİ: `getCachedVillaLocations/Types` FARKLI bir sorgu
+   çalıştırıyor (`findAllForTaxonomy` → ORDER BY name; `findAllBySortOrder`
+   → ORDER BY sort_order). Buradaki çağrıların ORDER BY'ı YOK ve sonuç
+   `.slice(0, 7)` ile kırpılıyor → swap footer'da GÖRÜNEN 7 bölge/tipi
+   değiştirirdi. Davranış korunuyor. */
+import { getCachedSettings } from "@/lib/cache.helpers";
 import type { Settings } from "@/app/services/settings.types";
 import { menuRepository } from "@/lib/db/menu.repository";
 import { pagesRepository } from "@/lib/db/pages.repository";
@@ -73,7 +86,7 @@ export default async function FooterWrapper() {
      Promise.allSettled tüm sonuçları döner; reject olanlar null. */
   const [settingsRes, locsRes, typesRes, corpPagesRes] =
     await Promise.allSettled([
-      getPublicSettings(),
+      getCachedSettings(),
       menuRepository.findAllVillaLocations(),
       menuRepository.findAllVillaTypes(),
       /* Footer'a özel slim helper — `findActivePages` (show_in_menu

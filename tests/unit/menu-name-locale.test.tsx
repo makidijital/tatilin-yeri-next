@@ -418,6 +418,16 @@ vi.mock("@/app/services/menu.service", () => ({
   getMenu: (...a: unknown[]) => getMenuMock(...a),
 }));
 
+/* 🔄 HeaderWrapper artık `getPublicSettings`/`getMenu`'yü DOĞRUDAN değil,
+   `lib/cache.helpers.ts`'teki `unstable_cache` sarmalayıcıları üzerinden
+   okuyor. Sarmalayıcılar aynı fonksiyonu çağırdığı için testin AMACI ve
+   TÜM assertion'ları DEĞİŞMEDİ — yalnız mock seam'i taşındı: aşağıdaki
+   mock, YUKARIDAKİ AYNI mock fonksiyonlarına delege eder. */
+vi.mock("@/lib/cache.helpers", () => ({
+  getCachedSettings: (...a: unknown[]) => getPublicSettingsMock(...a),
+  getCachedMenu: (...a: unknown[]) => getMenuMock(...a),
+}));
+
 import Header from "@/app/components/layout/Header";
 import HeaderWrapper from "@/app/components/layout/HeaderWrapper";
 

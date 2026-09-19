@@ -1,6 +1,18 @@
 import Header from "./Header";
-import { getMenu } from "@/app/services/menu.service";
-import { getPublicSettings } from "@/app/services/settings.service";
+/* 🔄 CACHE KULLANIMI — `getMenu()` / `getPublicSettings()` DOĞRUDAN
+   çağrılıyordu; oysa `lib/cache.helpers.ts` bu iki okuma için ZATEN
+   `unstable_cache` sarmalayıcıları barındırıyordu ve kimse
+   kullanmıyordu. Header HER public sayfada render olduğu için bu,
+   istek başına 5 gereksiz DB sorgusu demekti (settings 1 + getMenu
+   içinde 4 paralel sorgu).
+
+   Sarmalayıcılar BİREBİR aynı fonksiyonu çağırıyor:
+     getCachedSettings = unstable_cache(() => getPublicSettings())
+     getCachedMenu     = unstable_cache(() => getMenu())
+   → dönen veri, tip, null/hata davranışı DEĞİŞMEZ. Yeni cache
+   mekanizması KURULMADI; tag'ler ("settings" / "menu") ve
+   revalidateSettings()/revalidateMenu() invalidation yolu AYNEN. */
+import { getCachedMenu, getCachedSettings } from "@/lib/cache.helpers";
 import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
 /* 🛡️ PHASE 10H — `source_type: "category"` menü öğeleri villa tipi
    adını gösterir; EN/DE karşılıkları migration 082'deki
@@ -150,7 +162,7 @@ export default async function HeaderWrapper() {
      Hata/kapalı/`tr` durumunda "/" kalır (BYTE-IDENTICAL). */
   let trHomeHref = "/";
   try {
-    const settings = await getPublicSettings();
+    const settings = await getCachedSettings();
     siteLogo =
       resolveAssetUrlVersioned(settings?.site_logo, settings?.updated_at) ||
       null;
@@ -165,9 +177,11 @@ export default async function HeaderWrapper() {
      için try/catch render hatalarını ZATEN yakalamaz (bkz.
      react-hooks/error-boundaries). Veri hazırlığı try/catch içinde,
      tek `return` dışarıda — davranış BİREBİR aynı, lint uyarısı yok. */
-  let menuItems: Awaited<ReturnType<typeof getMenu>> = [];
+  /* Tip `getCachedMenu`'den türetilir — sarmalayıcı `getMenu()`'yü
+     aynen döndürdüğü için çıkarılan tip DEĞİŞMEZ. */
+  let menuItems: Awaited<ReturnType<typeof getCachedMenu>> = [];
   try {
-    menuItems = (await getMenu()) || [];
+    menuItems = (await getCachedMenu()) || [];
 
     /* 🛡️ PHASE 10H — villa tipi adlarının EN/DE karşılıkları. Okuma fail
        olursa header ÇÖKMEZ: harita boş kalır → canonical TR adı gösterilir
