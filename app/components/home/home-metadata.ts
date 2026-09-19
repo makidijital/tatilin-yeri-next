@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { getCachedSettings } from "@/lib/cache.helpers";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
+import { resolvePublicHome } from "@/lib/i18n/public-home";
 import { resolveSettingsText } from "@/lib/i18n/settings-translation.helper";
 
 /* ===============================================================
@@ -65,10 +66,38 @@ export async function buildHomeMetadata(
 
   const { canonical, languages } = buildLocaleAlternates("/", locale);
 
+  /* 🔄 ANA SAYFAYA ÖZEL hreflang/canonical DÜZELTMESİ
+     ------------------------------------------------------------
+     `buildLocaleAlternates` SAF ve settings'ten habersizdir
+     (`localeHref` de onu kullanır) — bu yüzden DEĞİŞTİRİLMEDİ.
+     Ana sayfaya özel tek istisna BURADA, yalnız bu helper'da
+     uygulanır:
+
+       MOD A (varsayılan "tr" veya multilingual kapalı)
+         → hiçbir şey değişmez; çıktı BYTE-IDENTICAL.
+       MOD B (varsayılan "en"/"de")
+         → `/` bir yönlendiricidir; TR ana sayfa `/tr`'de yaşar.
+           `hreflang="tr"` ve TR canonical `/tr`'yi gösterir,
+           `x-default` ise varsayılan dilin ana sayfasını gösterir.
+           Böylece hiçbir hreflang hedefi redirect'e düşmez.
+
+     Ek DB/cache okuması YOK — `settings` yukarıda ZATEN okundu. */
+  const home = resolvePublicHome(settings);
+  const homeLanguages = home.redirectsFromRoot
+    ? {
+        ...languages,
+        tr: home.trHomeHref,
+        "x-default": languages[home.defaultLocale],
+      }
+    : languages;
+  const homeCanonical = home.redirectsFromRoot
+    ? homeLanguages[locale]
+    : canonical;
+
   return {
     title,
     description,
-    alternates: { canonical, languages },
+    alternates: { canonical: homeCanonical, languages: homeLanguages },
     openGraph: { title, description },
     twitter: { title, description },
   };

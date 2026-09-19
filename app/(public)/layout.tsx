@@ -16,6 +16,7 @@ import FloatingSocial from "@/app/components/layout/FloatingSocial";
 import BottomNav from "@/app/components/layout/BottomNav";
 import ScrollToTopButton from "@/app/components/layout/ScrollToTopButton";
 import { getCachedSettings } from "@/lib/cache.helpers";
+import { resolvePublicHome } from "@/lib/i18n/public-home";
 
 /* ===============================================================
    🛡️ PUBLIC LAYOUT — MAINTENANCE MODE GATE
@@ -63,6 +64,12 @@ export default async function PublicLayout({
     settings?.whatsapp_link?.trim() ||
     (phoneDigits ? `https://wa.me/${phoneDigits}` : null);
 
+  /* 🔄 TR ana sayfa yolu — varsayılan dil EN/DE iken "/" bir
+     YÖNLENDİRİCİDİR, TR ana sayfa "/tr"'de yaşar. `settings` ZATEN
+     yukarıda okundu → EK FETCH YOK. Varsayılan "tr" veya multilingual
+     kapalı → "/" (BYTE-IDENTICAL). */
+  const { trHomeHref } = resolvePublicHome(settings);
+
   return (
     <div className="public-shell flex flex-col min-h-screen bg-[var(--color-ivory)]">
       {/* HEADER */}
@@ -87,7 +94,11 @@ export default async function PublicLayout({
          MobileBookingCta'sı var) otomatik gizlenir. Desktop'ta render
          edilir ama `md:hidden` ile görünmez → FloatingSocial desktop'ta
          aynen çalışır. Href'ler server'da türetilip prop geçilir. */}
-      <BottomNav phoneHref={phoneHref} whatsappHref={whatsappHref} />
+      <BottomNav
+        phoneHref={phoneHref}
+        whatsappHref={whatsappHref}
+        trHomeHref={trHomeHref}
+      />
 
       {/* ⬆️ Scroll-to-top — sol alt floating client island; scrollY>400'de
          görünür. z-40 (cookie/modaller üstte kalır), bottom-20 md:bottom-8

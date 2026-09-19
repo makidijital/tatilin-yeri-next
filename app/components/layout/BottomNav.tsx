@@ -18,7 +18,7 @@ import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
 /* 🛡️ PHASE 11 — locale, Header (9A) / Footer (9B) ile AYNI şekilde
    ZATEN VAR OLAN `pathname`'den türetilir. Layout'a (server) dokunulmadı;
    `headers()`/`cookies()` KULLANILMADI. */
-import { localeFromPathname } from "@/lib/i18n/config";
+import { DEFAULT_LOCALE, localeFromPathname } from "@/lib/i18n/config";
 /* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
    (bkz. lib/i18n/locale-href.ts). */
 import { localeHref } from "@/lib/i18n/locale-href";
@@ -45,6 +45,10 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 interface BottomNavProps {
   phoneHref: string | null;
   whatsappHref: string | null;
+  /* 🔄 TR ana sayfanın yolu. Varsayılan dil EN/DE iken "/" bir
+     YÖNLENDİRİCİ olduğu için public layout "/tr" geçer; aksi halde
+     (ve prop hiç verilmezse) "/" → davranış BYTE-IDENTICAL. */
+  trHomeHref?: string;
 }
 
 const ITEM_BASE =
@@ -57,6 +61,7 @@ const LABEL_CLASS = "text-[10.5px] font-medium leading-none tracking-tight";
 export default function BottomNav({
   phoneHref,
   whatsappHref,
+  trHomeHref = "/",
 }: BottomNavProps) {
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -84,8 +89,14 @@ export default function BottomNav({
   // Villa detay → tek alt bar (MobileBookingCta) kalsın; nav gizle.
   if (basePath.startsWith("/kiralik-villa/")) return null;
 
+  /* `/tr` (MOD B'deki TR ana sayfa) da "ana sayfa" sayılır —
+     `stripLocalePrefix` yalnız /en,/de soyduğu için basePath "/tr"
+     olarak gelir. MOD A'da `trHomeHref === "/"` → koşul BİREBİR
+     eskisi gibi çalışır. */
   const isActive = (href: string) =>
-    href === "/" ? basePath === "/" : basePath === href;
+    href === "/" || href === trHomeHref
+      ? basePath === "/" || basePath === trHomeHref
+      : basePath === href;
 
   return (
     <>
@@ -110,7 +121,11 @@ export default function BottomNav({
         <ul className="grid grid-cols-5">
           <li>
             <InternalItem
-              href={localeHref("/", locale)}
+              href={
+                locale === DEFAULT_LOCALE
+                  ? trHomeHref
+                  : localeHref("/", locale)
+              }
               label={dict.header.home}
               Icon={Home}
               active={isActive("/")}

@@ -10,6 +10,7 @@ import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
    `getMenu()` / `lib/menu-resolver.ts` DEĞİŞTİRİLMEDİ: çeviri burada,
    çözülmüş ağaca `source_id` üzerinden eklenir. */
 import { isMultilingualEnabled } from "@/lib/i18n/config";
+import { resolvePublicHome } from "@/lib/i18n/public-home";
 import { getVillaTypeNamesByLocale } from "@/lib/i18n/get-villa-type-translations.server";
 /* 🛡️ MIGRATION 086 — dinamik menü etiketlerinin EN/DE karşılıkları
    (`menu_translations`). Villa tipi çevirisiyle AYNI batch deseni:
@@ -142,12 +143,19 @@ export default async function HeaderWrapper() {
      404 (requirePublicLocaleEnabled) → çeviri okumak GEREKSİZ sorgu
      olur; bu bayrak o durumda okumayı tamamen atlatır. */
   let multilingualEnabled = false;
+  /* 🔄 TR ana sayfa yolu — varsayılan dil EN/DE iken "/" bir
+     YÖNLENDİRİCİDİR ve TR ana sayfa "/tr"'de yaşar; logo linki oraya
+     bakmalı ki TR kullanıcı varsayılan dile geri düşmesin. Okuma
+     ZATEN yapılan `getPublicSettings()` üzerinden — EK FETCH YOK.
+     Hata/kapalı/`tr` durumunda "/" kalır (BYTE-IDENTICAL). */
+  let trHomeHref = "/";
   try {
     const settings = await getPublicSettings();
     siteLogo =
       resolveAssetUrlVersioned(settings?.site_logo, settings?.updated_at) ||
       null;
     multilingualEnabled = isMultilingualEnabled(settings);
+    trHomeHref = resolvePublicHome(settings).trHomeHref;
   } catch {
     siteLogo = null;
   }
@@ -208,5 +216,5 @@ export default async function HeaderWrapper() {
     menuItems = [];
   }
 
-  return <Header menu={menuItems} siteLogo={siteLogo} />;
+  return <Header menu={menuItems} siteLogo={siteLogo} trHomeHref={trHomeHref} />;
 }

@@ -129,7 +129,8 @@ function normalizeSearchSuffix(search: string | null | undefined): string {
  */
 export function getLocaleSwitchTargets(
   pathname: string | null | undefined,
-  search?: string | null
+  search?: string | null,
+  trHomePath?: string | null
 ): Record<Locale, string> {
   /* `usePathname()` normalde query taşımaz; yine de savunmacı olarak
      path ile query ayrıştırılır (ör. testler/çağıranlar tam URL
@@ -147,13 +148,32 @@ export function getLocaleSwitchTargets(
   const { languages } = buildLocaleAlternates(pathOnly || "/", "tr");
   const basePath = languages.tr;
 
+  /* 🔄 ANA SAYFAYA ÖZEL TR HEDEFİ
+     ------------------------------------------------------------
+     Varsayılan dil EN/DE iken `/` bir YÖNLENDİRİCİDİR ve TR ana
+     sayfa `/tr`'de yaşar. O modda dil değiştiriciden "TR" seçmek
+     `/`'ye gitseydi kullanıcı ANINDA varsayılan dile geri
+     düşerdi (döngü hissi). Bu yüzden — ve YALNIZ ana sayfada
+     (`basePath === "/"`) — TR hedefi çağıran tarafından
+     `trHomePath` ile "/tr" olarak verilebilir.
+
+     `trHomePath` verilmezse veya "/" ise davranış BYTE-IDENTICAL.
+     İç sayfalar (`/kiralik-villalar`, `/arama`, …) HİÇ etkilenmez:
+     onların TR hedefi prefix'siz path olmaya devam eder. */
+  const trHome =
+    basePath === "/" && trHomePath ? trHomePath : languages.tr;
+
   if (hasLocaleRoute(basePath)) {
     return {
-      tr: `${languages.tr}${suffix}`,
+      tr: `${trHome}${suffix}`,
       en: `${languages.en}${suffix}`,
       de: `${languages.de}${suffix}`,
     };
   }
 
-  return { tr: "/", en: "/en", de: "/de" };
+  /* Fallback (locale karşılığı olmayan path) — her locale'in KÖKÜ.
+     ⚠️ Burada `trHome` KULLANILMAZ: bu dalda `basePath` "/" değildir,
+     dolayısıyla `trHome` o sayfanın kendi path'idir. TR KÖKÜ MOD B'de
+     "/tr", aksi halde "/" olmalıdır. */
+  return { tr: trHomePath || "/", en: "/en", de: "/de" };
 }

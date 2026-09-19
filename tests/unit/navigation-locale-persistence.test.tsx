@@ -406,6 +406,14 @@ const INTENTIONAL_CANONICAL: Record<string, string[]> = {
     "/arama?bolgeler=${encodeURIComponent(token)}",
   ],
   "app/services/menu.service.ts": ["/p/${p.slug}"],
+  /* 🔄 VARSAYILAN DİL — `trHomeHref` bir LİNK DEĞİL, TR ana sayfanın
+     KANONİK YOLUDUR ve tanımı gereği prefix'siz olmalıdır ("/" veya
+     "/tr"). Buradaki "/" yalnızca fail-safe başlangıç değeridir;
+     gerçek değer `resolvePublicHome(settings)`'ten gelir ve Header'a
+     prop olarak geçer (Header bunu `locale === DEFAULT_LOCALE`
+     dalında kullanır, EN/DE'de `localeHref` devrede kalır).
+     Kural GEVŞETİLMEDİ — yalnız bu dosya + bu tek değer muaf. */
+  "app/components/layout/HeaderWrapper.tsx": ["/"],
 };
 
 const HREF_PATTERNS = [

@@ -19,6 +19,10 @@ import { blogRepository } from "@/lib/db/blog.repository";
    URL kaynağı (elle string birleştirme YOK). */
 import { getCachedSettings } from "@/lib/cache.helpers";
 import { isMultilingualEnabled } from "@/lib/i18n/config";
+import {
+  resolvePublicHome,
+  type PublicHomeResolution,
+} from "@/lib/i18n/public-home";
 import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
 
 /* ===============================================================
@@ -119,6 +123,27 @@ function languageAlternates(trPath: string): Record<string, string> {
   };
 }
 
+/* 🔄 ANA SAYFAYA ÖZEL hreflang SETİ
+   ------------------------------------------------------------
+   Varsayılan dil EN/DE olduğunda (`redirectsFromRoot`) `/` bir
+   YÖNLENDİRİCİDİR; TR ana sayfa `/tr`'de yaşar. Sitemap'e veya
+   hreflang'e redirect eden bir URL koymak Search Console'da
+   "Page with redirect" + hreflang mismatch üretir. Bu yüzden bu
+   modda TR hedefi `/tr`, `x-default` ise varsayılan dilin ana
+   sayfası olur. Varsayılan "tr" iken (bugünkü production) çıktı
+   `languageAlternates("/")` ile BYTE-IDENTICAL kalır. */
+function homeLanguageAlternates(
+  home: PublicHomeResolution
+): Record<string, string> {
+  const base = languageAlternates("/");
+  if (!home.redirectsFromRoot) return base;
+  return {
+    ...base,
+    tr: url(home.trHomeHref),
+    "x-default": url(`/${home.defaultLocale}`),
+  };
+}
+
 /** Villa detay — mevcut çağıranın imzası DEĞİŞMEDİ. */
 function villaLanguageAlternates(slug: string): Record<string, string> {
   return languageAlternates(`/kiralik-villa/${slug}`);
@@ -141,6 +166,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
      penceresi DEĞİŞMEDİ. */
   const seoSettings = await getCachedSettings().catch(() => null);
   const multilingualEnabled = isMultilingualEnabled(seoSettings);
+  /* Ana sayfanın kanonik TR URL'i ("/" veya "/tr") — ek okuma YOK,
+     yukarıdaki `seoSettings`'ten saf şekilde türetilir. */
+  const home = resolvePublicHome(seoSettings);
 
   /* ---------- STATIK INDEXLENEN ROUTE'LAR ---------- */
   const now = new Date();
@@ -154,12 +182,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
      `multilingual_enabled=false` iken alan HİÇ eklenmez. */
   const staticEntries: MetadataRoute.Sitemap = [
     {
-      url: url("/"),
+      /* MOD A → "/" (bugünkü davranış). MOD B → "/tr": `/` artık
+         yönlendirici olduğu için sitemap'e indexlenebilir olan
+         TR ana sayfa URL'i yazılır. */
+      url: url(home.trHomeHref),
       lastModified: now,
       changeFrequency: "daily",
       priority: 1.0,
       ...(multilingualEnabled
-        ? { alternates: { languages: languageAlternates("/") } }
+        ? { alternates: { languages: homeLanguageAlternates(home) } }
         : {}),
     },
     {

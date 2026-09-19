@@ -26,7 +26,8 @@ import type { TaxonomyItem, CorporatePage } from "./FooterWrapper";
    riski YOK (bkz. Phase 9B audit — bu tasarımın seçilme nedeni). */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
-import { localeFromPathname } from "@/lib/i18n/config";
+import { DEFAULT_LOCALE, localeFromPathname } from "@/lib/i18n/config";
+import { resolvePublicHome } from "@/lib/i18n/public-home";
 /* 🛡️ NAVIGATION LOCALE PERSISTENCE — footer iç linkleri aktif locale'i
    taşır (bkz. lib/i18n/locale-href.ts). Dış bağlantılar (sosyal medya,
    tel/mailto) helper tarafından AYNEN geçirilir. */
@@ -220,6 +221,15 @@ export default function Footer({
   const locale = localeFromPathname(pathname);
   const dictionary = getDictionary(locale);
 
+  /* 🔄 TR ana sayfa yolu — varsayılan dil EN/DE iken "/" bir
+     YÖNLENDİRİCİDİR, TR ana sayfa "/tr"'de yaşar. Logo linki "/"
+     kalsaydı TR kullanıcı logoya basınca varsayılan dile geri
+     düşerdi. `settings` prop'u ZATEN mevcut → YENİ PROP/FETCH YOK.
+     Varsayılan "tr" veya multilingual kapalı → "/" (BYTE-IDENTICAL). */
+  const { trHomeHref } = resolvePublicHome(settings);
+  const homeHref =
+    locale === DEFAULT_LOCALE ? trHomeHref : localeHref("/", locale);
+
   /* 🛡️ PHASE 10L §7 — `settings.translations` (migration 083) locale'e
      göre çözülür. `settings` prop'u zaten `getPublicSettings()`'ten
      geliyor; YENİ PROP EKLENMEDİ. TR'de sonuç canonical değerin
@@ -272,7 +282,7 @@ export default function Footer({
           {/* LEFT — dominant brand block */}
           <div className="lg:col-span-5 space-y-7">
             <Link
-              href={localeHref("/", locale)}
+              href={homeHref}
               className="font-display text-[24px] tracking-tight inline-flex items-center text-[var(--color-stone-900)]"
             >
               {settings?.footer_logo || settings?.site_logo ? (

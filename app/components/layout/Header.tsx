@@ -25,7 +25,7 @@ import VillaSearchBox from "@/app/components/layout/VillaSearchBox";
    Header zaten "use client" olduğu ve `usePathname()`'e sahip olduğu
    için mümkün; site-wide dynamic-rendering riski YOK). */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
-import { localeFromPathname } from "@/lib/i18n/config";
+import { DEFAULT_LOCALE, localeFromPathname } from "@/lib/i18n/config";
 /* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç linkler aktif locale'i taşır.
    Yeni bir routing sistemi DEĞİL; `buildLocaleAlternates` (Phase 7B)
    üzerine ince, saf sarmalayıcı (bkz. lib/i18n/locale-href.ts). */
@@ -90,10 +90,15 @@ type MenuItem = {
 export default function Header({
   menu = [],
   siteLogo = null,
+  trHomeHref = "/",
 }: {
   menu?: MenuItem[];
   /* settings.site_logo — boşsa text wordmark fallback */
   siteLogo?: string | null;
+  /* 🔄 TR ana sayfanın yolu. Varsayılan dil EN/DE iken "/" bir
+     YÖNLENDİRİCİ olduğu için HeaderWrapper "/tr" geçer; aksi halde
+     (ve prop hiç verilmezse) "/" → davranış BYTE-IDENTICAL. */
+  trHomeHref?: string;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -107,6 +112,11 @@ export default function Header({
      referans/değerleri döner. */
   const locale = localeFromPathname(pathname);
   const dictionary = getDictionary(locale);
+
+  /* TR'de ana sayfa hedefi `trHomeHref`; EN/DE'de mevcut
+     `localeHref` davranışı AYNEN korunur. */
+  const homeHref =
+    locale === DEFAULT_LOCALE ? trHomeHref : localeHref("/", locale);
 
   /* 🛡️ Header search (desktop + mobile) TÜM sayfalarda gösterilir —
      anasayfa dahil (eski `!isHome` gizleme kaldırıldı). İç sayfa
@@ -217,7 +227,7 @@ export default function Header({
           <div className="max-w-[1480px] mx-auto px-5 md:px-10 lg:px-16 h-[72px] md:h-[80px] flex items-center justify-between">
             {/* LOGO */}
             <Link
-              href={localeHref("/", locale)}
+              href={homeHref}
               className="
                 font-display text-2xl tracking-tight
                 flex items-center

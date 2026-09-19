@@ -42,6 +42,7 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
    doldurulur (yeni bir i18n mekanizması EKLENMEDİ). */
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import { getLocaleSwitchTargets } from "@/lib/i18n/locale-switch.helper";
+import { resolvePublicHome } from "@/lib/i18n/public-home";
 
 /* 🛡️ Para birimi seçenekleri — bayraklar LOCAL SVG asset (public/flags).
    Emoji yerine OS-bağımsız render (Windows'ta da görünür). DEĞİŞMEDİ. */
@@ -189,16 +190,21 @@ function LocaleSwitchOptions({
   pathname,
   label,
   onSelect,
+  trHomePath,
 }: {
   locale: Locale;
   pathname: string | null;
   label: string;
   onSelect: () => void;
+  /* 🔄 Varsayılan dil EN/DE iken TR ana sayfanın yolu ("/tr").
+     Varsayılan "tr" iken "/" gelir → davranış BYTE-IDENTICAL. */
+  trHomePath: string;
 }) {
   const searchParams = useSearchParams();
   const localeSwitchTargets = getLocaleSwitchTargets(
     pathname,
-    searchParams.toString()
+    searchParams.toString(),
+    trHomePath
   );
 
   return (
@@ -305,6 +311,11 @@ export default function TopBar() {
      `getLocaleSwitchTargets` yalnız switcher görünürken hesaplanır
      (gereksiz iş yok). */
   const multilingualEnabled = isMultilingualEnabled(settings);
+
+  /* 🔄 TR ana sayfa yolu — `settings` ZATEN yukarıda okundu, ek fetch
+     YOK. Kural tek kaynaktan gelir (lib/i18n/public-home.ts, saf).
+     Varsayılan "tr" veya multilingual kapalı → "/" (bugünkü davranış). */
+  const { trHomeHref } = resolvePublicHome(settings);
 
   /* 🛡️ İLETİŞİM HREF TÜRETME — mevcut projede zaten kullanılan
      pattern'lerin AYNISI (yeni mantık YOK, sadece TopBar'a taşındı):
@@ -608,6 +619,7 @@ export default function TopBar() {
                   pathname={pathname}
                   label={dictionary.common.language}
                   onSelect={() => setLangOpen(false)}
+                  trHomePath={trHomeHref}
                 />
               </Suspense>
             )}
