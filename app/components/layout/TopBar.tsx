@@ -44,17 +44,17 @@ import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import { getLocaleSwitchTargets } from "@/lib/i18n/locale-switch.helper";
 import { resolvePublicHome } from "@/lib/i18n/public-home";
 
-/* 🛡️ Para birimi seçenekleri — bayraklar LOCAL SVG asset (public/flags).
-   Emoji yerine OS-bağımsız render (Windows'ta da görünür). DEĞİŞMEDİ. */
 /* 🛡️ TURSAB belge numarası — ÖNCEDEN de bu dosyada HARDCODED'di
    (settings şemasına dokunulmadı). Çeviri metninden AYRI tutulur ki
    numara üç dilde tekrarlanmasın; `header.agencyCredential`'ın `{no}`
    token'ına enjekte edilir. */
 const TURSAB_LICENSE_NO = "13303";
 
-/* `symbol` — YALNIZ tetikleyici butonda seçili kurun yanında gösterilir.
-   `flag` alanı DEĞİŞMEDİ; dropdown listesi onu AYNEN kullanmaya devam
-   eder. Kur state'i / dönüşüm mantığı / seçim davranışı DOKUNULMADI. */
+/* `symbol` — kapalı tetikleyicide VE dropdown seçeneklerinde gösterilen
+   para birimi sembolü (₺ / $ / € / £); ikisi de AYNI sunumu kullanır.
+   `flag` alanı veri şeklini bozmamak için BIRAKILDI ama şu an hiçbir
+   yerde render EDİLMİYOR (kur ≠ ülke; seçeneklerde de sembol gösteriliyor).
+   Kur state'i / dönüşüm mantığı / seçim davranışı DOKUNULMADI. */
 const CURRENCY_OPTIONS: { code: string; flag: string; symbol: string }[] = [
   { code: "TRY", flag: "/flags/tr.svg", symbol: "₺" },
   { code: "USD", flag: "/flags/us.svg", symbol: "$" },
@@ -62,7 +62,8 @@ const CURRENCY_OPTIONS: { code: string; flag: string; symbol: string }[] = [
   { code: "GBP", flag: "/flags/gb.svg", symbol: "£" },
 ];
 
-/* Seçili dilin bayrağı — projenin ZATEN kullandığı `/flags/*.svg`
+/* Dil bayrakları — kapalı tetikleyicide seçili dil, dropdown'da her
+   seçenek için. Projenin ZATEN kullandığı `/flags/*.svg`
    asset deseni (yukarıdaki CURRENCY_OPTIONS ile aynı). Emoji bilinçli
    olarak KULLANILMADI: bayrak emoji'leri Windows'ta render EDİLMEZ.
    `de.svg` bu tur eklendi; tr/gb zaten mevcuttu. Yeni paket/library YOK. */
@@ -233,8 +234,14 @@ function LocaleSwitchOptions({
               role="option"
               aria-selected="true"
               aria-current="true"
-              className="w-full flex items-center px-3 py-1.5 text-[14px] font-medium text-left bg-gradient-to-r from-[#ED7926]/10 to-[#0973BA]/10 text-[var(--color-stone-900)]"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-[14px] font-medium text-left bg-gradient-to-r from-[#ED7926]/10 to-[#0973BA]/10 text-[var(--color-stone-900)]"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={LOCALE_FLAGS[l]}
+                alt=""
+                className="w-4 h-3 rounded-[1px] object-cover shrink-0"
+              />
               {l.toUpperCase()}
             </span>
           </li>
@@ -245,8 +252,14 @@ function LocaleSwitchOptions({
               role="option"
               aria-selected="false"
               onClick={onSelect}
-              className="w-full flex items-center px-3 py-1.5 text-[14px] font-medium text-left text-[var(--color-stone-700)] hover:bg-[var(--color-stone-50)] transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-[14px] font-medium text-left text-[var(--color-stone-700)] hover:bg-[var(--color-stone-50)] transition-colors"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={LOCALE_FLAGS[l]}
+                alt=""
+                className="w-4 h-3 rounded-[1px] object-cover shrink-0"
+              />
               {l.toUpperCase()}
             </Link>
           </li>
@@ -579,12 +592,18 @@ export default function TopBar() {
                         : "text-[var(--color-stone-700)] hover:bg-[var(--color-stone-50)]")
                     }
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={c.flag}
-                      alt=""
-                      className="w-4 h-3 rounded-[1px] object-cover shrink-0"
-                    />
+                    {/* 🔄 Seçeneğin KENDİ kur sembolü (₺ / $ / € / £) —
+                        kapalı tetikleyicideki sunumla BİREBİR aynı.
+                        `aria-hidden` + sabit genişlik: erişilebilir ad
+                        `c.code` olarak KALIR (mevcut testler bu adla
+                        eşleşiyor) ve satırlar hizalı durur. `onClick`/
+                        `setCurrency`/state DEĞİŞMEDİ. */}
+                    <span
+                      aria-hidden
+                      className="w-4 shrink-0 text-center leading-none"
+                    >
+                      {c.symbol}
+                    </span>
                     {c.code}
                   </button>
                 </li>

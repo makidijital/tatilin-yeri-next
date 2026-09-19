@@ -591,6 +591,93 @@ describe("TopBar — Phase 10C dil değiştirici", () => {
       `/de/arama?${ARAMA_QUERY}`
     );
   });
+
+  /* ===============================================================
+     🔒 44-48) DROPDOWN İKON/BAYRAK SÖZLEŞMESİ
+     ===============================================================
+     Kapalı tetikleyicide seçili kurun sembolü ve seçili dilin bayrağı
+     ZATEN vardı; bu tur dropdown SEÇENEKLERİNE de eklendi. Testler
+     hem yeni sunumu hem de "iş mantığı değişmedi" garantisini kilitler.
+  =============================================================== */
+
+  it("44) KUR dropdown'ı — her seçenek KENDİ sembolünü gösterir", async () => {
+    usePathnameMock.mockReturnValue("/");
+    getPublicSettingsMock.mockResolvedValue(
+      settingsWith({ multilingual_enabled: true })
+    );
+    const { container } = render(<TopBar />);
+    fireEvent.click(await screen.findByText("TRY"));
+
+    const list = container.querySelector('ul[role="listbox"]');
+    expect(list).not.toBeNull();
+    const rows = Array.from(list!.querySelectorAll('[role="option"]')).map(
+      (o) => o.textContent || ""
+    );
+    expect(rows).toEqual(["₺TRY", "$USD", "€EUR", "£GBP"]);
+    /* Bayrak <img> ARTIK kur listesinde YOK (kur ≠ ülke). */
+    expect(list!.querySelectorAll("img")).toHaveLength(0);
+  });
+
+  it("45) KUR dropdown'ı — erişilebilir ad hâlâ SADECE kod (mevcut testler bozulmaz)", async () => {
+    usePathnameMock.mockReturnValue("/");
+    getPublicSettingsMock.mockResolvedValue(
+      settingsWith({ multilingual_enabled: true })
+    );
+    render(<TopBar />);
+    fireEvent.click(await screen.findByText("TRY"));
+    expect(screen.getByRole("option", { name: "USD" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "EUR" })).toBeInTheDocument();
+  });
+
+  it("46) KUR seçimi — sembol eklenmesi setCurrency davranışını DEĞİŞTİRMEDİ", async () => {
+    usePathnameMock.mockReturnValue("/");
+    getPublicSettingsMock.mockResolvedValue(
+      settingsWith({ multilingual_enabled: true })
+    );
+    render(<TopBar />);
+    fireEvent.click(await screen.findByText("TRY"));
+    fireEvent.click(screen.getByRole("option", { name: "EUR" }));
+    expect(setCurrencyMock).toHaveBeenCalledWith("EUR");
+    expect(setCurrencyMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("47) DİL dropdown'ı — her seçenek KENDİ bayrağını gösterir (emoji DEĞİL, /flags/*.svg)", async () => {
+    usePathnameMock.mockReturnValue("/");
+    getPublicSettingsMock.mockResolvedValue(
+      settingsWith({ multilingual_enabled: true })
+    );
+    const { container } = render(<TopBar />);
+    fireEvent.click(await screen.findByLabelText(LANGUAGE_LABEL.tr));
+
+    const list = container.querySelector('ul[role="listbox"]');
+    expect(list).not.toBeNull();
+    const srcs = Array.from(list!.querySelectorAll("img")).map((i) =>
+      i.getAttribute("src")
+    );
+    expect(srcs).toEqual(["/flags/tr.svg", "/flags/gb.svg", "/flags/de.svg"]);
+    /* Bayraklar dekoratif → erişilebilir ad SADECE dil kodu kalır. */
+    expect(screen.getByRole("option", { name: "TR" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "EN" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "DE" })).toBeInTheDocument();
+  });
+
+  it("48) DİL seçimi — bayrak eklenmesi hedef URL'leri DEĞİŞTİRMEDİ", async () => {
+    usePathnameMock.mockReturnValue("/");
+    getPublicSettingsMock.mockResolvedValue(
+      settingsWith({ multilingual_enabled: true })
+    );
+    render(<TopBar />);
+    fireEvent.click(await screen.findByLabelText(LANGUAGE_LABEL.tr));
+    expect(screen.getByRole("option", { name: "TR" }).tagName).toBe("SPAN");
+    expect(screen.getByRole("option", { name: "EN" })).toHaveAttribute(
+      "href",
+      "/en"
+    );
+    expect(screen.getByRole("option", { name: "DE" })).toHaveAttribute(
+      "href",
+      "/de"
+    );
+  });
 });
 
 /* ═══════════════════════════════════════════════════════════════
@@ -721,4 +808,5 @@ describe("TopBar — dictionary bütünlüğü ve source-lock", () => {
     expect(code.includes("Costeralla Travel")).toBe(true);
     expect(code.includes("13303")).toBe(true);
   });
+
 });
