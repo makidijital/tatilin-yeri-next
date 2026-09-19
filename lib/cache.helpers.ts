@@ -5,7 +5,7 @@ import { resolveVillaImageUrl } from "@/lib/storage.helpers";
    mantık: villa_prices içindeki MIN nightly (getStartingPrice). Eskiden
    koleksiyon mapper'ları villa_prices[0] kullanıyordu → tutarsız. */
 import { getStartingPrice, type DiscountRange } from "@/lib/price.engine";
-import { parseLocalDate } from "@/lib/date-format";
+import { parseLocalDate, formatLocalDate } from "@/lib/date-format";
 /* 🛡️ Villa Migration S2 + S8L — findActiveLocationIds (S2) +
    findActiveImagesByIds (S8L) native'e taşındı. cache.helpers zaten
    server-only (unstable_cache) → server-only native repo import'u güvenli.
@@ -509,6 +509,13 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
     const rows = (data || []) as unknown as Row[];
     const statsMap = await statsPromise;
 
+    /* Bugün — LOCAL tarih; `discount-collection.service.ts >
+       listDiscountCollection` ile BİREBİR AYNI formatLocalDate →
+       parseLocalDate round-trip'i (villa_discounts.end_date'in
+       "YYYY-MM-DD" local semantiğiyle karşılaştırılabilir). Döngü
+       DIŞINDA bir kez hesaplanır (cache build başına tek Date). */
+    const today = parseLocalDate(formatLocalDate(new Date()));
+
     const result: HomepageCollectionVilla[] = [];
     for (const r of rows) {
       const v = r.villa;
@@ -577,15 +584,46 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
          seçilir (villa_discounts admin akışında normalde tek kayıt olur;
          birden fazlaysa en erken başlayan, ekstra bir "aktiflik/öncelik"
          iş kuralı İCAT EDİLMEDEN, en basit deterministik seçimdir).
-         normalizedDiscounts boşsa (villanın hiç geçerli villa_discounts
-         kaydı yoksa) `discount: null` olur — bu YENİ değil, önceki
-         davranışla da AYNI. */
+         Seçim, aşağıdaki görünürlük filtresinden GEÇEN kayıtlar
+         üzerinden yapılır (bkz. bir sonraki blok). */
+
+      /* 🔄 KÖK NEDEN DÜZELTMESİ — ADMIN İLE FİLTRE SİMETRİSİ
+         ------------------------------------------------------------
+         SORUN: `villa_discounts` kaydı admin'den silindiğinde
+         `discount_collections` satırı (kasıtlı olarak) SİLİNMEZ. Admin
+         listesi (app/services/discount-collection.service.ts >
+         listDiscountCollection) bu durumda item'ı tarih-bazlı filtreyle
+         eliyordu; BU okuma yolunda ise hiçbir `villa_discounts` koşulu
+         yoktu → villa admin'de kaybolurken ana sayfada `discount: null`
+         ile kart olarak kalmaya devam ediyordu.
+
+         DÜZELTME: admin'deki kuralın BİREBİR AYNISI burada da uygulanır —
+         bir villa yalnızca EN AZ BİR `villa_discounts` kaydı `end_date >=
+         bugün` ise koleksiyonda kalır. `discount_collections` satırına,
+         `villa_discounts` kayıtlarına, şemaya veya sorguya DOKUNULMAZ;
+         yalnız bu mapper'ın görünürlük kararı düzeltilir (villa'ya yeni
+         gelecek-tarihli indirim eklenirse otomatik geri görünür).
+
+         ⚠️ Gelecek tarihli indirimler ETKİLENMEZ (end_date de gelecekte
+         → koşulu geçer) — "kayıt varsa kartta gösterilir" iş kuralı
+         korunur; yalnızca SÜRESİ GEÇMİŞ / HİÇ OLMAYAN kayıt elenir. */
+      const visibleDiscounts = normalizedDiscounts.filter((d) => {
+        const end = parseLocalDate(d.end_date);
+        /* parseLocalDate throw etmez; Invalid Date → geçerli SAYILMAZ
+           (admin filtresiyle birebir aynı defansif davranış). */
+        if (Number.isNaN(end.getTime())) return false;
+        return end >= today;
+      });
+      if (visibleDiscounts.length === 0) continue;
+
+      /* Buraya gelindiğinde visibleDiscounts GARANTİLİ boş değil
+         (yukarıdaki `continue`), ama alanın tipi nullable kalır —
+         `HomepageCollectionVilla.discount` homepage-collection
+         kartlarında null olmaya devam ediyor. */
       const selectedDiscount: DiscountRange | null =
-        normalizedDiscounts.length > 0
-          ? [...normalizedDiscounts].sort((a, b) =>
-              a.start_date.localeCompare(b.start_date)
-            )[0]
-          : null;
+        [...visibleDiscounts].sort((a, b) =>
+          a.start_date.localeCompare(b.start_date)
+        )[0] ?? null;
 
       const s = statsMap[v.id];
       const hasReviews = !!s && s.count > 0;
