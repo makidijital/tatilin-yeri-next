@@ -184,7 +184,12 @@ describe("revalidate.actions — 'settings' tag'i DEĞİŞMEDİ", () => {
       join(process.cwd(), "app/services/revalidate.actions.ts"),
       "utf-8"
     );
-    expect(src).toMatch(/revalidateTag\("settings", "max"\)/);
+    /* 🔄 İkinci argüman `"max"` → `{ expire: 0 }` olarak düzeltildi
+       (Next 16.2.4'te "max" purge etmiyor, expire'ı 1 yıl ileri
+       atıyordu). Testin AMACI aynı: "settings" tag'i kullanılıyor,
+       yeni tag icat edilmedi. Ayrıntılı sözleşme:
+       tests/unit/revalidate-actions-invalidation.test.ts */
+    expect(src).toMatch(/revalidateTag\("settings", \{ expire: 0 \}\)/);
     expect(src).not.toMatch(/settings-translations/);
     expect(src).not.toMatch(/settings_translations/);
   });
