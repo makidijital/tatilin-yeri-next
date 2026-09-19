@@ -4,7 +4,7 @@
 -- SORUN:
 --   Production cron (/api/cron/short-gaps-refresh) çağrısında:
 --     {"ok":false,"error":"DELETE requires a WHERE clause"}
---   Sebep: Supabase oturumunda `sql_safe_updates = on`; WHERE'siz
+--   Sebep: eski sağlayıcı oturumunda `sql_safe_updates = on`; WHERE'siz
 --   `DELETE FROM public.villa_short_gaps;` Postgres tarafından reddedilir.
 --   (sql_safe_updates session GUC'u SECURITY DEFINER ile değişmez.)
 --

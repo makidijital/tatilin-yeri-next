@@ -24,7 +24,7 @@
 --
 -- BACKWARD COMPATIBILITY:
 --   Service contract aynı (villaId + payload). Fonksiyonlar void
---   döndürür; supabase.rpc() çağrısı error nesnesi ile fail eder ve
+--   döndürür; db.rpc() çağrısı error nesnesi ile fail eder ve
 --   mevcut error handling pattern'i çalışmaya devam eder.
 -- ============================================================================
 

@@ -10,7 +10,7 @@
 --     - admin/homepage-collection page     : 0 referans
 --     - components/villa/VillaList         : 0 referans
 --     - migrations/012_homepage_collections: schema'da TANIMLI DEĞİL
---   Phantom kolon: muhtemelen Supabase Dashboard üzerinden manuel
+--   Phantom kolon: muhtemelen veritabanı yönetim paneli üzerinden manuel
 --   eklenmiş, kod tarafına hiç sızmamış.
 --
 --   `custom_title` (active, display_title fallback) ve

@@ -19,7 +19,7 @@
 --   yok, tek-kullanım yok).
 --
 -- ⚠️ NATIVE AUTHZ MODELİ (068 ile aynı — RLS / role-grant YOK):
---   Hedef Hetzner PostgreSQL 16'da Supabase-özgü public/JWT rolleri YOKTUR →
+--   Hedef Hetzner PostgreSQL 16'da eski sağlayıcı-özgü public/JWT rolleri YOKTUR →
 --   RLS + role-grant eklemek vanilla PG'de ERROR üretir.
 --   Native provider tek ayrıcalıklı app-rolü ile çalışır; yetki UYGULAMA
 --   KATMANINDA (admin yazma: authorizeAdminCaller; public resolve: server-only
@@ -36,19 +36,6 @@
 -- ----------------------------------------------------------------------------
 create index if not exists idx_admin_users_auth_user_id
   on public.admin_users (auth_user_id);
-
-create or replace function public.is_active_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = pg_catalog, public
-as $$
-  select exists (
-    select 1 from public.admin_users au
-    where au.auth_user_id = auth.uid() and au.is_active = true
-  );
-$$;
 
 
 -- ----------------------------------------------------------------------------

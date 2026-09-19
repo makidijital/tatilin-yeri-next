@@ -27,7 +27,7 @@
 --
 -- ⚠️ NATIVE POSTGRESQL (migration 068 CANON — 071'deki desenle AYNI):
 --   Bu projede anon/authenticated/service_role rolleri YOK; RLS/GRANT/
---   REVOKE Supabase-era kalıntısıdır (071'in kendi yorumunda da belirtildi).
+--   REVOKE eski sağlayıcı dönemi kalıntısıdır (071'in kendi yorumunda da belirtildi).
 --   Bu migration BİLİNÇLİ olarak native desenle yazıldı: role/grant/revoke/
 --   RLS değişikliği YOK. get_public_settings() SECURITY DEFINER olarak
 --   CREATE OR REPLACE edilir; tek app-rolü (service-role bağlantısı)

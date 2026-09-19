@@ -10,7 +10,7 @@
 --   pg_cron + cleanup function. Yeni yaklaşım üretilmedi.
 --
 -- STRATEJİ:
---   • pg_cron extension (Supabase'de yerleşik) ile saat başı (`0 * * * *`)
+--   • pg_cron extension (eski sağlayıcıda yerleşik) ile saat başı (`0 * * * *`)
 --     `delete from shared_favorite_lists where expires_at < now()` çalıştır.
 --   • Cleanup function `public.cleanup_expired_shared_favorite_lists()` —
 --     hem manuel çağrılabilir hem cron'dan tetiklenir.
@@ -20,9 +20,9 @@
 --     filtresi (036'daki delete ile aynı semantik).
 --
 -- DEFANSİF NOTLAR:
---   • pg_cron extension Supabase tarafında yüklü olmalı. Self-hosted
+--   • pg_cron extension eski sağlayıcı tarafında yüklü olmalı. Self-hosted
 --     Postgres'te yoksa migration 'extension does not exist' ile düşer.
---     Bu durumda admin Supabase Dashboard → Database → Extensions'tan
+--     Bu durumda admin veritabanı yönetim paneli → Database → Extensions'tan
 --     pg_cron'u enable edip migration'ı tekrar çalıştırabilir.
 --   • Cleanup function `security definer` DEĞIL (036 ile aynı; pg_cron
 --     postgres rolünde çalışır).
@@ -57,7 +57,7 @@ comment on function public.cleanup_expired_shared_favorite_lists() is
   'başı tetiklenir; manuel çağrı da güvenli (idempotent). 7 günlük TTL '
   'application layer (shared-favorites.service) tarafından set edilir.';
 
--- ---- 2) pg_cron extension (Supabase'de yerleşik) ----
+-- ---- 2) pg_cron extension (eski sağlayıcıda yerleşik) ----
 do $$
 begin
   -- pg_cron extension'ı oluşturmaya çalış; yüklü değilse warning at,

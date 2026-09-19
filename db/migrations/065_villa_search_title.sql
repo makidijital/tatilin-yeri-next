@@ -20,12 +20,12 @@
      (İ→I translate + lower() = i; noktasız 'I' → lower() = i)
 
    TAŞINABİLİRLİK & SÜRÜM:
-     Supabase'e bağımlı DEĞİL. translate / lower / regexp_replace /
+     eski sağlayıcıya bağımlı DEĞİL. translate / lower / regexp_replace /
      btrim hepsi IMMUTABLE core fonksiyonlar → GENERATED STORED'da
      geçerli. pg_trgm standart contrib extension'dır (plain PostgreSQL
      / Hetzner PostgreSQL'de de mevcut; CREATE EXTENSION yetkisi ister).
      ⚠️ GENERATED ALWAYS AS ... STORED → PostgreSQL 12+ gerektirir.
-        Supabase = PG15 ✓. Hetzner: `SHOW server_version;` ile ≥12
+        eski sağlayıcı = PG15 ✓. Hetzner: `SHOW server_version;` ile ≥12
         doğrulanmalı (modern kurulumlar 14–17). <12 ise BEFORE trigger
         varyantına geçilir (bkz. dosya sonu NOT).
 
@@ -49,7 +49,7 @@
        - ALTER TABLE ... ADD COLUMN IF NOT EXISTS ... GENERATED ...
        - CREATE INDEX IF NOT EXISTS ...
        - ANALYZE (her koşulda güvenli)
-     Supabase ve Hetzner (aynı standart PG DDL) üzerinde birebir.
+     eski sağlayıcı ve Hetzner (aynı standart PG DDL) üzerinde birebir.
 
    ROLLBACK (geri alma):
      -- Sıra: önce index, sonra kolon. pg_trgm BIRAKILIR (başka

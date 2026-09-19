@@ -8,7 +8,7 @@
 --   tabloda birikmesin.
 --
 -- STRATEJİ:
---   • pg_cron extension (Supabase'de yerleşik) ile saat başı (`0 * * * *`)
+--   • pg_cron extension (eski sağlayıcıda yerleşik) ile saat başı (`0 * * * *`)
 --     `delete from shared_villa_lists where expires_at < now()` çalıştır.
 --   • Cleanup function `public.cleanup_expired_shared_villa_lists()` —
 --     hem manuel çağrılabilir hem cron'dan tetiklenir.
@@ -18,9 +18,9 @@
 --     bunlar zaten 404 davranışında).
 --
 -- DEFANSİF NOTLAR:
---   • pg_cron extension Supabase tarafında yüklü olmalı. Self-hosted
+--   • pg_cron extension eski sağlayıcı tarafında yüklü olmalı. Self-hosted
 --     Postgres'te yoksa migration 'extension does not exist' ile düşer.
---     Bu durumda admin Supabase Dashboard → Database → Extensions'tan
+--     Bu durumda admin veritabanı yönetim paneli → Database → Extensions'tan
 --     pg_cron'u enable edip migration'ı tekrar çalıştırabilir.
 --   • Cleanup function `security definer` DEĞIL — RLS'i bypass etmek
 --     istemiyoruz; authenticated context'te ya da pg_cron'un kendi
@@ -53,7 +53,7 @@ comment on function public.cleanup_expired_shared_villa_lists() is
   'başı tetiklenir; manuel çağrı da güvenli (idempotent). revoked_at '
   'satırları dokunulmaz (admin moderation log).';
 
--- ---- 2) pg_cron extension (Supabase'de yerleşik) ----
+-- ---- 2) pg_cron extension (eski sağlayıcıda yerleşik) ----
 do $$
 begin
   -- pg_cron extension'ı oluşturmaya çalış; yüklü değilse warning at,

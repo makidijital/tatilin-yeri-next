@@ -3,15 +3,15 @@
 -- ===============================================================
 -- AMAÇ:
 --   Her villa_type için tek kapak görseli. Full public URL DEĞİL,
---   sadece Supabase Storage RELATIVE PATH kaydedilir. Bucket adı,
+--   sadece R2 storage RELATIVE PATH kaydedilir. Bucket adı,
 --   project URL veya CDN domain değişirse DB değeri kırılmaz —
---   runtime'da `supabase.storage.from(bucket).getPublicUrl(path)`
+--   runtime'da `eski sağlayıcı.storage.from(bucket).getPublicUrl(path)`
 --   ile public URL üretilir.
 --
 --   ÖRNEK DB DEĞERİ:
 --     'category-covers/balayi-villalari.webp'
 --   ÖRNEK RUNTIME URL (production'da):
---     https://<proj>.supabase.co/storage/v1/object/public/site-assets/
+--     https://<proj>.eski storage host/storage/v1/object/public/site-assets/
 --       category-covers/balayi-villalari.webp
 --
 -- KORUNAN BEHAVIOR:

@@ -3,7 +3,7 @@
 -- ============================================================================
 -- AMAÇ:
 --   FAZ 45'te tespit edilen duplicate kolon yapısı kaldırılıyor.
---   Kullanıcı Supabase Dashboard üzerinden manuel olarak migration
+--   Kullanıcı veritabanı yönetim paneli üzerinden manuel olarak migration
 --   022 canonical isimlerinin paraleline alias kolonları eklemişti.
 --   Service ikisine de yazıyordu (temporary mirror).
 --   Şimdi tek source of truth:

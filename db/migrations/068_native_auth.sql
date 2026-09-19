@@ -4,14 +4,14 @@
 -- KAPSAM:
 --   1) admin_users → native auth kolonları (password_hash + login
 --      state alanları). TAMAMEN nullable / default'lu → mevcut satırlar
---      ETKİLENMEZ, mevcut Supabase Auth yolu bu kolonları OKUMAZ.
+--      ETKİLENMEZ, mevcut native auth yolu bu kolonları OKUMAZ.
 --   2) admin_sessions → native refresh/session tablosu (yeni).
 --
 -- ⚠️ NEDEN GÜVENLİ (canlıyı bozmaz):
 --   • Tüm ALTER'lar `IF NOT EXISTS` + nullable/default → idempotent,
 --     yeniden çalıştırılabilir, veri kaybı yok.
 --   • `admin_sessions` YENİ tablo; hiçbir mevcut obje değişmez.
---   • Supabase Auth hâlâ `auth.users`'ı kullanıyor; bu kolonlar/tablo
+--   • native auth hâlâ `auth.users`'ı kullanıyor; bu kolonlar/tablo
 --     yalnız native yol AKTİF olduğunda (FAZ 3 cutover) devreye girer.
 --
 -- ⚠️ RLS YOK (bilinçli):
@@ -42,7 +42,7 @@ alter table public.admin_users
   add column if not exists password_changed_at  timestamptz;
 
 comment on column public.admin_users.password_hash is
-  'Native auth şifre hash''i (self-describing prefix: $scrypt$… / gelecekte $argon2id$… / legacy $2a$… bcrypt). NULL = henüz native şifre atanmadı (Supabase Auth yolu kullanılıyor).';
+  'Native auth şifre hash''i (self-describing prefix: $scrypt$… / gelecekte $argon2id$… / legacy $2a$… bcrypt). NULL = henüz native şifre atanmadı (native auth yolu kullanılıyor).';
 comment on column public.admin_users.failed_attempts is
   'Ardışık başarısız login sayacı (brute-force koruması). Başarılı login sıfırlar.';
 comment on column public.admin_users.locked_until is

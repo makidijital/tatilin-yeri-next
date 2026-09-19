@@ -5,12 +5,12 @@
 --   Her villa_location için tek kapak görseli. Migration 010
 --   (villa_types.cover_image) ile BİREBİR paralel mimari:
 --   bucket-relative path saklanır, public URL runtime'da
---   `supabase.storage.from(bucket).getPublicUrl(path)` ile üretilir.
+--   `eski sağlayıcı.storage.from(bucket).getPublicUrl(path)` ile üretilir.
 --
 --   ÖRNEK DB DEĞERİ:
 --     'location-covers/kalkan.webp'
 --   ÖRNEK RUNTIME URL (production'da):
---     https://<proj>.supabase.co/storage/v1/object/public/site-assets/
+--     https://<proj>.eski storage host/storage/v1/object/public/site-assets/
 --       location-covers/kalkan.webp
 --
 -- KORUNAN BEHAVIOR:

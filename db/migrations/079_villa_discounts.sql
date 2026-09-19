@@ -87,7 +87,7 @@
        bypass ediyor, bkz. `lib/db/native.ts` doc-comment'i).
 
    RLS / GRANT — YOK (BİLİNÇLİ; native production hatasının düzeltmesi):
-     İlk sürüm `villa_prices`'ın migration 037'deki (Supabase-era) RLS/
+     İlk sürüm `villa_prices`'ın migration 037'deki (eski sağlayıcı dönemi) RLS/
      POLICY desenini birebir kopyalamıştı: `TO anon, authenticated` +
      `public.is_active_admin()` guard'lı policy'ler. Bu, production'da
      ("Hetzner native PostgreSQL", migration 068 native-auth cutover
@@ -224,7 +224,7 @@ ALTER TABLE public.villa_discounts
 -- 3) RLS / GRANT — BİLİNÇLİ OLARAK YOK (production hatasının düzeltmesi).
 --    ÖNCEKİ SÜRÜM burada `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` +
 --    `TO anon, authenticated` / `public.is_active_admin()` guard'lı iki
---    CREATE POLICY içeriyordu (migration 037 Supabase-era deseni). Hedef
+--    CREATE POLICY içeriyordu (migration 037 eski sağlayıcı dönemi deseni). Hedef
 --    Hetzner PostgreSQL'de (migration 068 native-auth cutover sonrası)
 --    anon/authenticated/service_role rolleri YOK → bu ifadeler
 --    `ERROR: role "anon" does not exist` üretti ve migration transaction'ı

@@ -8,44 +8,35 @@ Projede **migration runner yoktur** (`package.json`'da migration script'i,
 uygulanır. Bu nedenle bu dosyaların taşınmasının **runtime/deployment
 etkisi sıfırdır**.
 
-## `supabase/` — Supabase dönemi (29 dosya)
+## `legacy/` — eski yönetilen-PostgreSQL dönemi (20 dosya)
 
-Proje Supabase PostgreSQL'den native PostgreSQL'e (Hetzner) geçtiği için
-bu migration'lar **bugünkü veritabanında çalıştırılamaz**: `anon`,
-`authenticated`, `service_role` rolleri ve `auth` şeması vanilla
-PostgreSQL'de yoktur → `ERROR` verirler.
+Proje, yönetilen bir PostgreSQL sağlayıcısından **native PostgreSQL**'e
+(Hetzner) geçti. O dönemin migration'ları eski sağlayıcıya özgü bir
+yetkilendirme katmanı (satır-seviyesi politikalar + sağlayıcıya ait rol
+adları + `auth` şeması) içeriyordu. Bu katman **bugünkü veritabanında
+mevcut değildir**; ilgili ifadeler dosyalardan temizlenmiştir.
 
-İçerdikleri Supabase'e özgü yapılar:
+**Bu dosyalardaki tablo / index / trigger / fonksiyon tanımları hâlâ
+geçerlidir** — yalnızca sağlayıcıya özgü yetkilendirme katmanı kaldırıldı.
+Yetkilendirme artık uygulama katmanında yapılır (`authorizeAdminCaller`,
+native JWT).
 
-- `CREATE POLICY` / `ENABLE ROW LEVEL SECURITY`
-- `GRANT … TO anon | authenticated | service_role`
-- `auth.uid()` / `auth.users`
-
-Kapsam: `015`–`069` arası 28 dosya + numaralandırma öncesi
-`2026_05_payment_accounts_rls.sql`.
-
-> `069_native_auth_password_import.sql` Supabase GoTrue
-> (`auth.users.encrypted_password`) → `admin_users.password_hash`
-> köprüsüdür. `to_regclass('auth.users')` koruması sayesinde
-> `auth` şeması olmayan bir veritabanında sessizce atlanır.
-
-**Bu dosyalardaki tablo/kolon/fonksiyon tanımları hâlâ geçerlidir** —
-yalnızca RLS/rol/auth katmanı geçersizdir. Yetkilendirme artık uygulama
-katmanında (`authorizeAdminCaller`, native JWT) yapılır.
+Kapsam: `015`–`067` arası numaralı dosyalar + numaralandırma öncesi
+`2026_05_payment_methods_add_type.sql`.
 
 ## `pre-numbering/` — numaralandırma öncesi (1 dosya)
 
 `db/migrations/NNN_*.sql` şeması benimsenmeden önce kök `migrations/`
-klasöründe duran, Supabase'e özgü olmayan migration.
+klasöründe duran migration.
 
 ## Aktif migration'lar
 
-`db/migrations/*.sql` (numaralı) — native PostgreSQL. `070` ve sonrası
-RLS/rol/`auth.*` kullanmaz.
+`db/migrations/*.sql` (numaralı) — native PostgreSQL. Satır-seviyesi
+politika, sağlayıcıya özgü rol adı veya `auth.*` şeması kullanmaz.
 
 > ⚠️ Bilinen istisna: `070_reservation_share_links.sql` içindeki
 > `public.is_active_admin()` fonksiyonu hâlâ `auth.uid()` çağırır.
-> Fonksiyon uygulama kodundan **çağrılmaz** (yalnız arşivlenen RLS
-> policy'leri kullanıyordu); vanilla PostgreSQL'de bu migration'ın
+> Fonksiyon uygulama kodundan **çağrılmaz** (yalnız arşivlenen
+> politikalar kullanıyordu); vanilla PostgreSQL'de bu migration'ın
 > yeniden çalıştırılması `auth.uid()` bulunamadığı için hata verir.
 > Ayrı bir görevde temizlenmelidir.
