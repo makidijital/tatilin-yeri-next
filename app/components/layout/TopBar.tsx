@@ -52,12 +52,25 @@ import { resolvePublicHome } from "@/lib/i18n/public-home";
    token'ına enjekte edilir. */
 const TURSAB_LICENSE_NO = "13303";
 
-const CURRENCY_OPTIONS: { code: string; flag: string }[] = [
-  { code: "TRY", flag: "/flags/tr.svg" },
-  { code: "USD", flag: "/flags/us.svg" },
-  { code: "EUR", flag: "/flags/eu.svg" },
-  { code: "GBP", flag: "/flags/gb.svg" },
+/* `symbol` — YALNIZ tetikleyici butonda seçili kurun yanında gösterilir.
+   `flag` alanı DEĞİŞMEDİ; dropdown listesi onu AYNEN kullanmaya devam
+   eder. Kur state'i / dönüşüm mantığı / seçim davranışı DOKUNULMADI. */
+const CURRENCY_OPTIONS: { code: string; flag: string; symbol: string }[] = [
+  { code: "TRY", flag: "/flags/tr.svg", symbol: "₺" },
+  { code: "USD", flag: "/flags/us.svg", symbol: "$" },
+  { code: "EUR", flag: "/flags/eu.svg", symbol: "€" },
+  { code: "GBP", flag: "/flags/gb.svg", symbol: "£" },
 ];
+
+/* Seçili dilin bayrağı — projenin ZATEN kullandığı `/flags/*.svg`
+   asset deseni (yukarıdaki CURRENCY_OPTIONS ile aynı). Emoji bilinçli
+   olarak KULLANILMADI: bayrak emoji'leri Windows'ta render EDİLMEZ.
+   `de.svg` bu tur eklendi; tr/gb zaten mevcuttu. Yeni paket/library YOK. */
+const LOCALE_FLAGS: Record<Locale, string> = {
+  tr: "/flags/tr.svg",
+  en: "/flags/gb.svg",
+  de: "/flags/de.svg",
+};
 
 /* ═══════════════════════════════════════════════════════════════
    🛡️ TOPBAR REDESIGN — inline brand-colored sosyal ikonlar
@@ -533,15 +546,13 @@ export default function TopBar() {
               focus-visible:ring-[#0973BA]/60
             "
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={
-                CURRENCY_OPTIONS.find((c) => c.code === currency)?.flag ||
-                "/flags/tr.svg"
-              }
-              alt=""
-              className="w-4 h-3 rounded-[1px] object-cover shrink-0"
-            />
+            {/* 🔄 Seçili kurun SEMBOLÜ (₺ / $ / € / £). Yalnız görsel —
+                `currency` state'i, `setCurrency`, dönüşüm mantığı ve
+                dropdown DEĞİŞMEDİ. */}
+            <span aria-hidden className="shrink-0 leading-none">
+              {CURRENCY_OPTIONS.find((c) => c.code === currency)?.symbol ??
+                ""}
+            </span>
             {currency}
             <ChevronDown size={11} className="text-white/55" />
           </button>
@@ -608,6 +619,16 @@ export default function TopBar() {
                 focus-visible:ring-[#0973BA]/60
               "
             >
+              {/* 🔄 Seçili DİLİN bayrağı — kur seçicinin `<img>` deseniyle
+                  BİREBİR aynı sınıflar. Yalnız SEÇİLİ olanın bayrağı
+                  basılır; locale çözümleme/dropdown/navigasyon
+                  DEĞİŞMEDİ. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={LOCALE_FLAGS[locale]}
+                alt=""
+                className="w-4 h-3 rounded-[1px] object-cover shrink-0"
+              />
               {locale.toUpperCase()}
               <ChevronDown size={11} className="text-white/55" />
             </button>
