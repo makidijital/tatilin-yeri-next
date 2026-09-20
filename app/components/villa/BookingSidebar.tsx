@@ -169,6 +169,7 @@ export default function BookingSidebar({
     selectedNights,
     minStayThreshold,
     minimumStayValid,
+    priceUnavailable,
     isGapOverride,
     result,
     activeStayDiscount,
@@ -395,6 +396,19 @@ export default function BookingSidebar({
           />
         )}
 
+      {/* 🛡️ EKSİK SEZON FİYATI — yanlış/düşük tutar göstermek yerine
+          durumu açıkça bildir. Yalnız fiyatı tanımlı olmayan gece
+          varken render edilir; diğer TÜM durumlarda hiçbir şey
+          değişmez (additive blok). */}
+      {priceUnavailable && (
+        <p
+          role="status"
+          className="text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2"
+        >
+          {dict.booking.priceUnavailableNotice}
+        </p>
+      )}
+
       {/* 🛡️ GAP OVERRIDE bilgi metni — koşul AYNEN. */}
       {isGapOverride && (
         <p className="text-[12px] text-emerald-700 bg-emerald-50/70 border border-emerald-100 rounded-xl px-3 py-2">
@@ -453,13 +467,13 @@ export default function BookingSidebar({
       <div className="space-y-3">
         <button
           onClick={handleReservation}
-          disabled={!minimumStayValid}
+          disabled={!minimumStayValid || priceUnavailable}
           className={`
             w-full rounded-full py-4
             text-[14px] font-semibold tracking-[0.01em] text-white
             transition-all duration-200 motion-reduce:transition-none
             ${
-              !minimumStayValid
+              !minimumStayValid || priceUnavailable
                 ? "bg-[var(--color-stone-300)] cursor-not-allowed"
                 : "bg-gradient-to-r from-[#ED7926] to-[#0973BA] shadow-[0_16px_32px_-12px_rgba(9,115,186,0.45)] hover:shadow-[0_20px_40px_-12px_rgba(9,115,186,0.55)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
             }

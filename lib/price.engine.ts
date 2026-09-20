@@ -311,6 +311,8 @@ export const calculateStayTotal = (
       stay: 0,
       original_stay: 0,
       original_currency: "TRY",
+      /* Tarih seçilmemiş → kapsanacak gece YOK. "Eksik fiyat" DEĞİL. */
+      uncoveredNights: 0,
     };
   }
 
@@ -320,17 +322,18 @@ export const calculateStayTotal = (
 
   let original_currency = "TRY";
 
-  // 🛡️ ADIM 2 — aşağıdaki "fallback" bloğu villa_prices'ın ÖNCEDEN beri
-  // var olan davranışı (bkz. yorum): stay===0 olduğunda prices[0]'a
-  // düşer — bu, "bu tarih aralığında HİÇBİR villa_prices satırı
-  // eşleşmedi" (sezon dışı sorgu) durumunu varsayar. Discount katmanı
-  // eklenince stay===0 artık BAŞKA, MEŞRU bir sebeple de oluşabilir:
-  // fiyat BULUNDU ama indirim onu 0'a düşürdü (Math.max(0, ...) clamp).
-  // Bu iki durumu ayırt etmek için `hadMatchingPrice` — İNDİRİMDEN ÖNCEKİ
-  // `daily` üzerinden — izlenir; fallback SADECE hiçbir gece bir
-  // villa_prices satırına denk gelmediğinde tetiklenir (eski davranış
-  // BYTE-IDENTICAL), meşru "indirimle 0'a düşme" durumunda tetiklenmez.
-  let hadMatchingPrice = false;
+  /* 🛡️ FİYAT KAPSAMASI — "bu gecenin fiyatı var mı?"
+     ===============================================================
+     Ölçüt, ESKİ `hadMatchingPrice` bayrağıyla BİREBİR AYNI koşuldur
+     (`daily.original > 0`) — yalnız OR'lanmak yerine GECE GECE sayılır.
+     İNDİRİMDEN ÖNCEKİ `daily` üzerinden bakılır; böylece "fiyat vardı
+     ama indirim onu 0'a düşürdü" (Math.max(0,...) clamp) MEŞRU durumu
+     "fiyat yok" sayılmaz — eski ayrım AYNEN korunur.
+
+     Tam kapsanan (uncoveredNights === 0) TÜM hesaplarda dönen
+     stay/original_stay/original_currency değerleri BYTE-IDENTICAL
+     kalır; bu sayaç yalnız EK bir alandır. */
+  let uncoveredNights = 0;
 
   // parseLocalDate → "YYYY-MM-DD" LOCAL midnight; while-loop ve
   // setDate(+1) LOCAL zincirde ilerler. UTC parse (önceki davranış)
@@ -348,8 +351,8 @@ export const calculateStayTotal = (
       rates
     );
 
-    if (daily.original > 0) {
-      hadMatchingPrice = true;
+    if (!(daily.original > 0)) {
+      uncoveredNights += 1;
     }
 
     // 🛡️ ADIM 2 — İNDİRİM KATMANI: getDailyPrice'ın normal (indirimsiz)
@@ -379,36 +382,22 @@ export const calculateStayTotal = (
     );
   }
 
-  // fallback — YALNIZ hiçbir gece bir villa_prices satırına denk
-  // gelmediyse (mevcut/eski davranış). İndirimle MEŞRU şekilde 0'a
-  // düşen bir gece (hadMatchingPrice=true) burada ARTIK ELE ALINMAZ.
-  if (stay === 0 && !hadMatchingPrice && prices?.length) {
+  /* 🛡️ ESKİ `prices[0]` FALLBACK'İ KALDIRILDI
+     ===============================================================
+     Hiçbir gece bir villa_prices satırına denk gelmediğinde eski kod
+     `prices[0]`'ın TEK GECELİK fiyatını (gece sayısıyla ÇARPMADAN)
+     toplam olarak döndürüyordu → 7 gecelik konaklama 1 gecelik
+     ücrete düşüyordu. Bu dal artık YOK: o durumda
+     `uncoveredNights === nights` olur ve caller
+     (`calculateGrandTotal`) hesabı GEÇERSİZ sayar.
 
-    const original =
-      Number(prices[0].price || 0);
-
-    const originalCurrency =
-      prices[0].currency || "TRY";
-
-    return {
-      stay: convertPrice(
-        original,
-        originalCurrency,
-        currency,
-        rates
-      ),
-
-      original_stay: original,
-
-      original_currency:
-        originalCurrency,
-    };
-  }
-
+     Tam kapsanan hesaplar bu daldan HİÇ geçmiyordu → onların
+     çıktısı DEĞİŞMEDİ. */
   return {
     stay,
     original_stay,
     original_currency,
+    uncoveredNights,
   };
 };
 
@@ -603,6 +592,11 @@ export const calculateGrandTotal = ({
   const original_currency =
     stayResult.original_currency;
 
+  /* 🛡️ Fiyatı bulunamayan gece sayısı — calculateStayTotal'dan aynen
+     taşınır (yeni bir hesap YOK). */
+  const uncoveredNights =
+    stayResult.uncoveredNights;
+
   const rawCleaning =
     calculateCleaningFee(
       nights,
@@ -666,6 +660,43 @@ export const calculateGrandTotal = ({
   const total =
     stay + cleaning + poolHeating;
 
+  /* 🛡️ FİYAT GEÇERLİLİĞİ — EK, additive alanlar
+     ===============================================================
+     `uncoveredNights > 0` ⇔ seçilen aralıkta fiyatı BULUNAMAYAN en az
+     bir gece var. Bu durumda hesap GEÇERSİZDİR: eski kod o geceleri
+     sessizce 0 TL sayıp toplamı düşürüyordu.
+
+     FAIL-CLOSED: geçersizken tüm PARA alanları 0 döner. Böylece
+     `result.total > 0` kontrolü yapan MEVCUT tüketiciler (VillaCard,
+     /arama sıralama anahtarı, admin villa-listesi) hiçbir değişiklik
+     olmadan "fiyat gösterme" davranışına düşer — yanlış ama makul
+     görünen bir sayı ASLA dışarı sızmaz. `priceAvailable`'ı okuyan
+     tüketiciler (BookingSidebar, ReservationForm, price-verify)
+     durumu açıkça ele alır.
+
+     ⚠️ Tam kapsanan (uncoveredNights === 0) hesaplarda aşağıdaki
+     return BYTE-IDENTICAL: aynı 12 alan, aynı değerler; yalnız iki
+     EK alan (priceAvailable: true, uncoveredNights: 0) eklenir. */
+  const priceAvailable = uncoveredNights === 0;
+
+  if (!priceAvailable) {
+    return {
+      nights,
+      stay: 0,
+      cleaning: 0,
+      poolHeating: 0,
+      total: 0,
+      original_stay: 0,
+      original_cleaning: 0,
+      original_pool_heating: 0,
+      original_currency,
+      original_cleaning_currency,
+      original_pool_heating_currency,
+      currency,
+      priceAvailable: false,
+      uncoveredNights,
+    };
+  }
 
   return {
     nights,
@@ -691,6 +722,10 @@ export const calculateGrandTotal = ({
     original_pool_heating_currency,
 
     currency,
+
+    priceAvailable: true,
+
+    uncoveredNights,
   };
 };
 

@@ -104,6 +104,8 @@ export const tr: Dictionary = {
     childrenLabel: "Çocuk",
     confirm: "Tamam",
     gapOverrideNotice: "Kısa süreli boşluk fırsatı nedeniyle bu tarih aralığı rezerve edilebilir.",
+    priceUnavailableNotice:
+      "Seçtiğiniz tarih aralığının bazı geceleri için fiyat tanımlı değil; toplam tutar hesaplanamıyor. Lütfen farklı bir tarih aralığı seçin veya bizimle iletişime geçin.",
     bookNow: "Rezervasyon Yap",
     feeAutoCalculated: "Ücret seçilen tarihlere göre otomatik hesaplanır",
     installmentEyebrow: "Ödeme Kolaylığı",

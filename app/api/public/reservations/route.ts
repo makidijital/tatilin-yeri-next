@@ -136,6 +136,23 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   try {
+    /* 🛡️ EKSİK SEZON FİYATI GATE
+       ===============================================================
+       Sunucu, seçilen aralıktaki HER gece için villa_prices'ta bir
+       satır bulamadıysa toplam GEÇERSİZDİR (eski davranışta o geceler
+       sessizce 0 TL sayılıyor ve düşük tutar authoritative olarak
+       yazılıyordu). Burada throw edilir → aşağıdaki catch 400 döner;
+       mevcut hata zarfı ({ ok:false, error }) AYNEN kullanılır.
+
+       ⚠️ Bu, fail-open dalından AYRIDIR: recompute'un kendisi patlarsa
+       (`priceUnavailable === false`, `authoritative === null`) mevcut
+       fail-open davranışı DEĞİŞMEDEN korunur. */
+    if (verification.priceUnavailable) {
+      throw new Error(
+        "Seçilen tarihler için fiyat hesaplanamadı"
+      );
+    }
+
     /* 🛡️ ORPHAN-GAP GATE — frontend bypass edilirse min-stay'den kısa
        kullanılamaz boşluk bırakan rezervasyon backend'de de reddedilir.
        Ayar kapalı/okunamaz veya veri toplanamazsa BLOKLAMAZ (fail-open);

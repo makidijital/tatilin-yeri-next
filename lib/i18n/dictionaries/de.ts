@@ -96,6 +96,8 @@ export const de: Dictionary = {
     childrenLabel: "Kinder",
     confirm: "Fertig",
     gapOverrideNotice: "Aufgrund einer kurzfristigen Lückenmöglichkeit kann dieser Zeitraum gebucht werden.",
+    priceUnavailableNotice:
+      "Für einige Nächte im gewählten Zeitraum ist kein Preis hinterlegt, daher kann der Gesamtpreis nicht berechnet werden. Bitte wählen Sie einen anderen Zeitraum oder kontaktieren Sie uns.",
     bookNow: "Jetzt Buchen",
     feeAutoCalculated: "Die Gebühr wird automatisch anhand der gewählten Daten berechnet",
     installmentEyebrow: "Zahlungskomfort",

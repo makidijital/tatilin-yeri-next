@@ -419,6 +419,11 @@ export default function ReservationForm({
   const remainingPayment =
     totalPrice - prepayment;
 
+  /* 🛡️ EKSİK SEZON FİYATI — seçilen aralıkta fiyatı tanımlı olmayan
+     gece varsa toplam hesaplanamaz. Tam kapsanan aralıklarda DAİMA
+     false → mevcut davranış BİREBİR aynı. */
+  const priceUnavailable = !!result && !result.priceAvailable;
+
   const isFormValid =
     form.name &&
     form.phone &&
@@ -426,7 +431,9 @@ export default function ReservationForm({
     form.identity &&
     form.payment_method_id &&
     start &&
-    end;
+    end &&
+    /* Geçersiz fiyatla gönderim engellenir; sunucu da ayrıca reddeder. */
+    !priceUnavailable;
 
   const handleSubmit = async () => {
     /* 🛡️ FAZ 2 — validation helper-driven; mesaj + regex'ler birebir. */
@@ -642,6 +649,19 @@ export default function ReservationForm({
                 aria-hidden="true"
                 className="absolute inset-x-4 top-0 h-[2.5px] rounded-full bg-gradient-to-r from-[#ED7926] via-[#ED7926]/50 to-[#0973BA]"
               />
+
+              {/* 🛡️ EKSİK SEZON FİYATI — yanlış/düşük tutar göstermek
+                  yerine durumu açıkça bildir. Yalnız fiyatı tanımlı
+                  olmayan gece varken render edilir; diğer TÜM
+                  durumlarda hiçbir şey değişmez (additive blok). */}
+              {priceUnavailable && (
+                <p
+                  role="status"
+                  className="text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2"
+                >
+                  {bookingDict.priceUnavailableNotice}
+                </p>
+              )}
 
               {/* Konaklama Tutarı — gece sayısı dinamik (mevcut result.stay).
                   🛡️ İndirim karşılaştırması (bu tur) — hasActiveStayDiscount

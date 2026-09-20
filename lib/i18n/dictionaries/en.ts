@@ -96,6 +96,8 @@ export const en: Dictionary = {
     childrenLabel: "Children",
     confirm: "Done",
     gapOverrideNotice: "This date range can be booked as a short-stay opportunity.",
+    priceUnavailableNotice:
+      "Some nights in the selected date range have no price defined, so the total cannot be calculated. Please choose different dates or contact us.",
     bookNow: "Book Now",
     feeAutoCalculated: "The fee is calculated automatically based on the selected dates",
     installmentEyebrow: "Payment Flexibility",

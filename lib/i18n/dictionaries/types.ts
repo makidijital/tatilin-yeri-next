@@ -170,6 +170,10 @@ export type Dictionary = {
     childrenLabel: string;
     confirm: string;
     gapOverrideNotice: string;
+    /** 🛡️ Seçilen aralıkta fiyatı tanımlı olmayan gece var →
+     *  toplam hesaplanamaz. Yanlış/düşük fiyat göstermek yerine
+     *  durum açıkça bildirilir. */
+    priceUnavailableNotice: string;
     bookNow: string;
     feeAutoCalculated: string;
     installmentEyebrow: string;

@@ -183,10 +183,14 @@ describe("calculateGrandTotal", () => {
     expect(res.total).toBe(0);
   });
 
-  it("uses price[0] fallback when range falls outside defined seasons", () => {
-    /* Range 2027 yılında, prices 2026 yazına ait → loop hiçbir günde
-       getDailyPrice'a hit etmez → fallback: prices[0] tek gece
-       fiyatına düşer (mevcut davranış, byte-identical). */
+  it("marks the price UNAVAILABLE when range falls outside defined seasons", () => {
+    /* ⚠️ DAVRANIŞ DEĞİŞİKLİĞİ (bilinçli — eksik sezon fiyatı düzeltmesi)
+       ÖNCE: loop hiçbir günde getDailyPrice'a hit etmiyordu → `prices[0]`
+       fallback'i devreye giriyor ve 7 GECELİK konaklama TEK GECELİK
+       fiyata (1000) düşüyordu. Bu, kullanıcıya gerçek tutarın ~1/7'si
+       kadar YANLIŞ DÜŞÜK bir fiyat göstermek demekti.
+       ŞİMDİ: fiyatı bulunamayan gece sayısı raporlanır ve hesap
+       GEÇERSİZ sayılır (fail-closed: tüm para alanları 0). */
     const res = calculateGrandTotal({
       start: "2027-01-01",
       end: "2027-01-08",
@@ -195,8 +199,11 @@ describe("calculateGrandTotal", () => {
       rates,
     });
     expect(res.nights).toBe(7);
-    expect(res.stay).toBe(1000); // fallback single price
-    expect(res.original_stay).toBe(1000);
+    expect(res.priceAvailable).toBe(false);
+    expect(res.uncoveredNights).toBe(7);
+    expect(res.stay).toBe(0);
+    expect(res.original_stay).toBe(0);
+    expect(res.total).toBe(0);
   });
 });
 

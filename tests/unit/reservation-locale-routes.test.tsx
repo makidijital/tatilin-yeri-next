@@ -101,7 +101,22 @@ const VILLA = {
 function renderForm(locale?: Locale, overrides: Record<string, unknown> = {}) {
   const props: Record<string, unknown> = {
     villa: VILLA,
-    prices: [],
+    /* 🛡️ FIXTURE DÜZELTMESİ (eksik sezon fiyatı koruması):
+       Fixture eskiden `prices: []` idi — yani "hiç fiyatı olmayan"
+       gerçekçi olmayan bir villa. Motor artık böyle bir aralıkta
+       GEÇERLİ fiyat üretmediği için form gönderimi (doğru şekilde)
+       kilitleniyor ve bu dosyadaki gönderim/hata-mesajı testleri
+       anlamını yitiriyordu. Fixture, seçili aralığı (01→08 Haziran)
+       TAM KAPSAYAN tek bir fiyat satırına çevrildi; testlerin
+       assertion'ları AYNEN korundu. */
+    prices: [
+      {
+        start_date: "2026-06-01",
+        end_date: "2026-06-30",
+        price: 1000,
+        currency: "TRY",
+      },
+    ],
     discounts: [],
     start: "2026-06-01",
     end: "2026-06-08",

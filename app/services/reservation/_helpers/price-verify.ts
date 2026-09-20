@@ -101,6 +101,10 @@ export type ServerPriceResult = {
   // sayıdır (bkz. buildPublicReservationPayload.ts: total_price =
   // snapshotTotalTRY = total_price_try) — ayrı bir "display currency
   // total" kolonu YOK; ikisi de aynı authoritative değerden türetilir.
+  /* 🛡️ false → seçilen aralıkta fiyatı tanımlı olmayan gece var;
+     AŞAĞIDAKİ TÜM tutarlar 0'dır ve KULLANILMAMALIDIR.
+     `calculateGrandTotal().priceAvailable` değerinden aynen taşınır. */
+  priceAvailable: boolean;
   totalPrice: number;
   originalPrice: number;
   originalCurrency: string;
@@ -211,6 +215,17 @@ export async function recomputePublicReservationPrice(input: {
     discounts,
   });
 
+  /* 🛡️ EKSİK SEZON FİYATI — SERVER-SIDE RED
+     ===============================================================
+     `priceAvailable === false` ⇔ aralıkta fiyatı tanımlı olmayan gece
+     var. Eski davranışta motor bu geceleri 0 TL sayıyor, sunucu da
+     AYNI motoru kullandığı için aynı düşük tutarı "authoritative"
+     olarak yazıyordu. Artık recompute burada DURUR ve `null` yerine
+     AYIRT EDİLEBİLİR bir işaret döner — route bunu 400 ile reddeder.
+
+     ⚠️ `null` dönülseydi mevcut FAIL-OPEN dalına düşerdi ve client'ın
+     gönderdiği tutar kaydedilirdi; bu yüzden ayrı bir bayrak
+     kullanılıyor. Tam kapsanan hesaplarda bu dal HİÇ çalışmaz. */
   /* prepayment rate precedence — ReservationForm ile BİREBİR:
      custom_prepayment_rate (null/undefined/"" değilse) → onu kullan,
      yoksa settings.prepayment_rate (truthy ise), yoksa 20. */
@@ -364,6 +379,8 @@ export async function recomputePublicReservationPrice(input: {
   }
 
   return {
+    /* 🛡️ Motorun kapsama kararı AYNEN taşınır (yeni hesap YOK). */
+    priceAvailable: snapshot.priceAvailable,
     totalPriceTry,
     cleaningFeeTry,
     prepaymentAmount,
@@ -502,6 +519,11 @@ export type PublicReservationServerVerification = {
      patlarsa booking'i BLOKLAMAMAK — pool heating precedent'iyle
      BİREBİR aynı trade-off). */
   authoritative: PublicReservationAuthoritativeSnapshot | null;
+  /* 🛡️ true → seçilen aralıkta fiyatı tanımlı olmayan gece var; hesap
+     GEÇERSİZ. `authoritative`/`poolHeating` null'dır AMA bu, fail-open
+     "client'a güven" durumu DEĞİLDİR: route bu bayrağı görünce
+     rezervasyonu REDDEDER. Tam kapsanan hesaplarda DAİMA false. */
+  priceUnavailable: boolean;
 };
 
 /* ---------------------------------------------------------------
@@ -528,7 +550,25 @@ export async function verifyPublicReservationPrice(
       end_date: payload.end_date,
       pool_heating_selected: payload.pool_heating_selected,
     });
-    if (!server) return { comparison: null, poolHeating: null, authoritative: null };
+    /* 🛡️ EKSİK SEZON FİYATI — fail-open DEĞİL, açık RED sinyali.
+       `null` dönülseydi aşağıdaki fail-open dalına düşer ve client'ın
+       gönderdiği tutar kaydedilirdi. Tam kapsanan hesaplarda bu dal
+       HİÇ çalışmaz (priceAvailable daima true). */
+    if (server && !server.priceAvailable) {
+      return {
+        comparison: null,
+        poolHeating: null,
+        authoritative: null,
+        priceUnavailable: true,
+      };
+    }
+    if (!server)
+      return {
+        comparison: null,
+        poolHeating: null,
+        authoritative: null,
+        priceUnavailable: false,
+      };
 
     const cmp = comparePublicReservationPrice(payload, server);
 
@@ -549,6 +589,8 @@ export async function verifyPublicReservationPrice(
       });
     }
     return {
+      /* Tam kapsanan hesap → fiyat geçerli (eski davranış aynen). */
+      priceUnavailable: false,
       comparison: cmp,
       poolHeating: {
         pool_heating_selected: server.poolHeatingSelected,
@@ -585,6 +627,11 @@ export async function verifyPublicReservationPrice(
       "[price-verify] recompute FAILED (fail-open, booking sürüyor):",
       err instanceof Error ? err.message : err
     );
-    return { comparison: null, poolHeating: null, authoritative: null };
+    return {
+      comparison: null,
+      poolHeating: null,
+      authoritative: null,
+      priceUnavailable: false,
+    };
   }
 }

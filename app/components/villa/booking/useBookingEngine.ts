@@ -228,6 +228,10 @@ export type UseBookingEngineReturn = {
      kullanarak min-stay uyarısını bastırır + bilgi metni gösterir. */
   isGapOverride: boolean;
   result: BookingResult | null;
+  /* 🛡️ EKSİK SEZON FİYATI — seçilen aralıkta fiyatı tanımlı olmayan
+     gece varsa true (bu durumda `result` null'dır). Tam kapsanan
+     aralıklarda DAİMA false → mevcut davranış BİREBİR aynı. */
+  priceUnavailable: boolean;
   /* 🛡️ VILLA_DISCOUNTS — UI-only karşılaştırma (bkz. type doc-comment).
      null → seçili aralıkta aktif indirim yok (mevcut davranış, badge
      render edilmez). */
@@ -747,7 +751,7 @@ export function useBookingEngine(
 
   /* 🛡️ FAZ 26B — minimum stay invalid → result hesaplama atla.
      calculateGrandTotal eski davranış aynen. */
-  const result =
+  const rawResult =
     startDate && endDate && minimumStayValid && orphanGapValid
       ? calculateGrandTotal({
           start: formatDate(startDate),
@@ -773,6 +777,16 @@ export function useBookingEngine(
           discounts,
         })
       : null;
+
+  /* 🛡️ EKSİK SEZON FİYATI — seçilen aralıkta fiyatı tanımlı olmayan
+     gece varsa hesap GEÇERSİZDİR (`priceAvailable === false`).
+     `result` bu durumda `null`'a düşürülür; böylece özet bloğu
+     (BookingSidebar:408 `... && result &&`) MEVCUT koşuluyla
+     kendiliğinden gizlenir — yeni bir gizleme mekanizması YOK.
+     Tam kapsanan aralıklarda `priceAvailable === true` olduğu için
+     `result` ESKİSİYLE BİREBİR aynı nesnedir. */
+  const result = rawResult && rawResult.priceAvailable ? rawResult : null;
+  const priceUnavailable = !!rawResult && !rawResult.priceAvailable;
 
   /* ===============================================================
      🛡️ VILLA_DISCOUNTS — GÖRSEL GÖSTERİM (Adım 3, UI-only)
@@ -976,6 +990,9 @@ export function useBookingEngine(
     orphanGapValid,
     isGapOverride: isExactGapFill,
     result,
+    /** 🛡️ Seçilen aralıkta fiyatı tanımlı olmayan gece var mı?
+     *  Tam kapsanan aralıklarda DAİMA false → mevcut davranış aynı. */
+    priceUnavailable,
     activeStayDiscount,
     prepayment,
     convertedDeposit,
