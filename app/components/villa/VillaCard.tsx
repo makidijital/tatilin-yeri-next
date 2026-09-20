@@ -83,6 +83,16 @@ type Props = {
   stayStart?: string;
   stayEnd?: string;
   prices?: StayPrice[];
+  /* 🛡️ OPSİYONEL — seçilen tarih aralığındaki aktif indirimler
+     (villa_discounts). `prices` ile BİRLİKTE geçilir; AŞAĞIDAKİ
+     MEVCUT `calculateGrandTotal` çağrısının ZATEN var olan opsiyonel
+     `discounts` parametresine olduğu gibi iletilir — fiyat motoru,
+     indirim mantığı ve currency/tarih hesabı DEĞİŞMEDİ. Verilmezse
+     (undefined) motorun `discounts = null` default'u devreye girer →
+     bu prop'u geçmeyen TÜM mevcut çağrı yerlerinde davranış BİREBİR
+     aynı kalır. `discount` (tekil) prop'u ile KARIŞTIRILMAMALI: o
+     yalnız "discount" variant'ının gecelik gösterimi içindir. */
+  stayDiscounts?: DiscountRange[];
   /** Temizlik ücreti (orijinal currency). calculateGrandTotal kendi
    *  cleaning_limit kuralını uygular (nights >= limit ise muaf). */
   cleaningFee?: number;
@@ -152,6 +162,7 @@ export default function VillaCard({
   stayStart,
   stayEnd,
   prices,
+  stayDiscounts,
   cleaningFee,
   cleaningCurrency,
   cleaningLimit,
@@ -339,6 +350,10 @@ export default function VillaCard({
         cleaning_fee: Number(cleaningFee || 0),
         cleaning_currency: cleaningCurrency || "TRY",
         cleaning_limit: Number(cleaningLimit || 0),
+        /* 🛡️ TEK EKLENEN SATIR — motorun ZATEN var olan opsiyonel
+           parametresi. undefined ise motor `null` default'una düşer
+           (eski davranış birebir). */
+        discounts: stayDiscounts,
       });
       if (result.total > 0) {
         stayTotal = result.total;

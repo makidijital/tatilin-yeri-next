@@ -13,7 +13,12 @@ import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
 import VillaCard from "@/app/components/villa/VillaCard";
-import { calculateGrandTotal, calculateNights, getStartingPrice } from "@/lib/price.engine";
+import {
+  calculateGrandTotal,
+  calculateNights,
+  getStartingPrice,
+  type DiscountRange,
+} from "@/lib/price.engine";
 import { Search, Sparkles } from "lucide-react";
 
 import FilterSidebar from "@/app/(public)/arama/FilterSidebar";
@@ -525,6 +530,17 @@ export default async function AramaPageBody({
       start_date: string | null;
       end_date: string | null;
     }> | null;
+    /* 🛡️ villa_discounts — villa detay (`getVillaDiscounts`) ile AYNI
+       kayıtlar. `calculateGrandTotal`'ın ZATEN var olan opsiyonel
+       `discounts` parametresine geçirilir; fiyat motoru DEĞİŞMEDİ.
+       Tarih seçilmeyen kullanıcılar için kullanılmaz (eski davranış). */
+    villa_discounts: Array<{
+      start_date: string | null;
+      end_date: string | null;
+      discount_type: string | null;
+      discount_value: number | null;
+      currency: string | null;
+    }> | null;
   };
   type StayPrice = {
     price: number;
@@ -547,6 +563,11 @@ export default async function AramaPageBody({
     /** Tarih-bazlı fiyat aralıkları — VillaCard client-side
      *  calculateGrandTotal için kullanır. Tarih yoksa görmezden gelinir. */
     prices: StayPrice[];
+    /** 🛡️ Aktif indirim aralıkları — `calculateGrandTotal`'ın MEVCUT
+     *  opsiyonel `discounts` parametresine geçer. Boş dizi = "indirim
+     *  yok" (getActiveDiscount boş diziyi zaten null sayar) → eski
+     *  davranış birebir korunur. */
+    discounts: DiscountRange[];
     /** Temizlik ücreti (orijinal currency) — calculateGrandTotal ile
      *  birlikte stayTotal'a eklenir. cleaning_limit > nights ise
      *  ücret muaftır (price.engine semantic). */
@@ -644,6 +665,39 @@ export default async function AramaPageBody({
        stayStart/stayEnd/prices üçlüsünü ayrıca pass eder; VillaCard
        `calculateGrandTotal` ile total hesaplar — bu değerin etkisi YOK.
        Conversion VillaCard seviyesinde convertPrice(...) ile yapılır. */
+    /* 🛡️ İNDİRİMLER — `app/services/villa-discount.service.ts`'teki
+       `getVillaDiscounts` map'i ile BİREBİR aynı normalizasyon
+       (start/end zorunlu string, discount_value Number()||0, currency
+       aynen). Yeni bir indirim mantığı YOK; yalnız motorun beklediği
+       `DiscountRange[]` şekline daraltma. Geçersiz/eksik satır elenir
+       → dizi boş kalırsa davranış eskisiyle birebir aynı. */
+    const rawDiscounts = Array.isArray(v.villa_discounts)
+      ? v.villa_discounts
+      : [];
+    const discounts: DiscountRange[] = rawDiscounts
+      .filter(
+        (d): d is {
+          start_date: string;
+          end_date: string;
+          discount_type: "percent" | "fixed";
+          discount_value: number | null;
+          currency: string | null;
+        } =>
+          !!d &&
+          typeof d.start_date === "string" &&
+          d.start_date.length > 0 &&
+          typeof d.end_date === "string" &&
+          d.end_date.length > 0 &&
+          (d.discount_type === "percent" || d.discount_type === "fixed")
+      )
+      .map((d) => ({
+        start_date: d.start_date,
+        end_date: d.end_date,
+        discount_type: d.discount_type,
+        discount_value: Number(d.discount_value) || 0,
+        currency: d.currency,
+      }));
+
     const startingFallback = getStartingPrice(prices);
     const villaPrice: number | null = startingFallback?.price ?? null;
     const villaCurrency: string | null =
@@ -662,6 +716,7 @@ export default async function AramaPageBody({
       bathrooms: v.bathrooms,
       guests: v.guests,
       prices,
+      discounts,
       cleaning_fee: Number(v.cleaning_fee || 0),
       cleaning_currency: v.cleaning_currency || "TRY",
       cleaning_limit: Number(v.cleaning_limit || 0),
@@ -834,6 +889,12 @@ export default async function AramaPageBody({
           cleaning_fee: v.cleaning_fee,
           cleaning_currency: v.cleaning_currency,
           cleaning_limit: v.cleaning_limit,
+          /* 🛡️ Kartta gösterilen sayı ile sort anahtarının AYNI olması
+             bu dosyanın belgelenmiş invariant'ı — kart artık indirimli
+             toplamı gösterdiği için anahtar da aynı `discounts` ile
+             hesaplanır. Aksi halde "fiyata göre sırala" gösterilenden
+             farklı bir sayıya göre sıralardı. */
+          discounts: v.discounts,
         });
         const total =
           typeof result.total === "number" &&
@@ -1240,6 +1301,15 @@ export default async function AramaPageBody({
                       prices={
                         hasDateRange && !villa.isFlexible
                           ? villa.prices
+                          : undefined
+                      }
+                      /* 🛡️ İndirimler `prices` ile AYNI koşulda geçer:
+                         tarih yoksa veya esnek sonuçta undefined →
+                         calculateGrandTotal'ın `discounts` default'u
+                         (null) devreye girer, davranış eskisiyle aynı. */
+                      stayDiscounts={
+                        hasDateRange && !villa.isFlexible
+                          ? villa.discounts
                           : undefined
                       }
                       cleaningFee={

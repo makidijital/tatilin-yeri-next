@@ -442,6 +442,11 @@ export const villaAdminRepository = {
   /* ===============================================================
      READ — public /arama results (NATIVE EMBED twin, Migration S5B)
      ===============================================================
+     🛡️ villa_discounts embed'i EKLENDİ — kart toplamı `calculateGrandTotal`'a
+     `discounts` geçebilsin diye (villa detay ile AYNI veri, AYNI motor).
+     villa_prices embed'iyle AYNI mekanizma; `findSearchResults` YALNIZ
+     /arama tarafından kullanılır (tek call-site), başka yüzey etkilenmez.
+
      Anon `villaRepository.findSearchResults` karşılığı. BYTE-IDENTICAL:
      CARD-style embed (villa_prices'ta `end_date` DAHİL) + cover-slim
      (villa_images is_cover desc/sort_order asc + limit1) + koşullu
@@ -479,6 +484,13 @@ export const villaAdminRepository = {
           currency,
           start_date,
           end_date
+        ),
+        villa_discounts (
+          start_date,
+          end_date,
+          discount_type,
+          discount_value,
+          currency
         )
       `
       )
