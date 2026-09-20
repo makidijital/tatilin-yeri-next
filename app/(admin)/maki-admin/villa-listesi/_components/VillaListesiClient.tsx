@@ -10,6 +10,8 @@ import {
   X,
   Search,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import AdminDateRangePicker from "@/app/components/admin/shared/AdminDateRangePicker";
@@ -30,6 +32,7 @@ import {
 import {
   applyPublicSort,
   parsePublicSort,
+  computePageWindow,
   type PublicSort,
 } from "@/lib/pagination";
 import { useCurrency } from "@/app/context/CurrencyContext";
@@ -51,6 +54,14 @@ const EXPIRATION_OPTIONS: ReadonlyArray<{
   { key: "6h", label: "6 Saat" },
   { key: "24h", label: "24 Saat" },
 ];
+
+/* 🚀 RENDER PAGINATION — sayfa başına gösterilecek kart sayısı.
+   YALNIZ RENDER KATMANI: veri çekme, filtreleme, arama, sıralama,
+   fiyat hesabı ve seçim mantığı bu sabitten ETKİLENMEZ; hepsi
+   filtrelenmiş TÜM liste üzerinde çalışmaya devam eder. Yalnız
+   `.map()` edilen dilim sınırlanır. 24 = grid'in 2/3/4 kolon
+   varyantlarının üçüne de tam bölünen değer. */
+const RENDER_PAGE_SIZE = 24;
 
 /* ===============================================================
    🏛️ VillaListesiClient — admin curator orchestrator
@@ -358,7 +369,67 @@ export default function VillaListesiClient({
     return applyPublicSort(input, sort, { userCurrency: currency, rates });
   }, [filtered, sort, hasDateRange, start, end, currency, rates]);
 
+  /* ---------------- RENDER PAGINATION (yalnız görüntüleme) ----------------
+     🚀 TEK AMAÇ: aynı anda mount edilen `VillaCard` sayısını sınırlamak.
+     Bu blok pipeline'ın EN SONUNA eklenir — `filtered` ve `sortedFiltered`
+     olduğu gibi kalır ve aşağıdaki davranışların HEPSİ filtrelenmiş TÜM
+     liste üzerinde çalışmaya devam eder:
+       • "Tümünü seç" (`selectAllFiltered` → `filtered`, sayfadan bağımsız)
+       • seçim Set'i (sayfa değişince korunur)
+       • sayaç (`filtered.length`)
+       • arama / bölge / kategori / misafir / tarih-müsaitlik filtreleri
+       • sıralama (fiyat/kapasite dahil) ve fiyat/kur hesapları
+       • "Listeyi Paylaş" (seçili id'lerle çalışır, render'la değil)
+     Yalnız `pageItems` render edilir.
+
+     STATE: local `useState`. URL'e DOKUNULMAZ — bu sayfada filtreler de
+     URL'de tutulmuyor (`useSearchParams`/`router` hiç kullanılmıyor);
+     sayfayı URL'e yazmak refresh'te "filtre yok ama sayfa 40" tutarsızlığı
+     üretirdi. En düşük riskli yöntem local state. */
+  const [page, setPage] = useState(1);
+
+  /* Sonuç kümesini değiştiren HER girdide 1. sayfaya dön — aksi halde
+     filtre daraltılınca boş ekran kalırdı. (Mevcut iki admin pagination
+     deseniyle aynı kural.)
+
+     React'in "prop değişince state'i ayarla" deseni (render sırasında
+     senkron ayar) kullanılır; `useEffect` + `setState` kullanılmaz —
+     projenin `set-state-in-effect` lint kuralı ve cascading render
+     maliyeti böylece devreye girmez. `blockedSet` imzaya GEREKMEZ:
+     müsaitlik yalnız `start`/`end` değişince yeniden çözülür ve o
+     değişim imzada zaten var. */
+  const filterSignature = [
+    search,
+    locationId,
+    categoryIds.join(","),
+    guests,
+    start,
+    end,
+    sort,
+  ].join("|");
+  const [prevFilterSignature, setPrevFilterSignature] =
+    useState(filterSignature);
+  if (prevFilterSignature !== filterSignature) {
+    setPrevFilterSignature(filterSignature);
+    setPage(1);
+  }
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sortedFiltered.length / RENDER_PAGE_SIZE)
+  );
+  /* Clamp — liste daralırsa mevcut sayfa aralık dışında kalmasın. */
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const pageItems = sortedFiltered.slice(
+    (safePage - 1) * RENDER_PAGE_SIZE,
+    safePage * RENDER_PAGE_SIZE
+  );
+
   /* ---------------- HANDLERS ---------------- */
+  function gotoPage(next: number) {
+    setPage(Math.min(Math.max(1, next), totalPages));
+  }
+
   function toggleSelect(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -649,8 +720,11 @@ export default function VillaListesiClient({
           </p>
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-x-5 md:gap-x-6 gap-y-10">
-          {sortedFiltered.map((v) => {
+          {/* 🚀 `pageItems` = sortedFiltered'ın yalnız görünen dilimi.
+             Kart içeriği, prop'ları ve seçim overlay'i AYNEN. */}
+          {pageItems.map((v) => {
             const isSelected = selected.has(v.id);
             /* Starting price fallback (arama page ile aynı pattern). */
             const fallback = (() => {
@@ -731,6 +805,14 @@ export default function VillaListesiClient({
             );
           })}
         </div>
+        {totalPages > 1 && (
+          <PaginationBar
+            page={safePage}
+            totalPages={totalPages}
+            onGoto={gotoPage}
+          />
+        )}
+        </>
       )}
 
       {/* ════════ STICKY ACTION BAR ════════ */}
@@ -971,6 +1053,107 @@ export default function VillaListesiClient({
         </div>
       )}
     </div>
+  );
+}
+
+/* ===============================================================
+   PaginationBar — önceki/sonraki + numaralı sayfa pillarları
+   ===============================================================
+   Görünüm ve sınıflar `VillaOperationsList.tsx:319` (/maki-admin/villas)
+   ile BİREBİR — admin tasarım dili (`--admin-*` token'ları + aktif
+   sayfa `--brand-coral` pill). Sayfa penceresi algoritması
+   `lib/pagination.ts` → `computePageWindow` (mevcut ortak helper;
+   yeni algoritma YAZILMADI).
+=============================================================== */
+function PaginationBar({
+  page,
+  totalPages,
+  onGoto,
+}: {
+  page: number;
+  totalPages: number;
+  onGoto: (next: number) => void;
+}) {
+  const pages = computePageWindow(page, totalPages);
+  const prevDisabled = page <= 1;
+  const nextDisabled = page >= totalPages;
+
+  return (
+    <nav
+      role="navigation"
+      aria-label="Sayfa gezinme"
+      className="flex flex-wrap items-center justify-center gap-1.5 pt-2"
+    >
+      <button
+        type="button"
+        onClick={() => onGoto(page - 1)}
+        disabled={prevDisabled}
+        className="
+          inline-flex items-center gap-1
+          px-3 py-1.5 rounded-lg
+          text-[12.5px] font-medium
+          text-[var(--admin-muted)]
+          hover:text-[var(--admin-text)]
+          hover:bg-[var(--admin-bg-soft)]
+          transition-colors motion-reduce:transition-none
+          disabled:opacity-40 disabled:cursor-not-allowed
+          disabled:hover:bg-transparent
+        "
+      >
+        <ChevronLeft size={14} />
+        Önceki
+      </button>
+
+      {pages.map((p, idx) =>
+        p === "…" ? (
+          <span
+            key={`gap-${idx}`}
+            className="px-2 py-1.5 text-[12.5px] text-[var(--admin-muted-2)]"
+            aria-hidden="true"
+          >
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onGoto(p)}
+            aria-current={p === page ? "page" : undefined}
+            className={
+              "inline-flex items-center justify-center min-w-[32px] " +
+              "px-2.5 py-1.5 rounded-lg " +
+              "text-[12.5px] font-medium tabular-nums " +
+              "transition-colors motion-reduce:transition-none " +
+              (p === page
+                ? "bg-[var(--brand-coral)] text-white"
+                : "text-[var(--admin-muted)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-bg-soft)]")
+            }
+          >
+            {p}
+          </button>
+        )
+      )}
+
+      <button
+        type="button"
+        onClick={() => onGoto(page + 1)}
+        disabled={nextDisabled}
+        className="
+          inline-flex items-center gap-1
+          px-3 py-1.5 rounded-lg
+          text-[12.5px] font-medium
+          text-[var(--admin-muted)]
+          hover:text-[var(--admin-text)]
+          hover:bg-[var(--admin-bg-soft)]
+          transition-colors motion-reduce:transition-none
+          disabled:opacity-40 disabled:cursor-not-allowed
+          disabled:hover:bg-transparent
+        "
+      >
+        Sonraki
+        <ChevronRight size={14} />
+      </button>
+    </nav>
   );
 }
 
