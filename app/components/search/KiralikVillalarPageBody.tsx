@@ -14,6 +14,9 @@ import type { VillaDTO } from "@/app/services/villa.service";
 
 import VillaCard from "@/app/components/villa/VillaCard";
 import FilterSidebar from "@/app/(public)/arama/FilterSidebar";
+/* 🛡️ Villa özellikleri (sidebar "Villa Özellikleri" bölümü) — /arama ve
+   Hero ile AYNI action. Yeni repository/sorgu/cache katmanı YOK. */
+import { loadHeroFeatures } from "@/app/components/ui/hero/_components/hero-features.action";
 import PageHero from "@/app/components/ui/PageHero";
 
 import {
@@ -164,14 +167,23 @@ export default async function KiralikVillalarPageBody({
        TTL 1 saat; mutation invalidation yok (rare changes, TTL OK)
      - cookies(): currency cookie'sini oku (CurrencyContext dual-write)
      - getExchangeRatesMap(): server-side rates (DB'den; TCMB cron'la dolar) */
-  const [villas, regionOptions, categoryOptions, cookieStore, ratesMap] =
-    await Promise.all([
-      getCachedVillas(),
-      getCachedVillaLocations(),
-      getCachedVillaTypes(),
-      cookies(),
-      getExchangeRatesMap(),
-    ]);
+  const [
+    villas,
+    regionOptions,
+    categoryOptions,
+    cookieStore,
+    ratesMap,
+    featureOptions,
+  ] = await Promise.all([
+    getCachedVillas(),
+    getCachedVillaLocations(),
+    getCachedVillaTypes(),
+    cookies(),
+    getExchangeRatesMap(),
+    /* 🛡️ Mevcut Promise.all'a girer → EK RTT YOK. Hata → boş liste
+       (sidebar bölümü boş metin gösterir; sayfa ETKİLENMEZ). */
+    loadHeroFeatures(locale).catch(() => []),
+  ]);
 
   const totalCount = villas.length;
 
@@ -328,6 +340,12 @@ export default async function KiralikVillalarPageBody({
               <FilterSidebar
                 regionOptions={regionOptions}
                 categoryOptions={sidebarCategoryOptions}
+                /* 🛡️ Locale'e göre çözülmüş adlarla TEK SEFER geçer;
+                   client'ta sorgu YOK. `initial.features` VERİLMEZ:
+                   arşiv sayfası URL query okumaz (mevcut sözleşme) →
+                   bölüm seçim yokken KAPALI başlar, seçim "Villa Bul"
+                   ile /arama?ozellikler=… olarak taşınır. */
+                featureOptions={featureOptions}
                 initial={sidebarInitial}
                 mode="redirect"
                 /* 🛡️ Panel metinleri + takvim locale'i. `basePath`

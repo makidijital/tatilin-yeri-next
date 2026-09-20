@@ -68,6 +68,19 @@ vi.mock("@/lib/i18n/get-villa-type-translations.server", () => ({
   getVillaTypeNamesByLocale: (ids: string[]) => typeNamesMock(ids),
 }));
 
+/* 🛡️ ADDITIVE — sidebar "Villa Özellikleri" seçenekleri `loadHeroFeatures`
+   üzerinden gelir (/arama ve Hero ile AYNI action). Yalnız en alttaki
+   taksonomi okuması mock'lanır; gerçek action zinciri ÇALIŞIR. Mock
+   olmasaydı action fail-soft davranıp boş liste dönerdi → mevcut
+   testlerin çıktısı DEĞİŞMEZ; mock sadece 22) numaralı yeni testi
+   deterministik yapar. */
+const featuresTaxonomyMock = vi.fn();
+vi.mock("@/lib/db/villa-feature.repository", () => ({
+  villaFeatureRepository: {
+    findAllForPublicTaxonomy: () => featuresTaxonomyMock(),
+  },
+}));
+
 /* --- ağır UI çocukları: prop-yakalayan hafif stub'lar --- */
 const sidebarProps: Record<string, unknown>[] = [];
 vi.mock("@/app/(public)/arama/FilterSidebar", () => ({
@@ -249,6 +262,13 @@ const BODY_SRC = "app/components/search/KiralikVillalarPageBody.tsx";
 beforeEach(() => {
   vi.clearAllMocks();
   sidebarProps.length = 0;
+  featuresTaxonomyMock.mockResolvedValue({
+    data: [
+      { id: "f-2", name: "Sauna" },
+      { id: "f-1", name: "Jakuzi" },
+    ],
+    error: null,
+  });
   cardProps.length = 0;
   requirePublicLocaleEnabledMock.mockResolvedValue(undefined);
   villasMock.mockResolvedValue(MANY_VILLAS);
@@ -532,6 +552,23 @@ describe("FilterSidebar sözleşmesi", () => {
   it("21) bölge seçenekleri ÇEVRİLMEZ (Phase 10I canonical özel isim)", async () => {
     await renderBody("en");
     expect(sidebarProps[0].regionOptions).toEqual(REGION_OPTIONS);
+  });
+
+  it("22) villa ÖZELLİK seçenekleri sidebar'a geçer; `initial` BOŞ sözleşmesi korunur", async () => {
+    await renderBody("tr");
+    const p = sidebarProps[0];
+    /* Seçenekler server'dan TEK SEFER prop olarak iner (client sorgu YOK). */
+    expect(featuresTaxonomyMock).toHaveBeenCalledTimes(1);
+    expect(
+      (p.featureOptions as Array<{ id: string; name: string }>).map(
+        (f) => f.name
+      )
+    ).toEqual(["Jakuzi", "Sauna"]);
+    /* 🔒 Arşiv sözleşmesi: URL okunmaz → `initial.features` VERİLMEZ
+       (bölüm seçim yokken KAPALI başlar). */
+    expect(
+      (p.initial as Record<string, unknown>).features
+    ).toBeUndefined();
   });
 });
 
