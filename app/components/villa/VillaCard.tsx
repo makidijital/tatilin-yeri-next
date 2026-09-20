@@ -1212,20 +1212,42 @@ export default function VillaCard({
               olmasın diye oradan kaldırıldı (stayTotal!==null tarih-seçili
               toplam ve isFlexible esnek-sonuç senaryoları BOTTOM ROW'da
               AYNEN kalmaya devam ediyor — mutually exclusive, çakışma yok). */}
-          {!isFlexible && stayTotal === null && (
-            <p className="mt-2 text-[13px] text-[var(--color-stone-500)]">
-              {price ? (
-                <>
-                  <span className="font-display text-[15px] font-semibold text-[#ED7926] tabular-nums">
-                    {formatCurrency(convertedPrice, currency, effectiveLocale)}
-                  </span>{" "}
-                  {dict.card.startingFromLower}
-                </>
-              ) : (
-                dict.card.priceOnRequest
-              )}
-            </p>
-          )}
+          {!isFlexible &&
+            (stayTotal !== null ? (
+              /* 🛡️ TARİH SEÇİLİ — konaklama TOPLAMI artık BU alanda
+                 gösterilir (eskiden BOTTOM ROW'da, müsaitlik CTA'sının
+                 solundaydı; çift gösterim olmasın diye oradan kaldırıldı).
+                 SADECE KONUM DEĞİŞTİ: aynı `stayTotal` / `stayNights` /
+                 `hasCleaning` değerleri, aynı `formatCurrency`, aynı
+                 currency ve aynı sözlük anahtarları. calculateGrandTotal
+                 çağrısına, indirim/kur/temizlik hesabına DOKUNULMADI. */
+              <p className="mt-2 text-[13px] text-[var(--color-stone-500)]">
+                <span className="font-display text-[15px] font-semibold text-[#ED7926] tabular-nums">
+                  {formatCurrency(stayTotal, currency, effectiveLocale)}
+                </span>{" "}
+                <span className="tabular-nums">
+                  {formatDictionaryString(dict.card.nights, {
+                    n: stayNights,
+                  })}
+                  {hasCleaning ? dict.card.cleaningIncludedSuffix : ""}
+                </span>
+              </p>
+            ) : (
+              /* Tarih seçilmemiş — MEVCUT davranış BİREBİR:
+                 "X başlayan fiyatlarla" veya "Fiyat sorunuz". */
+              <p className="mt-2 text-[13px] text-[var(--color-stone-500)]">
+                {price ? (
+                  <>
+                    <span className="font-display text-[15px] font-semibold text-[#ED7926] tabular-nums">
+                      {formatCurrency(convertedPrice, currency, effectiveLocale)}
+                    </span>{" "}
+                    {dict.card.startingFromLower}
+                  </>
+                ) : (
+                  dict.card.priceOnRequest
+                )}
+              </p>
+            ))}
 
           {/* Divider — üst bilgi bloğu ↔ özellikler */}
           <div aria-hidden="true" className="mt-3.5 h-px bg-[var(--color-stone-100)]" />
@@ -1300,24 +1322,15 @@ export default function VillaCard({
                 </div>
               </div>
             ) : (
-              /* 🛡️ stayTotal===null durumunda (tarih seçilmemiş) fiyat
-                 artık CONTENT AREA'nın üstünde ("X başlayan fiyatlarla",
-                 review'ın eski konumu) gösteriliyor — burada ÇİFT
-                 gösterim olmasın diye boş bırakıldı. stayTotal!==null
-                 (tarih seçili gerçek toplam) AYNEN korunuyor, taşınmadı. */
-              <div className="min-w-0">
-                {stayTotal !== null ? (
-                  <>
-                    <div className="font-display font-bold text-[19px] md:text-[20px] text-[#ED7926] tracking-[-0.015em] tabular-nums leading-none">
-                      {formatCurrency(stayTotal, currency, effectiveLocale)}
-                    </div>
-                    <div className="mt-1 text-[10.5px] tracking-[0.04em] uppercase text-[var(--color-stone-500)] tabular-nums">
-                      {formatDictionaryString(dict.card.nights, { n: stayNights })}
-                    {hasCleaning ? dict.card.cleaningIncludedSuffix : ""}
-                    </div>
-                  </>
-                ) : null}
-              </div>
+              /* 🛡️ FİYAT ARTIK BURADA GÖSTERİLMİYOR (bu tur): hem
+                 tarihsiz "başlayan fiyatlarla" hem de tarih seçili
+                 KONAKLAMA TOPLAMI artık CONTENT AREA'nın üstündeki tek
+                 fiyat alanında gösterilir → müsaitlik CTA'sının yanında
+                 ÇİFT fiyat yok. Sarmalayıcı `div` KORUNDU: CTA'nın
+                 `mx-auto` hizalaması ve satır yüksekliği DEĞİŞMESİN.
+                 Fiyat hesabı (stayTotal/hasCleaning/stayNights) YUKARIDA
+                 AYNEN duruyor — motor ve değerler DEĞİŞMEDİ. */
+              <div className="min-w-0" />
             )}
 
             <button
