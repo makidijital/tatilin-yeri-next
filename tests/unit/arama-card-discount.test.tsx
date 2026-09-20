@@ -160,7 +160,24 @@ describe("/arama kart fiyatı — indirim aktarımı", () => {
     renderCard(DISCOUNTS);
     /* Motorun gerçek sonucu 56.000 → tr-TR gruplandırması "56.000". */
     expect(screen.getByText(/56\.000/)).toBeTruthy();
-    expect(screen.queryByText(/70\.000/)).toBeNull();
+    /* ⚠️ UI GÜNCELLEMESİ: indirimsiz toplam (70.000) artık kartta
+       ÜSTÜ ÇİZİLİ olarak gösteriliyor. Testin ASIL amacı — "kart
+       ödenecek tutar olarak indirimsizi göstermesin" — gevşetilmedi,
+       daha da sıkıldı: 70.000 YALNIZ line-through öğesinde olabilir,
+       56.000 ise ASLA üstü çizili olamaz. */
+    const struck = Array.from(
+      document.body.querySelectorAll(".line-through")
+    )
+      .map((el) => el.textContent || "")
+      .join(" ");
+    expect(struck).toMatch(/70\.000/);
+    expect(struck).not.toMatch(/56\.000/);
+    /* 70.000 SADECE üstü çizili öğede geçer — başka hiçbir yerde. */
+    expect(
+      screen.getAllByText(/70\.000/).every((el) =>
+        el.className.includes("line-through")
+      )
+    ).toBe(true);
   });
 
   it("5) indirim geçilmeyince kart ESKİSİ gibi indirimsiz toplamı render eder", () => {

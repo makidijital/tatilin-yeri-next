@@ -146,10 +146,17 @@ describe("B) tarih yok — mevcut davranış BİREBİR", () => {
 
 describe("C/D) indirim ve hesaplanamayan fiyat", () => {
   it("7) indirimli villa — motorun İNDİRİMLİ toplamı (24.000) fiyat alanında", () => {
-    /* 3 × 10.000 = 30.000 → %20 indirim → 24.000. Motor DEĞİŞMEDİ. */
+    /* 3 × 10.000 = 30.000 → %20 indirim → 24.000. Motor DEĞİŞMEDİ.
+       ⚠️ GÜNCELLEME: indirimsiz 30.000 artık kartta ÜSTÜ ÇİZİLİ olarak
+       gösteriliyor (bu turun istenen davranışı). Assertion gevşetilmedi:
+       indirimli tutarın ÜSTÜ ÇİZİLİ OLMADIĞI ek olarak kilitlendi;
+       30.000'in üstü çizili gösterimi F bloğunda ayrıca doğrulanıyor. */
     const { container } = renderCard({ discounts: DISCOUNTS });
     expect(priceAreaText(container)).toMatch(/24\.000/);
-    expect(container.textContent).not.toMatch(/30\.000/);
+    const struck = Array.from(container.querySelectorAll(".line-through"))
+      .map((el) => el.textContent || "")
+      .join(" ");
+    expect(struck).not.toMatch(/24\.000/);
   });
 
   it("8) fiyat kaydı yoksa (prices: []) mevcut fallback korunur", () => {
@@ -164,6 +171,89 @@ describe("C/D) indirim ve hesaplanamayan fiyat", () => {
   it("9) fiyat kaydı yok + price yok → 'Fiyat sorunuz'", () => {
     const { container } = renderCard({ prices: [], price: 0 });
     expect(container.textContent).toContain(tr.card.priceOnRequest);
+  });
+});
+
+/* ===============================================================
+   F) İNDİRİMLİ GÖSTERİM — üstü çizili indirimsiz + indirimli toplam
+   ===============================================================
+   Değerler motorun ÇIKTISIDIR: indirimli = mevcut calculateGrandTotal,
+   indirimsiz = motorun ZATEN export ettiği calculateStayTotal(…, null)
+   (villa detaydaki useBookingEngine deseni). Yeni formül YOK.
+=============================================================== */
+describe("F) indirimli toplam gösterimi", () => {
+  /** Üstü çizili (line-through) metinler. */
+  function struckTexts(container: HTMLElement): string[] {
+    return Array.from(container.querySelectorAll(".line-through")).map(
+      (el) => el.textContent || ""
+    );
+  }
+
+  it("13) indirim varsa indirimsiz toplam ÜSTÜ ÇİZİLİ gösterilir", () => {
+    /* 3 × 10.000 = 30.000 → %20 → 24.000 */
+    const { container } = renderCard({ discounts: DISCOUNTS });
+    expect(struckTexts(container).join(" ")).toMatch(/30\.000/);
+  });
+
+  it("14) indirimli toplam NORMAL (üstü çizili DEĞİL) gösterilir", () => {
+    const { container } = renderCard({ discounts: DISCOUNTS });
+    const text = priceAreaText(container);
+    expect(text).toMatch(/24\.000/);
+    expect(struckTexts(container).join(" ")).not.toMatch(/24\.000/);
+  });
+
+  it("15) iki tutar da AYNI fiyat alanında, gece bilgisiyle birlikte", () => {
+    const { container } = renderCard({ discounts: DISCOUNTS });
+    const text = priceAreaText(container);
+    expect(text).toMatch(/30\.000/);
+    expect(text).toMatch(/24\.000/);
+    expect(text).toContain("3 gece");
+  });
+
+  it("16) 🔒 indirim YOKSA üstü çizili tutar HİÇ render edilmez", () => {
+    const { container } = renderCard();
+    expect(struckTexts(container)).toHaveLength(0);
+    expect(priceAreaText(container)).toMatch(/30\.000/);
+  });
+
+  it("17) boş indirim dizisi = indirim yok (mevcut davranış birebir)", () => {
+    const { container } = renderCard({ discounts: [] });
+    expect(struckTexts(container)).toHaveLength(0);
+    expect(priceAreaText(container)).toMatch(/30\.000/);
+  });
+
+  it("18) tarih seçilmemişse indirim verisi olsa bile üstü çizili YOK", () => {
+    const { container } = renderCard({
+      withDates: false,
+      discounts: DISCOUNTS,
+    });
+    expect(struckTexts(container)).toHaveLength(0);
+    expect(priceAreaText(container)).toContain(tr.card.startingFromLower);
+  });
+
+  it("19) 🔒 müsaitlik satırına fiyat GERİ GELMEDİ", () => {
+    renderCard({ discounts: DISCOUNTS });
+    const row = availabilityRowText();
+    expect(row).not.toMatch(/30\.000/);
+    expect(row).not.toMatch(/24\.000/);
+  });
+
+  it("20) indirim tutarı yükseltirse (fixed = yüksek gecelik) üstü çizili YOK", () => {
+    /* "fixed" = o gecenin NİHAİ fiyatı (motor semantiği). 12.000 > 10.000
+       → indirimsiz toplam DAHA DÜŞÜK; sahte "indirim" gösterilmemeli. */
+    const { container } = renderCard({
+      discounts: [
+        {
+          start_date: "2026-10-01",
+          end_date: "2026-10-31",
+          discount_type: "fixed",
+          discount_value: 12000,
+          currency: null,
+        },
+      ],
+    });
+    expect(struckTexts(container)).toHaveLength(0);
+    expect(priceAreaText(container)).toMatch(/36\.000/);
   });
 });
 

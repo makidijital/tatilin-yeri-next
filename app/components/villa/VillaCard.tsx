@@ -22,6 +22,11 @@ import { useCurrency } from "@/app/context/CurrencyContext";
 import {
   calculateNights,
   calculateGrandTotal,
+  /* 🛡️ SALT-OKUNUR KARŞILAŞTIRMA — "indirim uygulanmasaydı toplam ne
+     olurdu" sorusunun cevabı için motorun ZATEN export ettiği pure
+     fonksiyon. Villa detaydaki `useBookingEngine` (satır ~797) ile
+     BİREBİR AYNI desen; yeni formül/motor YOK. */
+  calculateStayTotal,
   applyDiscountToDailyPrice,
   type DiscountRange,
 } from "@/lib/price.engine";
@@ -338,6 +343,10 @@ export default function VillaCard({
   let stayNights = 0;
   let stayTotal: number | null = null;
   let hasCleaning = false;
+  /* Temizlik payı — `hasCleaning`'in geldiği AYNI `result.cleaning`
+     değeri; indirimsiz toplamı kurarken tekrar hesaplanmasın diye
+     sayı olarak da saklanır (yeni hesap YOK). */
+  let stayCleaning = 0;
   if (stayStart && stayEnd && Array.isArray(prices) && prices.length > 0) {
     stayNights = calculateNights(stayStart, stayEnd);
     if (stayNights > 0) {
@@ -358,7 +367,50 @@ export default function VillaCard({
       if (result.total > 0) {
         stayTotal = result.total;
         hasCleaning = result.cleaning > 0;
+        stayCleaning = result.cleaning;
       }
+    }
+  }
+
+  /* ===============================================================
+     🛡️ İNDİRİMSİZ TOPLAM — YALNIZ GÖRSEL KARŞILAŞTIRMA (UI-only)
+     ===============================================================
+     Yukarıdaki `calculateGrandTotal` çağrısı ve dönen `stayTotal`
+     HİÇ DEĞİŞMEDİ — gösterilen/ödenecek tutar AYNEN o hesaptan gelir.
+     Burada yalnız "indirim olmasaydı ne olurdu" karşılaştırması için
+     AYRI, salt-okunur bir çağrı yapılır: motorun ZATEN export ettiği
+     `calculateStayTotal`, AYNI start/end/prices/currency/rates — tek
+     fark son parametrenin `null` olması (indirim yokmuş gibi).
+     Villa detay sayfasındaki `useBookingEngine` deseninin BİREBİR
+     aynısı; yeni indirim FORMÜLÜ YAZILMADI.
+
+     • Yalnız tarih seçili (stayTotal !== null) VE karta indirim verisi
+       geçilmişse çalışır → indirimsiz kartlarda EK MALİYET SIFIR.
+     • Temizlik her iki tarafta da aynı olduğu için mevcut
+       `stayCleaning` iki toplama da eklenir.
+     • 0.01 epsilon: kur yuvarlamasından doğan mikro farkı "sahte
+       indirim" olarak göstermemek için (detay sayfasıyla aynı eşik).
+     • `uncoveredNights > 0` → karşılaştırma güvenilmez, gösterilmez.
+     =============================================================== */
+  let stayTotalBeforeDiscount: number | null = null;
+  if (
+    stayTotal !== null &&
+    Array.isArray(stayDiscounts) &&
+    stayDiscounts.length > 0 &&
+    stayStart &&
+    stayEnd
+  ) {
+    const undiscountedStay = calculateStayTotal(
+      stayStart,
+      stayEnd,
+      prices || [],
+      currency,
+      rates,
+      null
+    );
+    const candidate = undiscountedStay.stay + stayCleaning;
+    if (undiscountedStay.uncoveredNights === 0 && candidate - stayTotal > 0.01) {
+      stayTotalBeforeDiscount = candidate;
     }
   }
 
@@ -1222,6 +1274,21 @@ export default function VillaCard({
                  currency ve aynı sözlük anahtarları. calculateGrandTotal
                  çağrısına, indirim/kur/temizlik hesabına DOKUNULMADI. */
               <p className="mt-2 text-[13px] text-[var(--color-stone-500)]">
+                {/* 🛡️ İNDİRİMSİZ TOPLAM — yalnız gerçek bir fark varsa
+                    render edilir (bkz. stayTotalBeforeDiscount). Üstü
+                    çizili stil villa detaydaki BookingSummary ile aynı
+                    dil: küçük punto + stone-400 + line-through. */}
+                {stayTotalBeforeDiscount !== null && (
+                  <>
+                    <span className="text-[12px] text-[var(--color-stone-400)] line-through tabular-nums">
+                      {formatCurrency(
+                        stayTotalBeforeDiscount,
+                        currency,
+                        effectiveLocale
+                      )}
+                    </span>{" "}
+                  </>
+                )}
                 <span className="font-display text-[15px] font-semibold text-[#ED7926] tabular-nums">
                   {formatCurrency(stayTotal, currency, effectiveLocale)}
                 </span>{" "}
