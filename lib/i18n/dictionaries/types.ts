@@ -850,6 +850,10 @@ export type Dictionary = {
       typeLabel: string;
       typeAll: string;
       typeEmpty: string;
+      /** 🛡️ ADDITIVE — sidebar "Villa Özellikleri" bölümü. */
+      featuresLabel: string;
+      featuresAll: string;
+      featuresEmpty: string;
       advancedTitle: string;
       advancedCheckbox: string;
       advancedHint: string;

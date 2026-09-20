@@ -624,6 +624,9 @@ export const de: Dictionary = {
       typeLabel: "Villentyp",
       typeAll: "Alle",
       typeEmpty: "Keine Typen.",
+      featuresLabel: "Villa-Ausstattung",
+      featuresAll: "Alle",
+      featuresEmpty: "Keine Ausstattung.",
       advancedTitle: "Erweiterte Suche",
       advancedCheckbox: "Auch Villen 3 Tage davor und danach anzeigen",
       advancedHint:

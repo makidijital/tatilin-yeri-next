@@ -11,6 +11,9 @@ import { cookies } from "next/headers";
 import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { villaFeatureRepository } from "@/lib/db/villa-feature.repository";
+/* 🛡️ Hero ile AYNI özellik kaynağı — yeni action/repository/sorgu
+   YAZILMADI. Locale-aware adlar (TR'de ek sorgu yok) buradan gelir. */
+import { loadHeroFeatures } from "@/app/components/ui/hero/_components/hero-features.action";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
 import VillaCard from "@/app/components/villa/VillaCard";
@@ -281,9 +284,14 @@ export default async function AramaPageBody({
      revalidateTaxonomy() invalidate eder. Category slug→id resolver
      için types listesi bu noktada lazım.
      =============================================================== */
-  const [regionOptions, categoryOptions] = await Promise.all([
+  const [regionOptions, categoryOptions, featureOptions] = await Promise.all([
     getCachedVillaLocations(),
     getCachedVillaTypes(),
+    /* 🛡️ Villa özellikleri — sidebar'daki "Villa Özellikleri" bölümü
+       ve `ozellikler` token resolve'u için TEK liste. Mevcut
+       `Promise.all` içine girdiği için EK RTT YOKTUR. Hata durumunda
+       boş liste → bölüm boş metin gösterir, arama ETKİLENMEZ. */
+    loadHeroFeatures(locale).catch(() => []),
   ]);
 
   /* ===============================================================
@@ -338,10 +346,6 @@ export default async function AramaPageBody({
 
      DEDUPE: aynı özellik iki kez gelirse (`ozellikler=a,a`) AND eşiği
      şişip yanlışlıkla 0 sonuç üretmesin diye tekilleştirilir. */
-  const featureOptions =
-    featureTokensRaw.length > 0
-      ? (await villaFeatureRepository.findAllForPublicTaxonomy()).data || []
-      : [];
   const featureIds = Array.from(
     new Set(
       resolveTokens(
@@ -1112,6 +1116,10 @@ export default async function AramaPageBody({
     /* 🛡️ Sidebar "Gelişmiş Arama" checkbox'ı için — URL'de flexible>0 mı.
        Hero ile AYNI `flexible=3`; checkbox otomatik CHECKED gelir. */
     flexible: flexDays > 0,
+    /* 🛡️ Hero'dan gelen `ozellikler` seçimi sidebar'da SEÇİLİ görünsün.
+       Resolve edilmiş (geçersiz token'ları düşürülmüş) UUID listesi —
+       URL kontratı ve AND filtresi ile BİREBİR aynı küme. */
+    features: featureIds,
   };
 
   /* 🛡️ PageHero pill etiketleri — eski filter chip'lerinin birebir
@@ -1213,6 +1221,10 @@ export default async function AramaPageBody({
           <FilterSidebar
             regionOptions={regionOptions}
             categoryOptions={sidebarCategoryOptions}
+            /* 🛡️ Locale'e göre çözülmüş adlar `loadHeroFeatures` içinde
+               hazır gelir (Hero ile AYNI helper) → sidebar'a TEK SEFER
+               prop olarak geçer; client'ta sorgu YOK. */
+            featureOptions={featureOptions}
             initial={sidebarInitial}
             resultCount={total}
             /* 🛡️ PHASE 13 — locale + hedef path. `mode` default

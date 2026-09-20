@@ -620,6 +620,9 @@ export const en: Dictionary = {
       typeLabel: "Villa Type",
       typeAll: "All",
       typeEmpty: "No types.",
+      featuresLabel: "Villa Features",
+      featuresAll: "All",
+      featuresEmpty: "No features.",
       advancedTitle: "Advanced Search",
       advancedCheckbox: "Also show villas 3 days before and after",
       advancedHint:

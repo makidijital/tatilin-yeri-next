@@ -67,6 +67,7 @@ import {
   Calendar,
   ChevronDown,
   MapPin,
+  Sparkles,
   Minus,
   Plus,
   RotateCcw,
@@ -105,6 +106,11 @@ type InitialFilters = {
    *  Opsiyonel (diğer caller'lar etkilenmez); yoksa false. Hero ile
    *  AYNI `flexible=3` parametresi. */
   flexible?: boolean;
+  /** 🛡️ ADDITIVE — URL'deki `ozellikler` (villa özellikleri) seçimi;
+   *  UUID dizisi. OPSİYONEL: verilmeyen caller'lar (örn.
+   *  /kiralik-villalar, /kisa-sureli-tarihler) BİREBİR eski davranışı
+   *  korur ve özellik bölümü hiç render edilmez. */
+  features?: string[];
 };
 
 /* ===============================================================
@@ -132,6 +138,12 @@ export type FilterSidebarMode = "search" | "redirect";
 type Props = {
   regionOptions: Option[];
   categoryOptions: Option[];
+  /** 🛡️ ADDITIVE — villa özellikleri seçenekleri (id + locale'e göre
+   *  çözülmüş name). Server'dan TEK SEFER aktarılır; checkbox
+   *  değişiminde YENİ SORGU YOKTUR. Verilmezse (veya boşsa) "Villa
+   *  Özellikleri" bölümü HİÇ render edilmez → mevcut caller'lar
+   *  (mode="redirect" dahil) birebir korunur. */
+  featureOptions?: Option[];
   initial: InitialFilters;
   /** Sonuç sayısı — mobile CTA üzerinde "X villa göster" için.
    *  Sadece mode="search" durumunda anlamlı. */
@@ -191,6 +203,7 @@ const parseDateFromUrl = (s: string | null): Date | null => {
 export default function FilterSidebar({
   regionOptions,
   categoryOptions,
+  featureOptions = [],
   initial,
   resultCount = 0,
   mode = "search",
@@ -230,6 +243,25 @@ export default function FilterSidebar({
      parametresi. Draft state (URL'den init); Uygula'da buildHref yazar. */
   const [flexible, setFlexible] = useState<boolean>(!!initial.flexible);
 
+  /* 🛡️ ADDITIVE — villa özellikleri draft seçimi (UUID listesi). Hero'da
+     seçilip URL'e yazılan değer `initial.features` ile buraya gelir →
+     sidebar'da SEÇİLİ görünür; "Filtrele"de buildHref geri yazar. */
+  const [features, setFeatures] = useState<string[]>(initial.features || []);
+
+  /* 🛡️ URL değişince (yeni `initial.features`) draft'ı senkronize et.
+     Yukarıdaki `useEffect` yerine React'in resmî "adjust state when
+     props change" RENDER-PHASE deseni kullanılır: effect'e bir setState
+     daha eklemek `set-state-in-effect` lint uyarı sayısını (baseline
+     200) artırırdı; bu desen ek uyarı üretmez ve bayat state flash'ı
+     oluşmaz. Diğer alanların mevcut effect senkronizasyonu DEĞİŞMEDİ. */
+  const featuresSignature = (initial.features || []).join(",");
+  const [prevFeaturesSignature, setPrevFeaturesSignature] =
+    useState(featuresSignature);
+  if (prevFeaturesSignature !== featuresSignature) {
+    setPrevFeaturesSignature(featuresSignature);
+    setFeatures(initial.features || []);
+  }
+
   /* Sayfa /arama?regions=... gibi yeni bir URL'le yeniden render
      edildiğinde props.initial değişir → draft'ı senkronize et. */
   useEffect(() => {
@@ -254,6 +286,17 @@ export default function FilterSidebar({
      openGroups[group] explicit toggle; tanımsızsa grup içinde seçili
      bölge varsa varsayılan AÇIK. */
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  /* ---------------- BÖLÜM AÇ/KAPA STATE (Villa Tipi · Özellikler) ----
+     Bölge gruplarındaki `openGroups` deseninin AYNISI: explicit toggle
+     yoksa `undefined` → her bölüm kendi varsayılanına düşer. Tarih /
+     Kişi / Bölge bölümleri BU STATE'İ KULLANMAZ (davranışları aynen
+     korunur). */
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(
+    {}
+  );
+  const toggleSection = (key: string, current: boolean) =>
+    setOpenSections((s) => ({ ...s, [key]: !current }));
 
   /* Görünür bölgeleri (show_in_filter=true) gruba göre kümele.
      regionOptions tam liste kalır (URL resolve için); burada YALNIZ
@@ -399,9 +442,22 @@ export default function FilterSidebar({
        SESSİZCE SİLİNİRDİ. Değer opak taşınır (parse/normalize YOK).
        "Temizle" tüm filtreleri sıfırladığı için bu param da doğal
        olarak kalkar — mevcut reset sözleşmesi DEĞİŞMEDİ. */
-    const existingFeatures = searchParams?.get("ozellikler");
-    if (existingFeatures) {
-      params.set("ozellikler", existingFeatures);
+    /* 🛡️ VİLLA ÖZELLİKLERİ (`ozellikler`, virgülle ayrık UUID).
+       Kaynak sırası:
+         1) Panelin kendi draft state'i (bu panelde artık UI VAR).
+         2) State BOŞ ve caller `initial.features` HİÇ vermiyorsa →
+            URL'deki mevcut değer AYNEN taşınır (eski passthrough
+            sözleşmesi; `buildHref` URL'i sıfırdan kurduğu için bu
+            olmadan parametre sessizce silinirdi).
+       Seçim yoksa parametre HİÇ yazılmaz → boş `ozellikler=` ASLA
+       üretilmez ve "Temizle" sonrası URL'den tamamen kalkar. */
+    if (features.length) {
+      params.set("ozellikler", features.join(","));
+    } else if (!initial.features) {
+      const existingFeatures = searchParams?.get("ozellikler");
+      if (existingFeatures) {
+        params.set("ozellikler", existingFeatures);
+      }
     }
     const qs = params.toString();
     /* 🛡️ PHASE 13 — hedef locale-aware (`basePath`). Parametre seti,
@@ -423,6 +479,7 @@ export default function FilterSidebar({
     setStartDate(null);
     setEndDate(null);
     setGuestCount(1);
+    setFeatures([]);
     /* 🛡️ MODE-aware reset:
          - search   → /arama'ya boş paramla push (mevcut davranış).
          - redirect → sadece local draft state'i sıfırla; kullanıcı
@@ -477,14 +534,33 @@ export default function FilterSidebar({
     });
   };
 
+  /* Varsayılanlar:
+       • Villa Tipi → AÇIK (mevcut davranış gereksiz yere değişmesin).
+       • Villa Özellikleri → bölge gruplarıyla AYNI kural: seçim varsa
+         açık, yoksa kapalı (sidebar gereksiz uzamasın).
+     Explicit toggle her ikisinde de `openSections` ile ezer. */
+  const typeSectionOpen = openSections.type ?? true;
+  const featureSectionOpen = openSections.features ?? features.length > 0;
+  /* Bölüm YALNIZ özellik verisi olan yüzeylerde render edilir
+     (/arama). Prop vermeyen caller'lar için DOM birebir eski hali. */
+  const showFeatures = featureOptions.length > 0 || !!initial.features;
+
   const activeFilterCount = useMemo(() => {
     let n = 0;
     if (regions.length) n += 1;
     if (categories.length) n += 1;
     if (startDate) n += 1;
     if (guestCount > 1) n += 1;
+    /* 🛡️ Yalnız özellik seçiliyken de "Temizle" AKTİF olsun. */
+    if (features.length) n += 1;
     return n;
-  }, [regions.length, categories.length, startDate, guestCount]);
+  }, [
+    regions.length,
+    categories.length,
+    startDate,
+    guestCount,
+    features.length,
+  ]);
 
   /* ===============================================================
      RENDER
@@ -528,12 +604,16 @@ export default function FilterSidebar({
           4) Misafir     (en son "kaç kişi")
         Cross-group semantic AND; her grup içinde OR (multi-select).
       */}
-      {/* 🛡️ flex-1 + min-h-0 + overflow-y-auto: canonical "internal
-         scroll in flex parent" pattern. min-h-0 olmadan flex item'ın
-         min-height defaultu intrinsic content'tir → scroll area
-         içeriği kadar büyür → overflow-y-auto hiç tetiklenmez →
-         checkbox listesi card'ın rounded border'ından taşar. */}
-      <div className="flex-1 min-h-0 overflow-y-auto py-6 space-y-8 pr-1 -mr-1">
+      {/* 🛡️ SCROLL SÖZLEŞMESİ (iki bağlam, TEK JSX):
+           • MOBİL DRAWER (<md): drawer sabit yükseklikte
+             (`h-[calc(92vh-1.25rem)]`) olduğu için iç scroll ŞART →
+             `flex-1 min-h-0 overflow-y-auto` AYNEN korunur. Aksi halde
+             sticky CTA'nın altındaki içerik erişilemez olurdu.
+           • DESKTOP (md+): iç scroll KALDIRILDI → `md:flex-none
+             md:overflow-visible`. Panel doğal yüksekliğinde uzar,
+             sayfa normal şekilde scroll olur. Body/page scroll
+             davranışına DOKUNULMADI. */}
+      <div className="flex-1 min-h-0 overflow-y-auto md:flex-none md:overflow-visible py-6 space-y-8 pr-1 -mr-1 md:pr-0 md:mr-0">
         {/* ============ 1) TARİH ============ */}
         <FilterGroup
           icon={
@@ -763,6 +843,10 @@ export default function FilterSidebar({
         </FilterGroup>
 
         {/* ============ 4) VİLLA TİPİ ============ */}
+        {/* 🛡️ AÇ/KAPA: varsayılan AÇIK → sayfa ilk açıldığında villa tipi
+            seçenekleri BUGÜNKÜ gibi görünür kalır. Seçim state'i, URL
+            kontratı ve filtreleme mantığı DEĞİŞMEDİ; yalnız görünürlük
+            toggle'ı eklendi. */}
         <FilterGroup
           icon={<Tag size={14} className="text-[var(--color-champagne-500)]" />}
           label={dict.typeLabel}
@@ -773,6 +857,9 @@ export default function FilterSidebar({
                   n: categories.length,
                 })
           }
+          collapsible
+          open={typeSectionOpen}
+          onToggle={() => toggleSection("type", typeSectionOpen)}
         >
           {categoryOptions.length === 0 ? (
             <p className="text-[13px] text-[var(--color-stone-400)]">
@@ -807,6 +894,68 @@ export default function FilterSidebar({
             </ul>
           )}
         </FilterGroup>
+
+        {/* ============ 5) VİLLA ÖZELLİKLERİ ============
+            🛡️ Seçenekler SERVER'dan TEK SEFER prop ile gelir
+            (AramaPageBody → `loadHeroFeatures`, Hero ile AYNI kaynak);
+            checkbox değişiminde YENİ SORGU YOKTUR. URL kontratı Hero
+            ile birebir: `ozellikler=uuid1,uuid2` (AND filtresi,
+            AramaPageBody'de çözülür). Caller prop vermiyorsa bölüm
+            HİÇ render edilmez → /kiralik-villalar birebir korunur. */}
+        {showFeatures && (
+          <FilterGroup
+            icon={
+              <Sparkles
+                size={14}
+                className="text-[var(--color-champagne-500)]"
+              />
+            }
+            label={dict.featuresLabel}
+            summary={
+              features.length === 0
+                ? dict.featuresAll
+                : formatDictionaryString(dict.selectedCount, {
+                    n: features.length,
+                  })
+            }
+            collapsible
+            open={featureSectionOpen}
+            onToggle={() => toggleSection("features", featureSectionOpen)}
+          >
+            {featureOptions.length === 0 ? (
+              <p className="text-[13px] text-[var(--color-stone-400)]">
+                {dict.featuresEmpty}
+              </p>
+            ) : (
+              <ul className="space-y-1">
+                {featureOptions.map((opt) => {
+                  const checked = features.includes(opt.id);
+                  return (
+                    <li key={opt.id}>
+                      <label
+                        className={`flex items-center gap-3 text-[14px] px-3 py-2.5 rounded-xl cursor-pointer transition-colors motion-reduce:transition-none ${
+                          checked
+                            ? "bg-[var(--color-sand-50)] text-[var(--color-stone-900)]"
+                            : "text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)]"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            toggleInList(opt.id, features, setFeatures)
+                          }
+                          className="!w-4 !h-4 accent-[var(--color-champagne-500)] !rounded"
+                        />
+                        <span className="truncate">{opt.name}</span>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </FilterGroup>
+        )}
 
         {/* ═══ GELİŞMİŞ ARAMA — Hero checkbox'ı ile AYNI `flexible=3`.
             Panel JSX paylaşımlı → desktop aside + mobil drawer ikisinde de
@@ -910,12 +1059,13 @@ export default function FilterSidebar({
       {/* DESKTOP — inline sticky aside */}
       <aside className="hidden md:block">
         <div className="sticky top-28">
-          {/* 🛡️ overflow-hidden: card max-h ile boy capping yapıyor.
-             İç panel/scroll-area min-h-0 ile doğru shrink etse de,
-             defansif clip border'ın rounded köşelerinin altında bir
-             1px overflow'un bile görünmesini engeller. Sticky scope
-             ve max-h davranışı dokunulmadı. */}
-          <div className="bg-white border border-[var(--color-stone-100)] rounded-2xl p-6 max-h-[calc(100vh-9rem)] flex flex-col overflow-hidden">
+          {/* 🛡️ SCROLL KALDIRILDI (desktop): önceki
+             `max-h-[calc(100vh-9rem)] overflow-hidden` çifti card'ı
+             viewport'a göre kırpıyor ve iç scroll'u zorunlu kılıyordu.
+             İkisi de kaldırıldı → card içeriği kadar uzar, tüm filtre
+             bölümleri doğal yüksekliğinde görünür. `sticky top-28`
+             scope'u ve mobil drawer DEĞİŞMEDİ. */}
+          <div className="bg-white border border-[var(--color-stone-100)] rounded-2xl p-6 flex flex-col">
             {panel}
           </div>
         </div>
@@ -964,29 +1114,66 @@ export default function FilterSidebar({
    SUB-COMPONENTS
    =============================================================== */
 
+/* 🛡️ ADDITIVE ACCORDION — `collapsible` VERİLMEYEN bölümler
+   (Tarih · Kişi Sayısı · Bölge) için çıktı BYTE-IDENTICAL: aynı
+   `<header>`, aynı h3/span, chevron YOK, children daima açık.
+   `collapsible` verildiğinde başlık satırı `<button>` olur ve sağa
+   bölge gruplarındakiyle AYNI chevron eklenir (kapalıyken
+   `-rotate-90`). Yeni bir görsel dil ÜRETİLMEDİ. */
 function FilterGroup({
   icon,
   label,
   summary,
   children,
+  collapsible = false,
+  open = true,
+  onToggle,
 }: {
   icon: React.ReactNode;
   label: string;
   summary: string;
   children: React.ReactNode;
+  collapsible?: boolean;
+  open?: boolean;
+  onToggle?: () => void;
 }) {
   return (
     <section className="space-y-3">
-      <header className="flex items-center justify-between gap-3">
-        <h3 className="flex items-center gap-2 text-[11px] tracking-[0.2em] uppercase font-semibold text-[var(--color-stone-700)]">
-          {icon}
-          {label}
-        </h3>
-        <span className="text-[11px] tracking-[0.06em] text-[var(--color-stone-400)] truncate max-w-[55%] text-right">
-          {summary}
-        </span>
-      </header>
-      <div>{children}</div>
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className="w-full flex items-center justify-between gap-3 text-left rounded-lg hover:opacity-80 transition-opacity motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
+        >
+          <h3 className="flex items-center gap-2 text-[11px] tracking-[0.2em] uppercase font-semibold text-[var(--color-stone-700)]">
+            {icon}
+            {label}
+          </h3>
+          <span className="flex items-center gap-2 min-w-0 max-w-[55%]">
+            <span className="text-[11px] tracking-[0.06em] text-[var(--color-stone-400)] truncate text-right">
+              {summary}
+            </span>
+            <ChevronDown
+              size={14}
+              className={`text-[var(--color-stone-400)] shrink-0 transition-transform motion-reduce:transition-none ${
+                open ? "" : "-rotate-90"
+              }`}
+            />
+          </span>
+        </button>
+      ) : (
+        <header className="flex items-center justify-between gap-3">
+          <h3 className="flex items-center gap-2 text-[11px] tracking-[0.2em] uppercase font-semibold text-[var(--color-stone-700)]">
+            {icon}
+            {label}
+          </h3>
+          <span className="text-[11px] tracking-[0.06em] text-[var(--color-stone-400)] truncate max-w-[55%] text-right">
+            {summary}
+          </span>
+        </header>
+      )}
+      {(!collapsible || open) && <div>{children}</div>}
     </section>
   );
 }

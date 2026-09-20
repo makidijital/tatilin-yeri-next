@@ -225,9 +225,15 @@ describe("A) regresyon — özellik filtresi KAPALI", () => {
     });
   });
 
-  it("2) parametre yokken özellik sorgularının HİÇBİRİ atılmaz (ek maliyet 0)", async () => {
+  it("2) parametre yokken PAHALI ilişki sorgusu atılmaz; seçenek listesi TEK kez okunur", async () => {
     await renderArama({ bolgeler: "kalkan", guests: "4" });
-    expect(findAllFeaturesMock).not.toHaveBeenCalled();
+    /* ⚠️ SÖZLEŞME DEĞİŞİKLİĞİ (bilinçli): sidebar'daki "Villa
+       Özellikleri" bölümü seçenek listesine HER ZAMAN ihtiyaç duyduğu
+       için taksonomi okuması koşulsuz çalışır — ama mevcut Promise.all
+       içinde olduğu için EK RTT YOKTUR ve TAM 1 kez çalışır (checkbox
+       başına sorgu YOK). Asıl maliyetli olan junction (AND) sorgusu
+       seçim yokken HÂLÂ HİÇ atılmaz. */
+    expect(findAllFeaturesMock).toHaveBeenCalledTimes(1);
     expect(findFeatureRelationsMock).not.toHaveBeenCalled();
     expect(searchArgs()).toEqual({
       categoryVillaIds: null,
@@ -668,5 +674,276 @@ describe("H) hero URL üretimi", () => {
     };
     expect(buildHeroSearchParams(base)).toBe("guests=2");
     expect(buildHeroSearchParams({ ...base, features: [] })).toBe("guests=2");
+  });
+});
+
+/* ===============================================================
+   I) SIDEBAR UI — accordion · özellik bölümü · scroll · Temizle
+   ===============================================================
+   ⚠️ Bu blok FAZ 2'de (sidebar entegrasyonu) eklendi. Yukarıdaki
+   testlerin hiçbiri gevşetilmedi; yalnız 2) numaralı testin sorgu
+   sözleşmesi, sidebar listesi koşulsuz gerektiği için AÇIKÇA
+   güncellendi (ilişki sorgusu assertion'ı AYNEN duruyor).
+=============================================================== */
+
+const SIDEBAR_SRC_PATH = "app/(public)/arama/FilterSidebar.tsx";
+
+type SidebarProps = {
+  regionOptions?: unknown[];
+  categoryOptions?: unknown[];
+  featureOptions?: Array<{ id: string; name: string }>;
+  initial?: Record<string, unknown>;
+  locale?: "tr" | "en" | "de";
+};
+
+async function renderSidebar(props: SidebarProps = {}) {
+  const { default: FilterSidebar } = await import(
+    "@/app/(public)/arama/FilterSidebar"
+  );
+  return render(
+    <FilterSidebar
+      regionOptions={[]}
+      categoryOptions={[
+        { id: "t1", name: "Havuzlu Villa", slug: "havuzlu" },
+        { id: "t2", name: "Deniz Manzaralı", slug: "deniz" },
+      ]}
+      featureOptions={
+        props.featureOptions || [
+          { id: F1, name: "Jakuzi" },
+          { id: F2, name: "Sauna" },
+        ]
+      }
+      initial={{
+        regions: [],
+        categories: [],
+        start: null,
+        end: null,
+        guests: 4,
+        features: [],
+        ...(props.initial || {}),
+      }}
+      locale={props.locale}
+    />
+  );
+}
+
+/** Panel içindeki (drawer trigger'ı OLMAYAN) butonu bulur. */
+function panelButton(label: string): HTMLButtonElement {
+  const btn = screen
+    .getAllByText(label)
+    .map((el) => el.closest("button"))
+    .find(
+      (b): b is HTMLButtonElement =>
+        !!b && b.getAttribute("aria-haspopup") !== "dialog"
+    );
+  expect(btn, `panel button: ${label}`).toBeTruthy();
+  return btn!;
+}
+
+describe("I) sidebar — accordion davranışı", () => {
+  it("30) VİLLA TİPİ varsayılan AÇIK (mevcut davranış korunur)", async () => {
+    await renderSidebar();
+    expect(screen.getAllByText("Havuzlu Villa").length).toBeGreaterThan(0);
+  });
+
+  it("31) VİLLA TİPİ başlığına tıklayınca seçenekler GİZLENİR, tekrar tıklayınca GÖRÜNÜR", async () => {
+    await renderSidebar();
+    const header = panelButton("Villa Tipi");
+    expect(header.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(header);
+    expect(screen.queryAllByText("Havuzlu Villa")).toHaveLength(0);
+    expect(panelButton("Villa Tipi").getAttribute("aria-expanded")).toBe(
+      "false"
+    );
+    fireEvent.click(panelButton("Villa Tipi"));
+    expect(screen.getAllByText("Havuzlu Villa").length).toBeGreaterThan(0);
+  });
+
+  it("32) VİLLA ÖZELLİKLERİ bölümü accordion — seçim yokken KAPALI, açılınca seçenekler gelir", async () => {
+    await renderSidebar();
+    const header = panelButton("Villa Özellikleri");
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryAllByText("Jakuzi")).toHaveLength(0);
+    fireEvent.click(header);
+    expect(screen.getAllByText("Jakuzi").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Sauna").length).toBeGreaterThan(0);
+  });
+
+  it("33) URL'de seçim VARSA özellik bölümü AÇIK gelir (bölge grubu kuralı)", async () => {
+    await renderSidebar({ initial: { features: [F1] } });
+    expect(
+      panelButton("Villa Özellikleri").getAttribute("aria-expanded")
+    ).toBe("true");
+  });
+
+  it("34) TARİH / KİŞİ / BÖLGE başlıkları accordion DEĞİL (mevcut davranış birebir)", async () => {
+    await renderSidebar();
+    for (const label of ["Tarih", "Kişi Sayısı", "Bölge"]) {
+      const el = screen.getAllByText(label)[0];
+      expect(el.closest("button"), label).toBeNull();
+    }
+  });
+
+  it("35) `featureOptions` verilmeyen caller'da bölüm HİÇ render edilmez (/kiralik-villalar)", async () => {
+    const { default: FilterSidebar } = await import(
+      "@/app/(public)/arama/FilterSidebar"
+    );
+    render(
+      <FilterSidebar
+        regionOptions={[]}
+        categoryOptions={[]}
+        initial={{
+          regions: [],
+          categories: [],
+          start: null,
+          end: null,
+          guests: 0,
+        }}
+        mode="redirect"
+      />
+    );
+    expect(screen.queryAllByText("Villa Özellikleri")).toHaveLength(0);
+  });
+});
+
+describe("I) sidebar — seçim · URL · Temizle", () => {
+  it("36) Hero'dan gelen seçim sidebar'da CHECKED görünür", async () => {
+    const { container } = await renderSidebar({ initial: { features: [F2] } });
+    const boxes = Array.from(
+      container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
+    );
+    const labels = boxes.map(
+      (b) => b.closest("label")?.textContent?.trim() || ""
+    );
+    const jacuzzi = boxes[labels.indexOf("Jakuzi")];
+    const sauna = boxes[labels.indexOf("Sauna")];
+    expect(sauna.checked).toBe(true);
+    expect(jacuzzi.checked).toBe(false);
+  });
+
+  it("37) sidebar'dan özellik seçip Filtrele → `ozellikler` URL'e yazılır", async () => {
+    await renderSidebar();
+    fireEvent.click(panelButton("Villa Özellikleri"));
+    fireEvent.click(screen.getAllByText("Jakuzi")[0]);
+    fireEvent.click(panelButton("Filtrele"));
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    const url = String(pushMock.mock.calls[0][0]);
+    expect(url).toContain(`ozellikler=${F1}`);
+    expect(url).toContain("guests=4");
+  });
+
+  it("38) özellik değişirken DİĞER filtreler (bölge/tip/tarih/kişi) KAYBOLMAZ", async () => {
+    await renderSidebar({
+      initial: {
+        regions: [],
+        categories: ["t1"],
+        start: "2026-10-08",
+        end: "2026-10-15",
+        guests: 6,
+        features: [F1],
+      },
+    });
+    fireEvent.click(screen.getAllByText("Sauna")[0]);
+    fireEvent.click(panelButton("Filtrele"));
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    const url = String(pushMock.mock.calls[0][0]);
+    expect(url).toContain("villa-turleri=havuzlu");
+    expect(url).toContain("start=2026-10-08");
+    expect(url).toContain("end=2026-10-15");
+    expect(url).toContain("guests=6");
+    expect(url).toContain(encodeURIComponent(`${F1},${F2}`));
+  });
+
+  it("39) son özellik kaldırılınca `ozellikler` URL'den TAMAMEN kalkar (boş param YOK)", async () => {
+    await renderSidebar({ initial: { features: [F1] } });
+    fireEvent.click(screen.getAllByText("Jakuzi")[0]);
+    fireEvent.click(panelButton("Filtrele"));
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    const url = String(pushMock.mock.calls[0][0]);
+    expect(url).not.toContain("ozellikler");
+    expect(url).toBe("/arama?guests=4");
+  });
+
+  it("40) YALNIZ özellik seçiliyken 'Temizle' AKTİF olur", async () => {
+    await renderSidebar({
+      initial: { guests: 1, features: [F1] },
+    });
+    expect(panelButton("Temizle").disabled).toBe(false);
+  });
+
+  it("41) hiç filtre yokken 'Temizle' PASİF kalır (mevcut davranış)", async () => {
+    await renderSidebar({ initial: { guests: 1, features: [] } });
+    expect(panelButton("Temizle").disabled).toBe(true);
+  });
+
+  it("42) 'Temizle' özellik seçimini de sıfırlar ve paramsız /arama'ya döner", async () => {
+    await renderSidebar({ initial: { features: [F1, F2] } });
+    fireEvent.click(panelButton("Temizle"));
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    expect(pushMock.mock.calls[0][0]).toBe("/arama");
+  });
+});
+
+describe("I) sidebar — /arama entegrasyonu ve i18n", () => {
+  it("43) /arama sidebar'ı özellik seçeneklerini SERVER'dan alır (client sorgu YOK)", async () => {
+    const { container } = await renderArama({});
+    expect(container.textContent).toContain("Villa Özellikleri");
+    /* Seçenek listesi TAM 1 kez okunur — checkbox başına sorgu yok. */
+    expect(findAllFeaturesMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("44) URL'deki seçim /arama render'ında sidebar'da CHECKED gelir (refresh senaryosu)", async () => {
+    findFeatureRelationsMock.mockResolvedValue({
+      data: [{ villa_id: "v1", feature_id: F1 }],
+      error: null,
+    });
+    const { container } = await renderArama({ ozellikler: F1 });
+    const boxes = Array.from(
+      container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
+    );
+    const checked = boxes.filter((b) => b.checked);
+    /* Panel JSX'i desktop aside + mobil drawer olarak İKİ kez mount
+       edilir (mevcut mimari) → her checkbox iki kopyada görünür. */
+    expect(checked.length).toBeGreaterThan(0);
+    for (const box of checked) {
+      expect(box.closest("label")?.textContent).toContain("Jakuzi");
+    }
+  });
+
+  it("45) EN/DE — bölüm başlığı sözlükten gelir (hardcoded TR yok)", async () => {
+    const { en } = await import("@/lib/i18n/dictionaries/en");
+    const { de } = await import("@/lib/i18n/dictionaries/de");
+    const enRender = await renderArama({}, "en");
+    expect(enRender.container.textContent).toContain(
+      en.search.filters.featuresLabel
+    );
+    enRender.unmount();
+    const deRender = await renderArama({}, "de");
+    expect(deRender.container.textContent).toContain(
+      de.search.filters.featuresLabel
+    );
+  });
+
+  it("46) 🔒 kaynak kilidi — desktop iç scroll KALDIRILDI, mobil drawer scroll DURUYOR", () => {
+    const src = fs.readFileSync(
+      path.join(process.cwd(), SIDEBAR_SRC_PATH),
+      "utf-8"
+    );
+    /* Desktop card artık viewport'a göre kırpılmıyor. Yalnız GERÇEK
+       className attribute'ları taranır (yorumlar hariç). */
+    const classNames = Array.from(src.matchAll(/className="([^"]*)"/g)).map(
+      (m) => m[1]
+    );
+    expect(
+      classNames.some((c) => c.includes("max-h-[calc(100vh-9rem)]"))
+    ).toBe(false);
+    expect(src).toContain(
+      'rounded-2xl p-6 flex flex-col"'
+    );
+    /* Mobil drawer'ın iç scroll'u KORUNDU (aksi halde CTA altındaki
+       içerik erişilemez olurdu) + desktop'ta kapatıldı. */
+    expect(src).toContain("overflow-y-auto md:flex-none md:overflow-visible");
+    /* Body scroll kilidi (drawer açıkken) DOKUNULMADI. */
+    expect(src).toContain('document.body.style.overflow = "hidden"');
   });
 });

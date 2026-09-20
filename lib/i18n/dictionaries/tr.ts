@@ -637,6 +637,9 @@ export const tr: Dictionary = {
       typeLabel: "Villa Tipi",
       typeAll: "Tümü",
       typeEmpty: "Tip yok.",
+      featuresLabel: "Villa Özellikleri",
+      featuresAll: "Tümü",
+      featuresEmpty: "Özellik yok.",
       advancedTitle: "Gelişmiş Arama",
       advancedCheckbox:
         "Sonuçlarda 3 gün önceki ve sonraki villaları da göster",
