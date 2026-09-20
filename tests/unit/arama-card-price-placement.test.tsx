@@ -72,6 +72,8 @@ function renderCard(opts: {
   discounts?: DiscountRange[];
   prices?: typeof PRICES;
   price?: number | null;
+  cleaningFee?: number;
+  locale?: "tr" | "en" | "de";
 } = {}) {
   const withDates = opts.withDates ?? true;
   return render(
@@ -86,9 +88,10 @@ function renderCard(opts: {
       stayEnd={withDates ? END : undefined}
       prices={opts.prices === undefined ? PRICES : opts.prices}
       stayDiscounts={opts.discounts}
-      cleaningFee={0}
+      cleaningFee={opts.cleaningFee ?? 0}
       cleaningCurrency="TRY"
       cleaningLimit={0}
+      locale={opts.locale}
     />
   );
 }
@@ -99,12 +102,21 @@ function availabilityRowText(): string {
   return btn.parentElement?.textContent || "";
 }
 
-/** Fiyat alanı = CONTENT AREA'daki tek `<p>` fiyat satırı. */
+/** Fiyat SATIRI = turuncu tutarı (font-display span) içeren `<p>`. */
+function priceLine(container: HTMLElement): HTMLElement | null {
+  const span = Array.from(
+    container.querySelectorAll("span.font-display")
+  ).find((el) => /\d/.test(el.textContent || ""));
+  return (span?.closest("p") as HTMLElement | null) ?? null;
+}
+
 function priceAreaText(container: HTMLElement): string {
-  const el = Array.from(container.querySelectorAll("p")).find((p) =>
-    /\d/.test(p.textContent || "")
-  );
-  return el?.textContent || "";
+  return priceLine(container)?.textContent || "";
+}
+
+/** Fiyat BLOĞU = tarih satırı + fiyat satırı + indirim satırı. */
+function priceBlockText(container: HTMLElement): string {
+  return priceLine(container)?.parentElement?.textContent || "";
 }
 
 describe("A) tarih seçili — toplam YALNIZ fiyat alanında", () => {
@@ -113,9 +125,12 @@ describe("A) tarih seçili — toplam YALNIZ fiyat alanında", () => {
     expect(priceAreaText(container)).toMatch(/30\.000/);
   });
 
-  it("2) gece sayısı bilgisi toplamla BİRLİKTE fiyat alanında", () => {
+  it("2) 🔒 'N gece' metni ARTIK gösterilmiyor (tarih üst satıra taşındı)", () => {
+    /* ⚠️ GÜNCELLEME: gece sayısı yerine seçilen tarih aralığı gösteriliyor.
+       Assertion gevşetilmedi — tam tersi, "gece" metninin YOKLUĞU ve
+       tarih satırının VARLIĞI kilitlendi (bkz. G bloğu). */
     const { container } = renderCard();
-    expect(priceAreaText(container)).toContain("3 gece");
+    expect(priceBlockText(container)).not.toContain("gece");
   });
 
   it("3) 🔒 müsaitlik CTA'sının yanında ARTIK fiyat YOK", () => {
@@ -202,12 +217,12 @@ describe("F) indirimli toplam gösterimi", () => {
     expect(struckTexts(container).join(" ")).not.toMatch(/24\.000/);
   });
 
-  it("15) iki tutar da AYNI fiyat alanında, gece bilgisiyle birlikte", () => {
+  it("15) iki tutar da AYNI fiyat SATIRINDA gösterilir", () => {
     const { container } = renderCard({ discounts: DISCOUNTS });
     const text = priceAreaText(container);
     expect(text).toMatch(/30\.000/);
     expect(text).toMatch(/24\.000/);
-    expect(text).toContain("3 gece");
+    expect(text).not.toContain("gece");
   });
 
   it("16) 🔒 indirim YOKSA üstü çizili tutar HİÇ render edilmez", () => {
@@ -290,5 +305,77 @@ describe("E) motor dokunulmazlığı — kaynak kilidi", () => {
     /* Curation: "TOPLAM" eyebrow'lu blok; Discount: gecelik gösterim. */
     expect(card).toContain("dict.card.total");
     expect(card).toContain("dict.card.nightly");
+  });
+});
+
+/* ===============================================================
+   G) ÜÇ SATIRLI FİYAT ALANI — tarih · fiyat · indirim tutarı
+   ===============================================================
+   Tarih etiketi mevcut `buildHeroDateLabel` (Hero paneliyle AYNI
+   helper) ile üretilir; indirim tutarı ZATEN hesaplanmış iki toplamın
+   FARKIDIR. Yeni format/hesap YOK.
+=============================================================== */
+describe("G) üç satırlı fiyat alanı", () => {
+  const savingsLine = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll("p")).find((p) =>
+      p.className.includes("text-red-600")
+    );
+
+  it("21) ÜST SATIR — seçilen tarih aralığı fiyatın üstünde gösterilir", () => {
+    const { container } = renderCard();
+    /* 2026-10-08 → 2026-10-11, tr-TR kısa ay: "8 Eki – 11 Eki". */
+    expect(priceBlockText(container)).toMatch(/8\s*Eki\s*–\s*11\s*Eki/);
+  });
+
+  it("22) tarih satırı fiyat satırının ÜSTÜNDE (DOM sırası)", () => {
+    const { container } = renderCard();
+    const block = priceLine(container)!.parentElement!;
+    const texts = Array.from(block.querySelectorAll("p")).map(
+      (p) => p.textContent || ""
+    );
+    expect(texts[0]).toMatch(/Eki/);
+    expect(texts[1]).toMatch(/30\.000/);
+  });
+
+  it("23) tarih seçilmemişse tarih satırı YOK (mevcut davranış)", () => {
+    const { container } = renderCard({ withDates: false });
+    expect(container.textContent).not.toMatch(/Eki/);
+    expect(priceAreaText(container)).toContain(tr.card.startingFromLower);
+  });
+
+  it("24) ALT SATIR — indirim tutarı (₺6.000) KIRMIZI gösterilir", () => {
+    /* 30.000 − 24.000 = 6.000 (iki mevcut toplamın farkı). */
+    const { container } = renderCard({ discounts: DISCOUNTS });
+    const line = savingsLine(container);
+    expect(line).toBeTruthy();
+    expect(line!.textContent).toMatch(/6\.000/);
+    expect(line!.textContent).toContain("indirimli");
+  });
+
+  it("25) 🔒 indirim yoksa indirim satırı HİÇ render edilmez", () => {
+    const { container } = renderCard();
+    expect(savingsLine(container)).toBeUndefined();
+  });
+
+  it("26) 'Temizlik dahil' mevcut koşuluyla fiyat satırında kalır", () => {
+    const { container } = renderCard({ cleaningFee: 2000 });
+    const text = priceAreaText(container);
+    expect(text).toContain(tr.card.cleaningIncluded);
+    /* 3 × 10.000 + 2.000 = 32.000 */
+    expect(text).toMatch(/32\.000/);
+  });
+
+  it("27) temizlik yoksa 'Temizlik dahil' YOK (mevcut davranış)", () => {
+    const { container } = renderCard();
+    expect(priceAreaText(container)).not.toContain(tr.card.cleaningIncluded);
+  });
+
+  it("28) EN/DE — indirim metni sözlükten gelir (hardcoded TR yok)", async () => {
+    const { en } = await import("@/lib/i18n/dictionaries/en");
+    const { container } = renderCard({ discounts: DISCOUNTS, locale: "en" });
+    const line = savingsLine(container);
+    expect(line!.textContent).toContain(
+      en.card.totalSavings.replace("{amount}", "").trim()
+    );
   });
 });

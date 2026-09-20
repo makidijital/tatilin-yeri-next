@@ -498,6 +498,8 @@ export type Dictionary = {
     discountBadgeAriaLabel: string;
     /** template: {amount} */
     nightlySavings: string;
+    /** template: {amount} — /arama kartı: konaklama toplamındaki indirim. */
+    totalSavings: string;
     bookNow: string;
     bookNowAriaLabel: string;
     /** template: {n} */

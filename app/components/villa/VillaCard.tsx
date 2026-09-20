@@ -31,7 +31,11 @@ import {
   type DiscountRange,
 } from "@/lib/price.engine";
 import type { MonthNumber } from "@/lib/i18n/dictionaries/types";
-import { formatDiscountDateRange } from "@/lib/date-format";
+import { formatDiscountDateRange, parseLocalDate } from "@/lib/date-format";
+/* 🛡️ Seçilen tarih aralığı etiketi — Hero/arama panelinin KULLANDIĞI
+   pure helper'ın AYNISI ("8 Eki – 11 Eki"). Yeni tarih formatlama
+   sistemi YAZILMADI; locale etiketi (LOCALE_BCP47) helper içinde. */
+import { buildHeroDateLabel } from "@/app/components/ui/hero/_helpers/date-label";
 /* 🛡️ PHASE 10G — locale-aware kart metinleri + locale-prefixed detay
    linki. `locale` OPSİYONEL, default "tr" → TR çıktısı (metin + href)
    BİREBİR AYNI. Fiyat/indirim/availability mantığı DEĞİŞMEDİ. */
@@ -413,6 +417,27 @@ export default function VillaCard({
       stayTotalBeforeDiscount = candidate;
     }
   }
+
+  /* 🛡️ SEÇİLEN TARİHLER — yalnız tarih seçiliyken (stayTotal !== null)
+     fiyatın ÜSTÜNDE gösterilir. Tarih matematiği/parse mevcut
+     `parseLocalDate` + `buildHeroDateLabel` ile; YENİ format YOK. */
+  const stayDateLabel =
+    stayTotal !== null && stayStart && stayEnd
+      ? buildHeroDateLabel(
+          parseLocalDate(stayStart),
+          parseLocalDate(stayEnd),
+          effectiveLocale
+        )
+      : null;
+
+  /* 🛡️ İNDİRİM TUTARI — ZATEN hesaplanmış iki değerin FARKI
+     (indirimsiz toplam − indirimli toplam). Yeni indirim algoritması,
+     yeni motor çağrısı, yeni yuvarlama/epsilon YOK: gösterim koşulu
+     `stayTotalBeforeDiscount`in kendi 0.01 eşiğidir (yukarıda). */
+  const stayDiscountSavings =
+    stayTotalBeforeDiscount !== null && stayTotal !== null
+      ? stayTotalBeforeDiscount - stayTotal
+      : null;
 
   const showImage = !!cover && !imgFailed;
   const initial = (title?.trim()?.[0] || "·").toUpperCase();
@@ -1273,32 +1298,55 @@ export default function VillaCard({
                  `hasCleaning` değerleri, aynı `formatCurrency`, aynı
                  currency ve aynı sözlük anahtarları. calculateGrandTotal
                  çağrısına, indirim/kur/temizlik hesabına DOKUNULMADI. */
-              <p className="mt-2 text-[13px] text-[var(--color-stone-500)]">
-                {/* 🛡️ İNDİRİMSİZ TOPLAM — yalnız gerçek bir fark varsa
-                    render edilir (bkz. stayTotalBeforeDiscount). Üstü
-                    çizili stil villa detaydaki BookingSummary ile aynı
-                    dil: küçük punto + stone-400 + line-through. */}
-                {stayTotalBeforeDiscount !== null && (
-                  <>
-                    <span className="text-[12px] text-[var(--color-stone-400)] line-through tabular-nums">
-                      {formatCurrency(
-                        stayTotalBeforeDiscount,
+              <div className="mt-2">
+                {/* ÜST SATIR — seçilen giriş/çıkış tarihleri. */}
+                {stayDateLabel && (
+                  <p className="text-[11.5px] tracking-[0.04em] text-[var(--color-stone-500)] tabular-nums">
+                    {stayDateLabel}
+                  </p>
+                )}
+
+                {/* ORTA SATIR — fiyat. "N gece" KALDIRILDI (tarih artık
+                    üst satırda); "Temizlik dahil" MEVCUT koşuluyla
+                    (hasCleaning) ve MEVCUT sözlük metniyle aynen kalır. */}
+                <p className="mt-0.5 text-[13px] text-[var(--color-stone-500)]">
+                  {/* 🛡️ İNDİRİMSİZ TOPLAM — yalnız gerçek bir fark varsa
+                      render edilir (bkz. stayTotalBeforeDiscount). Üstü
+                      çizili stil villa detaydaki BookingSummary ile aynı
+                      dil: küçük punto + stone-400 + line-through. */}
+                  {stayTotalBeforeDiscount !== null && (
+                    <>
+                      <span className="text-[12px] text-[var(--color-stone-400)] line-through tabular-nums">
+                        {formatCurrency(
+                          stayTotalBeforeDiscount,
+                          currency,
+                          effectiveLocale
+                        )}
+                      </span>{" "}
+                    </>
+                  )}
+                  <span className="font-display text-[15px] font-semibold text-[#ED7926] tabular-nums">
+                    {formatCurrency(stayTotal, currency, effectiveLocale)}
+                  </span>
+                  {hasCleaning ? (
+                    <span>{dict.card.cleaningIncludedSuffix}</span>
+                  ) : null}
+                </p>
+
+                {/* ALT SATIR — indirim tutarı. Yalnız gerçek indirim
+                    varsa; yoksa bu satır HİÇ render edilmez. */}
+                {stayDiscountSavings !== null && (
+                  <p className="mt-0.5 text-[12px] font-medium text-red-600 tabular-nums">
+                    {formatDictionaryString(dict.card.totalSavings, {
+                      amount: formatCurrency(
+                        stayDiscountSavings,
                         currency,
                         effectiveLocale
-                      )}
-                    </span>{" "}
-                  </>
+                      ),
+                    })}
+                  </p>
                 )}
-                <span className="font-display text-[15px] font-semibold text-[#ED7926] tabular-nums">
-                  {formatCurrency(stayTotal, currency, effectiveLocale)}
-                </span>{" "}
-                <span className="tabular-nums">
-                  {formatDictionaryString(dict.card.nights, {
-                    n: stayNights,
-                  })}
-                  {hasCleaning ? dict.card.cleaningIncludedSuffix : ""}
-                </span>
-              </p>
+              </div>
             ) : (
               /* Tarih seçilmemiş — MEVCUT davranış BİREBİR:
                  "X başlayan fiyatlarla" veya "Fiyat sorunuz". */

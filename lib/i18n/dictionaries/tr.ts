@@ -368,6 +368,7 @@ export const tr: Dictionary = {
     discountBadge: "%{percent} İNDİRİM",
     discountBadgeAriaLabel: "Yüzde {percent} indirim",
     nightlySavings: "Gecelik {amount} indirimli",
+    totalSavings: "{amount} indirimli",
     bookNow: "Hemen Rezervasyon Yap",
     bookNowAriaLabel: "Hemen rezervasyon yap",
     reserveNights: "{n} Gece",

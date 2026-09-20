@@ -355,6 +355,7 @@ export const de: Dictionary = {
     discountBadge: "{percent}% RABATT",
     discountBadgeAriaLabel: "{percent} Prozent Rabatt",
     nightlySavings: "{amount} Rabatt pro Nacht",
+    totalSavings: "{amount} Rabatt",
     bookNow: "Jetzt buchen",
     bookNowAriaLabel: "Jetzt buchen",
     reserveNights: "{n} Nächte",
