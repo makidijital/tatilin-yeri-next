@@ -347,6 +347,12 @@ export default function BookingCalendar({
                     <span
                       style={{
                         fontSize: 8,
+                        /* 🛡️ SALT RENK (bu tur) — üstü çizili ESKİ fiyat
+                           kırmızı. VillaCard'daki indirim satırıyla AYNI
+                           ton (#dc2626 = text-red-600). İndirimli fiyatın
+                           rengi ve indirimsiz günlerin görünümü DEĞİŞMEDİ;
+                           opacity/size/weight/layout AYNEN. */
+                        color: "#dc2626",
                         opacity: 0.55,
                         fontWeight: 500,
                         textDecoration: "line-through",

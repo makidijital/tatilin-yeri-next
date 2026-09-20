@@ -465,6 +465,13 @@ export default function AvailabilityInlineCalendar({
                             <span
                               style={{
                                 fontSize: 7,
+                                /* 🛡️ SALT RENK (bu tur) — üstü çizili ESKİ
+                                   fiyat kırmızı (#dc2626); BookingCalendar
+                                   ile AYNI ton. Parent span'in stone-700
+                                   class'ını YALNIZ bu element için ezer.
+                                   İndirimli fiyat ve indirimsiz gün
+                                   görünümü DEĞİŞMEDİ. */
+                                color: "#dc2626",
                                 opacity: 0.6,
                                 fontWeight: 500,
                                 textDecoration: "line-through",
