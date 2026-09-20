@@ -573,6 +573,9 @@ describe("Villa tipi adı locale-aware", () => {
           basePath={loc === "tr" ? "/arama" : `/${loc}/arama`}
         />
       );
+      /* 🛡️ "Villa Tipi" bölümü artık seçim yokken KAPALI başlıyor
+         (accordion). Assertion DEĞİŞMEDİ — yalnız bölüm açılıyor. */
+      clickPanelButtonGlobal({ tr, en, de }[loc].search.filters.typeLabel);
       expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
     }
   );
@@ -589,6 +592,8 @@ describe("Villa tipi adı locale-aware", () => {
         basePath="/en/arama"
       />
     );
+    /* 🛡️ Accordion: seçim yokken kapalı → önce aç (assertion aynı). */
+    clickPanelButtonGlobal(en.search.filters.typeLabel);
     fireEvent.click(screen.getAllByText("Detached Villa")[0]);
     clickPanelButtonGlobal(en.search.filters.apply);
     await waitFor(() => expect(pushMock).toHaveBeenCalled());

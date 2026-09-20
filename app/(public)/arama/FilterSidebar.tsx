@@ -20,7 +20,7 @@
         — kabul edilebilir UX kompromisi.)
 
    LAYOUT:
-     - Desktop  : inline sticky aside
+     - Desktop  : inline aside (normal flow — sticky YOK)
      - Mobile   : bottom-anchored slide-over (body scroll lock + ESC
                   + outside click + reduced-motion safe)
 
@@ -534,12 +534,13 @@ export default function FilterSidebar({
     });
   };
 
-  /* Varsayılanlar:
-       • Villa Tipi → AÇIK (mevcut davranış gereksiz yere değişmesin).
-       • Villa Özellikleri → bölge gruplarıyla AYNI kural: seçim varsa
-         açık, yoksa kapalı (sidebar gereksiz uzamasın).
-     Explicit toggle her ikisinde de `openSections` ile ezer. */
-  const typeSectionOpen = openSections.type ?? true;
+  /* Varsayılanlar (İKİSİ DE bölge gruplarıyla AYNI kural):
+       • Seçim YOKSA → KAPALI ([+] Villa Tipi / [+] Villa Özellikleri).
+       • URL'den seçim geliyorsa (`villa-turleri=…` / `ozellikler=…`)
+         → AÇIK, kullanıcı seçili filtresini görür.
+     Explicit toggle her ikisinde de `openSections` ile ezer. Tarih /
+     Kişi / Bölge bölümlerinin davranışı DEĞİŞMEDİ. */
+  const typeSectionOpen = openSections.type ?? categories.length > 0;
   const featureSectionOpen = openSections.features ?? features.length > 0;
   /* Bölüm YALNIZ özellik verisi olan yüzeylerde render edilir
      (/arama). Prop vermeyen caller'lar için DOM birebir eski hali. */
@@ -1056,15 +1057,19 @@ export default function FilterSidebar({
         </button>
       </div>
 
-      {/* DESKTOP — inline sticky aside */}
+      {/* DESKTOP — inline aside (normal document flow) */}
       <aside className="hidden md:block">
-        <div className="sticky top-28">
-          {/* 🛡️ SCROLL KALDIRILDI (desktop): önceki
+        <div>
+          {/* 🛡️ STICKY KALDIRILDI: önceki `sticky top-28` sarmalayıcısı
+             kaldırıldı → sidebar sayfayla birlikte normal akışta
+             hareket eder. `<aside className="hidden md:block">` ve
+             sarmalayıcı div KORUNDU → grid/genişlik/responsive yapı
+             DEĞİŞMEDİ.
+             🛡️ SCROLL KALDIRILDI (desktop): önceki
              `max-h-[calc(100vh-9rem)] overflow-hidden` çifti card'ı
              viewport'a göre kırpıyor ve iç scroll'u zorunlu kılıyordu.
-             İkisi de kaldırıldı → card içeriği kadar uzar, tüm filtre
-             bölümleri doğal yüksekliğinde görünür. `sticky top-28`
-             scope'u ve mobil drawer DEĞİŞMEDİ. */}
+             İkisi de kaldırıldı → card içeriği kadar uzar. Mobil drawer
+             (ve içindeki scroll) DEĞİŞMEDİ. */}
           <div className="bg-white border border-[var(--color-stone-100)] rounded-2xl p-6 flex flex-col">
             {panel}
           </div>

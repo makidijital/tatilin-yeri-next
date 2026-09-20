@@ -741,22 +741,34 @@ function panelButton(label: string): HTMLButtonElement {
 }
 
 describe("I) sidebar — accordion davranışı", () => {
-  it("30) VİLLA TİPİ varsayılan AÇIK (mevcut davranış korunur)", async () => {
+  it("30) VİLLA TİPİ seçim YOKKEN KAPALI başlar", async () => {
+    /* ⚠️ FAZ 3 ürün kararı: ilk açılışta [+] Villa Tipi / [+] Villa
+       Özellikleri. Önceki "varsayılan açık" assertion'ı bu davranışla
+       DEĞİŞTİRİLDİ (gevşetilmedi: kapalı olması artık kilitli). */
     await renderSidebar();
-    expect(screen.getAllByText("Havuzlu Villa").length).toBeGreaterThan(0);
-  });
-
-  it("31) VİLLA TİPİ başlığına tıklayınca seçenekler GİZLENİR, tekrar tıklayınca GÖRÜNÜR", async () => {
-    await renderSidebar();
-    const header = panelButton("Villa Tipi");
-    expect(header.getAttribute("aria-expanded")).toBe("true");
-    fireEvent.click(header);
-    expect(screen.queryAllByText("Havuzlu Villa")).toHaveLength(0);
     expect(panelButton("Villa Tipi").getAttribute("aria-expanded")).toBe(
       "false"
     );
+    expect(screen.queryAllByText("Havuzlu Villa")).toHaveLength(0);
+  });
+
+  it("30b) VİLLA TİPİ URL'den seçili geldiğinde AÇIK gelir", async () => {
+    await renderSidebar({ initial: { categories: ["t1"] } });
+    expect(panelButton("Villa Tipi").getAttribute("aria-expanded")).toBe(
+      "true"
+    );
+    expect(screen.getAllByText("Havuzlu Villa").length).toBeGreaterThan(0);
+  });
+
+  it("31) VİLLA TİPİ başlığına tıklayınca AÇILIR, tekrar tıklayınca KAPANIR", async () => {
+    await renderSidebar();
     fireEvent.click(panelButton("Villa Tipi"));
     expect(screen.getAllByText("Havuzlu Villa").length).toBeGreaterThan(0);
+    expect(panelButton("Villa Tipi").getAttribute("aria-expanded")).toBe(
+      "true"
+    );
+    fireEvent.click(panelButton("Villa Tipi"));
+    expect(screen.queryAllByText("Havuzlu Villa")).toHaveLength(0);
   });
 
   it("32) VİLLA ÖZELLİKLERİ bölümü accordion — seçim yokken KAPALI, açılınca seçenekler gelir", async () => {
@@ -945,5 +957,20 @@ describe("I) sidebar — /arama entegrasyonu ve i18n", () => {
     expect(src).toContain("overflow-y-auto md:flex-none md:overflow-visible");
     /* Body scroll kilidi (drawer açıkken) DOKUNULMADI. */
     expect(src).toContain('document.body.style.overflow = "hidden"');
+  });
+
+  it("47) 🔒 kaynak kilidi — desktop aside'da STICKY YOK, layout/drawer korundu", () => {
+    const src = fs.readFileSync(
+      path.join(process.cwd(), SIDEBAR_SRC_PATH),
+      "utf-8"
+    );
+    const classNames = Array.from(src.matchAll(/className="([^"]*)"/g)).map(
+      (m) => m[1]
+    );
+    /* Hiçbir className'de sticky KALMADI (yorum metni hariç). */
+    expect(classNames.some((c) => /\bsticky\b/.test(c))).toBe(false);
+    /* Genişlik/grid sarmalayıcısı ve mobil drawer AYNEN duruyor. */
+    expect(src).toContain('<aside className="hidden md:block">');
+    expect(src).toContain("h-[calc(92vh-1.25rem)]");
   });
 });
