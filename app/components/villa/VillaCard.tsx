@@ -1513,6 +1513,13 @@ export default function VillaCard({
         villaSlug={slug}
         villaTitle={title}
         locale={locale}
+        /* 🛡️ ADDITIVE — /arama URL'inden gelen konaklama aralığı
+           (`stayStart`/`stayEnd`, AramaPageBody'de zaten doğrulanmış)
+           modal takviminde SEÇİLİ açılsın. Yalnız İKİSİ de varsa
+           geçilir; aksi halde undefined → takvim BOŞ (mevcut davranış).
+           Yeni URL parse/tarih hesabı YOK — mevcut prop zinciri. */
+        initialStart={stayStart && stayEnd ? stayStart : undefined}
+        initialEnd={stayStart && stayEnd ? stayEnd : undefined}
       />
     )}
     </>

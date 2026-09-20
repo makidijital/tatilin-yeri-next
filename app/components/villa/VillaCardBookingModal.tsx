@@ -126,6 +126,15 @@ type Props = {
   villaTitle: string;
   /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış). */
   locale?: Locale;
+  /** 🛡️ ADDITIVE — /arama URL'inden gelen konaklama aralığı
+   *  ("YYYY-MM-DD"). Takvim bu aralık SEÇİLİ açılır; kullanıcı yeni
+   *  seçim yaparsa mevcut seçim davranışı AYNEN çalışır. Verilmezse
+   *  (veya tek taraflıysa) takvim BOŞ açılır — mevcut davranış.
+   *  `useBookingEngine`in ZATEN var olan `initialStart`/`initialEnd`
+   *  parametreleri kullanılır (BookingSidebar ile AYNI yol); yeni
+   *  tarih/rezervasyon mantığı YAZILMADI. */
+  initialStart?: string | null;
+  initialEnd?: string | null;
 };
 
 /* API response shape — /api/public/villas/[id]/availability. */
@@ -175,6 +184,8 @@ export default function VillaCardBookingModal({
   villaSlug,
   villaTitle,
   locale,
+  initialStart,
+  initialEnd,
 }: Props) {
   /* === Modal mount sonrası TEK API fetch ===
      Response = BookingSidebar'ın aldığı tüm engine input'ları
@@ -335,6 +346,8 @@ export default function VillaCardBookingModal({
       villaTitle={villaTitle}
       apiData={apiData}
       locale={locale}
+      initialStart={initialStart}
+      initialEnd={initialEnd}
     />
   );
 }
@@ -421,6 +434,9 @@ type ContentProps = {
   villaTitle: string;
   apiData: AvailabilityApiResponse;
   locale?: Locale;
+  /** Bkz. `Props.initialStart` — aynen aktarılır. */
+  initialStart?: string | null;
+  initialEnd?: string | null;
 };
 
 function ModalContent({
@@ -430,6 +446,8 @@ function ModalContent({
   villaTitle,
   apiData,
   locale,
+  initialStart,
+  initialEnd,
 }: ContentProps) {
   const dict = getDictionary(locale);
   const dateLocaleTag = DATE_LOCALE_TAG[locale ?? "tr"];
@@ -449,11 +467,18 @@ function ModalContent({
     custom_prepayment_rate: apiData.config.custom_prepayment_rate,
     minimum_stay_nights: apiData.config.minimum_stay_nights,
     externalBlocks: apiData.externalBlocks,
+    /* 🛡️ Yalnız İKİSİ de varsa hidrate edilir; tek taraflı aralıkta
+       engine eski davranışına (boş seçim) düşer. */
+    initialStart: initialStart && initialEnd ? initialStart : null,
+    initialEnd: initialStart && initialEnd ? initialEnd : null,
   });
 
   const {
     startDate,
     endDate,
+    /* Engine'in ZATEN döndürdüğü helper — takvim ayını konumlamak
+       için kullanılır (BookingSidebar ile aynı kullanım). */
+    parseLocalDate,
     adults,
     children,
     setAdults,
@@ -481,8 +506,11 @@ function ModalContent({
      currentMonth — modal local UI state. freshSelection state'i
      UX polish ile kaldırıldı (BookingCalendar onSelect kendi
      içinde completed-range-reset davranışı uygular). */
-  const [currentMonth, setCurrentMonth] = useState<Date>(
-    () => new Date()
+  /* 🛡️ Takvim, seçili başlangıç tarihinin AYINDA açılır (BookingSidebar
+     satır ~201 ile AYNI desen; `parseLocalDate` engine'in ZATEN
+     döndürdüğü helper). Tarih yoksa bugünün ayı → eski davranış. */
+  const [currentMonth, setCurrentMonth] = useState<Date>(() =>
+    initialStart && initialEnd ? parseLocalDate(initialStart) : new Date()
   );
 
   /* Guests popover — modal içinde inline dropdown. */
