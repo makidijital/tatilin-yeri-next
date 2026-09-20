@@ -11,6 +11,12 @@ import {
   type ExternalCalendarStringArrays,
 } from "@/lib/external-calendar.public.helper";
 import { getVillaPrices } from "@/app/services/villa-price.service";
+/* 🛡️ villa_discounts — MEVCUT public-safe servis (villa detay sayfası,
+   /rezervasyon ve server-side `price-verify` ile AYNI kaynak). Yeni bir
+   repository/sorgu/indirim sistemi OLUŞTURULMADI. Servis fail-safe:
+   hata durumunda [] döner → "indirim yok" ile AYNI davranış. */
+import { getVillaDiscounts } from "@/app/services/villa-discount.service";
+import type { DiscountRange } from "@/lib/price.engine";
 import type { VillaPriceEmbed } from "@/lib/villa-row.types";
 import { applyRateLimit } from "@/lib/rate-limit";
 
@@ -110,6 +116,10 @@ type ResponseShape = {
   config: VillaConfig;
   prices: VillaPriceEmbed[];
   externalBlocks: ExternalCalendarStringArrays;
+  /* 🛡️ ADDITIVE — mevcut alanların hiçbiri değişmedi/kaldırılmadı.
+     BookingSidebar'ın sayfa server-fetch'inde ZATEN var olan
+     `discounts` prop'unun API karşılığı (drift kapanır). */
+  discounts: DiscountRange[];
 };
 
 const EMPTY_CONFIG: VillaConfig = {
@@ -152,10 +162,13 @@ export async function GET(
          2. villa_prices (getVillaPrices service, anon) — BookingSidebar
             sayfa server-fetch'i ile birebir aynı service çağrısı
          3. external_calendar_events (service role, helper internal) */
-    const [configRes, prices, externalBlocks] = await Promise.all([
+    const [configRes, prices, externalBlocks, discounts] = await Promise.all([
       villaAdminRepository.findAvailabilityConfigById(id),
       getVillaPrices(id),
       fetchExternalCalendarStringsForVilla(id),
+      /* 4. kaynak: villa_discounts (public-safe servis; mevcut üç
+         fetch ile PARALEL → ek RTT yok). */
+      getVillaDiscounts(id),
     ]);
 
     if (configRes.error) {
@@ -222,6 +235,8 @@ export async function GET(
       config,
       prices: safePrices,
       externalBlocks: externalBlocks || EMPTY_EXTERNAL_STRING_ARRAYS,
+      /* Defansif: servis zaten [] garantiler; yine de tip güvencesi. */
+      discounts: Array.isArray(discounts) ? discounts : [],
     };
 
     return NextResponse.json(body, {

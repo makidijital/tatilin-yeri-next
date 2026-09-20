@@ -86,6 +86,7 @@ import {
 } from "@/lib/external-calendar.public.shared";
 
 import { useBookingEngine } from "@/app/components/villa/booking/useBookingEngine";
+import type { DiscountRange } from "@/lib/price.engine";
 import BookingCalendar from "@/app/components/villa/booking/BookingCalendar";
 import BookingSummary from "@/app/components/villa/booking/BookingSummary";
 import BookingMinStayWarning from "@/app/components/villa/booking/BookingMinStayWarning";
@@ -169,12 +170,17 @@ type AvailabilityApiResponse = {
   config: VillaConfig;
   prices: VillaPriceEmbed[];
   externalBlocks: ExternalCalendarStringArrays;
+  /* 🛡️ ADDITIVE — route'un ZATEN var olan public servisinden
+     (`getVillaDiscounts`) gelir. Eski response'larda alan yoksa
+     defansif `?? []` ile "indirim yok" davranışına düşer. */
+  discounts?: DiscountRange[];
 };
 
 const EMPTY_API_DATA: AvailabilityApiResponse = {
   config: EMPTY_CONFIG,
   prices: [],
   externalBlocks: EMPTY_EXTERNAL_STRING_ARRAYS,
+  discounts: [],
 };
 
 export default function VillaCardBookingModal({
@@ -284,6 +290,9 @@ export default function VillaCardBookingModal({
           prices: Array.isArray(data?.prices) ? data.prices : [],
           externalBlocks:
             data?.externalBlocks || EMPTY_EXTERNAL_STRING_ARRAYS,
+          /* 🛡️ ADDITIVE — mevcut alanların sanitizasyonu DEĞİŞMEDİ.
+             Alan yoksa/dizi değilse [] → "indirim yok" (eski davranış). */
+          discounts: Array.isArray(data?.discounts) ? data.discounts : [],
         });
       } catch (err) {
         if ((err as { name?: string })?.name === "AbortError") return;
@@ -467,6 +476,11 @@ function ModalContent({
     custom_prepayment_rate: apiData.config.custom_prepayment_rate,
     minimum_stay_nights: apiData.config.minimum_stay_nights,
     externalBlocks: apiData.externalBlocks,
+    /* 🛡️ villa_discounts — BookingSidebar (villa detay) ile AYNI engine
+       parametresi. Takvim günlük indirimli fiyatı bununla gösterir;
+       özet toplam da villa detay + server-side `price-verify` ile
+       TUTARLI hale gelir. Motor/hesap mantığı DEĞİŞMEDİ. */
+    discounts: apiData.discounts ?? [],
     /* 🛡️ Yalnız İKİSİ de varsa hidrate edilir; tek taraflı aralıkta
        engine eski davranışına (boş seçim) düşer. */
     initialStart: initialStart && initialEnd ? initialStart : null,
