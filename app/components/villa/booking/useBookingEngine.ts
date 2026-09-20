@@ -77,6 +77,10 @@ import {
   accommodationBase,
   isPoolHeatingActiveForRange,
   getActiveDiscount,
+  /* 🛡️ Takvim hücresindeki İNDİRİMLİ günlük fiyat için — `PriceList.tsx`
+     (villa detay sezon listesi) ve VillaCard discount variant'ının
+     KULLANDIĞI AYNI pure fonksiyon. Yeni indirim formülü YAZILMADI. */
+  applyDiscountToDailyPrice,
   type DiscountRange,
 } from "@/lib/price.engine";
 
@@ -258,6 +262,9 @@ export type UseBookingEngineReturn = {
   isIntersection: (date: Date) => boolean;
   hasConflict: (start: Date, end: Date) => boolean;
   getPriceForDate: (date: Date) => number | null;
+  /** Günlük İNDİRİMLİ fiyat (yalnız gerçek indirim varsa); aksi halde
+   *  null → tüketici mevcut tek-fiyat görünümünü korur. */
+  getDiscountedPriceForDate: (date: Date) => number | null;
 
   /* Submit — navigation URL inşası + window.location.href.
      BookingSidebar'daki davranışla birebir aynı; eski alert()
@@ -435,6 +442,51 @@ export function useBookingEngine(
       currency,
       rates
     );
+  };
+
+  /* ===============================================================
+     🛡️ GÜNLÜK İNDİRİMLİ FİYAT — SALT GÖSTERİM (UI-only)
+     ===============================================================
+     `getPriceForDate` (indirimsiz) DEĞİŞTİRİLMEDİ; bu yalnız onun
+     indirimli ikizidir. Kullanılan iki fonksiyon da price.engine'in
+     ZATEN export ettiği pure fonksiyonlardır ve `PriceList.tsx`
+     (villa detay sezon listesi) ile BİREBİR AYNI desende çağrılır:
+       getActiveDiscount(date, discounts) → aktif villa_discounts kaydı
+       applyDiscountToDailyPrice(daily, discount, currency, rates)
+     Yeni indirim formülü / yeni motor çağrısı YOK. `discounts`
+     verilmemişse (null/boş) `getActiveDiscount` null döner → bu
+     fonksiyon da null döner → takvim MEVCUT tek-fiyat görünümünde
+     kalır (rezervasyon/availability/tarih seçimi ETKİLENMEZ).
+     =============================================================== */
+  const getDiscountedPriceForDate = (date: Date): number | null => {
+    const target = formatDate(date);
+    const found = normalizedPrices.find(
+      (p) => target >= p.start_date && target <= p.end_date
+    );
+    if (!found) return null;
+
+    const activeDiscount = getActiveDiscount(date, discounts);
+    if (!activeDiscount) return null;
+
+    const converted = convertPrice(
+      found.price,
+      found.currency || "TRY",
+      currency,
+      rates
+    );
+    const discounted = applyDiscountToDailyPrice(
+      {
+        converted,
+        original: found.price,
+        original_currency: found.currency || "TRY",
+      },
+      activeDiscount,
+      currency,
+      rates
+    );
+    /* Sahte indirim koruması: yalnız GERÇEKTEN düşükse döner
+       (PriceList `isDiscounted` kuralının aynısı). */
+    return discounted.converted < converted ? discounted.converted : null;
   };
 
   /* ---------------------------------------------
@@ -1012,6 +1064,7 @@ export function useBookingEngine(
     isIntersection,
     hasConflict,
     getPriceForDate,
+    getDiscountedPriceForDate,
 
     /* Submit */
     handleReservation,

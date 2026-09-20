@@ -267,6 +267,11 @@ export default function VillaDetailBody({
                         villaId={villa.id}
                         prices={prices}
                         externalBlocks={externalBlocks}
+                        /* 🛡️ ADDITIVE — sayfa `getVillaDiscounts` ile
+                           ZATEN çekilen public indirim kayıtları; takvim
+                           günlük indirimli fiyatı bunlarla gösterir.
+                           Yeni veri kaynağı/sorgu YOK. */
+                        discounts={discounts}
                         locale={locale}
                       />
                     </div>

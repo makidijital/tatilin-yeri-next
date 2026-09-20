@@ -91,6 +91,9 @@ export default function BookingCalendar({
     isIntersection,
     hasConflict,
     getPriceForDate,
+    /* İndirimli günlük fiyat — engine'in salt-gösterim helper'ı
+       (indirim yoksa null → mevcut tek-fiyat görünümü). */
+    getDiscountedPriceForDate,
   } = engine;
 
   return (
@@ -285,6 +288,8 @@ export default function BookingCalendar({
             });
 
             const price = getPriceForDate(date);
+            /* null → indirim yok / fiyat yok → DOM MEVCUT haliyle. */
+            const discountedPrice = getDiscountedPriceForDate(date);
 
             const isBlocked = mergedBlockedDates.some(
               (d) => d.toDateString() === date.toDateString()
@@ -325,7 +330,48 @@ export default function BookingCalendar({
                 >
                   {date.getDate()}
                 </span>
-                {!isBlocked && price && (
+                {!isBlocked && price && discountedPrice !== null ? (
+                  /* 🛡️ İNDİRİMLİ GÜN — üstü çizili normal fiyat + indirimli
+                     fiyat. Tutarlar engine'den gelir (getPriceForDate /
+                     getDiscountedPriceForDate); yeni hesap YOK. Format ve
+                     currency MEVCUT `formatCurrency` ile AYNI. */
+                  <div
+                    style={{
+                      marginTop: 2,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      lineHeight: 1,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 8,
+                        opacity: 0.55,
+                        fontWeight: 500,
+                        textDecoration: "line-through",
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      {formatCurrency(price, currency, locale ?? "tr")}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 9,
+                        opacity: 0.85,
+                        fontWeight: 600,
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      {formatCurrency(
+                        discountedPrice,
+                        currency,
+                        locale ?? "tr"
+                      )}
+                    </span>
+                  </div>
+                ) : !isBlocked && price ? (
+                  /* MEVCUT DAVRANIŞ — BYTE-IDENTICAL (indirim yok). */
                   <div
                     style={{
                       fontSize: 9,
@@ -337,7 +383,7 @@ export default function BookingCalendar({
                   >
                     {formatCurrency(price, currency, locale ?? "tr")}
                   </div>
-                )}
+                ) : null}
               </div>
             );
           },

@@ -17,6 +17,13 @@ import {
   type VillaAvailabilityArrays,
 } from "@/lib/villa-availability.helper";
 import type { PriceRange } from "@/lib/villa-row.types";
+/* 🛡️ Günlük indirimli fiyat GÖSTERİMİ için — `PriceList.tsx` ile AYNI
+   iki pure fonksiyon. Yeni indirim formülü YAZILMADI. */
+import {
+  getActiveDiscount,
+  applyDiscountToDailyPrice,
+  type DiscountRange,
+} from "@/lib/price.engine";
 import {
   externalStringsToDateArrays,
   EMPTY_EXTERNAL_STRING_ARRAYS,
@@ -144,6 +151,11 @@ type Props = {
    *  GÖRMEZ — "iCal" badge yok, source_name yok. Default empty
    *  → backward-compat. */
   externalBlocks?: ExternalCalendarStringArrays;
+  /** 🛡️ ADDITIVE — public villa_discounts kayıtları (villa detay
+   *  sayfasında `getVillaDiscounts` ile ZATEN çekiliyor). Verilmezse
+   *  (örn. özel link sayfası) takvim MEVCUT tek-fiyat görünümünde
+   *  kalır — DOM birebir eski hali. Yeni veri kaynağı OLUŞTURULMADI. */
+  discounts?: DiscountRange[];
   /* 🛡️ PHASE 10B — opsiyonel, default "tr". */
   locale?: Locale;
 };
@@ -152,6 +164,7 @@ export default function AvailabilityInlineCalendar({
   villaId,
   prices,
   externalBlocks = EMPTY_EXTERNAL_STRING_ARRAYS,
+  discounts,
   locale,
 }: Props) {
   const { currency, rates } = useCurrency();
@@ -241,6 +254,46 @@ export default function AvailabilityInlineCalendar({
       rates
     );
     return formatCurrency(converted, currency, locale ?? "tr");
+  };
+
+  /* ---------------------------------------------------------------
+     🛡️ Günlük İNDİRİMLİ fiyat — SALT GÖSTERİM.
+     Yukarıdaki `getPriceForDate` (indirimsiz) DEĞİŞTİRİLMEDİ; bu onun
+     indirimli ikizidir ve `PriceList.tsx` ile BİREBİR AYNI iki pure
+     fonksiyonu kullanır (getActiveDiscount → applyDiscountToDailyPrice).
+     `discounts` yoksa veya o gün indirim aktif değilse null döner →
+     hücre MEVCUT tek-fiyat görünümünde kalır.
+  --------------------------------------------------------------- */
+  const getDiscountedPriceForDate = (date: Date): string | null => {
+    if (!discounts || discounts.length === 0) return null;
+    const target = formatLocalDate(date);
+    const found = prices?.find(
+      (p) => target >= p.start_date && target <= p.end_date
+    );
+    if (!found) return null;
+
+    const activeDiscount = getActiveDiscount(date, discounts);
+    if (!activeDiscount) return null;
+
+    const converted = convertPrice(
+      Number(found.price || 0),
+      found.currency || "TRY",
+      currency,
+      rates
+    );
+    const discounted = applyDiscountToDailyPrice(
+      {
+        converted,
+        original: Number(found.price || 0),
+        original_currency: found.currency || "TRY",
+      },
+      activeDiscount,
+      currency,
+      rates
+    );
+    /* Sahte indirim koruması (PriceList `isDiscounted` kuralı). */
+    if (!(discounted.converted < converted)) return null;
+    return formatCurrency(discounted.converted, currency, locale ?? "tr");
   };
 
   /* Responsive month count — admin pattern'iyle aynı: 1/2/3 col.
@@ -355,6 +408,9 @@ export default function AvailabilityInlineCalendar({
                   );
                   const isToday = date.toDateString() === todayKey;
                   const price = !isBlocked ? getPriceForDate(date) : null;
+                  const discountedPrice = !isBlocked
+                    ? getDiscountedPriceForDate(date)
+                    : null;
 
                   const cellStyle: CSSProperties = {
                     cursor: "default",
@@ -398,7 +454,36 @@ export default function AvailabilityInlineCalendar({
                         >
                           {date.getDate()}
                         </span>
-                        {price && (
+                        {price && discountedPrice ? (
+                          /* 🛡️ İNDİRİMLİ GÜN — üstü çizili normal fiyat +
+                             indirimli fiyat (villa detay sezon listesiyle
+                             AYNI gösterim dili). */
+                          <span
+                            className="mt-0.5 flex flex-col items-center text-[var(--color-stone-700)]"
+                            style={{ lineHeight: 1 }}
+                          >
+                            <span
+                              style={{
+                                fontSize: 7,
+                                opacity: 0.6,
+                                fontWeight: 500,
+                                textDecoration: "line-through",
+                              }}
+                            >
+                              {price}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: 8,
+                                opacity: 0.95,
+                                fontWeight: 600,
+                              }}
+                            >
+                              {discountedPrice}
+                            </span>
+                          </span>
+                        ) : price ? (
+                          /* MEVCUT DAVRANIŞ — BYTE-IDENTICAL. */
                           <span
                             className="mt-0.5 text-[var(--color-stone-700)]"
                             style={{
@@ -409,7 +494,7 @@ export default function AvailabilityInlineCalendar({
                           >
                             {price}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   );
