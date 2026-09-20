@@ -16,6 +16,7 @@ import type { FilterOption } from "../_types/hero";
      - "start"          (start_date)
      - "end"            (end_date)
      - "guests"         (guests count)
+     - "ozellikler"     (villa features — UUID token listesi)
 
    ⚠️ KESIN KURAL — slug-preferred fallback chain:
      tokens = ids.map(id => {
@@ -40,6 +41,12 @@ export type BuildHeroSearchParamsInput = {
    *  → hiç yazılmaz (mevcut URL birebir korunur). Yalnız > 0 iken
    *  `flexible=N` eklenir. Ana `start`/`end` ASLA değişmez. */
   flexible?: number;
+
+  /** 🛡️ ADDITIVE — "Gelişmiş Arama" villa özellikleri (AND filtresi).
+   *  UUID dizisi; boş/undefined → parametre HİÇ yazılmaz (mevcut URL
+   *  birebir korunur). `villa_features` tablosunda `slug` KOLONU YOK,
+   *  bu yüzden token her zaman UUID'dir (slug sistemi ÜRETİLMEDİ). */
+  features?: string[];
 };
 
 export function buildHeroSearchParams(
@@ -54,6 +61,7 @@ export function buildHeroSearchParams(
     categoryOptions,
     regionOptions,
     flexible,
+    features,
   } = input;
 
   const params = new URLSearchParams();
@@ -76,6 +84,9 @@ export function buildHeroSearchParams(
   if (guests) params.set("guests", guests.toString());
   /* Yalnız pozitifse yaz; 0/undefined → param yok → mevcut davranış. */
   if (flexible && flexible > 0) params.set("flexible", String(flexible));
+  /* Yalnız seçim varsa yaz → seçim yokken URL BİREBİR eskisi gibi.
+     Canonical param adı: `ozellikler` (virgülle ayrık UUID listesi). */
+  if (features && features.length) params.set("ozellikler", features.join(","));
 
   return params.toString();
 }

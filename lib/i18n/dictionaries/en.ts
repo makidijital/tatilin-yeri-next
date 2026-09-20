@@ -431,6 +431,9 @@ export const en: Dictionary = {
       optionsLoading: "Loading…",
       advanced: "Advanced Search",
       flexibleHint: "Also show villas 3 days before and after in the results",
+      featuresLabel: "Villa Features",
+      featuresSelected: "{n} features selected",
+      featuresEmpty: "No features found",
       submit: "Find a villa",
     },
     advantages: {

@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
    (menu/villa-type repository + @/lib/db client bundle'a girmez);
    aynı SELECT/order shape, aynı UI davranışı. */
 import { loadHeroFilters } from "./hero-filters.action";
+/* 🛡️ ADDITIVE — "Gelişmiş Arama" villa özellikleri listesi. AYRI action:
+   `loadHeroFilters` dosyası ve testleri BİREBİR korunur (bkz. hero-
+   features.action.ts başlığı). İki action PARALEL çağrılır. */
+import { loadHeroFeatures } from "./hero-features.action";
 
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -125,8 +129,17 @@ export default function HeroSearchPanel({
   const [advOpen, setAdvOpen] = useState(false);
   const [flexible, setFlexible] = useState(false);
 
+  /* 🛡️ ADDITIVE — villa özellikleri çoklu seçimi (AND). Boş kaldığında
+     `ozellikler` parametresi HİÇ yazılmaz → mevcut arama davranışı
+     BİREBİR aynı. */
+  const [features, setFeatures] = useState<string[]>([]);
+  /* Yükleme ile "hiç özellik yok" durumunu ayırmak için (kategori
+     dropdown'ındaki `optionsLoading` davranışının aynısı). */
+  const [featuresLoaded, setFeaturesLoaded] = useState(false);
+
   const [categoryOptions, setCategoryOptions] = useState<FilterOption[]>([]);
   const [regionOptions, setRegionOptions] = useState<FilterOption[]>([]);
+  const [featureOptions, setFeatureOptions] = useState<FilterOption[]>([]);
 
   const catRef = useRef<HTMLDivElement>(null);
   const regRef = useRef<HTMLDivElement>(null);
@@ -140,8 +153,16 @@ export default function HeroSearchPanel({
       /* 🛡️ PHASE 11 P0 — locale geçilir: EN/DE'de tip adları
          `villa_type_translations` üzerinden çevrilmiş gelir
          (VillaTypeCarousel ile AYNI helper'lar). TR'de ek sorgu YOK. */
-      const { types, locations } = await loadHeroFilters(locale);
+      /* 🛡️ PARALEL: özellik listesi ayrı action'dan gelir → EK RTT YOK.
+         `.catch(() => [])` ZORUNLU: özellik sorgusu hata verse bile
+         tip/bölge yüklemesi ETKİLENMEZ (mevcut davranış korunur). */
+      const [{ types, locations }, featureList] = await Promise.all([
+        loadHeroFilters(locale),
+        loadHeroFeatures(locale).catch(() => [] as FilterOption[]),
+      ]);
       if (types) setCategoryOptions(types);
+      setFeatureOptions(featureList);
+      setFeaturesLoaded(true);
       /* 🛡️ Migration 050 — Hero bölge dropdown'ı yalnız ANA BÖLGELERİ
          (grup kökü: name === filter_group_name) gösterir. Alt bölgeler
          gizlenir; detay seçimi /arama sidebar'ında. Resolver/URL/SEO
@@ -195,6 +216,8 @@ export default function HeroSearchPanel({
       regionOptions,
       /* Ana start/end DEĞİŞMEZ; yalnız ek-sonuç bayrağı. */
       flexible: flexible ? 3 : 0,
+      /* Boş dizi → `ozellikler` parametresi yazılmaz (mevcut URL birebir). */
+      features,
     });
     router.push(localeHref(`/arama?${query}`, locale));
   };
@@ -591,6 +614,63 @@ export default function HeroSearchPanel({
                 {dict.flexibleHint}
               </span>
             </label>
+
+            {/* ═══════════════════════════════════════════════════════
+                VİLLA ÖZELLİKLERİ — ÇOKLU SEÇİM (AND)
+                ═══════════════════════════════════════════════════════
+                Seçim yapılmazsa `ozellikler` parametresi HİÇ yazılmaz →
+                mevcut arama davranışı BİREBİR korunur. Seçenekler
+                `villa_features` tablosundan DİNAMİK gelir (hard-code YOK);
+                adlar EN/DE'de mevcut çeviri zinciriyle çözülür.
+                Checkbox stili mevcut tip/bölge dropdown'larıyla AYNI.
+            ═══════════════════════════════════════════════════════ */}
+            <div className="mt-3.5 border-t border-[var(--color-stone-100)] pt-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <div className="text-[10.5px] tracking-[0.18em] uppercase font-semibold text-[var(--color-stone-500)]">
+                  {dict.featuresLabel}
+                </div>
+                {features.length > 0 && (
+                  <div className="text-[11.5px] font-medium text-[#0973BA]">
+                    {formatDictionaryString(dict.featuresSelected, {
+                      n: features.length,
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {featureOptions.length === 0 ? (
+                <div className="mt-2 text-[13px] text-[var(--color-stone-400)]">
+                  {featuresLoaded ? dict.featuresEmpty : dict.optionsLoading}
+                </div>
+              ) : (
+                <div className="mt-2 max-h-[190px] overflow-y-auto -mx-1 px-1">
+                  {featureOptions.map((item) => {
+                    const checked = features.includes(item.id);
+                    return (
+                      <label
+                        key={item.id}
+                        className={`flex items-center gap-3 text-[13.5px] px-2.5 py-2 rounded-xl cursor-pointer transition ${
+                          checked
+                            ? "bg-[#0973BA]/10 text-[var(--color-stone-900)]"
+                            : "hover:bg-[#0973BA]/5 text-[var(--color-stone-700)]"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            toggleItem(item.id, features, setFeatures)
+                          }
+                          className="!w-4 !h-4 !rounded"
+                          style={{ accentColor: "#0973BA" }}
+                        />
+                        {item.name}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

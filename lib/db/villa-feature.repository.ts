@@ -63,6 +63,29 @@ export const villaFeatureRepository = {
       .eq("villa_id", villaId);
   },
 
+  /* ===============================================================
+     GET — seçili feature'lara ait villa_id ↔ feature_id satırları
+     ===============================================================
+     `villaTypeRepository.findVillaTypeRelationsByTypeIds`
+     (lib/db/villa-type.repository.ts) ile BİREBİR AYNI desen ve AYNI
+     dönüş şekli. /arama "Villa Özellikleri" filtresinin AND semantiği
+     caller'da (AramaPageBody) Map<villa_id, Set<feature_id>> ile
+     hesaplanır — burada SADECE ham satırlar döner.
+
+     ⚠️ Boş `featureIds`: caller zaten guard'lıyor (length > 0);
+        yine de native `.in(col, [])` compiler'da `FALSE` emit eder
+        (query-compiler:211-213) → boş sonuç, SQL hatası YOK.
+     ⚠️ Yeni tablo/kolon/migration YOK; mevcut `villa_feature_relations`
+        junction'ı okunur (db/migrations/002 replace_villa_feature_
+        relations ile yazılan tablo).
+  =============================================================== */
+  async findVillaFeatureRelationsByFeatureIds(featureIds: string[]) {
+    return await db
+      .from<{ villa_id: string; feature_id: string }>("villa_feature_relations")
+      .select("villa_id, feature_id")
+      .in("feature_id", featureIds);
+  },
+
   /** Front — villaya ait feature'lar (villa_feature_relations embed). */
   async findFeaturesByVilla(villaId: string) {
     return await db

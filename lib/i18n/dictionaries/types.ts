@@ -623,6 +623,11 @@ export type Dictionary = {
       optionsLoading: string;
       advanced: string;
       flexibleHint: string;
+      /** 🛡️ ADDITIVE — "Gelişmiş Arama" villa özellikleri filtresi. */
+      featuresLabel: string;
+      /** template: {n} */
+      featuresSelected: string;
+      featuresEmpty: string;
       submit: string;
     };
     advantages: {

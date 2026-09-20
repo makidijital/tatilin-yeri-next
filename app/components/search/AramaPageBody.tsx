@@ -10,6 +10,7 @@ import { cookies } from "next/headers";
    kullanıyor → server-only native repo import'u güvenli, tek call-site. */
 import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
+import { villaFeatureRepository } from "@/lib/db/villa-feature.repository";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
 import VillaCard from "@/app/components/villa/VillaCard";
@@ -166,6 +167,12 @@ export type AramaSearchParams = Promise<{
      *  Yoksa/0 → davranış birebir mevcut. Ana `start`/`end` ASLA
      *  değişmez; bu değer yalnız internal availability tespiti için. */
     flexible?: string | string[];
+    /** 🛡️ ADDITIVE — "Gelişmiş Arama" villa özellikleri filtresi (AND).
+     *  Virgülle ayrık UUID listesi (`villa_features.id`). `villa_features`
+     *  tablosunda `slug` KOLONU YOK → slug token ÜRETİLMEZ. Yoksa/boşsa
+     *  arama davranışı BİREBİR mevcut haliyle kalır. Legacy eş adı YOK
+     *  (tamamen yeni parametre). */
+    ozellikler?: string | string[];
 }>;
 
 type Props = {
@@ -239,6 +246,13 @@ export default async function AramaPageBody({
   const regionTokensRaw = regionsRaw
     ? regionsRaw.split(",").filter(Boolean)
     : [];
+  /* 🛡️ ADDITIVE — villa özellikleri (AND). Token formatı YALNIZ UUID
+     (`villa_features`'ta slug kolonu yok); `resolveTokens` UUID dalı
+     zaten bunu karşılar. Parametre yoksa dizi boş → aşağıdaki tüm
+     özellik mantığı KAPALI kalır ve hiç ek sorgu atılmaz. */
+  const featureTokensRaw = (firstString(sp.ozellikler) || "")
+    .split(",")
+    .filter(Boolean);
   const guests = Number(guestsRaw || 0) || 0;
 
   /* ===============================================================
@@ -309,6 +323,33 @@ export default async function AramaPageBody({
 
   const categories = resolveTokens(categoryTokensRaw, categoryOptions);
   const regions = resolveTokens(regionTokensRaw, regionOptions);
+
+  /* ===============================================================
+     🛡️ VİLLA ÖZELLİĞİ TOKEN → UUID RESOLVE (ADDITIVE)
+     ===============================================================
+     Seçenek listesi YALNIZ `ozellikler` parametresi varsa çekilir →
+     filtre kullanılmadığında /arama'nın sorgu sayısı DEĞİŞMEZ.
+     Cache helper EKLENMEDİ (admin feature CRUD'u taxonomy tag'ini
+     invalidate etmiyor; stale liste riski alınmadı).
+
+     `slug: null` verilir → `resolveTokens` yalnız UUID dalını kullanır:
+     geçersiz/silinmiş token sessizce DÜŞER (tip/bölge ile aynı kontrat)
+     ve `.in("feature_id", …)` ASLA uuid-cast hatası alamaz.
+
+     DEDUPE: aynı özellik iki kez gelirse (`ozellikler=a,a`) AND eşiği
+     şişip yanlışlıkla 0 sonuç üretmesin diye tekilleştirilir. */
+  const featureOptions =
+    featureTokensRaw.length > 0
+      ? (await villaFeatureRepository.findAllForPublicTaxonomy()).data || []
+      : [];
+  const featureIds = Array.from(
+    new Set(
+      resolveTokens(
+        featureTokensRaw,
+        featureOptions.map((f) => ({ id: String(f.id), slug: null }))
+      )
+    )
+  );
 
   /* ===============================================================
      🛡️ CATEGORY (Villa Tipi) PRE-RESOLVE — DB-LEVEL FILTER (AND)
@@ -400,8 +441,74 @@ export default async function AramaPageBody({
      yaklaşım: hiç eşleşen tip yoksa query'yi büyütmeden devam et,
      normalize aşamasında `forceEmpty` ile sonuç listesini boşalt
      → 0-sonuç empty state'i layout içinde sakince render edilir. */
-  const forceEmpty =
-    categoryVillaIds !== null && categoryVillaIds.length === 0;
+  /* ===============================================================
+     🛡️ VİLLA ÖZELLİKLERİ (features) — DB-LEVEL FILTER (AND)
+     ===============================================================
+     Villa tipi filtresiyle BİREBİR AYNI mimari (yukarıdaki blok):
+     junction'dan (`villa_feature_relations`) seçili feature_id satırları
+     çekilir; villa başına UNIQUE feature_id sayısı === seçim sayısı
+     olanlar eşleşir (AND). `Set` kullanıldığı için junction'daki olası
+     YİNELENEN satırlar sayımı BOZMAZ.
+
+     Hata → `featureVillaIds = null` (filtre atlanır, sayfa çalışmaya
+     devam eder) — tip filtresindeki defansif tutumun aynısı.
+     =============================================================== */
+  let featureVillaIds: string[] | null = null;
+  if (featureIds.length > 0) {
+    const { data: featureRels, error: featureRelsErr } =
+      await villaFeatureRepository.findVillaFeatureRelationsByFeatureIds(
+        featureIds
+      );
+
+    if (featureRelsErr) {
+      console.error(
+        "[arama] villa_feature_relations fetch error:",
+        featureRelsErr.message
+      );
+      featureVillaIds = null;
+    } else {
+      const featureIdsByVilla = new Map<string, Set<string>>();
+      for (const r of featureRels || []) {
+        const vid = r?.villa_id ? String(r.villa_id) : null;
+        const fid = r?.feature_id ? String(r.feature_id) : null;
+        if (!vid || !fid) continue;
+        let bucket = featureIdsByVilla.get(vid);
+        if (!bucket) {
+          bucket = new Set<string>();
+          featureIdsByVilla.set(vid, bucket);
+        }
+        bucket.add(fid);
+      }
+      const requiredFeatures = featureIds.length;
+      const matchedByFeature: string[] = [];
+      for (const [vid, featureSet] of featureIdsByVilla) {
+        if (featureSet.size === requiredFeatures) matchedByFeature.push(vid);
+      }
+      featureVillaIds = matchedByFeature;
+    }
+  }
+
+  /* 🛡️ KESİŞİM — tip filtresi VE özellik filtresi birlikte seçilmişse
+     iki id kümesinin KESİŞİMİ alınır (her iki filtre de daraltmadır).
+     Yalnız biri aktifse o kümenin kendisi, hiçbiri aktif değilse `null`
+     (= filtre yok) kullanılır → `findSearchResults` SQL'i ve imzası
+     DEĞİŞMEDEN eski davranışını sürdürür. */
+  let matchVillaIds: string[] | null = categoryVillaIds;
+  if (featureVillaIds !== null) {
+    if (matchVillaIds === null) {
+      matchVillaIds = featureVillaIds;
+    } else {
+      const featureIdSet = new Set(featureVillaIds);
+      matchVillaIds = matchVillaIds.filter((id) => featureIdSet.has(id));
+    }
+  }
+
+  /* ⚠️ KRİTİK: `findSearchResults` BOŞ diziyi "filtre yok" sayar
+     (villa.repository.server.ts — `categoryVillaIds.length > 0` guard'ı).
+     Bu yüzden eşleşme kümesi BOŞSA sorgu değil, `forceEmpty` devreye
+     girer; aksi halde 0 sonuç yerine TÜM villalar render edilirdi.
+     Artık kontrol `categoryVillaIds` yerine KESİŞİM üzerinden yapılır. */
+  const forceEmpty = matchVillaIds !== null && matchVillaIds.length === 0;
 
   /* 📍 BÖLGE
      🛡️ DB SCHEMA: villa tablosunda `location` kolonu YOK; gerçek
@@ -456,7 +563,8 @@ export default async function AramaPageBody({
      Promise.all → ek RTT yok (net latency = max of two). */
   const [villaRes, reviewStatsMap] = await Promise.all([
     villaAdminRepository.findSearchResults({
-      categoryVillaIds,
+      /* Tip + özellik kesişimi. Repository imzası/SQL'i DEĞİŞMEDİ. */
+      categoryVillaIds: matchVillaIds,
       expandedRegions,
       guests,
     }),
@@ -1451,6 +1559,9 @@ function buildAramaSearchHref(
      navigasyonunda KORU (yoksa esnek sonuçlar ilk tıklamada iptal
      olurdu). Yoksa yazılmaz → mevcut URL birebir. */
   setIf("flexible", sp.flexible);
+  /* 🛡️ ADDITIVE — villa özellikleri filtresini sayfalama / sıralama /
+     pageSize navigasyonunda KORU (yoksa ilk tıklamada silinirdi). */
+  setIf("ozellikler", sp.ozellikler);
 
   /* page: > 1 ise URL'e yaz, değilse silmek (default 1 clean URL). */
   const p = next.page ?? parsePublicPage(sp.page);

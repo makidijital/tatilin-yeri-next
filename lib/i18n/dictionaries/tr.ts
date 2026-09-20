@@ -445,6 +445,9 @@ export const tr: Dictionary = {
       optionsLoading: "Yükleniyor…",
       advanced: "Gelişmiş Arama",
       flexibleHint: "Sonuçlarda 3 gün önceki ve sonraki villaları da göster",
+      featuresLabel: "Villa Özellikleri",
+      featuresSelected: "{n} özellik seçildi",
+      featuresEmpty: "Özellik bulunamadı",
       submit: "Villa bul",
     },
     advantages: {

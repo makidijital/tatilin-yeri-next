@@ -392,6 +392,17 @@ export default function FilterSidebar({
     if (flexible) {
       params.set("flexible", "3");
     }
+    /* 🛡️ ADDITIVE PASSTHROUGH — Hero "Gelişmiş Arama"da seçilen villa
+       özellikleri (`ozellikler`, virgülle ayrık UUID). Bu panelde
+       özellik filtresi UI'ı YOKTUR; `buildHref` URL'i sıfırdan kurduğu
+       için değer AYNEN taşınmazsa herhangi bir filtre uygulandığında
+       SESSİZCE SİLİNİRDİ. Değer opak taşınır (parse/normalize YOK).
+       "Temizle" tüm filtreleri sıfırladığı için bu param da doğal
+       olarak kalkar — mevcut reset sözleşmesi DEĞİŞMEDİ. */
+    const existingFeatures = searchParams?.get("ozellikler");
+    if (existingFeatures) {
+      params.set("ozellikler", existingFeatures);
+    }
     const qs = params.toString();
     /* 🛡️ PHASE 13 — hedef locale-aware (`basePath`). Parametre seti,
        canonical isimler ve default'ların yazılmaması DEĞİŞMEDİ. */

@@ -432,6 +432,9 @@ export const de: Dictionary = {
       optionsLoading: "Wird geladen…",
       advanced: "Erweiterte Suche",
       flexibleHint: "Auch Villen 3 Tage davor und danach in den Ergebnissen anzeigen",
+      featuresLabel: "Villa-Ausstattung",
+      featuresSelected: "{n} Ausstattungsmerkmale ausgewählt",
+      featuresEmpty: "Keine Ausstattung gefunden",
       submit: "Villa finden",
     },
     advantages: {
