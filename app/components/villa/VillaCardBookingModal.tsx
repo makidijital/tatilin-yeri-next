@@ -503,6 +503,10 @@ function ModalContent({
     minimumStayValid,
     isGapOverride,
     result,
+    /* 🛡️ Engine'in ZATEN ürettiği indirim karşılaştırması (originalStay /
+       discountedStay). BookingSidebar ile AYNI değer; burada YENİDEN
+       hesaplanmaz, yalnız paylaşılan BookingSummary'ye aktarılır. */
+    activeStayDiscount,
     prepayment,
     convertedDeposit,
     startingPrice,
@@ -708,6 +712,11 @@ function ModalContent({
         {startDate && endDate && result && (
           <BookingSummary
             result={result}
+            /* 🛡️ İNDİRİMLİ TUTAR — villa detay (BookingSidebar) ile AYNI
+               prop, AYNI paylaşılan component, AYNI sözlük anahtarları.
+               null ise satır BİREBİR eski (indirimsiz) haliyle render
+               edilir; yeni markup/duplicate özet YAZILMADI. */
+            activeStayDiscount={activeStayDiscount}
             prepayment={prepayment}
             prepaymentRate={prepaymentRate}
             convertedDeposit={convertedDeposit}
@@ -722,6 +731,10 @@ function ModalContent({
             onPoolHeatingChange={setPoolHeatingSelected}
             poolHeatingTotal={poolHeatingTotal}
             poolHeatingActiveForRange={poolHeatingActiveForRange}
+            /* 🛡️ BookingSidebar ile parite: özet metinleri modalin
+               locale'inden gelsin (prop yoksa component "tr" default'una
+               düşüyordu → EN/DE'de TR metin). TR çıktısı DEĞİŞMEZ. */
+            locale={locale}
           />
         )}
 

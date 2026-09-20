@@ -234,3 +234,136 @@ describe("kaynak kilidi — veri akışı ve motor", () => {
     expect(dayCell).toMatch(/discountedPrice/);
   });
 });
+
+/* ===============================================================
+   D) MODAL FİYAT ÖZETİ — villa detay ile BİREBİR
+   ===============================================================
+   Referans: `booking/BookingSummary.tsx` (villa detay BookingSidebar'ın
+   kullandığı AYNI component). Modal artık engine'in ZATEN ürettiği
+   `activeStayDiscount`'ı aynı component'e geçirir → "Konaklama Tutarı
+   (3 Gece)" + üstü çizili indirimsiz tutar + indirimli tutar +
+   "İndirimli Tutar" etiketi. Yeni hesap/markup YOK.
+=============================================================== */
+describe("D) modal fiyat özeti — indirimli tutar", () => {
+  /* 08 → 11 = 3 gece; gelecek ay (seçilebilir). */
+  const START = `${FY}-${FM}-08`;
+  const END = `${FY}-${FM}-11`;
+  const FULL_DISCOUNT: DiscountRange[] = [
+    {
+      start_date: `${FY}-${FM}-01`,
+      end_date: `${FY}-${FM}-28`,
+      discount_type: "percent",
+      discount_value: 20,
+      currency: null,
+    },
+  ];
+
+  async function openWithDates(
+    discounts?: DiscountRange[],
+    cleaningFee = 0
+  ) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/availability")) {
+          const base = availabilityResponse(discounts);
+          return {
+            ok: true,
+            json: async () => ({
+              ...base,
+              config: { ...base.config, cleaning_fee: cleaningFee },
+            }),
+          };
+        }
+        if (url.includes("/blocked-ranges")) {
+          return { ok: true, json: async () => ({ ok: true, ranges: [] }) };
+        }
+        return { ok: true, json: async () => ({}) };
+      }) as unknown as typeof fetch
+    );
+    const r = render(
+      <VillaCardBookingModal
+        isOpen={true}
+        onClose={vi.fn()}
+        villaId="v1"
+        villaSlug="test-villa"
+        villaTitle="Test Villa"
+        initialStart={START}
+        initialEnd={END}
+      />
+    );
+    await screen.findByText("Toplam Tutar");
+    return r;
+  }
+
+  function struck(container: HTMLElement): string[] {
+    return Array.from(container.querySelectorAll(".line-through")).map(
+      (el) => el.textContent || ""
+    );
+  }
+
+  it("10) 3 gece + indirim → başlık 'Konaklama Tutarı (3 Gece)'", async () => {
+    await openWithDates(FULL_DISCOUNT);
+    expect(screen.getByText("Konaklama Tutarı (3 Gece)")).toBeInTheDocument();
+  });
+
+  it("11) indirimsiz konaklama toplamı ÜSTÜ ÇİZİLİ (₺30.000)", async () => {
+    const { container } = await openWithDates(FULL_DISCOUNT);
+    expect(struck(container).join(" ")).toMatch(/30\.000/);
+  });
+
+  it("12) indirimli toplam NORMAL + 'İndirimli Tutar' etiketi", async () => {
+    const { container } = await openWithDates(FULL_DISCOUNT);
+    expect(screen.getAllByText(/24\.000/).length).toBeGreaterThan(0);
+    expect(struck(container).join(" ")).not.toMatch(/24\.000/);
+    expect(screen.getByText("İndirimli Tutar")).toBeInTheDocument();
+  });
+
+  it("13) 🔒 indirim YOKKEN 'İndirimli Tutar' ve üstü çizili YOK", async () => {
+    const { container } = await openWithDates();
+    expect(screen.queryByText("İndirimli Tutar")).not.toBeInTheDocument();
+    expect(struck(container)).toHaveLength(0);
+    expect(screen.getByText("Konaklama Tutarı (3 Gece)")).toBeInTheDocument();
+  });
+
+  it("14) temizlik ücreti KORUNUR ve toplam doğru kalır", async () => {
+    /* 3 × 10.000 = 30.000 → %20 → 24.000 + temizlik 3.500 = 27.500 */
+    await openWithDates(FULL_DISCOUNT, 3500);
+    expect(screen.getAllByText(/3\.500/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/27\.500/).length).toBeGreaterThan(0);
+  });
+
+  it("15) indirimsizde toplam = 30.000 + temizlik (mevcut davranış)", async () => {
+    await openWithDates(undefined, 3500);
+    expect(screen.getAllByText(/33\.500/).length).toBeGreaterThan(0);
+  });
+
+  it("16) 🔒 tarihsiz modalda özet HİÇ render edilmez (eski davranış)", async () => {
+    mockFetch(FULL_DISCOUNT);
+    render(
+      <VillaCardBookingModal
+        isOpen={true}
+        onClose={vi.fn()}
+        villaId="v1"
+        villaSlug="test-villa"
+        villaTitle="Test Villa"
+      />
+    );
+    await screen.findByText("Tarih seç");
+    expect(screen.queryByText("Toplam Tutar")).not.toBeInTheDocument();
+    expect(screen.queryByText("İndirimli Tutar")).not.toBeInTheDocument();
+  });
+
+  it("17) 🔒 paylaşılan BookingSummary kullanılır — duplicate özet YOK", () => {
+    const modal = readFileSync(
+      join(process.cwd(), "app/components/villa/VillaCardBookingModal.tsx"),
+      "utf-8"
+    ).replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(modal).toMatch(/<BookingSummary/);
+    expect(modal).toMatch(/activeStayDiscount=\{activeStayDiscount\}/);
+    /* Modal kendi indirim hesabını YAPMAZ. */
+    expect(modal).not.toMatch(/applyDiscountToDailyPrice\(/);
+    expect(modal).not.toMatch(/calculateStayTotal\(/);
+    expect(modal).not.toMatch(/discountedTotal/);
+  });
+});
