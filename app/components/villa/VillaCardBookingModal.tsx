@@ -591,6 +591,14 @@ function ModalContent({
             engine={engine}
             currentMonth={currentMonth}
             onCurrentMonthChange={setCurrentMonth}
+            /* 🛡️ LOCALE DÜZELTMESİ (bu tur): `locale` GEÇİLMİYORDU →
+               BookingCalendar kendi "tr" default'una düşüyor ve takvim
+               (ay adı + hafta günleri) EN/DE modallarda da TÜRKÇE
+               görünüyordu. BookingSidebar (villa detay) bu prop'u zaten
+               geçiyor; modal artık onunla PARİTE. Tarih seçme, state,
+               fiyat/indirim gösterimi ve dış-header kaldırma değişikliği
+               ETKİLENMEZ — yalnız görünen dil doğru locale'e bağlanır. */
+            locale={locale}
             /* onSelectComplete verilmedi → modal calendar açık kalır,
                selection sonrası popup close DAVRANIŞI sidebar'a özgü. */
           />

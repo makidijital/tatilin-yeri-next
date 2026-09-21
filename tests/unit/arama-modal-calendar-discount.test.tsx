@@ -369,3 +369,57 @@ describe("D) modal fiyat özeti — indirimli tutar", () => {
     expect(modal).not.toMatch(/discountedTotal/);
   });
 });
+
+/* ===============================================================
+   E) MODAL TAKVİM DİLİ — modalın locale'i ile eşleşir
+   ===============================================================
+   Regresyon: modal, `BookingCalendar`'a `locale` GEÇMİYORDU → takvim
+   EN/DE modallarda da Türkçe render ediliyordu. Aşağıdaki test UÇTAN
+   UCA (modal → takvim) dil paritesini kilitler.
+=============================================================== */
+describe("E) modal takvim dili", () => {
+  function renderModalWithLocale(locale?: "tr" | "en" | "de") {
+    mockFetch();
+    return render(
+      <VillaCardBookingModal
+        isOpen={true}
+        onClose={vi.fn()}
+        villaId="v1"
+        villaSlug="test-villa"
+        villaTitle="Test Villa"
+        locale={locale}
+      />
+    );
+  }
+
+  async function calendarTexts(container: HTMLElement) {
+    await screen.findAllByRole("gridcell");
+    return {
+      caption: container.querySelector(".rdp-caption")?.textContent || "",
+      weekdays: Array.from(container.querySelectorAll(".rdp-head_cell"))
+        .map((el) => (el.textContent || "").trim())
+        .join(" "),
+    };
+  }
+
+  it("18) EN modal → İngilizce ay adı + hafta günleri", async () => {
+    const { container } = renderModalWithLocale("en");
+    const { caption, weekdays } = await calendarTexts(container);
+    expect(caption).toMatch(/January|February|March|April|May|June|July|August|September|October|November|December/);
+    expect(weekdays).not.toMatch(/Ça|Ct|Pz/);
+  });
+
+  it("19) DE modal → Almanca ay adı + hafta günleri", async () => {
+    const { container } = renderModalWithLocale("de");
+    const { caption, weekdays } = await calendarTexts(container);
+    expect(caption).toMatch(/Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember/);
+    expect(weekdays).toMatch(/Mo|Di|Mi/);
+    expect(weekdays).not.toMatch(/Ça|Ct|Pz/);
+  });
+
+  it("20) locale verilmezse MEVCUT güvenli default (TR) korunur", async () => {
+    const { container } = renderModalWithLocale();
+    const { weekdays } = await calendarTexts(container);
+    expect(weekdays).toMatch(/Ça|Ct|Pz/);
+  });
+});

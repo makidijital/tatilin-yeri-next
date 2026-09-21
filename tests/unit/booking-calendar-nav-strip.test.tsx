@@ -117,3 +117,90 @@ describe("dış nav strip", () => {
     expect(container.textContent).toContain("₺10.000");
   });
 });
+
+/* ===============================================================
+   B) MODAL DATEPICKER DİLİ — aktif locale ile eşleşir
+   ===============================================================
+   Kök neden: `VillaCardBookingModal` → `<BookingCalendar>` çağrısında
+   `locale` prop'u GEÇİLMİYORDU → component "tr" default'una düşüyor ve
+   takvim EN/DE modallarda da Türkçe görünüyordu (BookingSidebar bu
+   prop'u zaten geçiyordu). Aşağıdaki testler hem component seviyesinde
+   hem de kaynak seviyesinde bu bağı kilitler.
+=============================================================== */
+describe("datepicker dili — locale paritesi", () => {
+  function weekdays(container: HTMLElement): string[] {
+    return Array.from(container.querySelectorAll(".rdp-head_cell")).map(
+      (el) => (el.textContent || "").trim()
+    );
+  }
+  function captionText(container: HTMLElement): string {
+    return container.querySelector(".rdp-caption")?.textContent || "";
+  }
+
+  it("7) TR — Türkçe ay adı + Türkçe hafta günleri", () => {
+    const { container } = renderCalendar("tr");
+    expect(captionText(container)).toMatch(/Ekim\s*2026/i);
+    /* date-fns tr kısa gün adları: Pt Sa Ça Pe Cu Ct Pz */
+    expect(weekdays(container).join(" ")).toMatch(/Ça|Ct|Pz/);
+  });
+
+  it("8) EN — İngilizce ay adı + İngilizce hafta günleri", () => {
+    const { container } = renderCalendar("en");
+    expect(captionText(container)).toMatch(/October\s*2026/i);
+    const w = weekdays(container).join(" ");
+    expect(w).toMatch(/Mo|Tu|We/i);
+    expect(w).not.toMatch(/Çar|Prş|Cmt/i);
+  });
+
+  it("9) DE — Almanca ay adı + Almanca hafta günleri", () => {
+    const { container } = renderCalendar("de");
+    expect(captionText(container)).toMatch(/Oktober\s*2026/i);
+    const w = weekdays(container).join(" ");
+    expect(w).toMatch(/Mo|Di|Mi/i);
+    expect(w).not.toMatch(/Çar|Prş|Cmt/i);
+  });
+
+  it("10) locale değişince takvim dili DE değişir (TR ≠ EN ≠ DE)", () => {
+    const trR = renderCalendar("tr");
+    const trCap = captionText(trR.container);
+    const trDays = weekdays(trR.container).join(" ");
+    trR.unmount();
+
+    const enR = renderCalendar("en");
+    const enCap = captionText(enR.container);
+    const enDays = weekdays(enR.container).join(" ");
+    enR.unmount();
+
+    const deR = renderCalendar("de");
+    const deCap = captionText(deR.container);
+    deR.unmount();
+
+    expect(trCap).not.toBe(enCap);
+    expect(enCap).not.toBe(deCap);
+    expect(trDays).not.toBe(enDays);
+  });
+
+  it("11) locale verilmezse MEVCUT güvenli default (TR) korunur", () => {
+    const { container } = renderCalendar();
+    expect(captionText(container)).toMatch(/Ekim\s*2026/i);
+  });
+
+  it("12) 🔒 kaynak kilidi — modal ve sidebar `locale` prop'unu GEÇER", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const clean = (rel: string) =>
+      readFileSync(join(process.cwd(), rel), "utf-8").replace(
+        /\/\*[\s\S]*?\*\//g,
+        ""
+      );
+    for (const rel of [
+      "app/components/villa/VillaCardBookingModal.tsx",
+      "app/components/villa/BookingSidebar.tsx",
+    ]) {
+      const src = clean(rel);
+      const call = src.slice(src.indexOf("<BookingCalendar"));
+      const block = call.slice(0, call.indexOf("/>"));
+      expect(block, rel).toMatch(/locale=\{locale\}/);
+    }
+  });
+});
