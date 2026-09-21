@@ -470,42 +470,22 @@ export const villaAdminRepository = {
   }) {
     let q = dbAdmin
       .from("villa")
-      /* 🛡️ PERF — `select("*")` YERİNE AÇIK KOLON LİSTESİ.
-         KANIT (neden bu 13 kolon):
-           `AramaPageBody.tsx > AramaVillaRaw` (tek tüketici, tek
-           call-site) YALNIZ bu alanları okur; `villa` tablosundaki
-           diğer ~33 kolon (description, map_embed, seo_*, search_title,
-           real_title_search, havuz ölçüleri, koordinatlar, ...) normalize
-           aşamasında HİÇ okunmuyordu ve DB→Node boşuna taşınıyordu.
-         DAVRANIŞ DEĞİŞMEZ — mekanik gerekçe:
-           • `WHERE is_active / deleted_at` ve
-             `ORDER BY sort_order, created_at` SELECT listesinden
-             BAĞIMSIZ derlenir (query-compiler.ts > compileSelect) →
-             bu kolonların seçilmesine gerek YOK.
-           • Embed korelasyonları `relation-metadata.ts`'te STATİK
-             tanımlı (`location` → localKey "location_id") ve compiler
-             `"villa"."location_id"` diye NİTELİKLİ referans verir →
-             SELECT listesi daralınca etkilenmez. `location_id` yine de
-             listede tutuldu (güvenli taraf).
-           • `price` okunmasa da tutuldu: `AramaVillaRaw` tipini
-             değiştirmemek için (sıfır tip kayması).
-           • Embed'ler (location / villa_images / villa_prices /
-             villa_discounts) ve kolonları AYNEN korundu. */
+      /* 🛡️ ROLLBACK (production incident) — `select("*")` GERİ ALINDI.
+         Açık kolon listesi denendi ve production'da `/arama` "Arama
+         yüklenemedi." hatasına düştü: liste `price` kolonunu içeriyordu,
+         ancak `villa.price` production şemasında YOK (repo'daki
+         `types/database.ts > VillaRow` bu konuda BAYAT). `select("*")`
+         kolon adı YAZMADIĞI için bu farkı gizliyordu; açık liste ise
+         `column villa.price does not exist` ile hata veriyor.
+         KANIT (repo içi): production'da ÇALIŞAN `findActiveCuratorCards`
+         (bu dosyada, AYNI filtre + AYNI embed + AYNI order) villa'dan
+         açık kolon seçerken `price` ve `currency`'yi İÇERMEZ; tüm repoda
+         villa'dan top-level `price` seçen BAŞKA sorgu YOKTUR.
+         ⚠️ Gerçek şema doğrulanmadan (pg_indexes / information_schema)
+         bu sorgu tekrar daraltılMAMALIdır. */
       .select(
         `
-        id,
-        slug,
-        title,
-        price,
-        currency,
-        badge,
-        bedrooms,
-        bathrooms,
-        guests,
-        cleaning_fee,
-        cleaning_currency,
-        cleaning_limit,
-        location_id,
+        *,
         location:villa_locations(name),
         villa_images (
           image_url,
