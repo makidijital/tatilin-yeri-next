@@ -135,6 +135,15 @@ const seq = collectCallSequence(fnBody);
 
 const idx = (name: string): number => seq.findIndex((e) => e.name === name);
 
+/* 🛡️ FAZ 1/C — IDENTIFIER HİZALAMASI (üretim kodu DEĞİŞMEDİ)
+   `setVillaDistances` / `setVillaPrices` anon-`db` + silent-fail
+   tuzağı nedeniyle server-only karşılıklarıyla değiştirilmişti
+   (`setVillaDistancesServer` / `setVillaPricesServer` — bkz. ilgili
+   service dosyasının başlık yorumu). Bu contract testi `idx(name)`
+   ile BİREBİR identifier eşleşmesi aradığı için `-1` dönüyordu.
+   Aşağıda YALNIZCA aranan isim güncellendi; sıra / await /
+   conditional / BEFORE-AFTER assertion'larının hiçbiri gevşetilmedi. */
+
 describe("updateVillaFull — early validation", () => {
   it("throws Error when form.title is missing", () => {
     const first = fnBody.statements[0];
@@ -187,14 +196,14 @@ describe("updateVillaFull — relation sync asymmetry", () => {
   });
 
   it("setVillaDistances is ALWAYS (not conditional)", () => {
-    const i = idx("setVillaDistances");
+    const i = idx("setVillaDistancesServer");
     expect(i).toBeGreaterThanOrEqual(0);
     expect(seq[i].awaited).toBe(true);
     expect(seq[i].conditional).toBe(false);
   });
 
   it("setVillaPrices is ALWAYS (not conditional)", () => {
-    const i = idx("setVillaPrices");
+    const i = idx("setVillaPricesServer");
     expect(i).toBeGreaterThanOrEqual(0);
     expect(seq[i].awaited).toBe(true);
     expect(seq[i].conditional).toBe(false);
@@ -220,8 +229,8 @@ describe("updateVillaFull — strict sequential order", () => {
     const order = [
       "replaceVillaTypeRelations",
       "replaceVillaFeatureRelations",
-      "setVillaDistances",
-      "setVillaPrices",
+      "setVillaDistancesServer",
+      "setVillaPricesServer",
       "replaceVillaRuleRelations",
       "replaceVillaPriceIncludeRelations",
     ];

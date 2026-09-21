@@ -8,12 +8,22 @@
      1. Early return when id is missing
      2. AWAITED cleanupVillaStorageForHardDelete (storage cleanup)
      3. AWAITED Promise.all([7 parallel DELETE]) — array içeriği sabit
-     4. AWAITED eski sağlayıcı villa DELETE (final)
+     4. AWAITED final villa DELETE (repository: hardDeleteVillaById)
      5. SQLSTATE 23503 (FK) → TR explicit message
      6. return { ok: ... }
 
+   🛡️ FAZ 3 — REPOSITORY MİMARİSİNE HİZALAMA (üretim kodu DEĞİŞMEDİ)
+     FAZ 37'de ham `db.from("<tablo>").delete()` çağrıları
+     `villaAdminRepository.*` metodlarına delege edildi. Bu testin eski
+     hâli çağrı yerindeki TABLO ADI STRING'ini arıyordu; artık orada
+     tablo adı geçmiyor. Assertion GEVŞETİLMEDİ — aksine güçlendirildi:
+     çağrı yerinde repository METODU + ARGÜMAN + SIRA doğrulanıyor, VE
+     her metodun `villa.repository.server.ts` içinde gerçekten hangi
+     tabloyu sildiği AYRICA parse edilip 1:1 eşleştiriliyor. Yani
+     "hangi tablo temizleniyor" garantisi kaybolmadı, kanıta bağlandı.
+
    ⚠️ PROMISE.ALL ARRAY CONTENT:
-     7 ayrı db.from(...).delete().eq("villa_id", id) çağrısı:
+     7 ayrı repository DELETE çağrısı (her biri .eq("villa_id", id)):
        - villa_images
        - villa_feature_relations
        - villa_rule_relations
@@ -63,6 +73,55 @@ function findExportedFunction(name: string): ts.FunctionDeclaration {
 const fnDecl = findExportedFunction("hardDeleteVilla");
 const fnBody = fnDecl.body!;
 
+/* ---------------- Repository 1:1 eşleme doğrulayıcısı ----------------
+   Çağrı yerinde tablo adı artık görünmediği için, repository metodunun
+   GERÇEKTEN hangi tabloyu sildiğini kaynak koddan parse ederiz. Böylece
+   "villa_images temizleniyor mu" sorusu hâlâ kanıtlanabilir kalır. */
+const REPO_PATH = resolve(process.cwd(), "lib/db/villa.repository.server.ts");
+const repoText = readFileSync(REPO_PATH, "utf8");
+
+function repoDeleteTarget(method: string): { table: string; column: string } {
+  const i = repoText.indexOf(`async ${method}(`);
+  if (i < 0) throw new Error(`repository metodu bulunamadı: ${method}`);
+  const body = repoText.slice(i, i + 800);
+  const table = /\.from(?:<[^>]*>)?\(\s*"([a-z_]+)"\s*\)/.exec(body)?.[1];
+  const column = /\.eq\(\s*"([a-z_]+)"/.exec(body)?.[1];
+  if (!/\.delete\(\s*\)/.test(body)) {
+    throw new Error(`${method} bir DELETE yapmıyor`);
+  }
+  if (!table || !column) throw new Error(`${method} parse edilemedi`);
+  return { table, column };
+}
+
+/** Promise.all array'inde BEKLENEN sıra: repository metodu → tablo. */
+const EXPECTED_RELATION_DELETES: ReadonlyArray<[method: string, table: string]> =
+  [
+    ["deleteVillaImagesByVillaId", "villa_images"],
+    ["deleteVillaFeatureRelationsByVillaId", "villa_feature_relations"],
+    ["deleteVillaRuleRelationsByVillaId", "villa_rule_relations"],
+    ["deleteVillaPriceIncludeRelationsByVillaId", "villa_price_include_relations"],
+    ["deleteVillaTypeRelationsByVillaId", "villa_type_relations"],
+    ["deleteVillaDistancesByVillaId", "villa_distances"],
+    ["deleteVillaPricesByVillaId", "villa_prices"],
+  ];
+
+/** Final villa satırı silme metodu. */
+const FINAL_DELETE_METHOD = "hardDeleteVillaById";
+
+/** `villaAdminRepository.<metod>(<arg>)` çağrısını çözer. */
+function repoCallOf(
+  node: ts.Node
+): { method: string; args: string[] } | null {
+  if (!ts.isCallExpression(node)) return null;
+  const expr = node.expression;
+  if (!ts.isPropertyAccessExpression(expr)) return null;
+  if (expr.expression.getText() !== "villaAdminRepository") return null;
+  return {
+    method: expr.name.text,
+    args: node.arguments.map((a) => a.getText()),
+  };
+}
+
 /* ---------------- Tests ---------------- */
 
 describe("hardDeleteVilla — early guard", () => {
@@ -78,7 +137,10 @@ describe("hardDeleteVilla — early guard", () => {
 
 describe("hardDeleteVilla — destructive sequence", () => {
   it("calls cleanupVillaStorageForHardDelete AWAITED before Promise.all", () => {
-    /* Sıra: storage cleanup → Promise.all → final villa DELETE */
+    /* Sıra: storage cleanup → Promise.all → final villa DELETE.
+       Final DELETE artık ham `db.from("villa").delete()` değil,
+       `villaAdminRepository.hardDeleteVillaById(id)`. Tespit metod
+       adından yapılır; hedef tablo aşağıdaki testte ayrıca kanıtlanır. */
     let cleanupIdx = -1;
     let promiseAllIdx = -1;
     let finalDeleteIdx = -1;
@@ -87,7 +149,7 @@ describe("hardDeleteVilla — destructive sequence", () => {
       const text = stmt.getText();
       if (text.includes("cleanupVillaStorageForHardDelete")) cleanupIdx = idx;
       if (text.includes("Promise.all")) promiseAllIdx = idx;
-      if (text.includes('.from("villa")') && text.includes(".delete()"))
+      if (text.includes(`villaAdminRepository.${FINAL_DELETE_METHOD}(`))
         finalDeleteIdx = idx;
     });
 
@@ -96,6 +158,28 @@ describe("hardDeleteVilla — destructive sequence", () => {
     expect(finalDeleteIdx).toBeGreaterThanOrEqual(0);
     expect(cleanupIdx).toBeLessThan(promiseAllIdx);
     expect(promiseAllIdx).toBeLessThan(finalDeleteIdx);
+  });
+
+  it("storage cleanup AWAITED ve `id` ile çağrılıyor", () => {
+    /* EK GÜVENCE: cleanup'ın gerçekten await edildiğini ve doğru
+       argümanı aldığını kanıtlar (eskiden yalnız metin araması vardı). */
+    const cleanupStmts = fnBody.statements.filter((st) =>
+      st.getText().includes("cleanupVillaStorageForHardDelete")
+    );
+    /* EXACTLY ONCE — destructive akışta tekrar eden cleanup olmamalı. */
+    expect(cleanupStmts.length).toBe(1);
+    const stmt = cleanupStmts[0];
+    expect(ts.isExpressionStatement(stmt)).toBe(true);
+    const expr = (stmt as ts.ExpressionStatement).expression;
+    expect(ts.isAwaitExpression(expr)).toBe(true);
+    const call = (expr as ts.AwaitExpression).expression;
+    expect(ts.isCallExpression(call)).toBe(true);
+    expect((call as ts.CallExpression).expression.getText()).toBe(
+      "cleanupVillaStorageForHardDelete"
+    );
+    expect(
+      (call as ts.CallExpression).arguments.map((a) => a.getText())
+    ).toEqual(["id"]);
   });
 
   it("Promise.all contains EXACTLY 7 ilişkili tablo delete çağrısı", () => {
@@ -144,22 +228,39 @@ describe("hardDeleteVilla — destructive sequence", () => {
     const arr = (promiseAllExpr as unknown as ts.CallExpression).arguments[0];
     if (!ts.isArrayLiteralExpression(arr)) throw new Error("Expected array");
 
-    const allText = arr.elements.map((e) => e.getText()).join("|");
-    const expected = [
-      "villa_images",
-      "villa_feature_relations",
-      "villa_rule_relations",
-      "villa_price_include_relations",
-      "villa_type_relations",
-      "villa_distances",
-      "villa_prices",
-    ];
-    for (const table of expected) {
-      expect(allText).toContain(`"${table}"`);
+    /* Her element `villaAdminRepository.<metod>(id)` olmalı — metod adı,
+       argüman VE sıra birebir; ayrıca her metodun repository'de gerçekten
+       hangi tabloyu sildiği parse edilip 1:1 doğrulanır. */
+    const calls = arr.elements.map((e) => repoCallOf(e));
+    expect(calls.every((c) => c !== null)).toBe(true);
+
+    expect(calls.map((c) => c!.method)).toEqual(
+      EXPECTED_RELATION_DELETES.map(([method]) => method)
+    );
+
+    for (const c of calls) {
+      expect(c!.args).toEqual(["id"]);
     }
-    /* CRITICAL: reservations history korunmalı — YOK olmalı. */
+
+    /* 1:1 EŞLEME: metod → gerçek tablo + villa_id filtresi. */
+    const touchedTables: string[] = [];
+    for (const [method, table] of EXPECTED_RELATION_DELETES) {
+      const target = repoDeleteTarget(method);
+      expect(target.table).toBe(table);
+      expect(target.column).toBe("villa_id");
+      touchedTables.push(target.table);
+    }
+    expect(touchedTables).toEqual(
+      EXPECTED_RELATION_DELETES.map(([, table]) => table)
+    );
+
+    /* CRITICAL: reservations history korunmalı — ne çağrı metinlerinde
+       ne de çözümlenen GERÇEK tablolarda bulunmamalı. */
+    const allText = arr.elements.map((e) => e.getText()).join("|");
     expect(allText).not.toContain('"reservations"');
     expect(allText).not.toContain('"manual_reservations"');
+    expect(touchedTables).not.toContain("reservations");
+    expect(touchedTables).not.toContain("manual_reservations");
   });
 
   it("final villa DELETE happens AFTER Promise.all", () => {
@@ -170,15 +271,48 @@ describe("hardDeleteVilla — destructive sequence", () => {
       const text = stmt.getText();
       if (text.includes("Promise.all")) promiseAllIdx = idx;
       if (
-        text.includes('.from("villa")') &&
-        text.includes(".delete()") &&
+        text.includes(`villaAdminRepository.${FINAL_DELETE_METHOD}(`) &&
         !text.includes("Promise.all")
       ) {
         finalDeleteIdx = idx;
       }
     });
 
+    expect(promiseAllIdx).toBeGreaterThanOrEqual(0);
+    expect(finalDeleteIdx).toBeGreaterThanOrEqual(0);
     expect(promiseAllIdx).toBeLessThan(finalDeleteIdx);
+  });
+
+  it("final DELETE gerçekten `villa` satırını siler (AWAITED, id ile)", () => {
+    /* Eskiden bu, çağrı yerindeki `.from("villa").delete()` metninden
+       okunuyordu. Repository delegasyonundan sonra aynı garanti iki
+       parçadan kanıtlanır: (a) çağrı yeri metodu + argümanı,
+       (b) metodun repository'deki gerçek DELETE hedefi. */
+    const finalStmts = fnBody.statements.filter((st) =>
+      st.getText().includes(`villaAdminRepository.${FINAL_DELETE_METHOD}(`)
+    );
+    /* EXACTLY ONCE — villa satırı yalnız bir kez silinmeli. */
+    expect(finalStmts.length).toBe(1);
+
+    const found: Array<{ method: string; args: string[] }> = [];
+    function walk(node: ts.Node) {
+      if (ts.isAwaitExpression(node) && ts.isCallExpression(node.expression)) {
+        const c = repoCallOf(node.expression);
+        if (c && c.method === FINAL_DELETE_METHOD) {
+          found.push(c);
+          return;
+        }
+      }
+      ts.forEachChild(node, walk);
+    }
+    walk(finalStmts[0]);
+
+    /* AWAITED + doğru metod + tek argüman `id` — hepsi tek assertion'da. */
+    expect(found).toEqual([{ method: FINAL_DELETE_METHOD, args: ["id"] }]);
+
+    const target = repoDeleteTarget(FINAL_DELETE_METHOD);
+    expect(target.table).toBe("villa");
+    expect(target.column).toBe("id");
   });
 });
 

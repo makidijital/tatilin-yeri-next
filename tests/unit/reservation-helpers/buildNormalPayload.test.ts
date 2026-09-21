@@ -151,8 +151,25 @@ describe("buildNormalPayload — financial snapshot (payment helper)", () => {
       priceDetail: null,
       prepaymentRate: 20,
     });
-    expect(payload.prepayment_amount).toBe(20000);
-    expect(payload.remaining_payment).toBe(80000);
+    /* 🛡️ ÖN ÖDEME ARTIK KONAKLAMA ALT-TOPLAMI ÜZERİNDEN (FAZ 2/B)
+       accommodationBase = totalTRY - cleaningTRY - poolHeatingTRY
+       prepayment        = Math.round(accommodationBase * rate / 100)
+       Temizlik + havuz ısıtma ön ödemeye girmez, girişte tahsil edilir.
+
+       Bu fixture için ELLE hesap (üretim çıktısı kopyalanmadı):
+         cleaningTRY = baseReservation.cleaning_fee_try = 2.500
+         poolHeating = baseReservation.pool_heating_total_try = 0
+         base        = 100.000 - 2.500 - 0       = 97.500
+         prepayment  = round(97.500 x 20 / 100)  = round(19.500) = 19.500
+         remaining   = 100.000 - 19.500          = 80.500
+       ESKİ beklenti 20.000 / 80.000 idi (brüt toplam üzerinden). */
+    expect(payload.prepayment_amount).toBe(19500);
+    expect(payload.remaining_payment).toBe(80500);
+
+    /* 🛡️ FİNANSAL TUTARLILIK: ön ödeme + girişte ödenecek = TAM TOPLAM. */
+    expect(payload.prepayment_amount + payload.remaining_payment).toBe(
+      payload.total_price_try
+    );
   });
 
   it("full_payment branch: prepayment=total, remaining=0", () => {
@@ -196,7 +213,20 @@ describe("buildNormalPayload — financial snapshot (payment helper)", () => {
       priceDetail: null,
       prepaymentRate: 33,
     });
-    expect(payload.prepayment_amount).toBe(4076); // 4075.5 → 4076
+    /* 🛡️ YARI-YUKARI (half-up) YUVARLAMA — konaklama alt-toplamı üzerinden.
+       ELLE hesap (üretim çıktısı kopyalanmadı):
+         base       = 12.350 - 2.500 - 0      = 9.850
+         raw        = 9.850 x 33 / 100        = 3.250,5   ← tam .5
+         prepayment = Math.round(3.250,5)     = 3.251     (yarı-yukarı)
+       Test hâlâ tam .5 sınırını sınıyor; ESKİ beklenti 4.076 idi
+       (brüt 12.350 üzerinden 4.075,5 → 4.076). */
+    expect(payload.prepayment_amount).toBe(3251);
+
+    /* 🛡️ FİNANSAL TUTARLILIK: 3.251 + 9.099 = 12.350 (tam toplam). */
+    expect(payload.remaining_payment).toBe(9099);
+    expect(payload.prepayment_amount + payload.remaining_payment).toBe(
+      payload.total_price_try
+    );
   });
 });
 

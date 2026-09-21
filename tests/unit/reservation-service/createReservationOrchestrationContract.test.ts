@@ -141,6 +141,20 @@ const idx = (name: string): number => seq.findIndex((e) => e.name === name);
 
 /* ---------------- Tests ---------------- */
 
+/* 🛡️ FAZ 1/D — DEPENDENCY-INJECTION HİZALAMASI (üretim kodu DEĞİŞMEDİ)
+   create.service.ts test edilebilirlik için DI'ya geçti:
+     const insertRepository = deps?.insertRepository ?? reservationRepository;
+     await insertRepository.insert(buildCreateReservationPayload({...}));
+   1) Çağrı artık `insertRepository.insert` adıyla görünüyor → aranan
+      isim hizalandı; ayrıca DI default'unun gerçekten
+      `reservationRepository`ye bağlandığı AYRICA doğrulanıyor.
+   2) `buildCreateReservationPayload` artık insert çağrısının ARGÜMANI
+      olarak inline duruyor. Bu dosyadaki AST toplayıcısı (pushFromExpr)
+      yalnız en dıştaki çağrıyı kaydeder, argümanlara İNMEZ — bu yüzden
+      sayım 0 dönüyordu. EXACTLY-ONCE invariant'ı korunsun diye sayım
+      fonksiyon gövdesinin kaynak metni üzerinden yapılıyor (inline
+      konumu da kapsar). Assertion GEVŞEMEDİ. */
+
 describe("createReservation — early validation throws", () => {
   it("first if-statement guards villa_id (throw 'Villa zorunlu')", () => {
     const first = fnBody.statements[0];
@@ -197,7 +211,7 @@ describe("createReservation — orchestration order", () => {
   it("reservationRepository.insert AWAITED after fetchCommissionRate", () => {
     const cai = idx("calcCommissionAmount");
     const insertIdx = seq.findIndex(
-      (e) => e.name === "reservationRepository.insert" && e.awaited
+      (e) => e.name === "insertRepository.insert" && e.awaited
     );
     expect(insertIdx).toBeGreaterThanOrEqual(0);
     expect(cai).toBeLessThan(insertIdx);
@@ -212,7 +226,7 @@ describe("createReservation — EXCLUDE constraint catch", () => {
     /* mapInsertError ya conditional (if error block) ya da direct call;
        her halükarda INSERT'ten sonra. */
     const insertIdx = seq.findIndex(
-      (e) => e.name === "reservationRepository.insert" && e.awaited
+      (e) => e.name === "insertRepository.insert" && e.awaited
     );
     expect(insertIdx).toBeLessThan(i);
   });
@@ -236,12 +250,21 @@ describe("createReservation — return invariant", () => {
 });
 
 describe("createReservation — single-INSERT invariant", () => {
-  it("calls reservationRepository.insert EXACTLY ONCE", () => {
+  it("insertRepository DI default binds to reservationRepository", () => {
+    /* Alias'ın gerçek repository'ye düştüğünü kanıtlar — aşağıdaki
+       `insertRepository.insert` sayımı ancak bu sayede
+       "reservationRepository.insert" anlamına gelir. */
+    expect(fnBody.getText()).toMatch(
+      /const\s+insertRepository\s*=\s*deps\?\.insertRepository\s*\?\?\s*reservationRepository/
+    );
+  });
+
+  it("calls reservationRepository.insert EXACTLY ONCE (DI alias üzerinden)", () => {
     /* FAZ 33: önceden `db` identifier'ı sayılıyordu; artık
        repository identifier sayılıyor — INSERT atomicity invariant
        aynı (tek round-trip, tek EXCLUDE constraint check). */
     const repoCalls = seq.filter(
-      (e) => e.name === "reservationRepository.insert"
+      (e) => e.name === "insertRepository.insert"
     );
     expect(repoCalls.length).toBe(1);
   });
@@ -269,7 +292,18 @@ describe("createReservation — single-INSERT invariant", () => {
   });
 
   it("calls buildCreateReservationPayload EXACTLY ONCE", () => {
-    const c = seq.filter((e) => e.name === "buildCreateReservationPayload");
+    /* insert çağrısının ARGÜMANI olarak inline duruyor; AST toplayıcı
+       argümanlara inmediği için sayım kaynak metninden yapılır.
+       EXACTLY-ONCE invariant'ı aynen. */
+    const c =
+      fnBody.getText().match(/\bbuildCreateReservationPayload\s*\(/g) || [];
     expect(c.length).toBe(1);
+  });
+
+  it("buildCreateReservationPayload, insert çağrısının İÇİNDE kullanılır", () => {
+    /* Payload'ın DB write'a giden tek kaynak olduğunu kilitler. */
+    expect(fnBody.getText()).toMatch(
+      /insertRepository\.insert\(\s*buildCreateReservationPayload\s*\(/
+    );
   });
 });

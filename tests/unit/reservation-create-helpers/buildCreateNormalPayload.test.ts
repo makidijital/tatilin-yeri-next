@@ -63,8 +63,30 @@ describe("buildCreateNormalPayload — TRY-only happy path", () => {
       startISO,
       endISO,
     });
-    expect(payload.prepayment_amount).toBe(30000);
-    expect(payload.remaining_payment).toBe(70000);
+    /* 🛡️ ÖN ÖDEME ARTIK KONAKLAMA ALT-TOPLAMI ÜZERİNDEN (FAZ 2/B)
+       Kural (lib/price.engine > accommodationBase):
+         accommodationBase = totalTRY - cleaningTRY - poolHeatingTRY
+         prepayment        = Math.round(accommodationBase * rate / 100)
+       Temizlik ve havuz ısıtma ÖN ÖDEMEYE dahil DEĞİL; girişte tahsil
+       edilir → remaining tam total üzerinden hesaplanır.
+
+       Bu fixture için ELLE hesap (üretim çıktısı kopyalanmadı):
+         cleaningTRY  = data.cleaning_fee_try(0) || priceDetail.cleaning
+                      = tryPriceDetail.cleaning = 1.500
+         poolHeating  = 0 (tryPriceDetail.poolHeating tanımsız)
+         base         = 100.000 - 1.500 - 0        = 98.500
+         prepayment   = round(98.500 x 30 / 100)   = round(29.550) = 29.550
+         remaining    = 100.000 - 29.550           = 70.450
+       ESKİ beklenti 30.000 / 70.000 idi (brüt toplam üzerinden). */
+    expect(payload.prepayment_amount).toBe(29550);
+    expect(payload.remaining_payment).toBe(70450);
+
+    /* 🛡️ FİNANSAL TUTARLILIK: ön ödeme + girişte ödenecek = TAM TOPLAM.
+       Temizlik/havuz ısıtma ön ödemeden düşülse bile müşteriden
+       tahsil edilmeye devam ettiğini kilitler (gelir kaçağı guard'ı). */
+    expect(payload.prepayment_amount + payload.remaining_payment).toBe(
+      payload.total_price_try
+    );
   });
 
   it("full_payment → prepayment=total, remaining=0", () => {

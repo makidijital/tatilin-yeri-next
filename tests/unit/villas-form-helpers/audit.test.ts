@@ -137,11 +137,20 @@ describe("buildVillaUpdateAudit{Before,After}", () => {
     ],
   };
 
-  it("before + after have IDENTICAL shape (21 keys)", () => {
+  /* 🛡️ SABİT SAYI GÜNCELLEMESİ (FAZ 1/A): üretimdeki audit snapshot'ı
+     22 anahtar taşıyor (bathrooms, bedrooms, cleaning_currency,
+     cleaning_fee, deposit, description_length, distances_count,
+     features_count, guests, id, is_active, location_id,
+     minimum_stay_nights, noindex, price_includes_count, prices_count,
+     rules_count, seo_description, seo_title, slug, title, types_count).
+     Testin ASIL invariant'ı — before/after şekil SİMETRİSİ — zaten
+     geçiyordu ve AYNEN korunuyor; yalnız bayat regression sayısı
+     gerçek anahtar sayısına hizalandı. Üretim kodu DEĞİŞMEDİ. */
+  it("before + after have IDENTICAL shape (22 keys)", () => {
     const before = buildVillaUpdateAuditBefore(input);
     const after = buildVillaUpdateAuditAfter(input);
     expect(Object.keys(before).sort()).toEqual(Object.keys(after).sort());
-    expect(Object.keys(before).length).toBe(21);
+    expect(Object.keys(before).length).toBe(22);
   });
 
   it("counts are NOT filtered (update asimetrisi vs create)", () => {

@@ -303,7 +303,7 @@ describe("buildVillaCorePayload — delegated normalizers", () => {
 });
 
 describe("buildVillaCorePayload — key set invariant", () => {
-  it("returns EXACTLY 36 expected keys (regression guard)", () => {
+  it("returns EXACTLY 44 expected keys (regression guard)", () => {
     /* Bu test payload object'in key set'inin sabit kaldığını
        garantiler. Yeni alan eklenirse buradaki sayı + listenin
        bilinçli güncellenmesi gerekir. DB write surface kontrolü. */
@@ -315,7 +315,9 @@ describe("buildVillaCorePayload — key set invariant", () => {
     const keys = Object.keys(p).sort();
     const EXPECTED = [
       "badge",
+      "bathroom_layout",
       "bathrooms",
+      "bedroom_layout",
       "bedrooms",
       "child_pool",
       "child_pool_depth",
@@ -340,10 +342,16 @@ describe("buildVillaCorePayload — key set invariant", () => {
       "map_type",
       "minimum_stay_nights",
       "noindex",
+      "owner_id",
       "pool_depth",
+      "pool_heating_currency",
+      "pool_heating_fee",
+      "pool_heating_months",
       "pool_length",
+      "pool_sheltered",
       "pool_type",
       "pool_width",
+      "real_title",
       "seo_description",
       "seo_title",
       "slug",
@@ -351,7 +359,14 @@ describe("buildVillaCorePayload — key set invariant", () => {
       "tourism_document_number",
       "youtube_videos",
     ].sort();
-    expect(keys.length).toBe(36);
+    /* 🛡️ SABİT LİSTE GÜNCELLEMESİ (FAZ 1/A): testin kendi yorumunun
+       öngördüğü bakım adımı. Sonradan eklenen 8 alan — bathroom_layout
+       + bedroom_layout (migration 047), pool_sheltered (073),
+       pool_heating_fee/_currency/_months (074-076), real_title (072),
+       owner_id (property owners) — listeye eklendi. Anahtar SİLİNMEDİ;
+       `toEqual(EXPECTED)` tam-küme kontrolü AYNEN duruyor, yani guard
+       gevşemedi. Üretim kodu DEĞİŞMEDİ. */
+    expect(keys.length).toBe(44);
     expect(keys).toEqual(EXPECTED);
   });
 });

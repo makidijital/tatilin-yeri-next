@@ -62,6 +62,17 @@ function findFn(src: ts.SourceFile, name: string): ts.FunctionDeclaration {
   return result;
 }
 
+/* 🛡️ FAZ 1/D — DEPENDENCY-INJECTION HİZALAMASI (üretim kodu DEĞİŞMEDİ)
+   Rezervasyon servisleri test edilebilirlik için DI'ya geçti:
+     const repository = deps?.repository ?? reservationRepository;
+     await repository.updateById(id, { status });
+   Literal `reservationRepository.updateById` artık YALNIZ tip tanımında
+   ve `deps` default'unda geçiyor, ÇAĞRI YERİNDE değil — bu yüzden eski
+   regex'ler tutmuyordu. Aşağıda regex'ler gerçek çağrı biçimine
+   hizalandı ve AYRICA "DI default'u gerçekten reservationRepository'ye
+   bağlanıyor mu" kontrolü EKLENDİ. Yani await / payload / EXACTLY-ONCE
+   invariant'ları korundu, kapsam GENİŞLEDİ (gevşemedi). */
+
 describe("updateReservationStatus — orchestration contract", () => {
   const fn = findFn(
     loadSource("app/services/reservation/status.service.ts"),
@@ -82,14 +93,23 @@ describe("updateReservationStatus — orchestration contract", () => {
     expect(text).toContain('"confirmed"');
   });
 
-  it("reservationRepository.updateById awaited", () => {
-    expect(text).toMatch(/await\s+reservationRepository\.updateById/);
+  it("repository DI default binds to reservationRepository", () => {
+    /* Alias'ın gerçekten gerçek repository'ye düştüğünü kanıtlar —
+       aşağıdaki `repository.updateById` assertion'ı ancak bu sayede
+       "reservationRepository.updateById" anlamına gelir. */
+    expect(text).toMatch(
+      /const\s+repository\s*=\s*deps\?\.repository\s*\?\?\s*reservationRepository/
+    );
+  });
+
+  it("reservationRepository.updateById awaited (DI alias üzerinden)", () => {
+    expect(text).toMatch(/await\s+repository\.updateById/);
   });
 
   it("repository call passes { status } payload", () => {
     /* Payload shape `{ status }` orchestrator'da inline kalır;
        repository payload'a müdahil olmaz. */
-    expect(text).toMatch(/reservationRepository\.updateById\(\s*id\s*,\s*\{\s*status\s*\}\s*\)/);
+    expect(text).toMatch(/repository\.updateById\(\s*id\s*,\s*\{\s*status\s*\}\s*\)/);
   });
 
   it("does NOT touch the DB client directly (repository delegation)", () => {
@@ -139,12 +159,18 @@ describe("deleteReservationById — orchestration contract", () => {
     }
   });
 
-  it("reservationRepository.deleteById awaited", () => {
-    expect(text).toMatch(/await\s+reservationRepository\.deleteById/);
+  it("repository DI default binds to reservationRepository", () => {
+    expect(text).toMatch(
+      /const\s+repository\s*=\s*deps\?\.repository\s*\?\?\s*reservationRepository/
+    );
+  });
+
+  it("reservationRepository.deleteById awaited (DI alias üzerinden)", () => {
+    expect(text).toMatch(/await\s+repository\.deleteById/);
   });
 
   it("repository call passes id arg only", () => {
-    expect(text).toMatch(/reservationRepository\.deleteById\(\s*id\s*\)/);
+    expect(text).toMatch(/repository\.deleteById\(\s*id\s*\)/);
   });
 
   it("does NOT touch the DB client directly (repository delegation)", () => {
@@ -171,7 +197,7 @@ describe("deleteReservationById — orchestration contract", () => {
     /* Eski deleteReservationById behavior: hard delete only, no
        cascade in service layer. FAZ 33: invariant aynı; sayım
        repository identifier üzerinden. */
-    const repoMatches = text.match(/reservationRepository\.deleteById/g) || [];
+    const repoMatches = text.match(/\brepository\.deleteById/g) || [];
     expect(repoMatches.length).toBe(1);
   });
 });

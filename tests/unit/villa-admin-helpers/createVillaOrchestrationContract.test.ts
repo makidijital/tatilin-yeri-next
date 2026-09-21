@@ -10,8 +10,8 @@
      3. AWAITED villaAdminRepository.insertVilla (villa row)
      4. CONDITIONAL await insertVillaTypeRelations (if selectedTypes?.length)
      5. CONDITIONAL await insertVillaFeatureRelations
-     6. CONDITIONAL await setVillaDistances
-     7. CONDITIONAL await setVillaPrices
+     6. CONDITIONAL await setVillaDistancesServer
+     7. CONDITIONAL await setVillaPricesServer
      8. CONDITIONAL await insertVillaRuleRelations
      9. CONDITIONAL await insertVillaPriceIncludeRelations
     10. return newId
@@ -128,6 +128,15 @@ const idx = (name: string): number => seq.findIndex((e) => e.name === name);
 
 /* ---------------- Tests ---------------- */
 
+/* 🛡️ FAZ 1/C — IDENTIFIER HİZALAMASI (üretim kodu DEĞİŞMEDİ)
+   `setVillaDistances` / `setVillaPrices` anon-`db` + silent-fail
+   tuzağı nedeniyle server-only karşılıklarıyla değiştirilmişti
+   (`setVillaDistancesServer` / `setVillaPricesServer` — bkz. ilgili
+   service dosyasının başlık yorumu). Bu contract testi `idx(name)`
+   ile BİREBİR identifier eşleşmesi aradığı için `-1` dönüyordu.
+   Aşağıda YALNIZCA aranan isim güncellendi; sıra / await /
+   conditional / BEFORE-AFTER assertion'larının hiçbiri gevşetilmedi. */
+
 describe("createVillaFull — early validation", () => {
   it("throws Error when form.title is missing (first statement)", () => {
     /* `if (!form.title) { throw new Error("Villa adı zorunlu"); }` */
@@ -188,14 +197,14 @@ describe("createVillaFull — orchestration order", () => {
   });
 
   it("setVillaDistances is CONDITIONAL", () => {
-    const i = idx("setVillaDistances");
+    const i = idx("setVillaDistancesServer");
     expect(i).toBeGreaterThanOrEqual(0);
     expect(seq[i].conditional).toBe(true);
     expect(seq[i].awaited).toBe(true);
   });
 
   it("setVillaPrices is CONDITIONAL", () => {
-    const i = idx("setVillaPrices");
+    const i = idx("setVillaPricesServer");
     expect(i).toBeGreaterThanOrEqual(0);
     expect(seq[i].conditional).toBe(true);
     expect(seq[i].awaited).toBe(true);
@@ -209,16 +218,16 @@ describe("createVillaFull — orchestration order", () => {
 
   it("insertVillaFeatureRelations comes BEFORE setVillaDistances", () => {
     expect(idx("insertVillaFeatureRelations")).toBeLessThan(
-      idx("setVillaDistances")
+      idx("setVillaDistancesServer")
     );
   });
 
   it("setVillaDistances comes BEFORE setVillaPrices", () => {
-    expect(idx("setVillaDistances")).toBeLessThan(idx("setVillaPrices"));
+    expect(idx("setVillaDistancesServer")).toBeLessThan(idx("setVillaPricesServer"));
   });
 
   it("setVillaPrices comes BEFORE insertVillaRuleRelations", () => {
-    expect(idx("setVillaPrices")).toBeLessThan(idx("insertVillaRuleRelations"));
+    expect(idx("setVillaPricesServer")).toBeLessThan(idx("insertVillaRuleRelations"));
   });
 
   it("insertVillaRuleRelations comes BEFORE insertVillaPriceIncludeRelations", () => {

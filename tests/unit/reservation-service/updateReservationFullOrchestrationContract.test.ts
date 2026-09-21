@@ -128,6 +128,16 @@ const idx = (name: string): number => seq.findIndex((e) => e.name === name);
 
 /* ---------------- Tests ---------------- */
 
+/* 🛡️ FAZ 1/D — DEPENDENCY-INJECTION HİZALAMASI (üretim kodu DEĞİŞMEDİ)
+   update.service.ts test edilebilirlik için DI'ya geçti:
+     const repository = deps?.repository ?? reservationRepository;
+     const { error } = await repository.updateById(id, payload);
+   Literal `reservationRepository.updateById` artık yalnız tip tanımında
+   ve `deps` default'unda geçiyor, çağrı yerinde değil. Aşağıda aranan
+   isim gerçek çağrıya hizalandı ve DI default'unun gerçek repository'ye
+   bağlandığı AYRICA doğrulanıyor. BEFORE/AFTER, await ve EXACTLY-ONCE
+   invariant'ları aynen korundu. */
+
 describe("updateReservationFull — early validation", () => {
   it("first statement throws 'ID gerekli' if !id", () => {
     const first = fnBody.statements[0];
@@ -163,7 +173,7 @@ describe("updateReservationFull — orchestration order", () => {
   it("buildUpdateReservationPayload BEFORE reservationRepository.updateById", () => {
     const bi = idx("buildUpdateReservationPayload");
     const ui = seq.findIndex(
-      (e) => e.name === "reservationRepository.updateById" && e.awaited
+      (e) => e.name === "repository.updateById" && e.awaited
     );
     expect(bi).toBeGreaterThanOrEqual(0);
     expect(ui).toBeGreaterThanOrEqual(0);
@@ -173,6 +183,15 @@ describe("updateReservationFull — orchestration order", () => {
 });
 
 describe("updateReservationFull — single-UPDATE invariant", () => {
+  it("repository DI default binds to reservationRepository", () => {
+    /* Alias'ın gerçek repository'ye düştüğünü kanıtlar — aşağıdaki
+       `repository.updateById` sayımı ancak bu sayede
+       "reservationRepository.updateById" anlamına gelir. */
+    expect(fnBody.getText()).toMatch(
+      /const\s+repository\s*=\s*deps\?\.repository\s*\?\?\s*reservationRepository/
+    );
+  });
+
   it("calls reservationRepository.updateById EXACTLY ONCE (top-level await)", () => {
     /* Note: assertCanConfirm helper internal'inde repository çağırabilir
        ama bu test sadece update.service.ts'in own body'sini AST'le
@@ -182,7 +201,7 @@ describe("updateReservationFull — single-UPDATE invariant", () => {
        eski sağlayıcı chain'i sayıyordu; artık repository identifier'ı
        sayıyor — orchestration sırası invariant'ı aynı. */
     const repoCalls = seq.filter(
-      (e) => e.name === "reservationRepository.updateById"
+      (e) => e.name === "repository.updateById"
     );
     expect(repoCalls.length).toBe(1);
   });
