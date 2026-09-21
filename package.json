@@ -26,7 +26,6 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@node-rs/argon2": "^2.0.2",
-    "@sentry/nextjs": "^10.51.0",
     "@tiptap/extension-image": "^3.26.1",
     "@tiptap/extension-link": "^3.26.1",
     "@tiptap/extension-table": "^3.26.1",
