@@ -390,10 +390,33 @@ export default async function AramaPageBody({
        - 3+ kategori seçimlerinde empty-state olasılığı yüksek;
          ürün kararı gereği kabul edildi (filtre = daraltma).
      =============================================================== */
+  /* 🛡️ PERF — İKİ JUNCTION SORGUSU PARALEL BAŞLATILIR.
+     ÖNCE: tip sorgusu `await` edilir, BİTTİKTEN SONRA özellik sorgusu
+     başlardı (iki SIRALI RTT). Bu iki sorgu birbirinin çıktısını
+     KULLANMAZ; kesişim (`matchVillaIds`) zaten ikisi de geldikten
+     sonra alınır → eager başlatmak sonucu DEĞİŞTİREMEZ.
+     GÜVENLİ ÇÜNKÜ:
+       • Repository metodları REJECT ETMEZ — native provider hatayı
+         yakalayıp `{ data: null, error }` döndürür
+         (lib/db/native-db.provider.ts). Dolayısıyla "unhandled
+         rejection" riski YOK.
+       • Guard'lar (`categories.length > 0` / `featureIds.length > 0`)
+         AYNEN korundu → filtre seçili değilse sorgu HİÇ kurulmaz
+         (ek sorgu YOK; mevcut davranış birebir).
+       • Her bloğun defansif hata tutumu (`error` → filtre atlanır)
+         ve tüm AND/Set mantığı DEĞİŞMEDİ. */
+  const categoryRelsPromise =
+    categories.length > 0
+      ? villaTypeRepository.findVillaTypeRelationsByTypeIds(categories)
+      : null;
+  const featureRelsPromise =
+    featureIds.length > 0
+      ? villaFeatureRepository.findVillaFeatureRelationsByFeatureIds(featureIds)
+      : null;
+
   let categoryVillaIds: string[] | null = null;
   if (categories.length > 0) {
-    const { data: rels, error: relsErr } =
-      await villaTypeRepository.findVillaTypeRelationsByTypeIds(categories);
+    const { data: rels, error: relsErr } = await categoryRelsPromise!;
 
     if (relsErr) {
       console.error(
@@ -460,9 +483,7 @@ export default async function AramaPageBody({
   let featureVillaIds: string[] | null = null;
   if (featureIds.length > 0) {
     const { data: featureRels, error: featureRelsErr } =
-      await villaFeatureRepository.findVillaFeatureRelationsByFeatureIds(
-        featureIds
-      );
+      await featureRelsPromise!;
 
     if (featureRelsErr) {
       console.error(
