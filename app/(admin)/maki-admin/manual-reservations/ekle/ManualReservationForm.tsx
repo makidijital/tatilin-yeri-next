@@ -525,7 +525,7 @@ export default function ManualReservationForm({
       <div className="card-premium p-6 space-y-2">
         <label className="text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] flex items-center gap-1.5">
           <HomeIcon size={12} className="text-[var(--color-champagne-600)]" />
-          Villa
+          Mülk
         </label>
         <VillaCombobox
           villas={villas || []}

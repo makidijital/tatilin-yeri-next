@@ -701,18 +701,18 @@ export default function VillaListesiClient({
       {villas.length === 0 ? (
         <div className="admin-card-flat p-12 text-center text-[var(--admin-muted-2)] space-y-2">
           <p className="font-medium text-[var(--admin-text)]">
-            Aktif villa bulunamadı.
+            Aktif mülk bulunamadı.
           </p>
           <p className="text-[12.5px]">
             Veri çekilemediyse server log&apos;a (
             <code>[villa-listesi.fetch]</code>) bakın; aksi halde
-            mülk yönetiminden bir villa ekleyin ve aktifleştirin.
+            mülk yönetiminden bir mülk ekleyin ve aktifleştirin.
           </p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="admin-card-flat p-12 text-center text-[var(--admin-muted-2)] space-y-2">
           <p className="font-medium text-[var(--admin-text)]">
-            Filtreye uyan villa yok.
+            Filtreye uyan mülk yok.
           </p>
           <p className="text-[12.5px]">
             Toplam {villas.length} aktif villa var. Bölge/kişi filtresini

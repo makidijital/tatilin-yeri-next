@@ -620,7 +620,7 @@ export default function AdminReservationsPage() {
                   {villaCoverUrl ? (
                     <img
                       src={villaCoverUrl}
-                      alt={r.villa?.title || "Villa"}
+                      alt={r.villa?.title || "Mülk"}
                       className="w-full h-full object-cover"
                     />
                   ) : (

@@ -31,8 +31,8 @@ export default function VillaSelectCard({
 }) {
   return (
     <Section
-      eyebrow="Villa"
-      title="Villa"
+      eyebrow="Mülk"
+      title="Mülk"
       subtitle="Rezervasyonun yapıldığı mülkü değiştirebilirsin"
     >
       <div className="space-y-1.5">
@@ -41,7 +41,7 @@ export default function VillaSelectCard({
             size={12}
             className="text-[var(--color-champagne-600)] inline mr-1.5"
           />
-          Villa
+          Mülk
         </Label>
         <VillaCombobox
           villas={villas}

@@ -54,10 +54,10 @@ export default async function VillaSiralaPage() {
             <ChevronLeft size={14} />
             Mülkler
           </Link>
-          <p className="admin-page-eyebrow mt-3">Villalar</p>
-          <h1 className="admin-page-header__title">Villa Sırala</h1>
+          <p className="admin-page-eyebrow mt-3">Mülkler</p>
+          <h1 className="admin-page-header__title">Mülk Sırala</h1>
           <p className="admin-page-header__sub">
-            Villaları sürükle-bırak ile sırala. Sıra anlık olarak
+            Mülkleri sürükle-bırak ile sırala. Sıra anlık olarak
             kaydedilir; public site, arama ve homepage listeleri
             otomatik güncellenir. Bu ekranda yalnız sıralama yapılır
             — düzenleme / galeri / silme gibi işlemler için{" "}

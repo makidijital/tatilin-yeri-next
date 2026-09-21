@@ -253,7 +253,7 @@ export default function HomepageCollectionPage() {
       <div className="card-premium p-5">
         <div className="flex items-center justify-between gap-3 mb-3">
           <h2 className="text-[15px] font-medium text-[var(--color-stone-900)]">
-            Villa ekle
+            Mülk ekle
           </h2>
           <button
             onClick={() => setShowPicker((v) => !v)}
@@ -317,8 +317,8 @@ export default function HomepageCollectionPage() {
             Koleksiyon boş
           </h3>
           <p className="text-sm text-[var(--color-stone-500)] mt-2 max-w-md mx-auto">
-            Anasayfa şu an otomatik villa listesi gösteriyor. Manuel
-            yönetmek için yukarıdan villa ekleyin.
+            Anasayfa şu an otomatik mülk listesi gösteriyor. Manuel
+            yönetmek için yukarıdan mülk ekleyin.
           </p>
         </div>
       ) : (

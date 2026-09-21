@@ -73,7 +73,7 @@ export default function SeoStep({
         />
         <div className="flex justify-between items-center text-[11px]">
           <span className="text-[var(--color-stone-400)]">
-            Boş bırakılırsa villa adı kullanılır
+            Boş bırakılırsa mülk adı kullanılır
           </span>
           <span
             className={
@@ -103,7 +103,7 @@ export default function SeoStep({
         />
         <div className="flex justify-between items-center text-[11px]">
           <span className="text-[var(--color-stone-400)]">
-            Boş bırakılırsa villa açıklamasından özet üretilir
+            Boş bırakılırsa mülk açıklamasından özet üretilir
           </span>
           <span
             className={
@@ -124,7 +124,7 @@ export default function SeoStep({
             Arama motorlarında gizle
           </p>
           <p className="text-xs text-[var(--color-stone-500)] mt-0.5">
-            Açıkken bu villa Google&apos;da listelenmez (noindex,
+            Açıkken bu mülk Google&apos;da listelenmez (noindex,
             nofollow)
           </p>
         </div>

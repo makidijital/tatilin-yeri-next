@@ -571,13 +571,13 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
           {isInactive && (
             <VillaTemporaryUrlButton
               villaId={String(villa.id)}
-              villaTitle={String(villa.title || "Villa")}
+              villaTitle={String(villa.title || "Mülk")}
             />
           )}
 
           <VillaZipShareButton
             villaId={String(villa.id)}
-            villaTitle={String(villa.title || "Villa")}
+            villaTitle={String(villa.title || "Mülk")}
           />
 
           <Link
@@ -599,7 +599,7 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
           <div className="flex items-center gap-1.5">
             <VillaActions
               villaId={String(villa.id)}
-              villaTitle={String(villa.title || "Villa")}
+              villaTitle={String(villa.title || "Mülk")}
               initialActive={villa.is_active !== false}
             />
           </div>

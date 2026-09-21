@@ -508,7 +508,7 @@ export default function ExternalReservationList() {
               />
             </div>
           </FilterField>
-          <FilterField label="Villa">
+          <FilterField label="Mülk">
             <select
               value={villaFilter}
               onChange={(e) => setVillaFilter(e.target.value)}
@@ -598,7 +598,7 @@ export default function ExternalReservationList() {
             Bu filtrelerle eşleşen kayıt yok
           </h3>
           <p className="text-sm text-[var(--color-stone-500)] mt-2 max-w-md mx-auto">
-            Villa edit sayfasından iCal kaynağı ekleyip senkronize edince
+            Mülk edit sayfasından iCal kaynağı ekleyip senkronize edince
             burada görünür.
           </p>
         </div>

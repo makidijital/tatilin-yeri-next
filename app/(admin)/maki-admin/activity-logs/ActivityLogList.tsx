@@ -61,7 +61,7 @@ type ListResponse = {
 const PAGE_SIZE = 50;
 
 const ENTITY_LABEL: Record<string, string> = {
-  villa: "Villa",
+  villa: "Mülk",
   reservation: "Rezervasyon",
   manual_reservation: "Manuel Rez.",
   review: "Yorum",

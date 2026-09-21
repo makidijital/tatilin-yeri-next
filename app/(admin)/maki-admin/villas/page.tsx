@@ -135,7 +135,7 @@ export default async function VillasPage({
           </Link>
           <Link href="/maki-admin/villas/ekle" className="admin-btn-primary">
             <Plus size={15} />
-            Yeni Villa
+            Yeni Mülk
           </Link>
         </div>
       </header>
@@ -147,10 +147,10 @@ export default async function VillasPage({
             <Home size={18} className="text-[var(--admin-muted)]" />
           </div>
           <h3 className="font-display text-[22px] text-[var(--admin-text)] mt-4 tracking-[-0.015em]">
-            Henüz villa eklenmemiş
+            Henüz mülk eklenmemiş
           </h3>
           <p className="text-[var(--admin-muted)] text-sm mt-2 max-w-sm mx-auto">
-            İlk villanı ekleyerek katalog oluşturmaya başla. Daha sonra galeri,
+            İlk mülkünü ekleyerek katalog oluşturmaya başla. Daha sonra galeri,
             fiyatlar ve özellikler ekleyebilirsin.
           </p>
           <Link
@@ -158,7 +158,7 @@ export default async function VillasPage({
             className="admin-btn-primary mt-6 inline-flex"
           >
             <Plus size={15} />
-            Villa Ekle
+            Mülk Ekle
           </Link>
         </div>
       ) : (

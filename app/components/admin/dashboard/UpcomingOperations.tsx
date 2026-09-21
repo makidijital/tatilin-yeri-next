@@ -52,7 +52,7 @@ export default function UpcomingOperations({
         <div>
           <h3 className="admin-card__title">Yaklaşan Operasyonlar</h3>
           <p className="admin-card__sub">
-            Yaklaşan villa giriş ve çıkış hareketleri
+            Yaklaşan mülk giriş ve çıkış hareketleri
           </p>
         </div>
       </div>

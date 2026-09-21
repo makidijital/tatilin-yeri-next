@@ -218,7 +218,7 @@ describe("villa-listesi — render pagination (yalnız görüntüleme sınırı)
     renderList(0);
     expect(cards()).toHaveLength(0);
     expect(pagerNav()).toBeNull();
-    expect(screen.getByText("Aktif villa bulunamadı.")).toBeTruthy();
+    expect(screen.getByText("Aktif mülk bulunamadı.")).toBeTruthy();
   });
 });
 

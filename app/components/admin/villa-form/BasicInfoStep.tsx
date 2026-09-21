@@ -167,7 +167,7 @@ export default function BasicInfoStep({
               }
             />
             <p className="text-[11px] text-[var(--color-stone-400)]">
-              Villa kartında üstte gösterilen rozet (opsiyonel).
+              Mülk kartında üstte gösterilen rozet (opsiyonel).
             </p>
           </div>
 
@@ -280,7 +280,7 @@ export default function BasicInfoStep({
                     </p>
                   ) : (
                     <p className="text-[11px] text-[var(--color-stone-400)]">
-                      Bu villadan alınacak komisyon oranı. Boş bırakılırsa 20
+                      Bu mülkten alınacak komisyon oranı. Boş bırakılırsa 20
                       uygulanır.
                     </p>
                   )}

@@ -42,8 +42,8 @@ export default function Page() {
           Misafir yorumları
         </h1>
         <p className="text-sm text-[var(--color-stone-500)] mt-2">
-          Yeni gelen yorumlar admin onayı sonrası villa detay
-          sayfalarında yayınlanır. Her villa için en fazla bir
+          Yeni gelen yorumlar admin onayı sonrası mülk detay
+          sayfalarında yayınlanır. Her mülk için en fazla bir
           yorum &ldquo;öne çıkan&rdquo; olabilir.
         </p>
       </div>

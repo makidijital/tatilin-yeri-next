@@ -20,7 +20,7 @@ export default function Page() {
           Teklif talepleri
         </h1>
         <p className="text-sm text-[var(--color-stone-500)] mt-2">
-          /teklif-al sayfasından gelen kişiselleştirilmiş villa
+          /teklif-al sayfasından gelen kişiselleştirilmiş mülk
           talepleri. Tatil danışmanı süreç boyunca durumu günceller.
         </p>
       </div>

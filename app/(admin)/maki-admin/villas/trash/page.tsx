@@ -247,8 +247,8 @@ export default function VillaTrashPage() {
             Çöp Kutusu boş
           </h3>
           <p className="text-[var(--admin-muted)] text-sm mt-2 max-w-sm mx-auto">
-            Silinmiş villa yok. Buraya yalnızca soft delete ile çöpe
-            taşınan villalar düşer.
+            Silinmiş mülk yok. Buraya yalnızca soft delete ile çöpe
+            taşınan mülkler düşer.
           </p>
         </div>
       ) : (
@@ -273,7 +273,7 @@ export default function VillaTrashPage() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={cover}
-                      alt={villa.title || "Villa"}
+                      alt={villa.title || "Mülk"}
                       loading="lazy"
                       decoding="async"
                       className="absolute inset-0 w-full h-full object-cover object-center opacity-80"

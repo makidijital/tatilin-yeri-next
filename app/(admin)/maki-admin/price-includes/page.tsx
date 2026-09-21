@@ -110,7 +110,7 @@ export default function PriceIncludesPage() {
           Fiyata dahil olanlar
         </h1>
         <p className="text-sm text-[var(--color-stone-500)] mt-2">
-          Villa detayında &ldquo;Fiyata Dahil&rdquo; listesi olarak gösterilir.
+          Mülk detayında &ldquo;Fiyata Dahil&rdquo; listesi olarak gösterilir.
         </p>
       </div>
 

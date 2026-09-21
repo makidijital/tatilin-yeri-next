@@ -245,7 +245,7 @@ export default function VillaCombobox({
           >
             {rendered.length === 0 ? (
               <p className="px-4 py-6 text-center text-[13px] text-[var(--color-stone-400)]">
-                Eşleşen villa yok.
+                Eşleşen mülk yok.
               </p>
             ) : (
               rendered.map((v, i) => {

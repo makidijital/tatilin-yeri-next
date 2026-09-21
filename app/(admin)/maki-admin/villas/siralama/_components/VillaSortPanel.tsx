@@ -155,7 +155,7 @@ export default function VillaSortPanel({
     return (
       <div className="admin-card-flat p-12 text-center text-[var(--admin-muted-2)]">
         <p className="font-medium text-[var(--admin-text)]">
-          Sıralanacak villa yok
+          Sıralanacak mülk yok
         </p>
         <p className="text-[12.5px] mt-1">
           Önce{" "}
@@ -163,7 +163,7 @@ export default function VillaSortPanel({
             href="/maki-admin/villas/ekle"
             className="underline underline-offset-4 hover:text-[var(--admin-text)]"
           >
-            yeni villa
+            yeni mülk
           </Link>{" "}
           ekleyin.
         </p>

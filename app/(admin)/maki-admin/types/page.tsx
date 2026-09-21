@@ -456,10 +456,10 @@ export default function TypesPage() {
         <div>
           <p className="eyebrow">Yönetim</p>
           <h1 className="font-display text-3xl md:text-4xl text-[var(--color-stone-900)] mt-2 tracking-[-0.02em]">
-            Villa tipleri
+            Mülk tipleri
           </h1>
           <p className="text-sm text-[var(--color-stone-500)] mt-2">
-            Anasayfa filtrelerinde ve villa kayıtlarında kullanılır.
+            Anasayfa filtrelerinde ve mülk kayıtlarında kullanılır.
           </p>
         </div>
 
@@ -533,7 +533,7 @@ export default function TypesPage() {
             Henüz tip eklenmemiş
           </h3>
           <p className="text-sm text-[var(--color-stone-500)] mt-2">
-            Yukarıdan ilk villa tipini eklemeyi dene.
+            Yukarıdan ilk mülk tipini eklemeyi dene.
           </p>
         </div>
       ) : sortMode ? (

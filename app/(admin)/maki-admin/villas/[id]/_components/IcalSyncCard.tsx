@@ -305,7 +305,7 @@ export default function IcalSyncCard({
         <div className="flex items-center gap-2">
           <LinkIcon size={13} className="text-[var(--brand-coral)]" aria-hidden />
           <p className="text-[10.5px] tracking-[0.18em] uppercase font-medium text-[var(--color-stone-500)]">
-            Bu villa için export URL
+            Bu mülk için export URL
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

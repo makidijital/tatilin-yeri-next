@@ -33,7 +33,7 @@ export default function VillaSelectStep({
   return (
     <Section
       eyebrow="Adım 3"
-      title="Villa"
+      title="Mülk"
       subtitle="Rezervasyon yapılacak mülkü seç"
     >
       <div className="space-y-1.5">
@@ -42,7 +42,7 @@ export default function VillaSelectStep({
             size={12}
             className="text-[var(--color-champagne-600)] inline mr-1.5"
           />
-          Villa
+          Mülk
         </Label>
         <VillaCombobox
           villas={villas as unknown as VillaOption[]}

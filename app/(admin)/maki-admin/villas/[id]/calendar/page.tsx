@@ -97,7 +97,7 @@ export default function VillaPricingCanvasPage() {
             className="btn-ghost"
           >
             <ArrowLeft size={15} />
-            Villa Düzenle
+            Mülk Düzenle
           </Link>
         </div>
       </div>

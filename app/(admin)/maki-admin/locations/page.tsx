@@ -352,7 +352,7 @@ export default function LocationsPage() {
           Bölgeler
         </h1>
         <p className="text-sm text-[var(--color-stone-500)] mt-2">
-          Villaların bulunduğu bölgeleri buradan yönetebilirsin.
+          Mülklerin bulunduğu bölgeleri buradan yönetebilirsin.
         </p>
       </div>
 

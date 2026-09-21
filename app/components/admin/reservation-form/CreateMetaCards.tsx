@@ -27,7 +27,7 @@ export default function CreateMetaCards({
       </div>
       <div className="card-premium p-5">
         <p className="text-[11px] tracking-[0.16em] uppercase font-semibold text-[var(--color-stone-400)]">
-          Villa
+          Mülk
         </p>
         <p className="font-medium text-[var(--color-stone-900)] mt-1">
           {villaTitle || "—"}

@@ -144,7 +144,7 @@ export default function Page() {
           Blok düzenle
         </h1>
         <p className="text-sm text-[var(--color-stone-500)] mt-2">
-          Tarih aralığı, villa veya notu güncelleyebilirsin. Diğer
+          Tarih aralığı, mülk veya notu güncelleyebilirsin. Diğer
           rezervasyonlarla çakışma kontrolü otomatik uygulanır.
         </p>
       </div>

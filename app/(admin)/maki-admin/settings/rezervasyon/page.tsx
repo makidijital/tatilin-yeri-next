@@ -71,7 +71,7 @@ export default function SettingsReservationPage() {
           Rezervasyon
         </h1>
         <p className="text-sm text-[var(--color-stone-500)] mt-2 max-w-2xl">
-          Genel rezervasyon davranışları. Villa-spesifik
+          Genel rezervasyon davranışları. Mülk-spesifik
           custom_prepayment_rate override mevcut; bu değer fallback.
         </p>
       </div>

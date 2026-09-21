@@ -86,7 +86,7 @@ export function ReservationMetaCards({
             size={11}
             className="text-[var(--color-champagne-600)]"
           />
-          Villa
+          Mülk
         </p>
         <p className="font-medium text-[var(--color-stone-900)] mt-1 truncate">
           {data.villa?.title || "—"}

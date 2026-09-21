@@ -98,7 +98,7 @@ export default function AdminVillaGallery() {
             className="inline-flex items-center gap-1 text-[13px] text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] transition"
           >
             <ChevronLeft size={14} />
-            Villa düzenle
+            Mülk düzenle
           </Link>
           <p className="eyebrow mt-3">Mülk</p>
           <h1 className="font-display text-3xl md:text-4xl text-[var(--color-stone-900)] mt-2 tracking-[-0.02em]">

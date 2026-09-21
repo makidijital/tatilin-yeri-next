@@ -141,7 +141,7 @@ export default function AdminReservationDetailPage() {
   const STEPS: { id: number; label: string }[] = [
     { id: 1, label: "Kişisel" },
     { id: 2, label: "Konum" },
-    { id: 3, label: "Villa" },
+    { id: 3, label: "Mülk" },
     { id: 4, label: "Tarih" },
     { id: 5, label: "Misafir" },
     { id: 6, label: "Fiyat" },

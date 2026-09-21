@@ -107,10 +107,10 @@ export default function RulesPage() {
       <div>
         <p className="eyebrow">Yönetim</p>
         <h1 className="font-display text-3xl md:text-4xl text-[var(--color-stone-900)] mt-2 tracking-[-0.02em]">
-          Villa kuralları
+          Mülk kuralları
         </h1>
         <p className="text-sm text-[var(--color-stone-500)] mt-2">
-          Villa detayında &ldquo;Kurallar&rdquo; listesi olarak gösterilir.
+          Mülk detayında &ldquo;Kurallar&rdquo; listesi olarak gösterilir.
         </p>
       </div>
 

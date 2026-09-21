@@ -357,10 +357,10 @@ export default function EditVilla() {
         <div>
           <p className="eyebrow">Mülk</p>
           <h1 className="font-display text-3xl md:text-4xl text-[var(--color-stone-900)] mt-2 tracking-[-0.02em]">
-            Yeni villa ekle
+            Yeni mülk ekle
           </h1>
           <p className="text-sm text-[var(--color-stone-500)] mt-2">
-            Villaya ait tüm detayları ekle, görselleri sonraki adımda
+            Mülke ait tüm detayları ekle, görselleri sonraki adımda
             yükleyebilirsin.
           </p>
         </div>
