@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAdminAction } from "@/lib/auth/action-authz";
 import { revalidateTag } from "next/cache";
 
 /* ===============================================================
@@ -46,18 +47,22 @@ import { revalidateTag } from "next/cache";
    =============================================================== */
 
 export async function revalidateSettings(): Promise<void> {
+  await requireAdminAction();
   revalidateTag("settings", { expire: 0 });
 }
 
 export async function revalidateMenu(): Promise<void> {
+  await requireAdminAction();
   revalidateTag("menu", { expire: 0 });
 }
 
 export async function revalidateVillas(): Promise<void> {
+  await requireAdminAction();
   revalidateTag("villas", { expire: 0 });
 }
 
 export async function revalidateTaxonomy(): Promise<void> {
+  await requireAdminAction();
   revalidateTag("taxonomy", { expire: 0 });
 }
 
@@ -68,6 +73,7 @@ export async function revalidateTaxonomy(): Promise<void> {
    ama bir villa edit'lendi → koleksiyon cache'i gereksizyere
    temizlenmesin). */
 export async function revalidateHomepage(): Promise<void> {
+  await requireAdminAction();
   revalidateTag("homepage", { expire: 0 });
 }
 
@@ -75,6 +81,7 @@ export async function revalidateHomepage(): Promise<void> {
    CRUD sonrası çağrılır. DiscountCollection section'ı getCachedDiscount
    CollectionVillas (tag "discount") ile beslenir. "homepage"den AYRI. */
 export async function revalidateDiscount(): Promise<void> {
+  await requireAdminAction();
   revalidateTag("discount", { expire: 0 });
 }
 
@@ -82,6 +89,7 @@ export async function revalidateDiscount(): Promise<void> {
    replaceFaqs sonrası çağrılır. Homepage FAQ section'ı bu tag'i
    kullanan getCachedFaqs ile beslenir. */
 export async function revalidateFaqs(): Promise<void> {
+  await requireAdminAction();
   revalidateTag("faqs", { expire: 0 });
 }
 
@@ -91,5 +99,6 @@ export async function revalidateFaqs(): Promise<void> {
    Tag: "villa-reviews" — getCachedVillaReviews + getCachedVillaReviewStats
    her iki helper bu tag altında — tek invalidate her ikisini temizler. */
 export async function revalidateVillaReviews(): Promise<void> {
+  await requireAdminAction();
   revalidateTag("villa-reviews", { expire: 0 });
 }

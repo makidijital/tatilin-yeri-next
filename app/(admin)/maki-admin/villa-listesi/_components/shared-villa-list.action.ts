@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import {
   createSharedVillaList as createSharedVillaListService,
   type CreateSharedVillaListInput,
@@ -21,5 +22,6 @@ import {
 export async function createSharedVillaListAction(
   input: CreateSharedVillaListInput
 ): Promise<CreateSharedVillaListResult> {
+  await requirePermission("villa_lists");
   return createSharedVillaListService(input);
 }

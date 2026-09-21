@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
+import {
   getMenuTranslations,
   upsertMenuTranslation,
   type MenuTranslationInput,
@@ -27,6 +31,7 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
 export async function loadMenuTranslationsAction(
   menuId: string
 ): Promise<MenuTranslationsListResult> {
+  await requirePermission("menu");
   return getMenuTranslations(menuId);
 }
 
@@ -35,6 +40,9 @@ export async function saveMenuTranslationAction(
 ): Promise<MenuTranslationResult> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, error: "Yetkisiz" };
+  if (!(await callerHasPermission(auth.caller.id, "menu"))) {
+    return { ok: false, error: "Yetkisiz" };
+  }
 
   return upsertMenuTranslation(input);
 }

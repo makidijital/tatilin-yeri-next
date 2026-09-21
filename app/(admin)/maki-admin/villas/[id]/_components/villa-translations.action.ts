@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
+import {
   getVillaTranslations,
   upsertVillaTranslation,
   type VillaTranslationInput,
@@ -22,6 +26,7 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
 export async function loadVillaTranslationsAction(
   villaId: string
 ): Promise<VillaTranslationsListResult> {
+  await requirePermission("villas");
   return getVillaTranslations(villaId);
 }
 
@@ -30,6 +35,9 @@ export async function saveVillaTranslationAction(
 ): Promise<VillaTranslationResult> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, error: "Yetkisiz" };
+  if (!(await callerHasPermission(auth.caller.id, "villas"))) {
+    return { ok: false, error: "Yetkisiz" };
+  }
 
   return upsertVillaTranslation(input);
 }

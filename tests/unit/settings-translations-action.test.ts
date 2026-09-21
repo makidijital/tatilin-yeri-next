@@ -23,6 +23,15 @@ const upsertSettingsTranslationMock = vi.fn();
 const deleteSettingsTranslationMock = vi.fn();
 const revalidateSettingsMock = vi.fn();
 
+/* 🛡️ SERVER ACTION AUTHZ — permission kaynağı (admin_users.sidebar_permissions).
+   "yetkili oturum" artık AKTİF + "settings" izinli demek. Assertion'lar aynen. */
+const findByIdForSessionMock = vi.fn();
+vi.mock("@/lib/db/admin-user.repository.server", () => ({
+  adminUserServerRepository: {
+    findByIdForSession: (...a: unknown[]) => findByIdForSessionMock(...a),
+  },
+}));
+
 vi.mock("@/lib/admin-route-auth", () => ({
   authorizeAdminSession: (...args: unknown[]) =>
     authorizeAdminSessionMock(...args),
@@ -55,6 +64,14 @@ const OK_VALUES = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  findByIdForSessionMock.mockResolvedValue({
+    data: {
+      id: "admin-1",
+      is_active: true,
+      sidebar_permissions: ["settings"],
+    },
+    error: null,
+  });
   authorizeAdminSessionMock.mockResolvedValue({
     ok: true,
     caller: { id: "admin-1" },
@@ -165,9 +182,13 @@ describe("deleteSettingsTranslationAction", () => {
 });
 
 describe("loadSettingsTranslationsAction — okuma", () => {
-  it("9) ekstra auth ÇAĞRILMAZ, servise doğrudan delege edilir", async () => {
+  /* 🛡️ DAVRANIŞ DEĞİŞİKLİĞİ (Server Action authz sprint'i): okuma
+     action'ı ARTIK "settings" izni ister. Eski assertion ("ekstra auth
+     ÇAĞRILMAZ") tam olarak kapatılan açığı kodluyordu; gevşetilmedi,
+     TERSİNE ÇEVRİLDİ — delege + sonuç assertion'ları aynen korundu. */
+  it("9) okuma action'ı da yetki ister → yetkili admin servise delege edilir", async () => {
     const result = await loadSettingsTranslationsAction();
-    expect(authorizeAdminSessionMock).not.toHaveBeenCalled();
+    expect(authorizeAdminSessionMock).toHaveBeenCalledTimes(1);
     expect(getSettingsTranslationsMock).toHaveBeenCalledTimes(1);
     expect(result).toEqual({ ok: true, translations: {} });
   });

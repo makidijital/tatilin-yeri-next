@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import {
   getRuleItems as getRuleItemsService,
   addRuleItem as addRuleItemService,
@@ -21,10 +22,12 @@ import {
    =============================================================== */
 
 export async function getRuleItemsAction(): Promise<RuleItem[]> {
+  await requirePermission("rules");
   return getRuleItemsService();
 }
 
 export async function addRuleItemAction(title: string): Promise<boolean> {
+  await requirePermission("rules");
   return addRuleItemService(title);
 }
 
@@ -32,9 +35,11 @@ export async function updateRuleItemAction(
   id: string,
   title: string
 ): Promise<boolean> {
+  await requirePermission("rules");
   return updateRuleItemService(id, title);
 }
 
 export async function deleteRuleItemAction(id: string): Promise<boolean> {
+  await requirePermission("rules");
   return deleteRuleItemService(id);
 }

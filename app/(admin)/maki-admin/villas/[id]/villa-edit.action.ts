@@ -4,6 +4,7 @@
    identical `.single()` + PGRST116) repoint. Bu dosya "use server" →
    server-only native repo import'u güvenli. villaRepository yalnız
    findRawByIdSingle için; call-site aynı (villaAdminRepository → villaRepository alias). */
+import { requirePermission } from "@/lib/auth/action-authz";
 import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
 import { villaLocationRepository } from "@/lib/db/villa-location.repository";
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
@@ -29,6 +30,7 @@ import { getVillaPrices } from "@/app/services/villa-price.service";
    [id]/full` route'u (server-side, dbAdmin) aynen kullanılır.
    =============================================================== */
 export async function loadVillaEditData(id: string) {
+  await requirePermission("villas");
   const [
     villa,
     locations,

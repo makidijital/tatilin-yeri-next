@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
+import {
   getFaqTranslations,
   upsertFaqTranslation,
   type FaqTranslationInput,
@@ -26,6 +30,7 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
 export async function loadFaqTranslationsAction(
   faqIds: string[]
 ): Promise<FaqTranslationsMapResult> {
+  await requirePermission("faqs");
   return getFaqTranslations(faqIds);
 }
 
@@ -34,6 +39,9 @@ export async function saveFaqTranslationAction(
 ): Promise<FaqTranslationResult> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, error: "Yetkisiz" };
+  if (!(await callerHasPermission(auth.caller.id, "faqs"))) {
+    return { ok: false, error: "Yetkisiz" };
+  }
 
   return upsertFaqTranslation(input);
 }

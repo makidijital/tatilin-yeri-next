@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import type { ContactMessageRow } from "@/types/database";
 import {
   listMessages as listMessagesService,
@@ -23,6 +24,7 @@ import {
 export async function listMessagesAction(opts?: {
   includeArchived?: boolean;
 }): Promise<ContactMessageRow[]> {
+  await requirePermission("messages");
   return listMessagesService(opts);
 }
 
@@ -30,6 +32,7 @@ export async function markAsReadAction(
   id: string,
   isRead: boolean
 ): Promise<boolean> {
+  await requirePermission("messages");
   return markAsReadService(id, isRead);
 }
 
@@ -37,9 +40,11 @@ export async function archiveMessageAction(
   id: string,
   archived: boolean
 ): Promise<boolean> {
+  await requirePermission("messages");
   return archiveMessageService(id, archived);
 }
 
 export async function deleteMessageAction(id: string): Promise<boolean> {
+  await requirePermission("messages");
   return deleteMessageService(id);
 }

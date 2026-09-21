@@ -4,6 +4,10 @@
    byte-identical) repoint. Bu dosya "use server" (server action) →
    server-only native repo import'u güvenli. villaRepository yalnız bu
    method için kullanılıyor; method adı aynı. */
+import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
 import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
 import {
   getVillaPrices,
@@ -39,6 +43,7 @@ import { getStartingPrice } from "@/lib/price.engine";
    =============================================================== */
 
 export async function loadPricingData(villaId: string) {
+  await requirePermission("villas");
   const [villaRes, prices] = await Promise.all([
     villaRepository.findIdTitleCurrencyById(villaId),
     getVillaPrices(villaId),
@@ -64,6 +69,7 @@ export async function loadPricingData(villaId: string) {
 export async function getVillaCurrency(
   villaId: string
 ): Promise<string | null> {
+  await requirePermission("villas");
   const { data } = await villaRepository.findIdTitleCurrencyById(villaId);
   const villaCurrency = data?.currency || null;
   if (villaCurrency) return villaCurrency;
@@ -88,6 +94,9 @@ export async function savePricingData(
 ): Promise<void> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return;
+  if (!(await callerHasPermission(auth.caller.id, "villas"))) {
+    return;
+  }
 
   await setVillaPrices(villaId, prices);
 }

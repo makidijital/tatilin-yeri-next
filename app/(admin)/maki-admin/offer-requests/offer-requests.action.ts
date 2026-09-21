@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import type { OfferRequestRow, OfferRequestStatus } from "@/types/database";
 import {
   getOfferRequests as getOfferRequestsService,
@@ -21,6 +22,7 @@ import {
    =============================================================== */
 
 export async function getOfferRequestsAction(): Promise<OfferRequestRow[]> {
+  await requirePermission("offer_requests");
   return getOfferRequestsService();
 }
 
@@ -28,11 +30,13 @@ export async function updateOfferRequestStatusAction(
   id: string,
   status: OfferRequestStatus
 ): Promise<OfferRequestResult> {
+  await requirePermission("offer_requests");
   return updateOfferRequestStatusService(id, status);
 }
 
 export async function deleteOfferRequestAction(
   id: string
 ): Promise<OfferRequestResult> {
+  await requirePermission("offer_requests");
   return deleteOfferRequestService(id);
 }

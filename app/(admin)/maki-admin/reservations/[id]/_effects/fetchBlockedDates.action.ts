@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import { fetchBlockedDates } from "./fetchBlockedDates";
 import type {
   FetchBlockedDatesInput,
@@ -25,5 +26,6 @@ import type {
 export async function fetchBlockedDatesAction(
   input: FetchBlockedDatesInput
 ): Promise<BlockedDateGroups> {
+  await requirePermission("reservations");
   return fetchBlockedDates(input);
 }

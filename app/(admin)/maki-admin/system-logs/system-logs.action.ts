@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import {
   listMailLogs as listMailLogsService,
   type MailLog,
@@ -18,5 +19,6 @@ import {
    =============================================================== */
 
 export async function listMailLogsAction(limit = 50): Promise<MailLog[]> {
+  await requirePermission("system_logs");
   return listMailLogsService(limit);
 }

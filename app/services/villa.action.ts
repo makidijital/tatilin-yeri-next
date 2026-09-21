@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import {
   getVillasByIds as getVillasByIdsService,
   getTrashedVillas as getTrashedVillasService,
@@ -34,6 +35,7 @@ export async function getVillasByIdsAction(
 export async function getTrashedVillasAction(
   ...args: Parameters<typeof getTrashedVillasService>
 ): ReturnType<typeof getTrashedVillasService> {
+  await requirePermission("villas");
   return getTrashedVillasService(...args);
 }
 

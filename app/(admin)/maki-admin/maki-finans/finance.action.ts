@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import {
   getFinanceKpiSnapshot as getFinanceKpiSnapshotService,
   type FinanceKpiSnapshot,
@@ -21,5 +22,6 @@ import type { FinanceRangePreset } from "@/app/services/finance.constants";
 export async function getFinanceKpiSnapshotAction(
   preset?: FinanceRangePreset
 ): Promise<FinanceKpiSnapshot> {
+  await requirePermission("finance");
   return getFinanceKpiSnapshotService(preset);
 }

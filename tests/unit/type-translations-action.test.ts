@@ -19,6 +19,15 @@ const authorizeAdminSessionMock = vi.fn();
 const getTypeTranslationsMock = vi.fn();
 const upsertTypeTranslationMock = vi.fn();
 
+/* 🛡️ SERVER ACTION AUTHZ — permission kaynağı (admin_users.sidebar_permissions).
+   "yetkili oturum" artık AKTİF + "villa_types" izinli demek. Assertion'lar aynen. */
+const findByIdForSessionMock = vi.fn();
+vi.mock("@/lib/db/admin-user.repository.server", () => ({
+  adminUserServerRepository: {
+    findByIdForSession: (...a: unknown[]) => findByIdForSessionMock(...a),
+  },
+}));
+
 vi.mock("@/lib/admin-route-auth", () => ({
   authorizeAdminSession: (...args: unknown[]) =>
     authorizeAdminSessionMock(...args),
@@ -39,6 +48,10 @@ const TYPE_ID = "type-uuid-1";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  findByIdForSessionMock.mockResolvedValue({
+    data: { id: "admin-1", is_active: true, sidebar_permissions: ["villa_types"] },
+    error: null,
+  });
   authorizeAdminSessionMock.mockResolvedValue({
     ok: true,
     caller: { id: "admin-1" },
@@ -119,10 +132,13 @@ describe("saveTypeTranslationAction — authorizeAdminSession İLK kontrol", () 
 });
 
 describe("loadTypeTranslationsAction — okuma (sayfa zaten middleware korumalı)", () => {
-  it("5) ekstra auth ÇAĞRILMAZ, servise doğrudan delege edilir", async () => {
+  /* 🛡️ DAVRANIŞ DEĞİŞİKLİĞİ (Server Action authz sprint'i): okuma
+     action'ı ARTIK "villa_types" izni ister. Eski assertion kapatılan
+     açığı kodluyordu; gevşetilmedi, TERSİNE ÇEVRİLDİ. */
+  it("5) okuma action'ı da yetki ister → yetkili admin servise delege edilir", async () => {
     const result = await loadTypeTranslationsAction(TYPE_ID);
 
-    expect(authorizeAdminSessionMock).not.toHaveBeenCalled();
+    expect(authorizeAdminSessionMock).toHaveBeenCalledTimes(1);
     expect(getTypeTranslationsMock).toHaveBeenCalledWith(TYPE_ID);
     expect(result).toEqual({ ok: true, rows: [] });
   });

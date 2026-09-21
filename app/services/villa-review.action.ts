@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import {
   createVillaReview,
   getVillaReviewsForAdmin,
@@ -41,23 +42,27 @@ export async function createVillaReviewAction(
 export async function getVillaReviewsForAdminAction(
   ...args: Parameters<typeof getVillaReviewsForAdmin>
 ): ReturnType<typeof getVillaReviewsForAdmin> {
+  await requirePermission("reviews");
   return getVillaReviewsForAdmin(...args);
 }
 
 export async function approveVillaReviewAction(
   ...args: Parameters<typeof approveVillaReview>
 ): ReturnType<typeof approveVillaReview> {
+  await requirePermission("reviews");
   return approveVillaReview(...args);
 }
 
 export async function deleteVillaReviewAction(
   ...args: Parameters<typeof deleteVillaReview>
 ): ReturnType<typeof deleteVillaReview> {
+  await requirePermission("reviews");
   return deleteVillaReview(...args);
 }
 
 export async function toggleFeaturedReviewAction(
   ...args: Parameters<typeof toggleFeaturedReview>
 ): ReturnType<typeof toggleFeaturedReview> {
+  await requirePermission("reviews");
   return toggleFeaturedReview(...args);
 }

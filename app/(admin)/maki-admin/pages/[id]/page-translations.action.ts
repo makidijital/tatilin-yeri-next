@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
+import {
   getPageTranslations,
   upsertPageTranslation,
   type PageTranslationInput,
@@ -26,6 +30,7 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
 export async function loadPageTranslationsAction(
   pageId: string
 ): Promise<PageTranslationsListResult> {
+  await requirePermission("pages");
   return getPageTranslations(pageId);
 }
 
@@ -34,6 +39,9 @@ export async function savePageTranslationAction(
 ): Promise<PageTranslationResult> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, error: "Yetkisiz" };
+  if (!(await callerHasPermission(auth.caller.id, "pages"))) {
+    return { ok: false, error: "Yetkisiz" };
+  }
 
   return upsertPageTranslation(input);
 }

@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import {
   listExternalCalendarSources as listExternalCalendarSourcesService,
   createExternalCalendarSource as createExternalCalendarSourceService,
@@ -23,12 +24,14 @@ import {
 export async function listExternalCalendarSourcesAction(
   villaId: string
 ): Promise<ExternalCalendarSourceListResult> {
+  await requirePermission("external_calendars");
   return listExternalCalendarSourcesService(villaId);
 }
 
 export async function createExternalCalendarSourceAction(
   input: CreateExternalCalendarSourceInput
 ): Promise<ExternalCalendarSourceResult> {
+  await requirePermission("external_calendars");
   return createExternalCalendarSourceService(input);
 }
 
@@ -36,5 +39,6 @@ export async function setExternalCalendarSourceActiveAction(
   id: string,
   active: boolean
 ): Promise<ExternalCalendarSourceResult> {
+  await requirePermission("external_calendars");
   return setExternalCalendarSourceActiveService(id, active);
 }

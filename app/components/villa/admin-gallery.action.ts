@@ -1,5 +1,6 @@
 "use server";
 
+import { callerHasPermission } from "@/lib/auth/action-authz";
 import {
   updateImageOrder,
   setCoverImage,
@@ -26,6 +27,9 @@ export async function reorderGalleryImages(
 ): Promise<void> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return;
+  if (!(await callerHasPermission(auth.caller.id, "villas"))) {
+    return;
+  }
 
   await updateImageOrder(updates);
 }
@@ -36,6 +40,9 @@ export async function setGalleryCover(
 ): Promise<void> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return;
+  if (!(await callerHasPermission(auth.caller.id, "villas"))) {
+    return;
+  }
 
   await setCoverImage(id, villaId);
 }

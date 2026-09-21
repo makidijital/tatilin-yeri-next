@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
+import {
   getRuleTranslations,
   upsertRuleTranslation,
   type RuleTranslationInput,
@@ -28,6 +32,7 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
 export async function loadRuleTranslationsAction(
   ruleId: string
 ): Promise<RuleTranslationsListResult> {
+  await requirePermission("rules");
   return getRuleTranslations(ruleId);
 }
 
@@ -36,6 +41,9 @@ export async function saveRuleTranslationAction(
 ): Promise<RuleTranslationResult> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, error: "Yetkisiz" };
+  if (!(await callerHasPermission(auth.caller.id, "rules"))) {
+    return { ok: false, error: "Yetkisiz" };
+  }
 
   return upsertRuleTranslation(input);
 }

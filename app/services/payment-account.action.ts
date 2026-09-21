@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import {
   getPaymentAccounts,
   createPaymentAccount,
@@ -26,29 +27,34 @@ import {
 export async function getPaymentAccountsAction(
   ...args: Parameters<typeof getPaymentAccounts>
 ): ReturnType<typeof getPaymentAccounts> {
+  await requirePermission(["payment_accounts", "settings"]);
   return getPaymentAccounts(...args);
 }
 
 export async function createPaymentAccountAction(
   ...args: Parameters<typeof createPaymentAccount>
 ): ReturnType<typeof createPaymentAccount> {
+  await requirePermission(["payment_accounts", "settings"]);
   return createPaymentAccount(...args);
 }
 
 export async function updatePaymentAccountAction(
   ...args: Parameters<typeof updatePaymentAccount>
 ): ReturnType<typeof updatePaymentAccount> {
+  await requirePermission(["payment_accounts", "settings"]);
   return updatePaymentAccount(...args);
 }
 
 export async function deletePaymentAccountAction(
   ...args: Parameters<typeof deletePaymentAccount>
 ): ReturnType<typeof deletePaymentAccount> {
+  await requirePermission(["payment_accounts", "settings"]);
   return deletePaymentAccount(...args);
 }
 
 export async function setActivePaymentAccountAction(
   ...args: Parameters<typeof setActivePaymentAccount>
 ): ReturnType<typeof setActivePaymentAccount> {
+  await requirePermission(["payment_accounts", "settings"]);
   return setActivePaymentAccount(...args);
 }

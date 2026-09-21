@@ -17,6 +17,15 @@ const authorizeAdminSessionMock = vi.fn();
 const getVillaTranslationsMock = vi.fn();
 const upsertVillaTranslationMock = vi.fn();
 
+/* 🛡️ SERVER ACTION AUTHZ — permission kaynağı (admin_users.sidebar_permissions).
+   "yetkili oturum" artık AKTİF + "villas" izinli demek. Assertion'lar aynen. */
+const findByIdForSessionMock = vi.fn();
+vi.mock("@/lib/db/admin-user.repository.server", () => ({
+  adminUserServerRepository: {
+    findByIdForSession: (...a: unknown[]) => findByIdForSessionMock(...a),
+  },
+}));
+
 vi.mock("@/lib/admin-route-auth", () => ({
   authorizeAdminSession: (...args: unknown[]) =>
     authorizeAdminSessionMock(...args),
@@ -38,6 +47,10 @@ const VILLA_ID = "villa-uuid-1";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  findByIdForSessionMock.mockResolvedValue({
+    data: { id: "admin-1", is_active: true, sidebar_permissions: ["villas"] },
+    error: null,
+  });
   authorizeAdminSessionMock.mockResolvedValue({
     ok: true,
     caller: { id: "admin-1" },
@@ -111,13 +124,16 @@ describe("saveVillaTranslationAction — authorizeAdminSession İLK kontrol", ()
   });
 });
 
-describe("loadVillaTranslationsAction — sayfa zaten middleware korumalı, ekstra auth YOK", () => {
-  it("authorizeAdminSession HİÇ çağrılmadan servise ulaşır (gallery.action.ts'in loadGalleryImages deseniyle AYNI)", async () => {
+describe("loadVillaTranslationsAction — okuma da \"villas\" izni ister (Server Action authz)", () => {
+  it("yetkili admin → authorizeAdminSession çağrılır ve servise ulaşır", async () => {
     getVillaTranslationsMock.mockResolvedValueOnce({ ok: true, rows: [] });
 
     const result = await loadVillaTranslationsAction(VILLA_ID);
 
-    expect(authorizeAdminSessionMock).not.toHaveBeenCalled();
+    /* 🛡️ DAVRANIŞ DEĞİŞİKLİĞİ (Server Action authz sprint'i): okuma
+       action'ı ARTIK "villas" izni ister. Eski assertion kapatılan
+       açığı kodluyordu; gevşetilmedi, TERSİNE ÇEVRİLDİ. */
+    expect(authorizeAdminSessionMock).toHaveBeenCalledTimes(1);
     expect(getVillaTranslationsMock).toHaveBeenCalledWith(VILLA_ID);
     expect(result).toEqual({ ok: true, rows: [] });
   });

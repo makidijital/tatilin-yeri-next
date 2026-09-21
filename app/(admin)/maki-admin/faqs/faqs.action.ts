@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import {
   getFaqsForAdmin as getFaqsForAdminService,
   replaceFaqs as replaceFaqsService,
@@ -20,12 +21,14 @@ import {
    =============================================================== */
 
 export async function getFaqsForAdminAction(): Promise<Faq[]> {
+  await requirePermission("faqs");
   return getFaqsForAdminService();
 }
 
 export async function replaceFaqsAction(
   items: FaqInput[]
 ): Promise<{ ok: boolean; error?: string; ids?: string[] }> {
+  await requirePermission("faqs");
   /* 🛡️ Dönüş tipine `ids` EKLENDİ (additive): kaydedilen satırların
      id'leri payload SIRASINDA döner; admin ekranı EN/DE çevirilerini
      bu id'lerle `faq_translations`'a yazar. Mevcut `{ ok, error }`

@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
+import {
   getPaymentMethodTranslations,
   upsertPaymentMethodTranslation,
   type PaymentMethodTranslationInput,
@@ -27,6 +31,7 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
 export async function loadPaymentMethodTranslationsAction(
   paymentMethodId: string
 ): Promise<PaymentMethodTranslationsListResult> {
+  await requirePermission("payment_methods");
   return getPaymentMethodTranslations(paymentMethodId);
 }
 
@@ -35,6 +40,9 @@ export async function savePaymentMethodTranslationAction(
 ): Promise<PaymentMethodTranslationResult> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, error: "Yetkisiz" };
+  if (!(await callerHasPermission(auth.caller.id, "payment_methods"))) {
+    return { ok: false, error: "Yetkisiz" };
+  }
 
   return upsertPaymentMethodTranslation(input);
 }

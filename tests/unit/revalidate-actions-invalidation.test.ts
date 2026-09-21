@@ -31,6 +31,24 @@ vi.mock("next/cache", () => ({
   revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
 }));
 
+/* 🛡️ SERVER ACTION AUTHZ — revalidate action'ları artık "aktif admin"
+   şartı arıyor (permission YOK: bunlar yetkisi çoktan doğrulanmış bir
+   mutation'dan SONRA çağrılan cache-purge yardımcıları; 10+ farklı
+   permission bağlamından çağrılıyorlar). Test bunları request scope
+   DIŞINDA doğrudan çağırdığı için `cookies()` erişimi mock'lanır.
+   Tag sözleşmesi assertion'ları AYNEN korundu. */
+vi.mock("@/lib/admin-route-auth", () => ({
+  authorizeAdminSession: async () => ({
+    ok: true,
+    caller: {
+      id: "admin-1",
+      authUserId: "auth-1",
+      email: "admin@example.com",
+      is_active: true,
+    },
+  }),
+}));
+
 /** tag ↔ fonksiyon sözleşmesi — lib/cache.helpers.ts ile eşleşir. */
 const CONTRACT: Array<[fn: string, tag: string]> = [
   ["revalidateSettings", "settings"],

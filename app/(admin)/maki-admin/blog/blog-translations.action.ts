@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
+import {
   getBlogTranslations,
   upsertBlogTranslation,
   type BlogTranslationInput,
@@ -24,6 +28,7 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
 export async function loadBlogTranslationsAction(
   postId: string
 ): Promise<BlogTranslationsListResult> {
+  await requirePermission("pages");
   return getBlogTranslations(postId);
 }
 
@@ -32,6 +37,9 @@ export async function saveBlogTranslationAction(
 ): Promise<BlogTranslationResult> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, error: "Yetkisiz" };
+  if (!(await callerHasPermission(auth.caller.id, "pages"))) {
+    return { ok: false, error: "Yetkisiz" };
+  }
 
   return upsertBlogTranslation(input);
 }

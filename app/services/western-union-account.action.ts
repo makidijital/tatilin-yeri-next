@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import {
   getWesternUnionAccounts,
   createWesternUnionAccount,
@@ -26,29 +27,34 @@ import {
 export async function getWesternUnionAccountsAction(
   ...args: Parameters<typeof getWesternUnionAccounts>
 ): ReturnType<typeof getWesternUnionAccounts> {
+  await requirePermission(["payment_accounts", "settings"]);
   return getWesternUnionAccounts(...args);
 }
 
 export async function createWesternUnionAccountAction(
   ...args: Parameters<typeof createWesternUnionAccount>
 ): ReturnType<typeof createWesternUnionAccount> {
+  await requirePermission(["payment_accounts", "settings"]);
   return createWesternUnionAccount(...args);
 }
 
 export async function updateWesternUnionAccountAction(
   ...args: Parameters<typeof updateWesternUnionAccount>
 ): ReturnType<typeof updateWesternUnionAccount> {
+  await requirePermission(["payment_accounts", "settings"]);
   return updateWesternUnionAccount(...args);
 }
 
 export async function deleteWesternUnionAccountAction(
   ...args: Parameters<typeof deleteWesternUnionAccount>
 ): ReturnType<typeof deleteWesternUnionAccount> {
+  await requirePermission(["payment_accounts", "settings"]);
   return deleteWesternUnionAccount(...args);
 }
 
 export async function setActiveWesternUnionAccountAction(
   ...args: Parameters<typeof setActiveWesternUnionAccount>
 ): ReturnType<typeof setActiveWesternUnionAccount> {
+  await requirePermission(["payment_accounts", "settings"]);
   return setActiveWesternUnionAccount(...args);
 }

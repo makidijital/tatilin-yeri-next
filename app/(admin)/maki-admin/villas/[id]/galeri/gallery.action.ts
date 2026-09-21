@@ -1,5 +1,9 @@
 "use server";
 
+import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
 import { getVillaImages } from "@/app/services/villa-image/villa-image.read";
 import { addVillaImage } from "@/app/services/villa-image/villa-image.mutations";
 import {
@@ -28,10 +32,12 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
    tek gerçek kaynak. Public RLS okuması → server'da anon ile birebir.
    =============================================================== */
 export async function loadGalleryImages(id: string) {
+  await requirePermission("villas");
   return getVillaImages(id);
 }
 
 export async function loadGallerySlug(id: string): Promise<string | null> {
+  await requirePermission("villas");
   const { data } = await villaRepository.findSlugById(id);
   return (data?.slug as string | null) ?? null;
 }
@@ -44,6 +50,9 @@ export async function addGalleryImage(
 ): Promise<boolean> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return false;
+  if (!(await callerHasPermission(auth.caller.id, "villas"))) {
+    return false;
+  }
 
   return addVillaImage(villaId, imageUrl);
 }
@@ -51,6 +60,9 @@ export async function addGalleryImage(
 export async function deleteGalleryImage(imageId: string): Promise<boolean> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return false;
+  if (!(await callerHasPermission(auth.caller.id, "villas"))) {
+    return false;
+  }
 
   return deleteVillaImage(imageId);
 }
@@ -60,6 +72,9 @@ export async function deleteAllGalleryImages(
 ): Promise<{ ok: boolean; removed: number; orphans: string[] }> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, removed: 0, orphans: [] };
+  if (!(await callerHasPermission(auth.caller.id, "villas"))) {
+    return { ok: false, removed: 0, orphans: [] };
+  }
 
   return deleteAllVillaImages(villaId);
 }

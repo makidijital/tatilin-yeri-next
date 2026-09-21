@@ -52,6 +52,15 @@ vi.mock("@/lib/db/villa-discount.repository.server", () => ({
   },
 }));
 
+/* 🛡️ SERVER ACTION AUTHZ — permission kaynağı (admin_users.sidebar_permissions).
+   "yetkili oturum" artık AKTİF + "villas" izinli demek. Assertion'lar aynen. */
+const findByIdForSessionMock = vi.fn();
+vi.mock("@/lib/db/admin-user.repository.server", () => ({
+  adminUserServerRepository: {
+    findByIdForSession: (...a: unknown[]) => findByIdForSessionMock(...a),
+  },
+}));
+
 vi.mock("@/lib/admin-route-auth", () => ({
   authorizeAdminSession: (...args: unknown[]) =>
     authorizeAdminSessionMock(...args),
@@ -74,6 +83,10 @@ const VILLA_ID = "villa-1";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  findByIdForSessionMock.mockResolvedValue({
+    data: { id: "admin-1", is_active: true, sidebar_permissions: ["villas"] },
+    error: null,
+  });
   authorizeAdminSessionMock.mockResolvedValue({
     ok: true,
     caller: { id: "admin-1" },

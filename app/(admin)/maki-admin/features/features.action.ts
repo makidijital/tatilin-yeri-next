@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import {
   getVillaFeatures as getVillaFeaturesService,
   addVillaFeature as addVillaFeatureService,
@@ -21,10 +22,12 @@ import {
    =============================================================== */
 
 export async function getVillaFeaturesAction(): Promise<Feature[]> {
+  await requirePermission("features");
   return getVillaFeaturesService();
 }
 
 export async function addVillaFeatureAction(name: string): Promise<boolean> {
+  await requirePermission("features");
   return addVillaFeatureService(name);
 }
 
@@ -32,9 +35,11 @@ export async function updateVillaFeatureAction(
   id: string,
   name: string
 ): Promise<boolean> {
+  await requirePermission("features");
   return updateVillaFeatureService(id, name);
 }
 
 export async function deleteVillaFeatureAction(id: string): Promise<boolean> {
+  await requirePermission("features");
   return deleteVillaFeatureService(id);
 }

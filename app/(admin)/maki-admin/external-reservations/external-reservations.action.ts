@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import { externalCalendarEventRepository } from "@/lib/db/external-calendar-event.repository";
 import { externalCalendarSourceRepository } from "@/lib/db/external-calendar-source.repository";
 import type {
@@ -27,6 +28,7 @@ const MAX_LIMIT = 200;
 export async function listExternalCalendarEventsAction(
   filters: ExternalEventListFilters = {}
 ): Promise<ExternalEventListResult> {
+  await requirePermission("external_calendars");
   const limit = Math.max(
     1,
     Math.min(MAX_LIMIT, Number(filters.limit) || DEFAULT_LIMIT)
@@ -54,6 +56,7 @@ export async function listExternalCalendarEventsAction(
 }
 
 export async function getExternalCalendarKpiAction(): Promise<ExternalCalendarKpi> {
+  await requirePermission("external_calendars");
   /* Tek round-trip yerine 4 paralel head-count query — minimal payload. */
   const [eventsRes, activeSourcesRes, errorSourcesRes, latestSourceRes] =
     await Promise.all([
@@ -77,6 +80,7 @@ export async function getExternalCalendarFilterOptionsAction(): Promise<{
   villas: FilterOption[];
   sources: FilterOption[];
 }> {
+  await requirePermission("external_calendars");
   const [villasRes, sourcesRes] = await Promise.all([
     externalCalendarSourceRepository.findActiveVillaEmbeds(),
     externalCalendarSourceRepository.findAllWithVillaTitle(),
@@ -117,6 +121,7 @@ export async function getExternalCalendarFilterOptionsAction(): Promise<{
 export async function countInactiveEventsForSourceAction(
   sourceId: string
 ): Promise<number> {
+  await requirePermission("external_calendars");
   const id = (sourceId || "").toString().trim();
   if (!id) return 0;
   const { count, error } =

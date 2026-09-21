@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
+import {
   deleteSettingsTranslation,
   getSettingsTranslations,
   upsertSettingsTranslation,
@@ -34,6 +38,7 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
    =============================================================== */
 
 export async function loadSettingsTranslationsAction(): Promise<SettingsTranslationsLoadResult> {
+  await requirePermission("settings");
   return getSettingsTranslations();
 }
 
@@ -42,6 +47,9 @@ export async function saveSettingsTranslation(
 ): Promise<SettingsTranslationSaveResult> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, error: "Yetkisiz" };
+  if (!(await callerHasPermission(auth.caller.id, "settings"))) {
+    return { ok: false, error: "Yetkisiz" };
+  }
 
   const result = await upsertSettingsTranslation(input);
 
@@ -59,6 +67,9 @@ export async function deleteSettingsTranslationAction(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, error: "Yetkisiz" };
+  if (!(await callerHasPermission(auth.caller.id, "settings"))) {
+    return { ok: false, error: "Yetkisiz" };
+  }
 
   const result = await deleteSettingsTranslation(locale);
   if (result.ok) {

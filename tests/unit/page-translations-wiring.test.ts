@@ -26,6 +26,16 @@ import {
 
 /* ---------- auth: yetkili ---------- */
 const authorizeAdminSessionMock = vi.fn();
+/* 🛡️ SERVER ACTION AUTHZ — permission kaynağı (admin_users.sidebar_permissions).
+   Action'lara eklenen izin kontrolü bu mevcut repository fonksiyonunu okur;
+   testte "yetkili admin" artık AKTİF + İZİNLİ demek. Assertion'lar aynen kaldı. */
+const findByIdForSessionMock = vi.fn();
+vi.mock("@/lib/db/admin-user.repository.server", () => ({
+  adminUserServerRepository: {
+    findByIdForSession: (...a: unknown[]) => findByIdForSessionMock(...a),
+  },
+}));
+
 vi.mock("@/lib/admin-route-auth", () => ({
   authorizeAdminSession: (...a: unknown[]) => authorizeAdminSessionMock(...a),
 }));
@@ -65,6 +75,14 @@ const SAVED_ROW: PageTranslationRow = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  findByIdForSessionMock.mockResolvedValue({
+    data: {
+      id: "admin-1",
+      is_active: true,
+      sidebar_permissions: ["pages"],
+    },
+    error: null,
+  });
   authorizeAdminSessionMock.mockResolvedValue({
     ok: true,
     caller: { id: "admin-1" },
@@ -241,7 +259,9 @@ describe("Phase 12C — kayıtlı çevirilerin okunması uçtan uca", () => {
     expect(fromMock).toHaveBeenCalledWith("page_translations");
     expect(selectMock).toHaveBeenCalledWith("*");
     expect(eqMock).toHaveBeenCalledWith("page_id", PAGE_ID);
-    /* okuma yolunda ekstra auth YOK (sayfa middleware korumalı) */
-    expect(authorizeAdminSessionMock).not.toHaveBeenCalled();
+    /* 🛡️ DAVRANIŞ DEĞİŞİKLİĞİ (Server Action authz sprint'i): okuma
+       yolu ARTIK "pages" izni ister. Eski assertion kapatılan açığı
+       kodluyordu; gevşetilmedi, TERSİNE ÇEVRİLDİ. */
+    expect(authorizeAdminSessionMock).toHaveBeenCalledTimes(1);
   });
 });

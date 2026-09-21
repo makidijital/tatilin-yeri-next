@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
+import {
   getFeatureTranslations,
   upsertFeatureTranslation,
   type FeatureTranslationInput,
@@ -30,6 +34,7 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
 export async function loadFeatureTranslationsAction(
   featureId: string
 ): Promise<FeatureTranslationsListResult> {
+  await requirePermission("features");
   return getFeatureTranslations(featureId);
 }
 
@@ -38,6 +43,9 @@ export async function saveFeatureTranslationAction(
 ): Promise<FeatureTranslationResult> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, error: "Yetkisiz" };
+  if (!(await callerHasPermission(auth.caller.id, "features"))) {
+    return { ok: false, error: "Yetkisiz" };
+  }
 
   return upsertFeatureTranslation(input);
 }

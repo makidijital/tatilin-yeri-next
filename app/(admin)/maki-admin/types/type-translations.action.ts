@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
+import {
   getTypeTranslations,
   upsertTypeTranslation,
   type TypeTranslationInput,
@@ -28,6 +32,7 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
 export async function loadTypeTranslationsAction(
   typeId: string
 ): Promise<TypeTranslationsListResult> {
+  await requirePermission("villa_types");
   return getTypeTranslations(typeId);
 }
 
@@ -36,6 +41,9 @@ export async function saveTypeTranslationAction(
 ): Promise<TypeTranslationResult> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, error: "Yetkisiz" };
+  if (!(await callerHasPermission(auth.caller.id, "villa_types"))) {
+    return { ok: false, error: "Yetkisiz" };
+  }
 
   return upsertTypeTranslation(input);
 }

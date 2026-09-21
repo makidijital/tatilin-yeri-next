@@ -23,6 +23,10 @@
    action'ı — loadPricingData — ile aynı: public/no-gate read,
    sadece write admin-gated).
 =============================================================== */
+import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
 import { villaDiscountRepository } from "@/lib/db/villa-discount.repository.server";
 import type { VillaDiscountInput } from "@/lib/db/villa-discount.repository.server";
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
@@ -90,6 +94,7 @@ export async function loadDiscountData(villaId: string): Promise<{
   discounts: VillaDiscountRow[];
   error?: string;
 }> {
+  await requirePermission("villas");
   const { data, error } =
     await villaDiscountRepository.findDiscountsByVillaId(villaId);
 
@@ -115,6 +120,9 @@ export async function saveDiscountData(
   const auth = await authorizeAdminSession();
   if (!auth.ok) {
     return { ok: false, error: auth.error || "Oturum doğrulanamadı." };
+  }
+  if (!(await callerHasPermission(auth.caller.id, "villas"))) {
+    return { ok: false, error: "Yetkisiz." };
   }
 
   /* 🛡️ SERVER-AUTHORITATIVE CURRENCY ENFORCEMENT — fixed özel fiyatın
@@ -218,6 +226,9 @@ export async function deleteDiscountData(
   const auth = await authorizeAdminSession();
   if (!auth.ok) {
     return { ok: false, error: auth.error || "Oturum doğrulanamadı." };
+  }
+  if (!(await callerHasPermission(auth.caller.id, "villas"))) {
+    return { ok: false, error: "Yetkisiz." };
   }
 
   const { error } = await villaDiscountRepository.deleteDiscountById(

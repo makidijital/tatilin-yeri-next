@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  callerHasPermission,
+  requirePermission,
+} from "@/lib/auth/action-authz";
+import {
   getPriceIncludeTranslations,
   upsertPriceIncludeTranslation,
   type PriceIncludeTranslationInput,
@@ -28,6 +32,7 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
 export async function loadPriceIncludeTranslationsAction(
   includeId: string
 ): Promise<PriceIncludeTranslationsListResult> {
+  await requirePermission("price_includes");
   return getPriceIncludeTranslations(includeId);
 }
 
@@ -36,6 +41,9 @@ export async function savePriceIncludeTranslationAction(
 ): Promise<PriceIncludeTranslationResult> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, error: "Yetkisiz" };
+  if (!(await callerHasPermission(auth.caller.id, "price_includes"))) {
+    return { ok: false, error: "Yetkisiz" };
+  }
 
   return upsertPriceIncludeTranslation(input);
 }

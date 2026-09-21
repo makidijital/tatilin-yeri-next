@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import {
   getPaymentMethods,
   createPaymentMethod,
@@ -24,17 +25,20 @@ import {
 export async function getPaymentMethodsAction(
   ...args: Parameters<typeof getPaymentMethods>
 ): ReturnType<typeof getPaymentMethods> {
+  await requirePermission("payment_methods");
   return getPaymentMethods(...args);
 }
 
 export async function createPaymentMethodAction(
   ...args: Parameters<typeof createPaymentMethod>
 ): ReturnType<typeof createPaymentMethod> {
+  await requirePermission("payment_methods");
   return createPaymentMethod(...args);
 }
 
 export async function deletePaymentMethodAction(
   ...args: Parameters<typeof deletePaymentMethod>
 ): ReturnType<typeof deletePaymentMethod> {
+  await requirePermission("payment_methods");
   return deletePaymentMethod(...args);
 }
