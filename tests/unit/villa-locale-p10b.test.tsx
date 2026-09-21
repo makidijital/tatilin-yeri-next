@@ -229,7 +229,7 @@ describe("BookingCalendar — Phase 10B locale (component visibility + TR defaul
     );
   }
 
-  it("locale verilmezse (TR default): legend 'Onaylı'/'Beklemede'/'Müsait' + 'Bugün' AYNEN render edilir", async () => {
+  it("locale verilmezse (TR default): legend 'Onaylı'/'Beklemede'/'Müsait' + TR nav etiketleri AYNEN render edilir", async () => {
     const engine = await setupEngine();
     render(
       <BookingCalendar
@@ -241,11 +241,19 @@ describe("BookingCalendar — Phase 10B locale (component visibility + TR defaul
     expect(screen.getByText("Onaylı")).toBeInTheDocument();
     expect(screen.getByText("Beklemede")).toBeInTheDocument();
     expect(screen.getByText("Müsait")).toBeInTheDocument();
-    expect(screen.getByText("Bugün")).toBeInTheDocument();
+    /* ⚠️ UI turu: dış "[Ay Yıl … Bugün]" şeridi KALDIRILDI → "Bugün"
+       butonu artık YOK. Locale kontratı GEVŞETİLMEDİ, aksine daha güçlü
+       doğrulanıyor: ay navigasyonu aria-label'ları MEVCUT TR sözlüğünden
+       gelmeye devam ediyor VE takvimin iç caption'ı TR ay adını basıyor. */
+    expect(screen.queryByText("Bugün")).toBeNull();
     expect(screen.getByLabelText("Önceki ay")).toBeInTheDocument();
+    expect(screen.getByLabelText("Sonraki ay")).toBeInTheDocument();
+    expect(
+      screen.getByText((t) => /Ekim\s*2026/i.test(t))
+    ).toBeInTheDocument();
   });
 
-  it("locale='en': legend 'Confirmed'/'Pending'/'Available' + 'Today'", async () => {
+  it("locale='en': legend 'Confirmed'/'Pending'/'Available' + EN nav etiketleri", async () => {
     const engine = await setupEngine();
     render(
       <BookingCalendar
@@ -258,10 +266,14 @@ describe("BookingCalendar — Phase 10B locale (component visibility + TR defaul
     expect(screen.getByText("Confirmed")).toBeInTheDocument();
     expect(screen.getByText("Pending")).toBeInTheDocument();
     expect(screen.getByText("Available")).toBeInTheDocument();
-    expect(screen.getByText("Today")).toBeInTheDocument();
+    /* Dış "Today" butonu kaldırıldı; EN locale kontratı nav
+       aria-label'ları üzerinden (aynı sözlük) doğrulanır. */
+    expect(screen.queryByText("Today")).toBeNull();
+    expect(screen.getByLabelText("Previous month")).toBeInTheDocument();
+    expect(screen.getByLabelText("Next month")).toBeInTheDocument();
   });
 
-  it("locale='de': legend 'Bestätigt'/'Ausstehend'/'Verfügbar' + 'Heute'", async () => {
+  it("locale='de': legend 'Bestätigt'/'Ausstehend'/'Verfügbar' + DE nav etiketleri", async () => {
     const engine = await setupEngine();
     render(
       <BookingCalendar
@@ -274,7 +286,11 @@ describe("BookingCalendar — Phase 10B locale (component visibility + TR defaul
     expect(screen.getByText("Bestätigt")).toBeInTheDocument();
     expect(screen.getByText("Ausstehend")).toBeInTheDocument();
     expect(screen.getByText("Verfügbar")).toBeInTheDocument();
-    expect(screen.getByText("Heute")).toBeInTheDocument();
+    /* Dış "Heute" butonu kaldırıldı; DE locale kontratı nav
+       aria-label'ları üzerinden (aynı sözlük) doğrulanır. */
+    expect(screen.queryByText("Heute")).toBeNull();
+    expect(screen.getByLabelText("Vorheriger Monat")).toBeInTheDocument();
+    expect(screen.getByLabelText("Nächster Monat")).toBeInTheDocument();
   });
 
   it("date-fns locale seçimi GERÇEKTEN değişiyor: TR/EN/DE hafta günü header'ları birbirinden FARKLI diziler üretir", async () => {

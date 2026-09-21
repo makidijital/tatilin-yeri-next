@@ -30,7 +30,6 @@
 import { DayPicker, type DayContentProps } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { tr, enUS, de } from "date-fns/locale";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { useState } from "react";
 import { formatCurrency } from "@/lib/currency";
@@ -46,7 +45,7 @@ import type { UseBookingEngineReturn } from "./useBookingEngine";
    DOKUNULMADI — yalnız UI string kaynağı ve date-fns `locale` objesi
    değişti. */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
-import { LOCALE_BCP47, type Locale } from "@/lib/i18n/config";
+import { type Locale } from "@/lib/i18n/config";
 
 type Props = {
   engine: UseBookingEngineReturn;
@@ -68,7 +67,6 @@ export default function BookingCalendar({
 }: Props) {
   const { currency } = useCurrency();
   const dict = getDictionary(locale);
-  const bcp47 = LOCALE_BCP47[locale ?? "tr"];
   const dateFnsLocale =
     locale === "en" ? enUS : locale === "de" ? de : tr;
 
@@ -113,68 +111,13 @@ export default function BookingCalendar({
           <span className="flex-1">{conflictError}</span>
         </div>
       )}
-      {/* ───────────────────────────────────────────────────
-          🛡️ FAZ 12 — PREMIUM NAV STRIP (refined)
-          ───────────────────────────────────────────────────
-          AvailabilityInlineCalendar parity korunarak daha
-          rafine. Layout: month title sola, kontroller sağa
-          (luxury booking calendar pattern).
-          ─────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-2 mb-4">
-        <h3 className="font-display text-[14px] text-[var(--color-stone-900)] tracking-[-0.015em] capitalize">
-          {currentMonth.toLocaleDateString(bcp47, {
-            month: "long",
-          })}
-          <span className="text-[var(--color-stone-400)] font-normal ml-1.5">
-            {currentMonth.getFullYear()}
-          </span>
-        </h3>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() =>
-              onCurrentMonthChange(
-                new Date(
-                  currentMonth.getFullYear(),
-                  currentMonth.getMonth() - 1,
-                  1
-                )
-              )
-            }
-            className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-[var(--color-sand-50)] transition motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
-            aria-label={dict.availability.prevMonth}
-          >
-            <ChevronLeft size={15} className="text-[var(--color-stone-600)]" />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const t = new Date();
-              onCurrentMonthChange(new Date(t.getFullYear(), t.getMonth(), 1));
-            }}
-            className="px-2 py-1 rounded-md text-[10px] tracking-[0.12em] uppercase font-medium text-[var(--color-stone-500)] hover:bg-[var(--color-sand-50)] hover:text-[var(--color-stone-900)] transition motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
-          >
-            {dict.booking.calendarToday}
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              onCurrentMonthChange(
-                new Date(
-                  currentMonth.getFullYear(),
-                  currentMonth.getMonth() + 1,
-                  1
-                )
-              )
-            }
-            className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-[var(--color-sand-50)] transition motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-champagne-500)]/40"
-            aria-label={dict.availability.nextMonth}
-          >
-            <ChevronRight size={15} className="text-[var(--color-stone-600)]" />
-          </button>
-        </div>
-      </div>
-
+      {/* 🛡️ DIŞ NAV STRIP KALDIRILDI (UI-only, user request):
+          önceki "[Ay Yıl … Bugün]" başlık/kontrol şeridi (kendi
+          çerçevesi dahil) artık RENDER EDİLMİYOR. Ay navigasyonu
+          DayPicker'ın KENDİ caption'ına (aşağıda görünür kılındı)
+          devredildi — `onMonthChange` ZATEN bağlıydı, yani ay değiştirme
+          davranışı ve `currentMonth` state'i DEĞİŞMEDİ. Tarih seçme,
+          günler, fiyat/indirim gösterimi, disabled günler AYNEN. */}
       <DayPicker
         locale={dateFnsLocale}
         mode="range"
@@ -249,6 +192,13 @@ export default function BookingCalendar({
           if (onSelectComplete) {
             setTimeout(() => onSelectComplete(), 120);
           }
+        }}
+        /* 🛡️ Nav aria-label'ları MEVCUT sözlük anahtarlarından gelir
+           (dış stripte de bunlar kullanılıyordu) → TR/EN/DE davranışı
+           BİREBİR korunur, yeni sözlük anahtarı EKLENMEDİ. */
+        labels={{
+          labelPrevious: () => dict.availability.prevMonth,
+          labelNext: () => dict.availability.nextMonth,
         }}
         numberOfMonths={1}
         disabled={[
@@ -439,7 +389,11 @@ export default function BookingCalendar({
            ──────────────────────────────────────────────── */
         className={[
           "p-0",
-          "[&_.rdp-caption]:hidden",
+          /* 🛡️ Önceki turda dış strip vardı ve RDP caption'ı gizleniyordu
+             ("[&_.rdp-caption]:hidden"). Dış strip kaldırıldığı için
+             caption artık GÖRÜNÜR: takvimin İÇİNDEKİ ay/yıl başlığı +
+             ileri/geri okları. Yalnız görünürlük değişti; RDP'nin
+             selection/disabled/modifier davranışına dokunulmadı. */
 
           /* Center alignment fix — DayPicker container ortalansın */
           "[&_.rdp]:!w-full",
