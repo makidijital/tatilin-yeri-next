@@ -85,7 +85,7 @@ const menuGroups: MenuGroup[] = [
     ],
   },
   {
-    label: "Villalar",
+    label: "Mülkler",
     items: [
       {
         name: "Mülkler",
@@ -94,13 +94,13 @@ const menuGroups: MenuGroup[] = [
         permissionKey: "villas",
       },
       {
-        /* 🛡️ Villa Sırala — drag-drop sıralama ekranı.
+        /* 🛡️ Mülk Sırala — drag-drop sıralama ekranı.
            `/maki-admin/villas/siralama` route'unda VillaSortPanel
            render eder. Operasyon ekranından (Mülkler) ayrıştırıldı:
            pagination'a hazırlık + drag-drop UX'in 1000+ villa
            scale'inde uygulanabilir kalması için. `permissionKey:
            "villas"` reuse — yeni permission / role / migration YOK. */
-        name: "Villa Sırala",
+        name: "Mülk Sırala",
         href: "/maki-admin/villas/siralama",
         icon: ArrowDownUp,
         permissionKey: "villas",
@@ -136,7 +136,7 @@ const menuGroups: MenuGroup[] = [
         permissionKey: "locations",
       },
       {
-        name: "Villa Listesi",
+        name: "Mülk Listesi",
         href: "/maki-admin/villa-listesi",
         icon: Share2,
         permissionKey: "villa_lists",
@@ -898,14 +898,14 @@ function AdminShell({
      Eski koşul: `pathname === href || pathname.startsWith(href + "/")`
      üç noktada (currentItem / currentGroup / sidebar item active) ayrı
      ayrı uygulanıyordu. Birden çok item aynı pathname'i match ettiğinde
-     (örn. /maki-admin/villas/siralama hem "Mülkler" hem "Villa Sırala"
+     (örn. /maki-admin/villas/siralama hem "Mülkler" hem "Mülk Sırala"
      için TRUE), `flatMap.find` ilk eşleşeni alıyordu → "Mülkler" item
      yanlışlıkla aktif görünüyor + sayfa başlığı yanlış oluyordu.
 
      Yeni mantık: tüm menü item href'leri arasında pathname'i match eden
      **en uzun href** belirlenir; aktif item yalnız bu href ile birebir
      eşleşendir. Eş anlamlı: en spesifik route kazanır. Bu sayede
-     `/villas/siralama` için yalnız "Villa Sırala" aktif olur, `/villas`
+     `/villas/siralama` için yalnız "Mülk Sırala" aktif olur, `/villas`
      ve `/villas/ekle` için yalnız "Mülkler" aktif olur. Gelecekte
      eklenecek alt-rotalar için ek değişiklik gerekmez. */
   const allHrefs = menuGroups.flatMap((g) => g.items.map((i) => i.href));

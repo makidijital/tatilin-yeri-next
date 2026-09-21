@@ -189,15 +189,15 @@ export const SIDEBAR_PERMISSIONS: PermissionItem[] = [
   // Genel
   { key: "dashboard", label: "Dashboard", group: "Genel" },
 
-  // Villalar
-  { key: "villas", label: "Mülkler", group: "Villalar" },
-  { key: "villa_types", label: "Mülk Tipleri", group: "Villalar" },
-  { key: "features", label: "Olanaklar", group: "Villalar" },
-  { key: "rules", label: "Kurallar", group: "Villalar" },
-  { key: "price_includes", label: "Fiyata Dahil", group: "Villalar" },
-  { key: "locations", label: "Bölgeler", group: "Villalar" },
-  { key: "villa_lists", label: "Villa Listesi", group: "Villalar" },
-  { key: "property_owners", label: "Mülk Sahipleri", group: "Villalar" },
+  // Mülkler
+  { key: "villas", label: "Mülkler", group: "Mülkler" },
+  { key: "villa_types", label: "Mülk Tipleri", group: "Mülkler" },
+  { key: "features", label: "Olanaklar", group: "Mülkler" },
+  { key: "rules", label: "Kurallar", group: "Mülkler" },
+  { key: "price_includes", label: "Fiyata Dahil", group: "Mülkler" },
+  { key: "locations", label: "Bölgeler", group: "Mülkler" },
+  { key: "villa_lists", label: "Mülk Listesi", group: "Mülkler" },
+  { key: "property_owners", label: "Mülk Sahipleri", group: "Mülkler" },
 
   // Rezervasyon
   {
