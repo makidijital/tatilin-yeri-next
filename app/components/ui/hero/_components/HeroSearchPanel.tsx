@@ -115,7 +115,10 @@ export default function HeroSearchPanel({
 
   const [categories, setCategories] = useState<string[]>([]);
   const [regions, setRegions] = useState<string[]>([]);
-  const [guests, setGuests] = useState(1);
+  /* 🛡️ Hero arama formu — VARSAYILAN kişi sayısı 2.
+     Yalnız başlangıç state değeri; dropdown (1–10) ve
+     `buildHeroSearchParams` URL yazım kuralı DEĞİŞMEDİ. */
+  const [guests, setGuests] = useState(2);
 
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
