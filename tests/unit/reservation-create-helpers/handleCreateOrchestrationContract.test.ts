@@ -137,6 +137,21 @@ function extractFromStmt(
       for (const s of stmt.thenStatement.statements) {
         extractFromStmt(s, out, /* conditional */ true);
       }
+    } else {
+      /* 🛡️ Süslü parantezsiz if — `if (reservationId) dispatchMail(id);`
+         Eskiden ATLANIYORDU; fire-forget mail çağrısı sequence'a hiç
+         girmiyordu. Artık conditional=true olarak toplanır. */
+      extractFromStmt(stmt.thenStatement, out, /* conditional */ true);
+    }
+    return;
+  }
+  /* 🛡️ Bare block statement — `{ const res = await adminFetch(...); ... }`
+     Üretim kodu DB-write adımını kendi scope'una aldı; koşullu DEĞİL,
+     yalnız değişken kapsamı. Eskiden bu blok atlandığı için AWAITED
+     server write sequence'ta görünmüyordu. */
+  if (ts.isBlock(stmt)) {
+    for (const s of stmt.statements) {
+      extractFromStmt(s, out, conditional);
     }
     return;
   }
@@ -401,5 +416,85 @@ describe("handleCreate — single-insert invariant", () => {
   it("calls router.push EXACTLY ONCE", () => {
     const pushes = trySeq.filter((e) => e.name === "router.push");
     expect(pushes.length).toBe(1);
+  });
+});
+
+/* ===============================================================
+   🔒 API DELEGATION CONTRACT (yeni mimari — güçlendirme)
+   ===============================================================
+   Eski kontrat yalnız "AWAITED bir DB write var mı" diyordu. Server'a
+   taşındıktan sonra asıl invariant, YAZMANIN DOĞRU UÇA, DOĞRU METOTLA
+   ve BUILDER'DAN GELEN PAYLOAD'LA gitmesidir. Aşağısı bunu yapısal
+   olarak kilitler; client'ın tekrar doğrudan DB'ye yazmasını engeller.
+=============================================================== */
+function findCallsDeep(node: ts.Node, name: string): ts.CallExpression[] {
+  const out: ts.CallExpression[] = [];
+  function walk(n: ts.Node) {
+    if (ts.isCallExpression(n) && getCalleeName(n) === name) out.push(n);
+    ts.forEachChild(n, walk);
+  }
+  walk(node);
+  return out;
+}
+
+function propOf(
+  obj: ts.ObjectLiteralExpression,
+  key: string
+): ts.Expression | undefined {
+  for (const p of obj.properties) {
+    if (
+      ts.isPropertyAssignment(p) &&
+      (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
+      p.name.text === key
+    ) {
+      return p.initializer;
+    }
+  }
+  return undefined;
+}
+
+describe("handleCreate — API delegation (POST /api/admin/reservations)", () => {
+  const calls = findCallsDeep(tryBlock, "adminFetch");
+
+  it("tek bir adminFetch çağrısı var", () => {
+    expect(calls.length).toBe(1);
+  });
+
+  it("endpoint TAM OLARAK /api/admin/reservations", () => {
+    const url = calls[0].arguments[0];
+    expect(ts.isStringLiteral(url)).toBe(true);
+    expect((url as ts.StringLiteral).text).toBe("/api/admin/reservations");
+  });
+
+  it("HTTP method POST ve Content-Type application/json", () => {
+    const init = calls[0].arguments[1];
+    expect(ts.isObjectLiteralExpression(init)).toBe(true);
+    const obj = init as ts.ObjectLiteralExpression;
+
+    const method = propOf(obj, "method");
+    expect(method && ts.isStringLiteral(method)).toBe(true);
+    expect((method as ts.StringLiteral).text).toBe("POST");
+
+    const headers = propOf(obj, "headers");
+    expect(headers && ts.isObjectLiteralExpression(headers)).toBe(true);
+    const ct = propOf(headers as ts.ObjectLiteralExpression, "Content-Type");
+    expect(ct && ts.isStringLiteral(ct)).toBe(true);
+    expect((ct as ts.StringLiteral).text).toBe("application/json");
+  });
+
+  it("body = JSON.stringify(payload) — builder çıktısı gövdeye gider", () => {
+    const init = calls[0].arguments[1] as ts.ObjectLiteralExpression;
+    const body = propOf(init, "body");
+    expect(body && ts.isCallExpression(body)).toBe(true);
+    expect(getCalleeName(body as ts.CallExpression)).toBe("JSON.stringify");
+  });
+
+  it("client doğrudan DB'ye yazmaz (repository/anon insert YOK)", () => {
+    const noComments = sourceText
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\/\/.*$/gm, "");
+    expect(noComments).not.toMatch(/from\s+["\']@\/lib\/db\//);
+    expect(noComments).not.toMatch(/\bdbAdmin\b/);
+    expect(noComments).not.toMatch(/\bdb\s*\.\s*from\s*\(/);
   });
 });

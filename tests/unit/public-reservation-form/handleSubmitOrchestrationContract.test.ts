@@ -1,18 +1,36 @@
 /* ===============================================================
-   🛡️ FAZ 4 — ReservationForm > handleSubmit AST contract
+   🛡️ ReservationForm > handleSubmit — API DELEGATION CONTRACT (AST)
    ===============================================================
+   ⚠️ MİMARİ DEĞİŞİKLİĞİ (üretim kodu DEĞİŞMEDİ — test ona hizalandı):
+     PHASE 3 "PII-SAFE CREATE" ile client-side anon `createReservation`
+     KALDIRILDI. Artık `POST /api/public/reservations` çağrılır; INSERT
+     server'da service_role ile yapılır (migration 040 sonrası anon
+     INSERT reddedilir) ve response yalnız `{ id, reservation_no }`
+     döner. Ayrıca `alert()` yerine inline banner state kullanılır.
+
+     Bu testin ESKİ hâli tam olarak KAPATILAN mimariyi donduruyordu
+     (client-side insert + alert). Eski beklentiler geri getirilmedi;
+     her invariant YENİ mimarideki karşılığıyla — ve daha sıkı biçimde
+     (HTTP method, endpoint, payload zinciri, sıra, EXACTLY ONCE,
+     PII/hata-sızıntısı guard'ları) — yeniden ifade edildi.
+
    FREEZE EDİLEN KONTRATLAR (public submit flow):
      1. validatePublicReservationForm called FIRST
      2. early return if errors > 0 (setErrors + return; setLoading YOK)
      3. setLoading(true) BEFORE try
-     4. buildPublicReservationPayload (sync) BEFORE AWAITED insert
-     5. AWAITED createReservation(payload)
-     6. FIRE-FORGET dispatchPublicReservationRequestMail (after insert)
-     7. alert("Rezervasyon alındı 🚀")
-     8. setForm(initialPublicReservationFormData())
-     9. setErrors({})
-    10. catch → alert(err.message)
-    11. finally → setLoading(false)
+     4. AWAITED fetch("/api/public/reservations", { method: "POST" })
+        body = JSON.stringify(buildPublicReservationPayload(...))
+     5. FIRE-FORGET dispatchPublicReservationRequestMail (conditional,
+        insert SONRASI)
+     6. success state sırası: setSubmitError(null) → setForm(factory)
+        → setErrors({}) → router.push(success url)
+     7. catch → setSubmitError (alert DEĞİL)
+     8. finally → setLoading(false)
+
+   🔒 GÜVENLİK INVARIANT'LARI (yeni, ayrı describe):
+     • client'tan doğrudan DB/repository/anon INSERT erişimi YOK
+     • server'ın ham hata metni UI'a SIZMAZ (dictionary metni kullanılır)
+     • response'tan yalnız `reservation.id` okunur — PII okunmaz
 =============================================================== */
 
 import { describe, it, expect } from "vitest";
@@ -117,6 +135,53 @@ const handleSubmit = findArrowFn("handleSubmit");
 const seq = collectCallSequence(handleSubmit);
 const idx = (name: string) => seq.findIndex((e) => e.name === name);
 
+/* ---------------- Derin çağrı arama ----------------
+   `collectCallSequence` yalnız EN DIŞTAKİ çağrıyı kaydeder; yeni
+   mimaride payload builder `fetch(...)` argümanının içinde iç içe
+   duruyor. Bu yardımcı argümanlara da iner. */
+function findCallsDeep(node: ts.Node, name: string): ts.CallExpression[] {
+  const out: ts.CallExpression[] = [];
+  function walk(n: ts.Node) {
+    if (ts.isCallExpression(n) && getCalleeName(n) === name) out.push(n);
+    ts.forEachChild(n, walk);
+  }
+  walk(node);
+  return out;
+}
+
+/** Object literal'dan bir property'nin initializer'ını döndürür. */
+function propOf(
+  obj: ts.ObjectLiteralExpression,
+  key: string
+): ts.Expression | undefined {
+  for (const p of obj.properties) {
+    if (
+      ts.isPropertyAssignment(p) &&
+      (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
+      p.name.text === key
+    ) {
+      return p.initializer;
+    }
+  }
+  return undefined;
+}
+
+/** handleSubmit içindeki TEK fetch çağrısı. */
+function theFetchCall(): ts.CallExpression {
+  const calls = findCallsDeep(handleSubmit, "fetch");
+  if (calls.length !== 1) {
+    throw new Error(`handleSubmit içinde 1 fetch bekleniyordu, ${calls.length} bulundu`);
+  }
+  return calls[0];
+}
+
+/** Yorumları çıkarılmış kaynak (yorumdaki kelimeler guard'ı yanıltmasın). */
+function stripComments(text: string): string {
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^[ \t]*\/\/.*$/gm, "");
+}
+
 describe("ReservationForm handleSubmit — pre-try guards", () => {
   it("validatePublicReservationForm called as first call (top-level)", () => {
     const validateIdx = idx("validatePublicReservationForm");
@@ -162,72 +227,131 @@ describe("ReservationForm handleSubmit — pre-try guards", () => {
   });
 });
 
-describe("ReservationForm handleSubmit — try-block orchestration", () => {
-  it("buildPublicReservationPayload called BEFORE createReservation", () => {
-    const buildIdx = idx("buildPublicReservationPayload");
-    const createIdx = idx("createReservation");
-    expect(buildIdx).toBeGreaterThanOrEqual(0);
-    expect(createIdx).toBeGreaterThanOrEqual(0);
-    expect(buildIdx).toBeLessThan(createIdx);
-  });
-
-  it("createReservation is AWAITED", () => {
-    const i = idx("createReservation");
+describe("ReservationForm handleSubmit — API delegation (POST /api/public/reservations)", () => {
+  it("tek bir fetch çağrısı var ve AWAITED (EXACTLY ONCE)", () => {
+    /* INVARIANT: eski "AWAITED createReservation + EXACTLY ONCE insert"
+       kontratının yeni mimarideki karşılığı — tek bir server write. */
+    expect(findCallsDeep(handleSubmit, "fetch").length).toBe(1);
+    const i = idx("fetch");
+    expect(i).toBeGreaterThanOrEqual(0);
     expect(seq[i].awaited).toBe(true);
+    expect(seq[i].conditional).toBe(false);
   });
 
-  it("dispatchPublicReservationRequestMail FIRE-FORGET, conditional, AFTER insert", () => {
-    const createIdx = idx("createReservation");
+  it("endpoint TAM OLARAK /api/public/reservations", () => {
+    const url = theFetchCall().arguments[0];
+    expect(ts.isStringLiteral(url)).toBe(true);
+    expect((url as ts.StringLiteral).text).toBe("/api/public/reservations");
+  });
+
+  it("HTTP method POST ve Content-Type application/json", () => {
+    const init = theFetchCall().arguments[1];
+    expect(ts.isObjectLiteralExpression(init)).toBe(true);
+    const obj = init as ts.ObjectLiteralExpression;
+
+    const method = propOf(obj, "method");
+    expect(method && ts.isStringLiteral(method)).toBe(true);
+    expect((method as ts.StringLiteral).text).toBe("POST");
+
+    const headers = propOf(obj, "headers");
+    expect(headers && ts.isObjectLiteralExpression(headers)).toBe(true);
+    const ct = propOf(headers as ts.ObjectLiteralExpression, "Content-Type");
+    expect(ct && ts.isStringLiteral(ct)).toBe(true);
+    expect((ct as ts.StringLiteral).text).toBe("application/json");
+  });
+
+  it("body = JSON.stringify(buildPublicReservationPayload(...)) — payload zinciri", () => {
+    /* INVARIANT: eski "buildPublicReservationPayload BEFORE insert"
+       kontratı. Artık builder, write çağrısının ARGÜMANI olduğu için
+       "önce/sonra" yerine YAPISAL İÇERME ile kanıtlanır: gövdeye giden
+       tek veri kaynağı builder'dır. */
+    const init = theFetchCall().arguments[1] as ts.ObjectLiteralExpression;
+    const body = propOf(init, "body");
+    expect(body && ts.isCallExpression(body)).toBe(true);
+
+    const bodyCall = body as ts.CallExpression;
+    expect(getCalleeName(bodyCall)).toBe("JSON.stringify");
+
+    const inner = bodyCall.arguments[0];
+    expect(ts.isCallExpression(inner)).toBe(true);
+    expect(getCalleeName(inner as ts.CallExpression)).toBe(
+      "buildPublicReservationPayload"
+    );
+  });
+
+  it("buildPublicReservationPayload EXACTLY ONCE ve yalnız fetch body'sinde", () => {
+    const all = findCallsDeep(handleSubmit, "buildPublicReservationPayload");
+    expect(all.length).toBe(1);
+    const inFetch = findCallsDeep(
+      theFetchCall(),
+      "buildPublicReservationPayload"
+    );
+    expect(inFetch.length).toBe(1);
+  });
+
+  it("dispatchPublicReservationRequestMail FIRE-FORGET, conditional, fetch SONRASI", () => {
+    const fetchIdx = idx("fetch");
     const mailIdx = idx("dispatchPublicReservationRequestMail");
     expect(mailIdx).toBeGreaterThanOrEqual(0);
-    expect(createIdx).toBeLessThan(mailIdx);
+    expect(fetchIdx).toBeLessThan(mailIdx);
     expect(seq[mailIdx].awaited).toBe(false);
     expect(seq[mailIdx].conditional).toBe(true); // inside `if (reservationId)`
   });
 
-  it("alert success AFTER mail dispatch", () => {
+  it("success state sırası: setSubmitError(null) → setForm → setErrors → router.push", () => {
+    /* INVARIANT: eski "alert → setForm → setErrors" sırası. alert()
+       inline banner state'e taşındığı için ilk adım setSubmitError(null);
+       sıra garantisi AYNEN korunuyor, üstüne redirect adımı eklendi. */
     const mailIdx = idx("dispatchPublicReservationRequestMail");
-    const alertIdx = idx("alert");
-    expect(alertIdx).toBeGreaterThan(mailIdx);
-  });
-
-  it("setForm reset AFTER alert", () => {
-    const alertIdx = idx("alert");
+    const clearBannerIdx = seq.findIndex(
+      (e, i) => e.name === "setSubmitError" && !e.conditional && i > mailIdx
+    );
     const setFormIdx = idx("setForm");
-    expect(setFormIdx).toBeGreaterThan(alertIdx);
+    const successSetErrorsIdx = seq.findIndex(
+      (e, i) => e.name === "setErrors" && !e.conditional && i > setFormIdx
+    );
+    const pushIdx = idx("router.push");
+
+    expect(clearBannerIdx).toBeGreaterThan(mailIdx);
+    expect(setFormIdx).toBeGreaterThan(clearBannerIdx);
+    expect(successSetErrorsIdx).toBeGreaterThan(setFormIdx);
+    expect(pushIdx).toBeGreaterThan(successSetErrorsIdx);
   });
 
-  it("setForm reset uses initialPublicReservationFormData factory", () => {
-    /* Check that setForm receives a call to initialPublicReservationFormData. */
-    const factoryIdx = idx("initialPublicReservationFormData");
-    expect(factoryIdx).toBeGreaterThanOrEqual(0);
-  });
-
-  it("setErrors clear AFTER setForm reset", () => {
-    const setFormIdx = idx("setForm");
-    /* setErrors appears multiple times (one in pre-try guard, one in success
-       reset, one in catch). Find LAST conditional=false occurrence in try. */
-    const trySetErrors = seq
-      .map((e, i) => ({ e, i }))
-      .filter(({ e }) => e.name === "setErrors");
-    expect(trySetErrors.length).toBeGreaterThanOrEqual(2);
-    /* setForm comes before reset's setErrors */
-    expect(setFormIdx).toBeGreaterThan(0);
+  it("setForm reset ARGÜMANI initialPublicReservationFormData() factory'sidir", () => {
+    /* Eskiden yalnız "factory bir yerde geçiyor mu" bakılıyordu; artık
+       gerçekten setForm'a geçirildiği yapısal olarak doğrulanır. */
+    const setFormCalls = findCallsDeep(handleSubmit, "setForm");
+    expect(setFormCalls.length).toBe(1);
+    const arg = setFormCalls[0].arguments[0];
+    expect(ts.isCallExpression(arg)).toBe(true);
+    expect(getCalleeName(arg as ts.CallExpression)).toBe(
+      "initialPublicReservationFormData"
+    );
   });
 });
 
 describe("ReservationForm handleSubmit — catch + finally", () => {
-  it("catch block calls alert", () => {
+  it("catch bloğu inline banner state'i set eder (alert DEĞİL)", () => {
+    /* INVARIANT: eski "catch → alert(err.message)" — kullanıcıya hata
+       geri bildirimi. alert() modern inline banner'a taşındı; geri
+       bildirimin VARLIĞI aynen kilitleniyor, alert geri getirilmiyor. */
     const tryStmt = handleSubmit.statements.find(ts.isTryStatement);
     expect(tryStmt?.catchClause).toBeTruthy();
-    const catchBlock = tryStmt?.catchClause?.block;
-    const hasAlert = catchBlock?.statements.some(
-      (s) =>
-        ts.isExpressionStatement(s) &&
-        ts.isCallExpression(s.expression) &&
-        getCalleeName(s.expression) === "alert"
-    );
-    expect(hasAlert).toBe(true);
+    const catchBlock = tryStmt!.catchClause!.block;
+
+    const names = catchBlock.statements
+      .filter(ts.isExpressionStatement)
+      .map((st) => st.expression)
+      .filter(ts.isCallExpression)
+      .map(getCalleeName);
+
+    expect(names).toContain("setSubmitError");
+    expect(names).not.toContain("alert");
+  });
+
+  it("handleSubmit'in TAMAMINDA alert() kullanılmaz", () => {
+    expect(findCallsDeep(handleSubmit, "alert").length).toBe(0);
   });
 
   it("finally block calls setLoading", () => {
@@ -248,17 +372,50 @@ describe("ReservationForm handleSubmit — invariants (EXACTLY ONCE)", () => {
     expect(seq.filter((e) => e.name === "validatePublicReservationForm").length).toBe(1);
   });
 
-  it("buildPublicReservationPayload called EXACTLY ONCE", () => {
-    expect(seq.filter((e) => e.name === "buildPublicReservationPayload").length).toBe(1);
-  });
-
-  it("createReservation called EXACTLY ONCE", () => {
-    expect(seq.filter((e) => e.name === "createReservation").length).toBe(1);
+  it("server write (fetch) called EXACTLY ONCE", () => {
+    expect(findCallsDeep(handleSubmit, "fetch").length).toBe(1);
   });
 
   it("dispatchPublicReservationRequestMail called EXACTLY ONCE", () => {
     expect(
       seq.filter((e) => e.name === "dispatchPublicReservationRequestMail").length
     ).toBe(1);
+  });
+});
+
+describe("ReservationForm handleSubmit — 🔒 güvenlik invariant'ları", () => {
+  const fileNoComments = stripComments(sourceText);
+
+  it("client'ta doğrudan DB / repository / anon INSERT erişimi YOK", () => {
+    /* PHASE 3 güvenlik düzeltmesinin geri alınmasını engeller. */
+    expect(fileNoComments).not.toMatch(/from\s+["']@\/lib\/db\//);
+    expect(fileNoComments).not.toMatch(/\bdbAdmin\b/);
+    expect(fileNoComments).not.toMatch(/\bdb\s*\.\s*from\s*\(/);
+    expect(fileNoComments).not.toMatch(/\.insert\s*\(/);
+    /* client-side `createReservation` bir daha import/çağrı olmamalı
+       (yalnız açıklama yorumlarında geçebilir → yorumlar strip edildi). */
+    expect(fileNoComments).not.toMatch(/\bcreateReservation\s*\(/);
+    expect(fileNoComments).not.toMatch(/import[^;]*\bcreateReservation\b/);
+  });
+
+  it("server'ın HAM hata metni UI'a sızdırılmaz", () => {
+    /* Route'un TR mesajları, rate-limit'in İngilizce gövdesi ve ham DB
+       hata metni locale dışıdır → UI dictionary metni gösterir. */
+    const body = stripComments(handleSubmit.getText());
+    expect(body).not.toMatch(/json\s*[.?]*\s*\.?\s*error/);
+    expect(body).toContain("dict.form.errorGeneric");
+    expect(body).toContain("dict.form.errorDatesUnavailable");
+  });
+
+  it("response'tan YALNIZ reservation.id okunur (PII okunmaz)", () => {
+    const body = stripComments(handleSubmit.getText());
+    const reads = [...new Set(body.match(/json[?.]*\.[A-Za-z_]+/g) || [])].sort();
+    /* İzin verilen TEK okuma kümesi: başarı bayrağı + reservation (→ .id).
+       Buraya yeni bir alan eklenirse test kırılır — PII sızıntısı guard'ı. */
+    expect(reads).toEqual(["json.reservation", "json?.ok"]);
+    for (const pii of ["name", "email", "phone", "identity_number", "address"]) {
+      expect(body).not.toContain(`json.${pii}`);
+      expect(body).not.toContain(`reservation.${pii}`);
+    }
   });
 });
