@@ -376,7 +376,7 @@ describe("/maki-admin/menu/new — TR + EN + DE", () => {
      =========================================================== */
   it.each([
     ["CMS Sayfa"],
-    ["Villa Tipi"],
+    ["Mülk Tipi"],
     ["Bölge"],
   ])("17-%#) '%s' türü seçilince EN/DE alanları GİZLENİR", async (label) => {
     render(<NewMenu />);
@@ -397,7 +397,7 @@ describe("/maki-admin/menu/new — TR + EN + DE", () => {
       target: { value: "Rental Villas" },
     });
     /* Tür değişir → alanlar gizlenir, taslak temizlenir. */
-    fireEvent.click(screen.getByText("Villa Tipi"));
+    fireEvent.click(screen.getByText("Mülk Tipi"));
     fireEvent.click(screen.getByText("Manuel Link"));
     expect(screen.getByLabelText("English")).toHaveValue("");
   });

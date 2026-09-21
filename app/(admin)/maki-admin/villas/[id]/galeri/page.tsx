@@ -100,7 +100,7 @@ export default function AdminVillaGallery() {
             <ChevronLeft size={14} />
             Villa düzenle
           </Link>
-          <p className="eyebrow mt-3">Villa</p>
+          <p className="eyebrow mt-3">Mülk</p>
           <h1 className="font-display text-3xl md:text-4xl text-[var(--color-stone-900)] mt-2 tracking-[-0.02em]">
             Galeri yönetimi
           </h1>

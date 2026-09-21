@@ -328,7 +328,7 @@ function OperationsList({
         >
           <div className="flex-1 min-w-0">
             <p className="text-[13.5px] font-semibold text-[var(--admin-text)] truncate">
-              {it.villaTitle || "Villa adı yok"}
+              {it.villaTitle || "Mülk adı yok"}
             </p>
             <p className="text-[12px] text-[var(--admin-muted)] truncate mt-0.5">
               {it.guestName || "İsimsiz misafir"}

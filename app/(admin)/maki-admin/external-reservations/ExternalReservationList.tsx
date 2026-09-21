@@ -574,7 +574,7 @@ export default function ExternalReservationList() {
         <div className="admin-pill-search">
           <Search size={14} className="text-[var(--admin-muted-2)]" />
           <input
-            placeholder="Villa, kod, açıklama ara…"
+            placeholder="Mülk, kod, açıklama ara…"
             value={clientSearch}
             onChange={(e) => setClientSearch(e.target.value)}
           />

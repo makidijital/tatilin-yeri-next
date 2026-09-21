@@ -73,7 +73,7 @@ export default function VideoStep({ videos, setVideos }: Props) {
     <Section
       eyebrow="Medya"
       title="YouTube Videoları"
-      subtitle="Villaya ait video URL'lerini ekleyin (opsiyonel)"
+      subtitle="Mülke ait video URL'lerini ekleyin (opsiyonel)"
     >
       {/* INPUT ROW — URL girişi + Ekle butonu */}
       <div className="space-y-2">

@@ -301,7 +301,7 @@ export default function NewMenu() {
     },
     {
       value: "category",
-      label: "Villa Tipi",
+      label: "Mülk Tipi",
       icon: Tag,
       hint: "/arama?villa-turleri=…",
     },
@@ -426,12 +426,12 @@ export default function NewMenu() {
 
         {sourceType === "category" && (
           <SourcePicker
-            label="Villa tipi"
+            label="Mülk tipi"
             hint="Seçilen tip /arama?villa-turleri= ile linklenir."
             value={selectedSourceId}
             onChange={setSelectedSourceId}
             options={typeOptions}
-            emptyMessage="Tanımlı villa tipi yok."
+            emptyMessage="Tanımlı mülk tipi yok."
             getUsage={usageFor("category")}
           />
         )}

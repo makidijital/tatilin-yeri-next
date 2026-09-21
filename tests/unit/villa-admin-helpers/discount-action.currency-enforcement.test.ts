@@ -137,7 +137,7 @@ describe("saveDiscountData — server-authoritative currency enforcement", () =>
 
     expect(res).toEqual({
       ok: false,
-      error: "Özel fiyat para birimi villanın fiyat para birimiyle aynı olmalıdır.",
+      error: "Özel fiyat para birimi mülkün fiyat para birimiyle aynı olmalıdır.",
     });
     expect(rpcReplaceVillaDiscountsMock).not.toHaveBeenCalled();
   });

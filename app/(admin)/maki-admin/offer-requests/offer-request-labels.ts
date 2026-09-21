@@ -11,6 +11,6 @@ import type { OfferRequestStatus } from "@/types/database";
 export const OFFER_STATUS_LABEL: Record<OfferRequestStatus, string> = {
   pending: "Bekliyor",
   contacted: "İletişime Geçildi",
-  offered: "Villa Önerildi",
+  offered: "Mülk Önerildi",
   closed: "Kapandı",
 };

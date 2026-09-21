@@ -159,7 +159,7 @@ export default function DiscountCollectionPage() {
     const proceed = await confirm({
       title: "Koleksiyondan çıkarılsın mı?",
       description:
-        "Villa kaydı silinmez — sadece indirimli koleksiyondan çıkarılır.",
+        "Mülk kaydı silinmez — sadece indirimli koleksiyondan çıkarılır.",
       confirmLabel: "Çıkar",
       variant: "danger",
     });
@@ -256,7 +256,7 @@ export default function DiscountCollectionPage() {
             className="btn-primary"
           >
             <Plus size={15} />
-            {showPicker ? "Kapat" : "Villa Seç"}
+            {showPicker ? "Kapat" : "Mülk Seç"}
           </button>
         </div>
         {showPicker && (
@@ -265,14 +265,14 @@ export default function DiscountCollectionPage() {
               autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Villa ara…"
+              placeholder="Mülk ara…"
               className="input w-full mb-3"
             />
             {availableVillas.length === 0 ? (
               <p className="text-sm text-[var(--color-stone-500)]">
                 {usedVillaIds.size === allVillas.length
-                  ? "Tüm aktif villalar koleksiyonda."
-                  : "Eşleşen villa bulunamadı."}
+                  ? "Tüm aktif mülkler koleksiyonda."
+                  : "Eşleşen mülk bulunamadı."}
               </p>
             ) : (
               <ul className="max-h-72 overflow-auto divide-y divide-[var(--color-stone-100)]">
@@ -427,7 +427,7 @@ function SortableRow({
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder={item.villa?.title ?? "Villa başlığı"}
+          placeholder={item.villa?.title ?? "Mülk başlığı"}
           className="input w-full"
         />
         <p className="text-[11px] text-[var(--color-stone-400)] tracking-[0.06em] font-mono truncate mt-1.5 pl-3">

@@ -635,7 +635,7 @@ function SortableItem({
       case "page":
         return { label: "CMS Sayfa", icon: FileText };
       case "category":
-        return { label: "Villa Tipi", icon: Tag };
+        return { label: "Mülk Tipi", icon: Tag };
       case "region":
         return { label: "Bölge", icon: MapPin };
       default:

@@ -52,7 +52,7 @@ export default function LocationStep({
       <Section
         eyebrow="Adım 7"
         title="Mesafeler"
-        subtitle="Villaya olan önemli mesafeleri ekle (metre veya kilometre)"
+        subtitle="Mülke olan önemli mesafeleri ekle (metre veya kilometre)"
       >
         <div className="space-y-3">
           {distances.map((d, index) => {

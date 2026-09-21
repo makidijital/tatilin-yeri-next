@@ -83,7 +83,7 @@ export default function SettingsReservationPage() {
       >
         <SettingsSection
           title="Ön Ödeme Oranı"
-          description="Villa detay sayfasında özel oran tanımlanmamışsa kullanılan global yüzde."
+          description="Mülk detay sayfasında özel oran tanımlanmamışsa kullanılan global yüzde."
           footer={<SaveButton loading={saving} saved={saved} />}
         >
           <NumberField

@@ -90,7 +90,7 @@ export function VillaActions({
       return;
     }
     setActive(next);
-    toast.success(next ? "Villa aktif" : "Villa pasifleştirildi", {
+    toast.success(next ? "Mülk aktif" : "Mülk pasifleştirildi", {
       id: `villa-active-${villaId}`,
     });
     /* 🛡️ FAZ 55J-1 — AUDIT LOG (fail-safe).
@@ -110,7 +110,7 @@ export function VillaActions({
 
   const handleDelete = async () => {
     const ok = await confirm({
-      title: "Villa silinsin mi?",
+      title: "Mülk silinsin mi?",
       description:
         `"${villaTitle}" admin görünümünden tamamen kaldırılır. ` +
         "Mevcut rezervasyon kayıtları korunur. Bu işlem geri alınamaz.",
@@ -149,7 +149,7 @@ export function VillaActions({
       });
       return;
     }
-    toast.success("Villa silindi", {
+    toast.success("Mülk silindi", {
       id: `villa-delete-${villaId}`,
     });
     /* 🛡️ FAZ 55J-1 — AUDIT LOG (fail-safe). Soft delete. */
@@ -175,10 +175,10 @@ export function VillaActions({
     if (cloning) return;
 
     const ok = await confirm({
-      title: "Villa kopyalansın mı?",
+      title: "Mülk kopyalansın mı?",
       description:
-        `"${villaTitle}" villasının bir kopyası oluşturulacak. ` +
-        "Tüm bilgiler taşınacak; galeri boş olacak ve yeni villa " +
+        `"${villaTitle}" mülkünün bir kopyası oluşturulacak. ` +
+        "Tüm bilgiler taşınacak; galeri boş olacak ve yeni mülk " +
         "pasif (görünmez) olarak başlayacak. Devam etmek istiyor musunuz?",
       confirmLabel: "Kopyala",
       variant: "default",
@@ -210,14 +210,14 @@ export function VillaActions({
     setCloning(false);
 
     if (!res.ok || !res.id) {
-      toast.error("Villa kopyalanamadı", {
+      toast.error("Mülk kopyalanamadı", {
         id: `villa-clone-${villaId}`,
         description: res.error,
       });
       return;
     }
 
-    toast.success("Villa kopyalandı", {
+    toast.success("Mülk kopyalandı", {
       id: `villa-clone-${villaId}`,
       description: `"${villaTitle} - Kopya" düzenleme ekranına yönlendiriliyorsunuz.`,
     });
@@ -249,7 +249,7 @@ export function VillaActions({
             ? ""
             : "!text-amber-700 !border-amber-200 hover:!bg-amber-50")
         }
-        aria-label={active ? "Villayı pasifleştir" : "Villayı aktifleştir"}
+        aria-label={active ? "Mülkü pasifleştir" : "Mülkü aktifleştir"}
         title={
           active
             ? "Pasifleştir — public görünmez, admin görür"
@@ -268,8 +268,8 @@ export function VillaActions({
         onClick={handleClone}
         disabled={cloning}
         className="admin-btn-ghost shrink-0 disabled:opacity-50"
-        aria-label="Villayı kopyala"
-        title="Bu villanın kopyasını oluştur"
+        aria-label="Mülkü kopyala"
+        title="Bu mülkün kopyasını oluştur"
       >
         <Copy size={13} />
         {cloning ? "Kopyalanıyor…" : "Kopyala"}
@@ -279,8 +279,8 @@ export function VillaActions({
         type="button"
         onClick={handleDelete}
         className="admin-btn-ghost shrink-0 !text-red-600 !border-red-200 hover:!bg-red-50"
-        aria-label="Villa sil"
-        title="Villayı sil"
+        aria-label="Mülk sil"
+        title="Mülkü sil"
       >
         <Trash2 size={13} />
       </button>

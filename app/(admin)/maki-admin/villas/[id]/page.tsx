@@ -313,7 +313,7 @@ export default function EditVilla() {
           );
         }
       }
-      toast.success("Villa güncellendi", { id: "villa-update" });
+      toast.success("Mülk güncellendi", { id: "villa-update" });
       /* 🛡️ FAZ 55J-1 — AUDIT LOG (fail-safe).
          after_data shape `_helpers/audit > buildVillaUpdateAuditAfter`;
          count-summary pattern before ile birebir aynı. */
@@ -339,7 +339,7 @@ export default function EditVilla() {
     } catch (err: unknown) {
       console.error("Update error:", err);
       const msg = err instanceof Error ? err.message : "Bir hata oluştu";
-      toast.error("Villa güncellenemedi", {
+      toast.error("Mülk güncellenemedi", {
         id: "villa-update",
         description: msg,
       });
@@ -360,9 +360,9 @@ export default function EditVilla() {
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="min-w-0">
-          <p className="eyebrow">Villa</p>
+          <p className="eyebrow">Mülk</p>
           <h1 className="font-display text-3xl md:text-4xl text-[var(--color-stone-900)] mt-2 tracking-[-0.02em] truncate">
-            {form.title || "Villa Düzenle"}
+            {form.title || "Mülk Düzenle"}
           </h1>
           <p className="text-sm text-[var(--color-stone-500)] mt-2">
             Detayları güncelle, sezonları yönet ya da galeriye geç.

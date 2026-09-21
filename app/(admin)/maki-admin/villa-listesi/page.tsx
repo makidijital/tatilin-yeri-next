@@ -225,7 +225,7 @@ export default async function VillaListesiPage() {
       <header className="admin-page-header">
         <div>
           <p className="admin-page-eyebrow">Pazarlama</p>
-          <h1 className="admin-page-header__title">Villa Listesi</h1>
+          <h1 className="admin-page-header__title">Mülk Listesi</h1>
           <p className="admin-page-header__sub">
             Müşteriye özel bir villa seçkisi hazırla. Filtre uygula,
             beğendiklerini seç, &ldquo;Listeyi Paylaş&rdquo; ile

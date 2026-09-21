@@ -194,7 +194,7 @@ export default function VillaOperationsList({
         <div className="admin-pill-search flex-1 min-w-[200px]">
           <Search size={14} className="text-[var(--admin-muted-2)]" />
           <input
-            placeholder="Villa adı veya slug ara…"
+            placeholder="Mülk adı veya slug ara…"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
           />
@@ -475,7 +475,7 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
           href={`/kiralik-villa/${villa.slug}`}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={`${villa.title} — genel (public) villa sayfasını aç`}
+          aria-label={`${villa.title} — genel (public) mülk sayfasını aç`}
           className="absolute inset-0 z-[1]"
         />
       ) : null}
@@ -562,7 +562,7 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
               String(villa.id)
             )}`}
             className="admin-btn-ghost"
-            title="Bu villa için takvimi aç ve yeni blok ekle"
+            title="Bu mülk için takvimi aç ve yeni blok ekle"
           >
             <Calendar size={13} />
             Takvim

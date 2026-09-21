@@ -521,7 +521,7 @@ function ReviewRow({
               title={
                 review.is_featured
                   ? "Öne çıkarmayı kaldır"
-                  : "Bu yorumu öne çıkar (villa başına 1)"
+                  : "Bu yorumu öne çıkar (mülk başına 1)"
               }
             >
               <Sparkles size={13} />

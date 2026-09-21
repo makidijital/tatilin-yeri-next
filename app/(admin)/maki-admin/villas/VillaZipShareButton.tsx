@@ -242,7 +242,7 @@ export function VillaZipShareButton({
         disabled={disabled}
         className="admin-btn-ghost disabled:opacity-50"
         aria-label={`${villaTitle} için ZIP paylaşım linki`}
-        title="Villa görsellerini ZIP olarak paylaş (süreli, iptal edilebilir link)"
+        title="Mülk görsellerini ZIP olarak paylaş (süreli, iptal edilebilir link)"
       >
         <Archive size={13} />
         ZIP Paylaş

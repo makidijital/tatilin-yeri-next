@@ -34,7 +34,7 @@ export default function VillaSelectStep({
     <Section
       eyebrow="Adım 3"
       title="Villa"
-      subtitle="Rezervasyon yapılacak villayı seç"
+      subtitle="Rezervasyon yapılacak mülkü seç"
     >
       <div className="space-y-1.5">
         <Label>
@@ -48,7 +48,7 @@ export default function VillaSelectStep({
           villas={villas as unknown as VillaOption[]}
           value={data.villa_id || ""}
           onChange={onVillaChange}
-          placeholder="Villa seç"
+          placeholder="Mülk seç"
           error={!!errors.villa_id}
         />
         {errors.villa_id && (

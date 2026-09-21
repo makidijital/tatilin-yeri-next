@@ -118,7 +118,7 @@ export default function PropertyOwnersPage() {
       title: "Mülk sahibi silinsin mi?",
       description:
         o.villa_count > 0
-          ? `${o.villa_count} villanın bağlantısı kaldırılır (villalar silinmez). Bu işlem geri alınamaz.`
+          ? `${o.villa_count} mülkün bağlantısı kaldırılır (mülkler silinmez). Bu işlem geri alınamaz.`
           : "Seçili kayıt kaldırılır. Bu işlem geri alınamaz.",
     });
     if (!proceed) return;
@@ -164,7 +164,7 @@ export default function PropertyOwnersPage() {
                 <th className="text-left font-medium px-4 py-2.5">Telefon</th>
                 <th className="text-left font-medium px-4 py-2.5">Mail</th>
                 <th className="text-left font-medium px-4 py-2.5">IBAN</th>
-                <th className="text-left font-medium px-4 py-2.5">Villa</th>
+                <th className="text-left font-medium px-4 py-2.5">Mülk</th>
                 <th className="text-right font-medium px-4 py-2.5">İşlemler</th>
               </tr>
             </thead>

@@ -33,7 +33,7 @@ export default function VillaSelectCard({
     <Section
       eyebrow="Villa"
       title="Villa"
-      subtitle="Rezervasyonun yapıldığı villayı değiştirebilirsin"
+      subtitle="Rezervasyonun yapıldığı mülkü değiştirebilirsin"
     >
       <div className="space-y-1.5">
         <Label>
@@ -47,7 +47,7 @@ export default function VillaSelectCard({
           villas={villas}
           value={data.villa_id || ""}
           onChange={onVillaChange}
-          placeholder="Villa seç"
+          placeholder="Mülk seç"
         />
       </div>
     </Section>

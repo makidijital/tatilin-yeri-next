@@ -36,7 +36,7 @@ export default function RulesAndIncludesStep({
       <Section
         eyebrow="Adım 11"
         title="Kurallar"
-        subtitle="Villada uygulanacak kuralları seç"
+        subtitle="Mülkte uygulanacak kuralları seç"
       >
         {ruleItems.length === 0 ? (
           <div className="text-sm text-[var(--color-stone-400)] border border-[var(--color-stone-100)] rounded-xl py-6 text-center italic">

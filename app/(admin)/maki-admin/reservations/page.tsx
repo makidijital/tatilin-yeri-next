@@ -517,7 +517,7 @@ export default function AdminReservationsPage() {
         <div className="admin-pill-search">
           <Search size={14} className="text-[var(--admin-muted-2)]" />
           <input
-            placeholder="İsim, telefon veya villa ara…"
+            placeholder="İsim, telefon veya mülk ara…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -648,7 +648,7 @@ export default function AdminReservationsPage() {
                     {r.phone || "-"}
                   </p>
                   <p className="text-[11.5px] text-[var(--admin-muted)] truncate mt-0.5">
-                    {r.villa?.title || "Villa yok"}
+                    {r.villa?.title || "Mülk yok"}
                   </p>
                 </div>
 

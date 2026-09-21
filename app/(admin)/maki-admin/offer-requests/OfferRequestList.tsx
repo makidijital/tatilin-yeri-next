@@ -515,7 +515,7 @@ function OfferDetail({
       <DetailField label="Bölge tercihleri">
         <ChipRow items={regionLabels} />
       </DetailField>
-      <DetailField label="Villa tipleri">
+      <DetailField label="Mülk tipleri">
         <ChipRow items={villaTypeLabels} />
       </DetailField>
       <DetailField label="Özellikler">

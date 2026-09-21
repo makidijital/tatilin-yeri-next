@@ -316,7 +316,7 @@ export default function EditVilla() {
         }
         newId = apiJson.id;
       }
-      toast.success("Villa eklendi", { id: "villa-create" });
+      toast.success("Mülk eklendi", { id: "villa-create" });
       /* 🛡️ FAZ 55J-1 — AUDIT LOG (fail-safe).
          after_data shape `_helpers/audit > buildVillaCreateAuditAfter`
          tarafında; count-summary pattern BYTE-IDENTICAL. */
@@ -341,7 +341,7 @@ export default function EditVilla() {
     } catch (err: unknown) {
       console.error(err);
       const msg = err instanceof Error ? err.message : "Bir hata oluştu";
-      toast.error("Villa eklenemedi", {
+      toast.error("Mülk eklenemedi", {
         id: "villa-create",
         description: msg,
       });
@@ -355,7 +355,7 @@ export default function EditVilla() {
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">Villa</p>
+          <p className="eyebrow">Mülk</p>
           <h1 className="font-display text-3xl md:text-4xl text-[var(--color-stone-900)] mt-2 tracking-[-0.02em]">
             Yeni villa ekle
           </h1>
@@ -516,7 +516,7 @@ export default function EditVilla() {
         onNext={goNext}
         onSubmit={handleCreate}
         loading={loading}
-        submitLabel="Villa Ekle"
+        submitLabel="Mülk Ekle"
         submitOnlyOnLastStep
         disableNavWhileLoading
       />

@@ -190,7 +190,7 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
     }
     if (draft.discount_type === "fixed" && !villaCurrency) {
       setFormError(
-        "Villa için bir fiyat para birimi belirlenmemiş; önce Fiyatlar bölümünden bir fiyat gir."
+        "Mülk için bir fiyat para birimi belirlenmemiş; önce Fiyatlar bölümünden bir fiyat gir."
       );
       return;
     }
@@ -408,7 +408,7 @@ export default function DiscountsSection({ villaId }: { villaId: string }) {
                             gösterim; <select> DEĞİL. */}
                         <div
                           className="input !pl-2 text-xs flex items-center justify-center bg-[var(--color-stone-100)] text-[var(--color-stone-500)] cursor-not-allowed select-none"
-                          title="Para birimi villanın fiyatlandırmasından otomatik alınır"
+                          title="Para birimi mülkün fiyatlandırmasından otomatik alınır"
                         >
                           {villaCurrency || "—"}
                         </div>

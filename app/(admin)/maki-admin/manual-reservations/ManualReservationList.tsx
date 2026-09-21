@@ -253,7 +253,7 @@ export default function ManualReservationList({ initialData }: any) {
         <div className="admin-pill-search flex-1 min-w-[200px]">
           <Search size={14} className="text-[var(--admin-muted-2)]" />
           <input
-            placeholder="Villa, ID, not ara…"
+            placeholder="Mülk, ID, not ara…"
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
           />

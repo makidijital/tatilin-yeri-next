@@ -31,12 +31,12 @@ export default function SeoStep({
   const previewTitle = (
     seoTitle ||
     fallbackTitle ||
-    "Villa Başlığı"
+    "Mülk Başlığı"
   ).trim();
   const previewDescriptionRaw = (
     seoDescription ||
     fallbackDescription ||
-    "Villa açıklaması burada görünecek."
+    "Mülk açıklaması burada görünecek."
   ).toString();
   const previewDescription =
     previewDescriptionRaw.length > 160
@@ -67,7 +67,7 @@ export default function SeoStep({
         <input
           value={seoTitle}
           onChange={(e) => onChangeTitle(e.target.value)}
-          placeholder={fallbackTitle || "Villa Başlığı"}
+          placeholder={fallbackTitle || "Mülk Başlığı"}
           className="input"
           maxLength={120}
         />
@@ -96,7 +96,7 @@ export default function SeoStep({
           value={seoDescription}
           onChange={(e) => onChangeDescription(e.target.value)}
           placeholder={
-            fallbackDescription || "Villa açıklamasından kısa bir özet"
+            fallbackDescription || "Mülk açıklamasından kısa bir özet"
           }
           className="input !rounded-2xl !p-4 min-h-[110px] resize-none"
           maxLength={300}

@@ -312,7 +312,7 @@ export default function SettingsGeneralPage() {
         {/* WATERMARK */}
         <SettingsSection
           title="Watermark"
-          description="Villa galerilerinde görsel üstüne uygulanan filigran."
+          description="Mülk galerilerinde görsel üstüne uygulanan filigran."
         >
           <ToggleField
             label="Watermark aktif"

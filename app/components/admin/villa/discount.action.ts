@@ -69,7 +69,7 @@ function mapDiscountError(
   const msg = err.message || "";
 
   if (err.code === "23P01" || msg.includes("villa_discounts_no_overlap")) {
-    return "Seçilen tarih aralığı, bu villa için tanımlı başka bir indirimle çakışıyor. Lütfen farklı bir tarih aralığı seç.";
+    return "Seçilen tarih aralığı, bu mülk için tanımlı başka bir indirimle çakışıyor. Lütfen farklı bir tarih aralığı seç.";
   }
   if (msg.includes("villa_discounts_percent_range")) {
     return "Yüzde indirim değeri 100'ü geçemez.";
@@ -176,7 +176,7 @@ export async function saveDiscountData(
     );
     return {
       ok: false,
-      error: "Villa fiyat para birimi okunamadı, indirim kaydedilemedi.",
+      error: "Mülk fiyat para birimi okunamadı, indirim kaydedilemedi.",
     };
   }
 
@@ -192,7 +192,7 @@ export async function saveDiscountData(
       return {
         ok: false,
         error:
-          "Özel fiyat para birimi villanın fiyat para birimiyle aynı olmalıdır.",
+          "Özel fiyat para birimi mülkün fiyat para birimiyle aynı olmalıdır.",
       };
     }
     // Eşleşiyor bile olsa server'ın kendi okuduğu değer yazılır (client

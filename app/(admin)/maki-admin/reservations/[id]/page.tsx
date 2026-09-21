@@ -262,7 +262,7 @@ export default function AdminReservationDetailPage() {
   ---------------------------------------------- */
   const STEPS: { id: number; label: string }[] = [
     { id: 1, label: "Kişi Bilgileri" },
-    { id: 2, label: "Villa & Tarih" },
+    { id: 2, label: "Mülk & Tarih" },
     { id: 3, label: "Fiyat & Ödeme" },
     { id: 4, label: "Tahsilat & Ödeme Yönetimi" },
     { id: 5, label: "Notlar & Durum" },

@@ -105,7 +105,7 @@ export default async function VillasPage({
       {/* PAGE HEADER */}
       <header className="admin-page-header">
         <div>
-          <p className="admin-page-eyebrow">Villalar</p>
+          <p className="admin-page-eyebrow">Mülkler</p>
           <h1 className="admin-page-header__title">Tüm mülkler</h1>
           <p className="admin-page-header__sub">
             Toplam{" "}

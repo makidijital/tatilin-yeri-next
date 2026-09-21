@@ -514,7 +514,7 @@ export default function VillaListesiClient({
         <div className="admin-pill-search">
           <Search size={14} className="text-[var(--admin-muted-2)]" />
           <input
-            placeholder="Villa adı, bölge, slug veya ID ara…"
+            placeholder="Mülk adı, bölge, slug veya ID ara…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

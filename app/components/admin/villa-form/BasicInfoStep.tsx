@@ -75,7 +75,7 @@ export default function BasicInfoStep({
       >
         <div className="grid md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label>Villa adı</Label>
+            <Label>Mülk adı</Label>
             <input
               placeholder="Örn: Villa Sunset Deluxe"
               className="input"
@@ -105,7 +105,7 @@ export default function BasicInfoStep({
               amaçlı. "Villa adı" input'undan TAMAMEN bağımsız; slug/
               onChange zincirine dokunmaz, opsiyonel (boş bırakılabilir). */}
           <div className="space-y-2">
-            <Label>Villanın Gerçek Adı</Label>
+            <Label>Mülkün Gerçek Adı</Label>
             <input
               placeholder="Villanın gerçek/mülk adı"
               className="input"
@@ -322,7 +322,7 @@ export default function BasicInfoStep({
       <Section
         eyebrow="Adım 2"
         title="Açıklama"
-        subtitle="Villayı detaylı ve etkileyici şekilde anlat"
+        subtitle="Mülkü detaylı ve etkileyici şekilde anlat"
       >
         <RichTextEditor
           value={form.description || ""}

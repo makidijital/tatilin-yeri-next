@@ -139,7 +139,7 @@ export default function VillaTrashPage() {
     setBusyId(null);
 
     if (!res.ok) {
-      toast.error("Villa geri yüklenemedi", {
+      toast.error("Mülk geri yüklenemedi", {
         id: `villa-restore-${villa.id}`,
         description: res.error,
       });
@@ -147,7 +147,7 @@ export default function VillaTrashPage() {
     }
 
     setVillas((prev) => prev.filter((v) => v.id !== villa.id));
-    toast.success("Villa geri yüklendi", {
+    toast.success("Mülk geri yüklendi", {
       id: `villa-restore-${villa.id}`,
       description: villa.title,
     });
@@ -157,9 +157,9 @@ export default function VillaTrashPage() {
 
   async function handleHardDelete(villa: TrashedVilla) {
     const proceed = await confirm({
-      title: "Villa kalıcı olarak silinsin mi?",
+      title: "Mülk kalıcı olarak silinsin mi?",
       description:
-        "Bu işlem geri alınamaz. Villa ile ilişkili görseller ve yönetim kayıtları tamamen kaldırılır.",
+        "Bu işlem geri alınamaz. Mülk ile ilişkili görseller ve yönetim kayıtları tamamen kaldırılır.",
       confirmLabel: "Kalıcı Olarak Sil",
       variant: "danger",
     });
@@ -202,7 +202,7 @@ export default function VillaTrashPage() {
     }
 
     setVillas((prev) => prev.filter((v) => v.id !== villa.id));
-    toast.success("Villa kalıcı olarak silindi", {
+    toast.success("Mülk kalıcı olarak silindi", {
       id: `villa-harddelete-${villa.id}`,
       description: villa.title,
     });
@@ -215,7 +215,7 @@ export default function VillaTrashPage() {
       {/* PAGE HEADER */}
       <header className="admin-page-header">
         <div>
-          <p className="admin-page-eyebrow">Villalar</p>
+          <p className="admin-page-eyebrow">Mülkler</p>
           <h1 className="admin-page-header__title">Çöp Kutusu</h1>
           <p className="admin-page-header__sub">
             Silinmiş villalar burada saklanır. Geri yükleyebilir veya
@@ -229,7 +229,7 @@ export default function VillaTrashPage() {
             className="admin-btn-ghost"
           >
             <ArrowLeft size={14} />
-            Villalara dön
+            Mülklere dön
           </Link>
         </div>
       </header>

@@ -89,7 +89,7 @@ export default async function AdminHome() {
                       {r.name || "İsimsiz"}
                     </p>
                     <p className="text-[12px] text-[var(--admin-muted-2)] truncate mt-0.5">
-                      {r.villa?.title || "Villa yok"}
+                      {r.villa?.title || "Mülk yok"}
                     </p>
                   </div>
                   <StatusBadge status={r.status} />

@@ -183,7 +183,7 @@ describe("villa-listesi — render pagination (yalnız görüntüleme sınırı)
 
     /* Arama → tek eşleşme; pagination bar kaybolur, sayfa 1'e döner. */
     const input = screen.getByPlaceholderText(
-      "Villa adı, bölge, slug veya ID ara…"
+      "Mülk adı, bölge, slug veya ID ara…"
     );
     fireEvent.change(input, { target: { value: "Villa 077" } });
 

@@ -159,7 +159,7 @@ export default function AmenitiesStep({
       {/* TYPES — Adım 5 */}
       <Section
         eyebrow="Adım 5"
-        title="Villa tipleri"
+        title="Mülk tipleri"
         subtitle="Birden fazla seçim yapabilirsin"
       >
         <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -186,8 +186,8 @@ export default function AmenitiesStep({
       {/* FEATURES — Adım 6 */}
       <Section
         eyebrow="Adım 6"
-        title="Villa özellikleri"
-        subtitle="Villada bulunan olanakları seç"
+        title="Mülk özellikleri"
+        subtitle="Mülkte bulunan olanakları seç"
       >
         {/* 🛡️ SELECT-ALL TOOLBAR — Adım 6 (Villa özellikleri).
            Boş liste durumunda render edilmez. Defansif `every()` ile

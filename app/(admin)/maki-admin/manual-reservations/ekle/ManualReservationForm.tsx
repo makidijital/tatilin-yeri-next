@@ -429,7 +429,7 @@ export default function ManualReservationForm({
     if (!selectedVilla || !startDate || !endDate) {
       toast.error("Eksik bilgi", {
         id: "manual-blok",
-        description: "Villa ve tarih aralığı seçin.",
+        description: "Mülk ve tarih aralığı seçin.",
       });
       return;
     }
@@ -531,7 +531,7 @@ export default function ManualReservationForm({
           villas={villas || []}
           value={selectedVilla}
           onChange={setSelectedVilla}
-          placeholder="Villa seç"
+          placeholder="Mülk seç"
         />
       </div>
 
