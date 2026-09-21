@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import { fetchExternalCalendarArraysForVillaAdmin } from "@/lib/external-calendar.admin.helper";
 import type { ExternalCalendarAdminArrays } from "@/lib/external-calendar.admin.types";
 
@@ -16,5 +17,6 @@ import type { ExternalCalendarAdminArrays } from "@/lib/external-calendar.admin.
 export async function fetchExternalCalendarArraysForVillaAdminAction(
   villaId: string
 ): Promise<ExternalCalendarAdminArrays> {
+  await requirePermission(["reservations", "manual_reservations"]);
   return fetchExternalCalendarArraysForVillaAdmin(villaId);
 }

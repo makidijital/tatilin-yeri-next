@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import * as Sentry from "@sentry/nextjs";
 
 import { createReservation } from "@/app/services/reservation.service";
 import { reservationServerRepository } from "@/lib/db/reservation.repository.server";
@@ -188,13 +187,6 @@ export async function POST(req: Request): Promise<Response> {
        err.message'ı aynen gösterir (UX değişmez). */
     const status = msg === "Bu tarihler dolu" ? 409 : 400;
     console.error("[api.public.reservations] create FAILED:", msg);
-    /* 🛡️ SENTRY — yalnız UNEXPECTED hatalar capture; expected validation
-       throw'ları (Villa zorunlu, Tarih zorunlu, Bu tarihler dolu, ...)
-       sentry.server.config `ignoreErrors` ile zaten DROP edilir. Burada
-       blanket captureException safe; filter alt katmanda. */
-    Sentry.captureException(err, {
-      tags: { route: "public.reservations.create", status: String(status) },
-    });
     return NextResponse.json({ ok: false, error: msg }, { status });
   }
 }

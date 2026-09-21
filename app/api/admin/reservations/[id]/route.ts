@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import * as Sentry from "@sentry/nextjs";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import {
@@ -60,10 +59,6 @@ export async function GET(
     const msg =
       err instanceof Error ? err.message : "Rezervasyon alınamadı";
     console.error("[admin.reservations.detail.get] FAILED", msg);
-    Sentry.captureException(err, {
-      tags: { route: "admin.reservations.detail.get" },
-      extra: { id },
-    });
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }
@@ -108,10 +103,6 @@ export async function PATCH(
     const msg =
       err instanceof Error ? err.message : "Güncellenemedi";
     console.error("[admin.reservations.detail.patch] FAILED", msg);
-    Sentry.captureException(err, {
-      tags: { route: "admin.reservations.detail.patch" },
-      extra: { id },
-    });
     return NextResponse.json({ ok: false, error: msg }, { status: 400 });
   }
 }
@@ -145,10 +136,6 @@ export async function DELETE(
     const msg =
       err instanceof Error ? err.message : "Silinemedi";
     console.error("[admin.reservations.detail.delete] FAILED", msg);
-    Sentry.captureException(err, {
-      tags: { route: "admin.reservations.detail.delete" },
-      extra: { id },
-    });
     return NextResponse.json({ ok: false, error: msg }, { status: 400 });
   }
 }

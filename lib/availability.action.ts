@@ -1,5 +1,6 @@
 "use server";
 
+import { requirePermission } from "@/lib/auth/action-authz";
 import { getBlockedVillaIds } from "@/lib/availability.helper";
 
 /* ===============================================================
@@ -16,6 +17,7 @@ import { getBlockedVillaIds } from "@/lib/availability.helper";
 export async function getBlockedVillaIdsAction(
   ...args: Parameters<typeof getBlockedVillaIds>
 ): Promise<string[]> {
+  await requirePermission("villas");
   const set = await getBlockedVillaIds(...args);
   return Array.from(set);
 }

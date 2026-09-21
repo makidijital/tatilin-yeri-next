@@ -7,8 +7,6 @@
    - DEBUG: tüm checkpoint'ler [mail] prefix ile loglanır
    =============================================================== */
 
-import * as Sentry from "@sentry/nextjs";
-
 import {
   formatFrom,
   getMailConfig,
@@ -111,27 +109,6 @@ export async function sendMail(
   });
 
   console.log("[mail] mail_logs write", { logged });
-
-  /* 🛡️ SENTRY — Resend fail = production'da müşteri mail almıyor.
-     mail_logs satırı düştü ama UI fire-and-forget olduğundan caller
-     uyarmıyor. Bu silent fail mode'unu Sentry "Inbox"a çıkarır →
-     ops alert. Başarılı send'ler capture EDILMEZ (sample 0). */
-  if (!result.ok) {
-    Sentry.captureMessage("mail.send.failed", {
-      level: "error",
-      tags: {
-        mail_type: input.mailType,
-        provider: "resend",
-        status: result.status ? String(result.status) : "unknown",
-      },
-      extra: {
-        recipient,
-        subject,
-        error: result.error,
-        reservationId: input.reservationId ?? null,
-      },
-    });
-  }
 
   return { ...result, recipient, subject };
 }
