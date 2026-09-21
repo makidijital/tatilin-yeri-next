@@ -74,7 +74,6 @@ import { useEffect, useState } from "react";
 
 import {
   X,
-  Calendar,
   Users,
   ChevronDown,
 } from "lucide-react";
@@ -105,15 +104,6 @@ import BookingMinStayWarning from "@/app/components/villa/booking/BookingMinStay
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import type { Locale } from "@/lib/i18n/config";
-
-/** Tarih aralığı etiketi için BCP47 tag'i. Bu dosya ZATEN
- *  `toLocaleDateString("tr-TR", …)` kullanıyordu; yalnız sabit "tr-TR"
- *  locale'e bağlandı — TR çıktısı DEĞİŞMEZ. */
-const DATE_LOCALE_TAG: Record<Locale, string> = {
-  tr: "tr-TR",
-  en: "en-US",
-  de: "de-DE",
-};
 
 type Props = {
   /* Modal open/close (parent owned). false ise content render
@@ -459,7 +449,6 @@ function ModalContent({
   initialEnd,
 }: ContentProps) {
   const dict = getDictionary(locale);
-  const dateLocaleTag = DATE_LOCALE_TAG[locale ?? "tr"];
   /* === DOMAIN — AYNI engine, TEK source-of-truth ===
      Input set BookingSidebar ile birebir aynı kaynaktan (API). */
   const engine = useBookingEngine({
@@ -509,7 +498,6 @@ function ModalContent({
     activeStayDiscount,
     prepayment,
     convertedDeposit,
-    startingPrice,
     handleReservation,
     /* 🛡️ HAVUZ ISITMA — apiData.config.pool_heating_fee artık gerçek
        villa değeri olduğundan poolHeatingTotal/selected aktif çalışır. */
@@ -572,16 +560,11 @@ function ModalContent({
             <h2 className="font-display text-xl text-[var(--color-stone-900)] tracking-[-0.02em] mt-1 line-clamp-2">
               {villaTitle}
             </h2>
-            <div className="flex items-baseline gap-1.5 mt-2">
-              <span className="font-display text-2xl text-[var(--color-stone-900)] tracking-[-0.02em]">
-                {startingPrice}
-              </span>
-              <span className="text-[var(--color-stone-500)] text-sm">
-                {dict.booking.perNightSuffix}
-              </span>
-              {/* Premium chip kaldırıldı (UI polish — user request).
-                  Spacing: gap-1.5 + mt-2 layout korunur. */}
-            </div>
+            {/* 🛡️ GÜNLÜK FİYAT GÖSTERİMİ KALDIRILDI (UI-only, user
+                request): başlıktaki "{startingPrice} / gece" satırı
+                artık render EDİLMİYOR. Engine `startingPrice`'ı
+                hesaplamaya DEVAM EDER (useBookingEngine dokunulmadı);
+                toplam tutar / indirim / rezervasyon akışı DEĞİŞMEDİ. */}
           </div>
           <button
             type="button"
@@ -593,34 +576,12 @@ function ModalContent({
           </button>
         </div>
 
-        {/* DATE display */}
-        <div
-          className="
-            border border-[var(--color-stone-100)] rounded-xl
-            px-4 py-3
-            flex items-center gap-3
-            bg-white
-          "
-        >
-          <Calendar size={16} className="text-[var(--color-champagne-500)]" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[10.5px] tracking-[0.16em] uppercase font-semibold text-[var(--color-stone-400)]">
-              {dict.booking.dateLabel}
-            </div>
-            <div className="text-sm font-medium text-[var(--color-stone-900)] truncate">
-              {startDate && endDate
-                ? `${startDate.toLocaleDateString(dateLocaleTag, {
-                  day: "numeric",
-                  month: "short",
-                })} – ${endDate.toLocaleDateString(dateLocaleTag, {
-                  day: "numeric",
-                  month: "short",
-                })}`
-                : dict.booking.selectDatePlaceholder}
-            </div>
-          </div>
-        </div>
-
+        {/* 🛡️ TARİH ETİKET BLOĞU KALDIRILDI (UI-only, user request):
+            takvim ikonu + "Tarih" başlığı + "Tarih seç" / seçili aralık
+            özeti artık render EDİLMİYOR. TARİH SEÇME FONKSİYONU AYNEN
+            ÇALIŞIR — seçim aşağıdaki BookingCalendar üzerinden yapılır,
+            engine state'i (startDate/endDate) ve URL'den hidrasyon
+            DEĞİŞMEDİ. */}
         {/* Calendar — paylaşılan component, AYNI engine.
             UI Polish #3: wrapper w-full + box-border, padding eşit.
             BookingCalendar internally `.rdp-months !justify-center`
@@ -741,7 +702,12 @@ function ModalContent({
         <button
           onClick={handleReservation}
           disabled={!minimumStayValid}
-          className={`btn-primary w-full !py-3.5 !text-sm ${
+          /* 🛡️ DÜZ TURUNCU CTA (UI-only): `.btn-primary`nin turkuaz
+             zemini + glow shadow'ları YALNIZ BU BUTONDA ezilir (global
+             sınıfa DOKUNULMADI → diğer tüm butonlar aynı). Marka
+             turuncusu #ED7926, beyaz metin; hover sade koyu ton,
+             gradient/glass/translate efekti yok. */
+          className={`btn-primary w-full !py-3.5 !text-sm !bg-[#ED7926] !bg-none !shadow-none !transform-none hover:!bg-[#d96d1f] hover:!shadow-none ${
             !minimumStayValid ? "!opacity-50 !cursor-not-allowed" : ""
           }`}
         >

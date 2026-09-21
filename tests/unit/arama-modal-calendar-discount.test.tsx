@@ -113,7 +113,9 @@ async function openModal(discounts?: DiscountRange[]) {
       villaTitle="Test Villa"
     />
   );
-  await screen.findByText("Tarih seç");
+  /* ⚠️ UI turu: "Tarih seç" bloğu kaldırıldı → sync-point takvimin
+     kendisidir. Test amacı/assertion'ları DEĞİŞMEDİ. */
+  await screen.findAllByRole("gridcell");
   await waitFor(() => expect(dayCellText(r.container, 9)).not.toBe(""));
   return r;
 }
@@ -179,12 +181,12 @@ describe("/arama modal takvimi — indirimli günlük fiyat", () => {
         initialEnd={end}
       />
     );
-    const label = (d: Date) =>
-      d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
-    const expected = `${label(new Date(FY, FUTURE.getMonth(), 8))} – ${label(
-      new Date(FY, FUTURE.getMonth(), 11)
-    )}`;
-    expect(await screen.findByText(expected)).toBeInTheDocument();
+    /* 08 → 11 = 3 gece → URL'den gelen aralık hidrate olmuş demektir
+       (tarih etiketi bloğu UI turunda kaldırıldı; doğrulama özet
+       üzerinden yapılır). */
+    expect(
+      await screen.findByText("Konaklama Tutarı (3 Gece)")
+    ).toBeInTheDocument();
   });
 });
 
@@ -349,7 +351,7 @@ describe("D) modal fiyat özeti — indirimli tutar", () => {
         villaTitle="Test Villa"
       />
     );
-    await screen.findByText("Tarih seç");
+    await screen.findAllByRole("gridcell");
     expect(screen.queryByText("Toplam Tutar")).not.toBeInTheDocument();
     expect(screen.queryByText("İndirimli Tutar")).not.toBeInTheDocument();
   });

@@ -81,10 +81,6 @@ function futureRange() {
   };
 }
 
-function label(d: Date) {
-  return d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
-}
-
 function renderModal(props: {
   initialStart?: string | null;
   initialEnd?: string | null;
@@ -111,19 +107,23 @@ function findDayGridcell(day: number): HTMLElement {
 }
 
 describe("VillaCardBookingModal — URL'den gelen tarihler", () => {
+  /* ⚠️ UI turu: takvim ikonu + "Tarih" + "Tarih seç" bloğu KALDIRILDI.
+     Seçim artık özet üzerinden doğrulanır ("Konaklama Tutarı (N Gece)"
+     yalnız geçerli bir aralık hidrate olduğunda render edilir) —
+     testlerin AMACI ve kapsamı DEĞİŞMEDİ, yalnız selector güncellendi. */
   it("1) start + end verilince takvim bu aralık SEÇİLİ açılır", async () => {
     const r = futureRange();
     renderModal({ initialStart: r.start, initialEnd: r.end });
-    const expected = `${label(r.startDate)} – ${label(r.endDate)}`;
-    expect(await screen.findByText(expected)).toBeInTheDocument();
-    /* "Tarih seç" placeholder'ı GÖRÜNMEZ. */
-    expect(screen.queryByText("Tarih seç")).not.toBeInTheDocument();
+    /* 08 → 11 = 3 gece → aralık hidrate olmuş demektir. */
+    expect(
+      await screen.findByText("Konaklama Tutarı (3 Gece)")
+    ).toBeInTheDocument();
   });
 
   it("2) takvim seçili başlangıç tarihinin AYINDA açılır", async () => {
     const r = futureRange();
     renderModal({ initialStart: r.start, initialEnd: r.end });
-    await screen.findByText(`${label(r.startDate)} – ${label(r.endDate)}`);
+    await screen.findByText("Konaklama Tutarı (3 Gece)");
     /* O ayın 8'i ve 11'i, ay değiştirmeden görünür olmalı. */
     expect(findDayGridcell(8)).toBeTruthy();
     expect(findDayGridcell(11)).toBeTruthy();
@@ -131,35 +131,36 @@ describe("VillaCardBookingModal — URL'den gelen tarihler", () => {
 
   it("3) 🔒 tarih verilmezse MEVCUT davranış: takvim boş açılır", async () => {
     renderModal({});
-    expect(await screen.findByText("Tarih seç")).toBeInTheDocument();
+    await screen.findAllByRole("gridcell");
+    expect(screen.queryByText("Toplam Tutar")).not.toBeInTheDocument();
   });
 
   it("4) 🔒 yalnız start verilirse MEVCUT davranış korunur (boş takvim)", async () => {
     const r = futureRange();
     renderModal({ initialStart: r.start });
-    expect(await screen.findByText("Tarih seç")).toBeInTheDocument();
+    await screen.findAllByRole("gridcell");
+    expect(screen.queryByText("Toplam Tutar")).not.toBeInTheDocument();
   });
 
   it("5) 🔒 yalnız end verilirse MEVCUT davranış korunur (boş takvim)", async () => {
     const r = futureRange();
     renderModal({ initialEnd: r.end });
-    expect(await screen.findByText("Tarih seç")).toBeInTheDocument();
+    await screen.findAllByRole("gridcell");
+    expect(screen.queryByText("Toplam Tutar")).not.toBeInTheDocument();
   });
 
   it("6) kullanıcı YENİ tarih seçerse normal seçim davranışı çalışmaya devam eder", async () => {
     const r = futureRange();
     renderModal({ initialStart: r.start, initialEnd: r.end });
-    await screen.findByText(`${label(r.startDate)} – ${label(r.endDate)}`);
+    await screen.findByText("Konaklama Tutarı (3 Gece)");
 
-    /* Aynı ay içinde 20 → 25 yeni seçim. */
+    /* Aynı ay içinde 20 → 25 yeni seçim (5 gece). */
     fireEvent.click(findDayGridcell(20));
     fireEvent.click(findDayGridcell(25));
 
-    const newStart = new Date(r.startDate.getFullYear(), r.startDate.getMonth(), 20);
-    const newEnd = new Date(r.startDate.getFullYear(), r.startDate.getMonth(), 25);
     await waitFor(() =>
       expect(
-        screen.getByText(`${label(newStart)} – ${label(newEnd)}`)
+        screen.getByText("Konaklama Tutarı (5 Gece)")
       ).toBeInTheDocument()
     );
   });

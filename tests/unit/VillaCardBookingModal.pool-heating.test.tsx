@@ -131,8 +131,11 @@ async function openModalAndSelectDates(poolHeatingFee: number | null) {
     />
   );
 
-  // Skeleton → apiData yüklenene kadar bekle (Tarih seç placeholder'ı).
-  await screen.findByText("Tarih seç");
+  /* Skeleton → apiData yüklenene kadar bekle. ⚠️ Eski sync-point
+     ("Tarih seç" placeholder'ı) UI turunda KALDIRILDI (takvim ikonu +
+     "Tarih" + "Tarih seç" bloğu); yerine takvimin kendisi (gridcell)
+     beklenir. Testin AMACI ve assertion'ları DEĞİŞMEDİ. */
+  await screen.findAllByRole("gridcell");
 
   await selectFutureDateRange();
   // Engine settle olsun (BookingSummary — "Toplam Tutar" satırı result hazır
@@ -200,7 +203,8 @@ describe("VillaCardBookingModal — havuz ısıtma veri zinciri (availability AP
       />
     );
 
-    await screen.findByText("Tarih seç");
+    /* Sync-point güncellendi (bkz. yukarıdaki not); assertion AYNI. */
+    await screen.findAllByRole("gridcell");
 
     expect(screen.queryByText("Havuz Isıtma")).not.toBeInTheDocument();
   });
