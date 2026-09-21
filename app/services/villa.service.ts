@@ -623,6 +623,37 @@ export async function getVillasForAdmin(): Promise<VillaDTO[]> {
 }
 
 /* ===============================================================
+   📦 ADMIN SIRALAMA — minimal projection (yalnız /villas/siralama)
+   ===============================================================
+   `getVillasForAdmin()` DEĞİŞTİRİLMEDİ (52 alanlı `VillaDTO`
+   sözleşmesi ve `mapVilla` aynen duruyor). Bu fonksiyon yalnız
+   sıralama ekranı için EK olarak eklendi.
+
+   NEDEN: sıralama paneli AST kanıtıyla sadece `id` ve `title`
+   okuyor; 52 alanlık DTO'nun RSC payload'ına serialize edilip
+   tarayıcıya taşınması saf israftı.
+
+   DAVRANIŞ: satır KÜMESİ ve SIRASI `listForAdmin()` ile BİREBİR
+   aynı (aynı WHERE, aynı ORDER BY, LIMIT yok) — yalnız kolonlar
+   daraltıldı. `mapVilla` çağrılmaz; bu yüzden villa başına
+   `getStartingPrice` + `villa_images.sort()` maliyeti de kalkar.
+   =============================================================== */
+export type VillaSortItem = {
+  id: string;
+  title: string;
+  sort_order: number;
+};
+
+export async function getVillasForSortOrder(): Promise<VillaSortItem[]> {
+  const rows = await villaAdminRepository.listForSortOrder();
+  return rows.map((r) => ({
+    id: String(r.id ?? ""),
+    title: String(r.title ?? ""),
+    sort_order: Number(r.sort_order ?? 0),
+  }));
+}
+
+/* ===============================================================
    📦 ADMIN PAGE — pagination + search (opt-in)
    ===============================================================
    `/maki-admin/villas` operasyon ekranı için. Sıralama paneli

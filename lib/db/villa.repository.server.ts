@@ -825,6 +825,58 @@ export const villaAdminRepository = {
   },
 
   /* ===============================================================
+     READ — admin SIRALAMA ekranı (minimal projection)
+     ===============================================================
+     YALNIZ `/maki-admin/villas/siralama` içindir.
+
+     ⚠️ NEDEN AYRI FONKSİYON (listForAdmin DEĞİŞTİRİLMEDİ):
+       `listForAdmin` iki tüketici tarafından paylaşılıyor —
+       `getVillasForAdmin()` (siralama) ve `getVillasForAdminPage()`
+       (`/maki-admin/villas` operasyon ekranı, kapak görseli + fiyat +
+       bölge gösterir). Ortak sorguyu daraltmak operasyon ekranını
+       bozardı; bu yüzden siralama'ya ÖZEL ayrı bir sorgu eklendi.
+       `listForAdmin` gövdesi ve sözleşmesi BİREBİR KORUNDU.
+
+     KANIT (neden yalnız 3 kolon):
+       `VillaSortPanel.tsx` AST taraması → paneldeki TEK alan erişimleri
+       `villa.id` ve `villa.title`. `sort_order` yalnız tipte duruyor;
+       sıra `reordered.map((v, idx) => ...)` ile INDEX'ten türetilir.
+       Panel; görsel, fiyat, bölge, açıklama, SEO, havuz, koordinat
+       alanlarının HİÇBİRİNİ okumuyor.
+
+     DAVRANIŞ AYNI:
+       • WHERE `deleted_at IS NULL` — listForAdmin ile BİREBİR
+         (pasif villalar DAHİL; global sort_order semantiği korunur).
+       • ORDER BY `sort_order ASC, created_at DESC` — BİREBİR.
+       • LIMIT/OFFSET **YOK** — tüm liste döner (global sıralama şart).
+       • Hata → `[]` (listForAdmin ile aynı fail-soft tutum).
+
+     ŞEMA GÜVENLİĞİ (açık kolon listesi riski):
+       `id` ve `title` bu dosyadaki 14 ÇALIŞAN sorguda açıkça
+       seçiliyor; `sort_order` migration 006'da
+       `ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0`
+       ile eklenmiş ve production'da çalışan `ORDER BY sort_order`
+       sorguları (listPublic / findSearchResults) varlığını kanıtlıyor.
+  =============================================================== */
+  async listForSortOrder(): Promise<Record<string, unknown>[]> {
+    const { data, error } = await dbAdmin
+      .from("villa")
+      .select("id, title, sort_order")
+      .is("deleted_at", null)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error(
+        "[villa.repo.server.listForSortOrder] FAILED",
+        error.message
+      );
+      return [];
+    }
+    return (data || []) as Record<string, unknown>[];
+  },
+
+  /* ===============================================================
      READ — admin count (exact, NATIVE, Migration S6B)
      ===============================================================
      Anon `villaRepository.countForAdmin` karşılığı. BYTE-IDENTICAL:

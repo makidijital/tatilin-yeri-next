@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -142,6 +142,15 @@ export default function VillaSortPanel({
     router.refresh();
   }
 
+  /* 🛡️ PERF — `SortableContext` her render'da YENİ dizi kimliği
+     alıyordu (`items.map(v => v.id)` inline). useMemo ile kimlik
+     `items` değişmedikçe sabit kalır → SortableContext gereksiz
+     yeniden hesaplama yapmaz. Dizinin İÇERİĞİ ve SIRASI birebir
+     aynı; dnd-kit sözleşmesi değişmedi.
+     ⚠️ Erken `return`'den ÖNCE çağrılır — hook sırası her render'da
+     aynı kalmalı (react-hooks/rules-of-hooks). */
+  const sortableIds = useMemo(() => items.map((v) => v.id), [items]);
+
   if (items.length === 0) {
     return (
       <div className="admin-card-flat p-12 text-center text-[var(--admin-muted-2)]">
@@ -184,7 +193,7 @@ export default function VillaSortPanel({
         onDragEnd={handleDragEnd}
       >
         <SortableContext
-          items={items.map((v) => v.id)}
+          items={sortableIds}
           strategy={verticalListSortingStrategy}
         >
           <div className="flex flex-col gap-2">
@@ -209,7 +218,7 @@ export default function VillaSortPanel({
    Operasyon kart'ından bilinçli olarak SADELEŞTİRİLDİ. 1000+ villa
    scale'inde DOM'da render edilecek node sayısı düşürüldü.
 =============================================================== */
-function SortRowCard({
+const SortRowCard = memo(function SortRowCard({
   villa,
   index,
   persisting,
@@ -285,4 +294,4 @@ function SortRowCard({
       </span>
     </article>
   );
-}
+});

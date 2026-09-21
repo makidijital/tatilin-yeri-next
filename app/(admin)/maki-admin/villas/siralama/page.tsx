@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
-import { getVillasForAdmin } from "@/app/services/villa.service";
+import { getVillasForSortOrder } from "@/app/services/villa.service";
 import VillaSortPanel from "./_components/VillaSortPanel";
 
 /* ===============================================================
@@ -14,10 +14,16 @@ import VillaSortPanel from "./_components/VillaSortPanel";
    onlar için "Mülkler" ekranına döner.
 
    VERI KAYNAĞI:
-     `getVillasForAdmin()` — `/maki-admin/villas` ile AYNI service.
-     Repository sözleşmesi DEĞİŞMEDİ; pagination YOK. Bu sayfa
-     tüm aktif+pasif (soft-deleted hariç) villaları tek seferde
-     fetch eder — sort_order semantiği global.
+     `getVillasForSortOrder()` — bu ekrana ÖZEL minimal projection
+     (`id, title, sort_order`). Satır KÜMESİ ve SIRASI eski
+     `getVillasForAdmin()` ile BİREBİR aynı (aynı WHERE
+     `deleted_at IS NULL`, aynı `ORDER BY sort_order ASC,
+     created_at DESC`); pagination YOK. Bu sayfa tüm aktif+pasif
+     (soft-deleted hariç) villaları tek seferde fetch eder —
+     sort_order semantiği GLOBAL kalır.
+     ⚠️ `getVillasForAdmin()` / `listForAdmin()` DEĞİŞTİRİLMEDİ;
+     `/maki-admin/villas` operasyon ekranı onları kullanmaya
+     devam eder.
 
    CACHE:
      `dynamic = "force-dynamic"` — FAZ 30 pattern; mutation
@@ -33,8 +39,8 @@ export const dynamic = "force-dynamic";
 
 export default async function VillaSiralaPage() {
   // 🛡️ Admin listing: pasif villalar dahil; soft-deleted hariç.
-  //    Bu service `/maki-admin/villas` ile birebir aynı — tek source.
-  const villas = await getVillasForAdmin();
+  //    Minimal projection — panel yalnız id + title okuyor.
+  const villas = await getVillasForSortOrder();
 
   return (
     <div className="space-y-10">
