@@ -936,6 +936,11 @@ export type Dictionary = {
       namePlaceholder: string;
       emailPlaceholder: string;
       phonePlaceholder: string;
+      /** 🛡️ İki telefonlu iletişim bloğu etiketleri. */
+      phoneLabel: string;
+      phone2Label: string;
+      phone2Placeholder: string;
+      phoneCountryAriaLabel: string;
       identityPlaceholder: string;
       addressPlaceholder: string;
       notePlaceholder: string;
@@ -980,6 +985,9 @@ export type Dictionary = {
       nameRequired: string;
       phoneRequired: string;
       phoneInvalid: string;
+      /** 🛡️ İkinci telefon — YENİ public rezervasyonlarda zorunlu. */
+      phone2Required: string;
+      phone2Invalid: string;
       emailRequired: string;
       emailInvalid: string;
       identityRequired: string;

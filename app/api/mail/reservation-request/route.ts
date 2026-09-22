@@ -177,6 +177,7 @@ export async function POST(req: Request) {
       guestName: r.name || "Misafir",
       identityNumber: r.identity_number || null,
       phone: r.phone || null,
+      phone2: r.phone2 || null,
       email: r.email || null,
       country: r.country || null,
       city: r.city || null,

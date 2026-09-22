@@ -67,6 +67,8 @@ export type VoucherProps = {
   guestName: string;
   identityNumber: string | null;
   phone: string | null;
+  /** 🛡️ İkinci telefon — eski rezervasyonlarda null → satır basılmaz. */
+  phone2: string | null;
   email: string | null;
   country: string | null;
   city: string | null;
@@ -119,6 +121,8 @@ type VoucherReservationRow = {
   damage_deposit: number | null;
   name: string | null;
   phone: string | null;
+  /** 🛡️ İkinci telefon — eski rezervasyonlarda null → satır basılmaz. */
+  phone2: string | null;
   email: string | null;
   identity_number: string | null;
   country: string | null;
@@ -235,6 +239,7 @@ export async function buildVoucherData(
     guestName: r.name || "Misafir",
     identityNumber: r.identity_number || null,
     phone: r.phone || null,
+    phone2: r.phone2 || null,
     email: r.email || null,
     country: r.country || null,
     city: r.city || null,

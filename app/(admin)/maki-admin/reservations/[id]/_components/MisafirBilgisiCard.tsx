@@ -65,6 +65,9 @@ export default function MisafirBilgisiCard({
         {[
           { key: "name", label: "Ad Soyad" },
           { key: "phone", label: "Telefon" },
+          /* 🛡️ Migration 094 — ikinci telefon. Admin tarafında OPSİYONEL:
+             eski kayıtlarda boş kalır, düzenleme engellenmez. */
+          { key: "phone2", label: "Telefon 2" },
           { key: "email", label: "E-posta" },
           { key: "identity_number", label: "TC / Pasaport" },
         ].map((field) => (

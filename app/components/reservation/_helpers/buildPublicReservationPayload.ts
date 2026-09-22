@@ -1,6 +1,8 @@
 import type { ReservationCreateInput } from "@/app/services/reservation/types";
 
 import type { PublicReservationFormData } from "../_types/reservation-form-data";
+/* 🛡️ E.164 normalize — ülke kodu kaybolmadan saklanır. */
+import { normalizePhone } from "@/lib/phone.helper";
 
 /* ===============================================================
    🛡️ FAZ 2 — buildPublicReservationPayload (PURE)
@@ -166,7 +168,9 @@ export function buildPublicReservationPayload(
 
     // USER
     name: form.name.trim(),
-    phone: form.phone.trim(),
+    phone: normalizePhone(form.phone),
+    /* 🛡️ İkinci telefon — E.164 normalize; ülke kodu korunur. */
+    phone2: normalizePhone(form.phone2),
     email: form.email.trim(),
 
     identity_number: form.identity.trim(),

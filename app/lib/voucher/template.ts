@@ -69,6 +69,7 @@ export function renderVoucherDocument(
       ? rowHtml("TC / Pasaport", props.identityNumber)
       : "",
     props.phone ? rowHtml("Telefon", props.phone) : "",
+    props.phone2 ? rowHtml("Telefon 2", props.phone2) : "",
     props.email ? rowHtml("E-posta", props.email) : "",
     /* 🌍 Display override: TR ISO → "Türkiye". Voucher PDF/print
        output; underlying snapshot data (props.country) aynen ISO

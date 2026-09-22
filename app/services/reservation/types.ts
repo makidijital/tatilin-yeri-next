@@ -82,6 +82,9 @@ export type ReservationCreateInput = {
 
   name: string;
   phone: string;
+  /** 🛡️ Migration 094 — ikinci telefon (E.164). Public akışta ZORUNLU
+   *  (create.service guard); admin akışında opsiyonel. */
+  phone2?: string | null;
   email?: string;
 
   identity_number?: string;
@@ -126,6 +129,7 @@ export type ReservationUpdateInput = {
 
   name?: string;
   phone?: string;
+  phone2?: string | null;
   email?: string | null;
 
   identity_number?: string | null;
@@ -201,6 +205,7 @@ export type ReservationUpdatePayload = {
   villa_id?: string;
   name?: string;
   phone?: string;
+  phone2?: string | null;
   email?: string | null;
   identity_number?: string | null;
   country?: string | null;

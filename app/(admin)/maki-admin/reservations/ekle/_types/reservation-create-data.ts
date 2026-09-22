@@ -128,6 +128,8 @@ export type ReservationCreateData = ReservationFormShape & {
   /* Kişi bilgileri — initial "" */
   name: string;
   phone: string;
+  /** 🛡️ Migration 094 — ikinci telefon. Admin'de OPSİYONEL. */
+  phone2: string;
   email: string;
   identity_number: string;
 
@@ -199,6 +201,7 @@ export function initialReservationCreateData(): ReservationCreateData {
   return {
     name: "",
     phone: "",
+    phone2: "",
     email: "",
     identity_number: "",
     city: "",

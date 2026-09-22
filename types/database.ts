@@ -324,6 +324,9 @@ export interface ReservationRow {
   stay_discount_amount_try: number | null;
   name: string;
   phone: string;
+  /** 🛡️ Migration 094 — ikinci iletişim telefonu (E.164).
+   *  Eski kayıtlarda NULL; zorunluluk uygulama katmanında. */
+  phone2: string | null;
   email: string | null;
   identity_number: string | null;
   country: string | null;

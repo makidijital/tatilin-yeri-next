@@ -5,6 +5,11 @@ import { reservationServerRepository } from "@/lib/db/reservation.repository.ser
 import { verifyPublicReservationPrice } from "@/app/services/reservation/_helpers/price-verify";
 import { verifyPublicReservationStayRules } from "@/app/services/reservation/_helpers/stay-verify";
 import { applyRateLimit } from "@/lib/rate-limit";
+/* 🛡️ Uluslararası telefon — TR-only regex KALDIRILDI. Yeni kütüphane YOK. */
+import {
+  normalizePhone,
+  isValidInternationalPhone,
+} from "@/lib/phone.helper";
 import type { ReservationCreateInput } from "@/app/services/reservation/types";
 
 /* ===============================================================
@@ -48,6 +53,38 @@ export async function POST(req: Request): Promise<Response> {
       { ok: false, error: "Geçersiz istek" },
       { status: 400 }
     );
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     🛡️ İKİ TELEFON ZORUNLU — SUNUCU TARAFI ENFORCEMENT
+     ═══════════════════════════════════════════════════════════
+     Frontend validation'a GÜVENİLMEZ: bu route'a doğrudan istek
+     atılsa bile iki telefon da zorunlu ve uluslararası E.164
+     kuralına uygun olmalı. Normalize edilmiş değer body'ye geri
+     yazılır → DB'ye her zaman "+ülke kodu + rakamlar" saklanır,
+     ülke kodu kaybolmaz.
+
+     ⚠️ Bu guard YALNIZ PUBLIC route'tadır. `createReservation`
+       service'i admin ile ORTAK olduğu için oraya konulmadı —
+       admin tarafında phone2 opsiyoneldir ve eski kayıtlar
+       düzenlenebilir kalır. */
+  {
+    const p1 = normalizePhone(body?.phone);
+    const p2 = normalizePhone(body?.phone2);
+    if (!p1 || !isValidInternationalPhone(p1)) {
+      return NextResponse.json(
+        { ok: false, error: "Geçerli bir telefon numarası gir" },
+        { status: 400 }
+      );
+    }
+    if (!p2 || !isValidInternationalPhone(p2)) {
+      return NextResponse.json(
+        { ok: false, error: "Geçerli bir ikinci telefon numarası gir" },
+        { status: 400 }
+      );
+    }
+    body.phone = p1;
+    body.phone2 = p2;
   }
 
   /* 🛡️ SERVER-SIDE PRICE VERIFY + FAZ 3 SERVER-AUTHORITATIVE OVERRIDE.

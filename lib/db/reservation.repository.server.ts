@@ -259,7 +259,7 @@ export const reservationServerRepository = {
       .from("reservations")
       .select(
         `id, reservation_no,
-         name, phone, email, identity_number, country, city, address,
+         name, phone, phone2, email, identity_number, country, city, address,
          guests, guest_names, note, status, created_at,
          start_date, end_date,
          total_price, total_price_try,
@@ -289,7 +289,7 @@ export const reservationServerRepository = {
       .from("reservations")
       .select(
         `id, reservation_no,
-         name, phone, email, identity_number, country, city, address,
+         name, phone, phone2, email, identity_number, country, city, address,
          guests, guest_names, note, status, created_at,
          start_date, end_date,
          total_price, total_price_try,
@@ -335,7 +335,7 @@ export const reservationServerRepository = {
       .from("reservations")
       .select(
         `id, reservation_no,
-         villa_id, name, phone, start_date, end_date,
+         villa_id, name, phone, phone2, start_date, end_date,
          total_price,
          total_price_try,
          original_price,

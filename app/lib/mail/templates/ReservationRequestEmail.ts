@@ -55,6 +55,8 @@ export type ReservationRequestProps = {
   guestName: string;
   identityNumber?: string | null;
   phone?: string | null;
+  /** 🛡️ İkinci telefon — eski rezervasyonlarda null → satır BASILMAZ. */
+  phone2?: string | null;
   email?: string | null;
   country?: string | null;
   city?: string | null;
@@ -154,6 +156,7 @@ export function renderReservationRequestEmail(
       ? emailKeyValueRow("TC / Pasaport", props.identityNumber)
       : "",
     props.phone ? emailKeyValueRow("Telefon", props.phone) : "",
+    props.phone2 ? emailKeyValueRow("Telefon 2", props.phone2) : "",
     props.email ? emailKeyValueRow("E-posta", props.email) : "",
     /* 🌍 Display override: TR ISO → "Türkiye". Snapshot/payload
        aynen ISO code akar; sadece kullanıcıya görünen text dönüşür. */

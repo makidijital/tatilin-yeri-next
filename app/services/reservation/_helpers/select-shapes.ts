@@ -39,6 +39,7 @@ export const SELECT_RESERVATION_LIST = `
   reservation_no,
   name,
   phone,
+  phone2,
   start_date,
   end_date,
 

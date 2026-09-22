@@ -89,6 +89,7 @@ export function buildNormalPayload(input: {
 
     name: data.name,
     phone: data.phone,
+    phone2: data.phone2 || null,
     email: data.email,
     identity_number: data.identity_number,
     country: data.country,

@@ -63,6 +63,8 @@ import { resolveTaxonomyName } from "@/lib/i18n/taxonomy-name.helper";
    Yeni i18n/routing mantığı YOK. */
 import Link from "next/link";
 import { localeHref } from "@/lib/i18n/locale-href";
+/* 🛡️ Uluslararası telefon — mevcut helper; yeni kütüphane YOK. */
+import { DIAL_CODES, joinPhone } from "@/lib/phone.helper";
 
 export default function ReservationForm({
   villa,
@@ -438,6 +440,8 @@ export default function ReservationForm({
   const isFormValid =
     form.name &&
     form.phone &&
+    /* 🛡️ İkinci telefon da zorunlu — mevcut isFormValid deseni aynen. */
+    form.phone2 &&
     form.email &&
     form.identity &&
     form.payment_method_id &&
@@ -884,7 +888,6 @@ export default function ReservationForm({
             {[
               { key: "name", placeholder: dict.form.namePlaceholder },
               { key: "email", placeholder: dict.form.emailPlaceholder },
-              { key: "phone", placeholder: dict.form.phonePlaceholder },
               { key: "identity", placeholder: dict.form.identityPlaceholder },
             ].map((field) => (
               <div key={field.key}>
@@ -905,6 +908,86 @@ export default function ReservationForm({
                   <p className="text-xs text-red-500 mt-1.5">
                     {errors[field.key]}
                   </p>
+                )}
+              </div>
+            ))}
+
+            {/* 🛡️ TELEFON 1 + TELEFON 2 — ikisi de ZORUNLU, ülke kodları
+                BİRBİRİNDEN BAĞIMSIZ. Mevcut input/select tasarım dili
+                (inputBase/inputOk/inputErr) aynen kullanıldı; yeni kart,
+                yeni renk, yeni component mimarisi YOK. Mobilde ülke kodu
+                sabit genişlikte, numara kalan alanı doldurur. */}
+            {(
+              [
+                {
+                  key: "phone" as const,
+                  dialKey: "phone_dial" as const,
+                  nationalKey: "phone_national" as const,
+                  label: dict.form.phoneLabel,
+                  placeholder: dict.form.phonePlaceholder,
+                },
+                {
+                  key: "phone2" as const,
+                  dialKey: "phone2_dial" as const,
+                  nationalKey: "phone2_national" as const,
+                  label: dict.form.phone2Label,
+                  placeholder: dict.form.phone2Placeholder,
+                },
+              ]
+            ).map((f) => (
+              <div key={f.key}>
+                <label
+                  htmlFor={`reservation-${f.key}`}
+                  className="block text-xs font-medium text-[var(--color-stone-500)] mb-1.5"
+                >
+                  {f.label} <span aria-hidden="true">*</span>
+                </label>
+                <div className="flex items-stretch gap-2">
+                  <select
+                    aria-label={`${f.label} — ${dict.form.phoneCountryAriaLabel}`}
+                    value={form[f.dialKey]}
+                    onChange={(e) => {
+                      const dial = e.target.value;
+                      setForm({
+                        ...form,
+                        [f.dialKey]: dial,
+                        [f.key]: joinPhone(dial, form[f.nationalKey]),
+                      });
+                      setErrors((prev) => ({ ...prev, [f.key]: "" }));
+                    }}
+                    className={`${inputBase} ${
+                      errors[f.key] ? inputErr : inputOk
+                    } !w-[104px] shrink-0 px-2 tabular-nums`}
+                  >
+                    {DIAL_CODES.map((c) => (
+                      <option key={c.iso} value={c.dial}>
+                        {c.dial} {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    id={`reservation-${f.key}`}
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete={f.key === "phone" ? "tel" : "tel-national"}
+                    value={form[f.nationalKey]}
+                    placeholder={f.placeholder}
+                    onChange={(e) => {
+                      const national = e.target.value;
+                      setForm({
+                        ...form,
+                        [f.nationalKey]: national,
+                        [f.key]: joinPhone(form[f.dialKey], national),
+                      });
+                      setErrors((prev) => ({ ...prev, [f.key]: "" }));
+                    }}
+                    className={`${inputBase} ${
+                      errors[f.key] ? inputErr : inputOk
+                    } flex-1 min-w-0`}
+                  />
+                </div>
+                {errors[f.key] && (
+                  <p className="text-xs text-red-500 mt-1.5">{errors[f.key]}</p>
                 )}
               </div>
             ))}

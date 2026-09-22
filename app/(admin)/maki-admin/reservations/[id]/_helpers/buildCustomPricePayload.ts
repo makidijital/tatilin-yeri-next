@@ -27,6 +27,7 @@ export type ReservationUpdatePayloadShape = {
   villa_id: string;
   name: string;
   phone: string;
+  phone2?: string | null;
   email: string | null;
   identity_number: string | null;
   country: string | null;
@@ -94,6 +95,7 @@ export function buildCustomPricePayload(input: {
 
     name: data.name,
     phone: data.phone,
+    phone2: data.phone2 || null,
     email: data.email,
     identity_number: data.identity_number,
     country: data.country,

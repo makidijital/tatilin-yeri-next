@@ -12,7 +12,14 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 
    Test edilen kurallar:
      - name required
-     - phone required + regex /^(\+90|0)?5\d{9}$/
+     - phone required + ULUSLARARASI (E.164)
+     - phone2 required + ULUSLARARASI (E.164)
+
+   ⚠️ SÖZLEŞME DEĞİŞİKLİĞİ (kullanıcı talebi §2/§9):
+     Eski kural `/^(\+90|0)?5\d{9}$/` YALNIZ TR cep hattını kabul
+     ediyordu. Artık E.164 → ülke kodu ZORUNLU. Bu nedenle ülke kodu
+     TAŞIMAYAN "05551112233" ve "5551112233" artık REDDEDİLİR;
+     bunun yerine "+905551112233" kullanılır. +49/+44/+33/+1 kabul.
      - email required + regex
      - identity required + regex /^\d{11}$/
      - payment_method_id required
@@ -22,7 +29,9 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 const valid = () => ({
   ...initialPublicReservationFormData(),
   name: "Ahmet Yılmaz",
-  phone: "05551112233",
+  phone: "+905551112233",
+  /* 🛡️ İkinci telefon ZORUNLU — farklı ülke (bağımsızlık kanıtı). */
+  phone2: "+4915112345678",
   email: "test@example.com",
   identity: "12345678901",
   payment_method_id: "pm-1",
@@ -69,22 +78,24 @@ describe("validatePublicReservationForm — phone regex", () => {
     expect(errors.phone).toBeUndefined();
   });
 
-  it("accepts 0 prefix", () => {
+  it("🔄 ARTIK REDDEDER — 0 öneki (ülke kodu yok)", () => {
     const errors = validatePublicReservationForm({
       form: { ...valid(), phone: "05551112233" },
       start: "2026-06-01",
       end: "2026-06-08",
     });
-    expect(errors.phone).toBeUndefined();
+    /* ⚠️ ARTIK RED: ülke kodu yok → E.164 değil. Kural bilerek değişti. */
+    expect(errors.phone).toBe("Geçerli telefon gir");
   });
 
-  it("accepts bare 5xxxxxxxxx (no prefix)", () => {
+  it("🔄 ARTIK REDDEDER — öneksiz 5xxxxxxxxx (ülke kodu yok)", () => {
     const errors = validatePublicReservationForm({
       form: { ...valid(), phone: "5551112233" },
       start: "2026-06-01",
       end: "2026-06-08",
     });
-    expect(errors.phone).toBeUndefined();
+    /* ⚠️ ARTIK RED: ülke kodu yok. */
+    expect(errors.phone).toBe("Geçerli telefon gir");
   });
 
   it("flags invalid 'Geçerli telefon gir' for wrong format", () => {
@@ -238,6 +249,7 @@ describe("validatePublicReservationForm — accumulated errors", () => {
         ...initialPublicReservationFormData(),
         name: "",
         phone: "",
+        phone2: "",
         email: "",
         identity: "",
         payment_method_id: null,
@@ -252,6 +264,7 @@ describe("validatePublicReservationForm — accumulated errors", () => {
       "name",
       "payment_method_id",
       "phone",
+      "phone2",
     ].sort());
   });
 });
@@ -322,7 +335,7 @@ describe("validatePublicReservationForm — locale (TR/EN/DE)", () => {
     const tr = validatePublicReservationForm(allInvalid(), "tr");
     const en = validatePublicReservationForm(allInvalid(), "en");
     const de = validatePublicReservationForm(allInvalid(), "de");
-    for (const key of ["name", "phone", "email", "identity", "date"] as const) {
+    for (const key of ["name", "phone", "phone2", "email", "identity", "date"] as const) {
       expect(en[key]).not.toBe(tr[key]);
       expect(de[key]).not.toBe(tr[key]);
       expect(en[key]).not.toBe(de[key]);
@@ -363,7 +376,8 @@ describe("validatePublicReservationForm — locale (TR/EN/DE)", () => {
       form: {
         ...initialPublicReservationFormData(),
         name: "Ahmet Yılmaz",
-        phone: "05551112233",
+        phone: "+905551112233",
+        phone2: "+4915112345678",
         email: "test@example.com",
         identity: "12345678901",
         payment_method_id: "pm-1",

@@ -813,6 +813,7 @@ export default function AdminReservationDetailPage() {
             name: data.name,
             email: data.email,
             phone: data.phone,
+            phone2: data.phone2 ?? null,
             start_date: data.start_date,
             end_date: data.end_date,
             status: data.status,

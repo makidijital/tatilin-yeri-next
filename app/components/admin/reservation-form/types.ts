@@ -21,6 +21,7 @@ import type { PaymentPreference } from "@/lib/payment.helper";
 export type ReservationFormShape = {
   name?: string;
   phone?: string;
+  phone2?: string;
   email?: string;
   identity_number?: string;
 

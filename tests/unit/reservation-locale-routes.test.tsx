@@ -219,8 +219,19 @@ describe("reservation dictionary — TR/EN/DE bütünlüğü", () => {
     /* Metin sayısı aynı; birebir aynı kalan metin oranı düşük olmalı. */
     expect(en.length).toBe(tr.length);
     expect(de.length).toBe(tr.length);
-    const sameEn = en.filter((v, i) => v === tr[i]).length;
-    const sameDe = de.filter((v, i) => v === tr[i]).length;
+    /* 🛡️ ÇEVRİLEBİLİR metinler karşılaştırılır. Harf İÇERMEYEN
+       değerler (ör. telefon örneği "532 123 45 67") hiçbir dilde
+       farklılaşamaz; bunları "çevrilmemiş" saymak yanlış pozitif
+       üretir. Eşik GEVŞETİLMEDİ — hâlâ 3; yalnız çevrilemez örnekler
+       kümeden çıkarıldı. */
+    const translatable = (v: string, i: number) =>
+      /\p{L}/u.test(tr[i]) || /\p{L}/u.test(v);
+    const sameEn = en.filter(
+      (v, i) => v === tr[i] && translatable(v, i)
+    ).length;
+    const sameDe = de.filter(
+      (v, i) => v === tr[i] && translatable(v, i)
+    ).length;
     expect(sameEn).toBeLessThan(3);
     expect(sameDe).toBeLessThan(3);
   });
@@ -559,7 +570,10 @@ describe("ReservationForm — TR parity (regresyon)", () => {
     for (const p of [
       "İsim Soyisim",
       "E-posta",
-      "Telefon",
+      /* 🛡️ Telefon placeholder'ı artık ulusal numara örneği; ülke kodu
+         ayrı select'te. İkinci telefonun kendi placeholder'ı var. */
+      "532 123 45 67",
+      "151 12345678",
       "TC / Pasaport",
       "Adres",
       "Not (isteğe bağlı)",
@@ -651,6 +665,7 @@ describe.each(["en", "de"] as const)("ReservationForm — %s", (locale) => {
       d.form.namePlaceholder,
       d.form.emailPlaceholder,
       d.form.phonePlaceholder,
+      d.form.phone2Placeholder,
       d.form.identityPlaceholder,
       d.form.addressPlaceholder,
       d.form.notePlaceholder,
@@ -725,6 +740,11 @@ describe.each(["en", "de"] as const)("ReservationForm — %s", (locale) => {
     fireEvent.change(screen.getByPlaceholderText(d.form.phonePlaceholder), {
       target: { value: "123" },
     });
+    /* phone2 de dolu ama geçersiz → submit engeli telefon 2'den değil,
+       assertion'ın hedeflediği phoneInvalid'den gelsin. */
+    fireEvent.change(screen.getByPlaceholderText(d.form.phone2Placeholder), {
+      target: { value: "123" },
+    });
     fireEvent.change(screen.getByPlaceholderText(d.form.identityPlaceholder), {
       target: { value: "42" },
     });
@@ -753,6 +773,29 @@ describe.each(["en", "de"] as const)("ReservationForm — %s", (locale) => {
 /* 🛡️ SÖZLEŞME ONAYI (yeni zorunlu adım) — gönderim artık checkbox
    işaretlenmeden çalışmaz. Testler KULLANICI AKIŞINI tamamlar; hiçbir
    assertion gevşetilmedi/kaldırılmadı. */
+/* 🛡️ İKİ TELEFON (Migration 094) — gönderim artık her iki telefon da
+   dolu olmadan çalışmaz. Testler KULLANICI AKIŞINI tamamlar; hiçbir
+   assertion gevşetilmedi/kaldırılmadı.
+   Ülke kodu select'i varsayılan +90'dır; ikinci telefonda ülkeyi
+   BİLEREK +49 yaparak bağımsızlık da doğrulanır. */
+function fillPhones(
+  locale: Locale,
+  national1 = "5551112233",
+  national2 = "15112345678"
+) {
+  const d = getDictionary(locale).reservation;
+  fireEvent.change(screen.getByPlaceholderText(d.form.phonePlaceholder), {
+    target: { value: national1 },
+  });
+  const dial2 = screen.getByLabelText(
+    `${d.form.phone2Label} — ${d.form.phoneCountryAriaLabel}`
+  );
+  fireEvent.change(dial2, { target: { value: "+49" } });
+  fireEvent.change(screen.getByPlaceholderText(d.form.phone2Placeholder), {
+    target: { value: national2 },
+  });
+}
+
 function acceptTerms() {
   const box = document.getElementById(
     "reservation-terms-accept"
@@ -773,9 +816,7 @@ async function fillAndSubmit(locale: Locale) {
   fireEvent.change(screen.getByPlaceholderText(d.form.emailPlaceholder), {
     target: { value: "test@example.com" },
   });
-  fireEvent.change(screen.getByPlaceholderText(d.form.phonePlaceholder), {
-    target: { value: "05551112233" },
-  });
+  fillPhones(locale);
   fireEvent.change(screen.getByPlaceholderText(d.form.identityPlaceholder), {
     target: { value: "12345678901" },
   });

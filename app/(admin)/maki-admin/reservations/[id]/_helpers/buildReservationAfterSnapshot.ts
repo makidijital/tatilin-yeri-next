@@ -20,6 +20,7 @@ export type ReservationAfterSnapshot = {
   name: string;
   email: string | null;
   phone: string;
+  phone2?: string | null;
   start_date: string;
   end_date: string;
   guests: number | null;
@@ -46,6 +47,7 @@ export function buildReservationAfterSnapshot(input: {
     name: data.name,
     email: data.email,
     phone: data.phone,
+    phone2: data.phone2 ?? null,
     start_date: payload.start_date,
     end_date: payload.end_date,
     guests: payload.guests,

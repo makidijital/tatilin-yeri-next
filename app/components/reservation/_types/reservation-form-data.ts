@@ -1,6 +1,8 @@
 import type { Dispatch, SetStateAction } from "react";
 
 import type { PaymentPreference } from "@/lib/payment.helper";
+/* 🛡️ Uluslararası telefon — mevcut helper, yeni kütüphane YOK. */
+import { DEFAULT_DIAL_CODE } from "@/lib/phone.helper";
 /* 🛡️ MIGRATION 088 — ödeme yöntemi adının EN/DE haritası (additive). */
 import type { TaxonomyNameByLocale } from "@/lib/i18n/taxonomy-name.helper";
 
@@ -32,7 +34,17 @@ import type { TaxonomyNameByLocale } from "@/lib/i18n/taxonomy-name.helper";
 export type PublicReservationFormData = {
   name: string;
   email: string;
+  /** Telefon 1 — E.164 (ülke kodu + numara birleşik). */
   phone: string;
+  /** 🛡️ Telefon 1 ülke kodu (UI seçici state'i, "+90"). */
+  phone_dial: string;
+  /** 🛡️ Telefon 1 ulusal numara (UI input state'i). */
+  phone_national: string;
+  /** 🛡️ Telefon 2 — E.164. YENİ public rezervasyonlarda ZORUNLU. */
+  phone2: string;
+  /** 🛡️ Telefon 2 ülke kodu — Telefon 1'den BAĞIMSIZ seçilebilir. */
+  phone2_dial: string;
+  phone2_national: string;
   identity: string;
   country: string;
   city: string;
@@ -61,6 +73,13 @@ export function initialPublicReservationFormData(): PublicReservationFormData {
     name: "",
     email: "",
     phone: "",
+    /* 🛡️ Varsayılan ülke kodu +90; kullanıcı her iki alan için de
+       bağımsız değiştirebilir. */
+    phone_dial: DEFAULT_DIAL_CODE,
+    phone_national: "",
+    phone2: "",
+    phone2_dial: DEFAULT_DIAL_CODE,
+    phone2_national: "",
     identity: "",
     country: "",
     city: "",

@@ -23,6 +23,7 @@ function buildPayload(
     villa_id: "villa-1",
     name: "Ahmet Yılmaz",
     phone: "+905551112233",
+    phone2: "+4915112345678",
     email: "ahmet@example.com",
     identity_number: "12345678901",
     country: "Türkiye",
@@ -63,7 +64,7 @@ function buildPayload(
 }
 
 describe("buildReservationAfterSnapshot — shape contract", () => {
-  it("returns the 17 documented fields", () => {
+  it("returns the 18 documented fields", () => {
     const result = buildReservationAfterSnapshot({
       id: "res-1",
       data: asReservation(baseReservation),
@@ -76,6 +77,8 @@ describe("buildReservationAfterSnapshot — shape contract", () => {
       "name",
       "email",
       "phone",
+      /* 🛡️ Migration 094 — audit log kontratına BİLİNÇLİ eklendi. */
+      "phone2",
       "start_date",
       "end_date",
       "guests",

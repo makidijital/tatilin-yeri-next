@@ -126,6 +126,7 @@ export function buildCreateReservationPayload(
 
     name: data.name,
     phone: data.phone,
+    phone2: data.phone2 ?? null,
     email: data.email || null,
 
     identity_number: data.identity_number || null,

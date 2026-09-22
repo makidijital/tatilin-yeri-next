@@ -20,6 +20,7 @@ type Partial = Pick<
   | "name"
   | "email"
   | "phone"
+  | "phone2"
   | "start_date"
   | "end_date"
   | "guests"
@@ -60,6 +61,8 @@ export const baseReservation: Partial = {
   name: "Ahmet Yılmaz",
   email: "ahmet@example.com",
   phone: "+905551112233",
+  /* 🛡️ Migration 094 — ikinci telefon (farklı ülke). */
+  phone2: "+4915112345678",
   start_date: "2026-06-01",
   end_date: "2026-06-08",
   guests: 4,

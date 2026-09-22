@@ -35,6 +35,7 @@ import type {
 export type ReservationCreatePayloadShape = {
   name: string;
   phone: string;
+  phone2?: string | null;
   email: string;
   identity_number: string;
   city: string;
@@ -122,6 +123,7 @@ export function buildCreateCustomPricePayload(
   return {
     name: data.name,
     phone: data.phone,
+    phone2: data.phone2 || null,
     email: data.email,
     identity_number: data.identity_number,
     city: data.city,

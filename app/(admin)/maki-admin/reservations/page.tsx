@@ -474,7 +474,7 @@ export default function AdminReservationsPage() {
 
   /* ---------------------------------------------
      🔥 UI-ONLY FILTER (business logic'e dokunmaz)
-     name / phone / villa.title üzerinden client-side
+     name / phone / phone2 / villa.title üzerinden client-side
      filtering. Asıl liste DB'den geldiği gibi gelir.
   ---------------------------------------------- */
   const filtered = !search.trim()
@@ -484,6 +484,7 @@ export default function AdminReservationsPage() {
         return (
           normalizeSearchText(r.name || "").includes(q) ||
           normalizeSearchText(r.phone || "").includes(q) ||
+          normalizeSearchText(r.phone2 || "").includes(q) ||
           normalizeSearchText(r.villa?.title || "").includes(q)
         );
       });
@@ -647,6 +648,14 @@ export default function AdminReservationsPage() {
                     <Phone size={11} />
                     {r.phone || "-"}
                   </p>
+                  {/* 🛡️ Migration 094 — ikinci telefon. Eski kayıtlarda
+                      null → satır HİÇ basılmaz (liste yüksekliği değişmez). */}
+                  {r.phone2 && (
+                    <p className="text-[12px] text-[var(--admin-muted-2)] truncate mt-0.5 flex items-center gap-1.5">
+                      <Phone size={11} />
+                      {r.phone2}
+                    </p>
+                  )}
                   <p className="text-[11.5px] text-[var(--admin-muted)] truncate mt-0.5">
                     {r.villa?.title || "Mülk yok"}
                   </p>

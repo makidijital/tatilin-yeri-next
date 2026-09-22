@@ -17,7 +17,7 @@ import { buildReservationBeforeSnapshot } from "@/app/(admin)/maki-admin/reserva
 import { asReservation, baseReservation } from "./_fixtures";
 
 describe("buildReservationBeforeSnapshot — shape contract", () => {
-  it("returns exactly the 17 documented fields in declaration order", () => {
+  it("returns exactly the 18 documented fields in declaration order", () => {
     const snapshot = buildReservationBeforeSnapshot(
       asReservation(baseReservation)
     );
@@ -30,6 +30,8 @@ describe("buildReservationBeforeSnapshot — shape contract", () => {
       "name",
       "email",
       "phone",
+      /* 🛡️ Migration 094 — audit log kontratına BİLİNÇLİ eklendi. */
+      "phone2",
       "start_date",
       "end_date",
       "guests",
@@ -55,6 +57,7 @@ describe("buildReservationBeforeSnapshot — shape contract", () => {
       name: "Ahmet Yılmaz",
       email: "ahmet@example.com",
       phone: "+905551112233",
+      phone2: "+4915112345678",
       start_date: "2026-06-01",
       end_date: "2026-06-08",
       guests: 4,

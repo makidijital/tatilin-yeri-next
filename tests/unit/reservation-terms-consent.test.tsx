@@ -103,8 +103,13 @@ async function fillValidForm(locale: Locale) {
   fireEvent.change(screen.getByPlaceholderText(d.form.emailPlaceholder), {
     target: { value: "test@example.com" },
   });
+  /* 🛡️ Migration 094 — İKİ telefon da zorunlu; ülke kodu select'i
+     varsayılan +90. Kullanıcı akışı tamamlanır, assertion değişmedi. */
   fireEvent.change(screen.getByPlaceholderText(d.form.phonePlaceholder), {
-    target: { value: "05551112233" },
+    target: { value: "5551112233" },
+  });
+  fireEvent.change(screen.getByPlaceholderText(d.form.phone2Placeholder), {
+    target: { value: "5559998877" },
   });
   fireEvent.change(screen.getByPlaceholderText(d.form.identityPlaceholder), {
     target: { value: "12345678901" },

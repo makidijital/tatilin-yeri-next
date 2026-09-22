@@ -17,6 +17,8 @@ import type {
 export const baseCreateData: ReservationCreateData = {
   name: "Ahmet Yılmaz",
   phone: "+905551112233",
+  /* 🛡️ Migration 094 — admin akışında OPSİYONEL; fixture boş bırakır. */
+  phone2: "",
   email: "ahmet@example.com",
   identity_number: "12345678901",
   city: "Antalya",
