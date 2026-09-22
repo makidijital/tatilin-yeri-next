@@ -309,12 +309,15 @@ function clampRating(value: number | null | undefined): number {
    (is_cover öncelik, ardından sort_order ASC).
 
    PUBLIC kontratı:
-     - Yalnız approved review'lar
-     - Featured-first sort, ardından newest fallback
-     - Max 6 (homepage performance)
-     - Villa silinmiş/pasif ise client filter düşer (defansif)
+     - Yalnız approved review'lar (is_approved = true)
+     - Sıralama: SALT created_at DESC (en yeni). `is_featured`
+       sıralaması KALDIRILDI — anasayfada "öne çıkan" önceliği yok.
+     - Max 10 (homepage performance)
+     - Villa silinmiş/pasif ise client filter düşer (defansif) —
+       bu nedenle sonuç 10'dan AZ olabilir; over-fetch buffer bunu
+       telafi eder, hata üretmez.
 =============================================================== */
-const HOMEPAGE_REVIEW_LIMIT = 6;
+const HOMEPAGE_REVIEW_LIMIT = 10;
 
 export type HomepageReviewItem = {
   id: string;

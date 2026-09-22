@@ -64,7 +64,11 @@ export const villaReviewServerRepository = {
       .eq("is_approved", true);
   },
 
-  /** Homepage testimonial — embedded join (villa + images + location). */
+  /** Homepage testimonial — embedded join (villa + images + location).
+   *  🛡️ Sıralama: SALT `created_at DESC` (en yeni onaylı yorumlar).
+   *  `is_featured` sıralaması homepage'den KALDIRILDI — "öne çıkan"
+   *  rozeti villa-detay (`findApprovedByVilla`) ve admin tarafında
+   *  AYNEN korunur; yalnız anasayfa sırası etkilenir. */
   async findFeaturedHomepage(limit: number) {
     return await dbAdmin
       .from<Record<string, unknown>>("villa_reviews")
@@ -77,7 +81,6 @@ export const villaReviewServerRepository = {
        )`
       )
       .eq("is_approved", true)
-      .order("is_featured", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(limit);
   },
