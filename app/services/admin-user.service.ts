@@ -238,6 +238,18 @@ export const SIDEBAR_PERMISSIONS: PermissionItem[] = [
 
   // İçerik
   { key: "pages", label: "Sayfalar", group: "İçerik" },
+  /* 🛡️ Blog Yazıları — kendi permission key'i.
+     ÖNCESİ: `/maki-admin/blog` sidebar item'ı ve blog translation
+     action'ları `pages` key'ini REUSE ediyordu → "Sayfalar" yetkisi
+     verilen her admin blog menüsünü de görüyordu, ayrı açıp kapatmak
+     mümkün değildi. Bu key onu `pages`'ten AYIRIR.
+     `pages` key'i DEĞİŞMEDİ/KALDIRILMADI — Sayfalar yönetimi aynen
+     onunla çalışmaya devam eder.
+     Mevcut admin'ler migration 093 ile idempotent backfill edilir
+     (064/018 paterni) → kimse blog erişimini KAYBETMEZ. Yeni admin
+     oluşturma akışı zaten bu katalogdan tüm key'leri verdiği için
+     (`SIDEBAR_PERMISSIONS.map(p => p.key)`) otomatik sahip olur. */
+  { key: "blog", label: "Blog Yazıları", group: "İçerik" },
   { key: "menu", label: "Menü", group: "İçerik" },
   {
     key: "homepage_collection",

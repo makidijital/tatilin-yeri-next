@@ -221,12 +221,15 @@ const menuGroups: MenuGroup[] = [
         permissionKey: "pages",
       },
       {
-        /* 🛡️ Blog Yazıları — İçerik grubu. permissionKey "pages" REUSE
-           (yeni yetki/migration YOK; villas/siralama paterni). */
+        /* 🛡️ Blog Yazıları — İçerik grubu. Kendi permission key'i
+           ("blog"); ÖNCEDEN `pages` REUSE ediliyordu. Ayrı key sayesinde
+           admin bazında açılıp kapatılabilir. Mevcut admin'lere
+           migration 093 backfill eder → menü kimsede kaybolmaz.
+           `pages` item'ı (Sayfalar) DEĞİŞMEDİ. */
         name: "Blog Yazıları",
         href: "/maki-admin/blog",
         icon: Newspaper,
-        permissionKey: "pages",
+        permissionKey: "blog",
       },
       {
         name: "Menü",

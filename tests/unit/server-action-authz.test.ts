@@ -114,7 +114,7 @@ const ALL_PERMISSIONS = [
   "dashboard", "villas", "villa_types", "features", "rules", "price_includes",
   "locations", "villa_lists", "property_owners", "reservations",
   "manual_reservations", "external_calendars", "offer_requests",
-  "payment_methods", "payment_accounts", "finance", "pages", "menu",
+  "payment_methods", "payment_accounts", "finance", "pages", "blog", "menu",
   "homepage_collection", "discount_collection", "messages", "faqs",
   "reviews", "settings", "webmaster", "system_logs", "activity_logs", "users",
 ];

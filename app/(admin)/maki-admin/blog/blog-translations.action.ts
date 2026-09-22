@@ -28,7 +28,10 @@ import { authorizeAdminSession } from "@/lib/admin-route-auth";
 export async function loadBlogTranslationsAction(
   postId: string
 ): Promise<BlogTranslationsListResult> {
-  await requirePermission("pages");
+  /* 🛡️ Blog artık kendi permission key'ini kullanır ("blog");
+     ÖNCEDEN `pages` REUSE ediliyordu. Authorization DESENİ değişmedi —
+     yalnız key. */
+  await requirePermission("blog");
   return getBlogTranslations(postId);
 }
 
@@ -37,7 +40,9 @@ export async function saveBlogTranslationAction(
 ): Promise<BlogTranslationResult> {
   const auth = await authorizeAdminSession();
   if (!auth.ok) return { ok: false, error: "Yetkisiz" };
-  if (!(await callerHasPermission(auth.caller.id, "pages"))) {
+  /* 🛡️ Bkz. yukarısı — key `pages` → `blog`. Guard yapısı ve
+     `{ ok:false }` dönüş şekli AYNEN korundu. */
+  if (!(await callerHasPermission(auth.caller.id, "blog"))) {
     return { ok: false, error: "Yetkisiz" };
   }
 
