@@ -117,4 +117,43 @@ export const villaDiscountRepository = {
       .eq("id", discountId)
       .eq("villa_id", villaId);
   },
+
+  /* ===============================================================
+     🛡️ CLEANUP — TAMAMEN GEÇMİŞ İNDİRİMLER (cron)
+     ===============================================================
+     `villa-price.repository.server.ts > deletePastSeasons` metodunun
+     BİREBİR KARDEŞİ — yalnız tablo + çağıran cron farklı. Yeni desen,
+     yeni mimari, yeni migration YOK.
+
+     KURAL: `end_date < today` — STRICT `<`.
+       • BUGÜN biten indirim KORUNUR (o gün hâlâ geçerli/görünür),
+         ertesi gün silinir. `<=` KULLANILMAZ.
+       • Bu eşik, projedeki İKİ mevcut görünürlük filtresiyle
+         (lib/cache.helpers > getCachedDiscountCollectionVillas ve
+         app/services/discount-collection.service > listDiscountCollection,
+         her ikisi de `end_date >= bugün` → görünür) TAM SİMETRİKTİR.
+
+     KAPSAM SINIRI — DOKUNMADIKLARI:
+       • `discount_collections`: bu tablo HİÇ okunmaz/yazılmaz. Admin
+         küratörlüğü (sort_order, is_active, custom_title,
+         custom_cover_image) KORUNUR; villaya yeni indirim eklenince
+         kart otomatik geri gelir.
+       • `reservations`: indirim bilgisi orada SNAPSHOT kolonlarında
+         tutulur (migration 080: discount_applied/discount_type/
+         discount_value/discount_currency/...). `villa_discounts`'a FK
+         YOKTUR → geçmiş rezervasyonların fiyat/indirim bilgisi
+         ETKİLENMEZ.
+       • FK/CASCADE: `villa_discounts`'a referans veren BAŞKA TABLO
+         YOKTUR; tek FK giden yönde (`villa_id → villa(id) ON DELETE
+         CASCADE`, migration 079:136). Silme zinciri tetiklenmez.
+
+     İdempotent: eşleşen satır yoksa `count: 0`, hata yok. Tek DELETE
+     ifadesi PostgreSQL'de zaten atomiktir → ayrı transaction GEREKMEZ.
+     WHERE'li DELETE (safe-updates OK). */
+  async deletePastDiscounts(today: string) {
+    return await dbAdmin
+      .from("villa_discounts")
+      .delete({ count: "exact" })
+      .lt("end_date", today);
+  },
 };

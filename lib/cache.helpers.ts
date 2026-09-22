@@ -538,6 +538,19 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
     const today = parseLocalDate(formatLocalDate(new Date()));
 
     const result: HomepageCollectionVilla[] = [];
+    /* 🛡️ TAM DOLULUK POST-PASS — villa başına aday indirim dönemleri
+       (start_date ASC) + fiyat türetici. Yalnız aşağıdaki availability
+       bloğu doldurur/okur. */
+    const discountCandidates = new Map<
+      string,
+      {
+        periods: DiscountRange[];
+        priceForDiscount: (d: DiscountRange | null) => {
+          price: number | null;
+          currency: string;
+        };
+      }
+    >();
     for (const r of rows) {
       const v = r.villa;
       if (!v || !v.id) continue;
@@ -646,6 +659,33 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
           a.start_date.localeCompare(b.start_date)
         )[0] ?? null;
 
+      /* 🛡️ TAM DOLULUK POST-PASS BAĞLAMI (aşağıdaki availability bloğu
+         için). Yukarıdaki `selectedDiscount` seçimi (start_date ASC, ilk)
+         DEĞİŞTİRİLMEDİ — bu yalnız EK bir kayıt: aynı sırada TÜM aday
+         dönemler + o villanın fiyat bağlamı. Post-pass, TAMAMEN DOLU
+         dönemleri eleyip aynı sıradan bir SONRAKİ uygun dönemi seçebilsin
+         diye. Tek dönem varsa davranış BİREBİR aynı kalır. */
+      const sortedVisibleDiscounts = [...visibleDiscounts].sort((a, b) =>
+        a.start_date.localeCompare(b.start_date)
+      );
+      /* Fiyat türetimi — aşağıdaki `result.push` ile BİREBİR aynı ifade
+         (`seasonPriceAtDiscountStart || firstPrice`). Yeni bir fiyat
+         mantığı DEĞİL; dönem değişirse AYNI kural yeniden uygulanır. */
+      const priceForDiscount = (d: DiscountRange | null) => {
+        const seasonal = d
+          ? getSeasonPriceForDiscountStart(rawPrices, d.start_date)
+          : null;
+        const ref = seasonal || firstPrice;
+        return {
+          price: ref && ref.price !== null ? Number(ref.price) : null,
+          currency: ref?.currency || "TRY",
+        };
+      };
+      discountCandidates.set(v.id, {
+        periods: sortedVisibleDiscounts,
+        priceForDiscount,
+      });
+
       const s = statsMap[v.id];
       const hasReviews = !!s && s.count > 0;
 
@@ -695,69 +735,211 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
     }
 
     /* ===============================================================
-       🛡️ İNDİRİM PENCERESİ MÜSAİTLİK KONTROLÜ — TOPLU, N+1 YOK
+       🛡️ İNDİRİM PENCERESİ MÜSAİTLİK — 3 DURUM, TOPLU, N+1 YOK
        ===============================================================
-       KURAL: indirim aralığının TAMAMI boş olmalı. Aralıkta tek bir
-       gece bile dolu ise `discount_available = false` (kart CTA'sı
-       rezervasyon sayfasına DEĞİL, mevcut villa detay href'ine gider).
-       "En az 1 gece müsaitse yeter" mantığı YOKTUR.
+       KURALLAR (tek yerde):
+         0/N gece dolu      → TAMAMEN MÜSAİT → kart var, CTA rezervasyon
+         1..N-1 gece dolu   → KISMEN DOLU    → kart var, CTA villa detay
+         N/N gece dolu      → TAMAMEN DOLU   → o DÖNEM elenir; villanın
+                              başka uygun dönemi yoksa KART HİÇ ÜRETİLMEZ
 
-       N+1 YOK — villa başına sorgu ATILMAZ:
-         • Kartlar (start_date,end_date) penceresine göre GRUPLANIR.
-         • Her DISTINCT pencere için TEK `getBlockedVillaIds` çağrısı,
-           `villaIds` ile o gruba scope'lanmış.
-         • Gruplar `Promise.all` ile paralel — /arama'nın esnek pencere
-           bloğuyla (AramaPageBody:926-928) BİREBİR AYNI desen.
-         ⇒ sorgu sayısı = DISTINCT pencere sayısı ≤ kart sayısı.
-           (Bu bölüm `discount_collections` küratörlü tablosunu render
-           eder — villa tablosunu DEĞİL; 1500 villa senaryosu yok.)
+       ÇOKLU DÖNEM: mevcut `start_date` ASC sırası KORUNUR; yalnız
+       TAMAMEN DOLU dönemler atlanır, kalan EN ERKEN dönem seçilir.
 
-       ⚠️ Envelope (min(start)…max(end)) ile tek sorgu BİLİNÇLİ olarak
-       REDDEDİLDİ: Kasım'da dolu bir villa, Ekim indirimi için yanlışlıkla
-       dolu işaretlenirdi.
+       AVAILABILITY KAYNAĞI: yalnız MEVCUT `getBlockedVillaIds` →
+       `get_blocked_villa_ids` RPC (migration 039). Yeni RPC/migration/
+       repository YOK. RPC kapsamı: reservations(pending|confirmed) +
+       manual_reservations(tümü) + external_calendar_events(is_active).
+       Half-open [) overlap (`existing.start < end AND existing.end >
+       start`) RPC'nin İÇİNDE — burada tarih matematiği İCAT EDİLMEZ.
 
-       FAIL-SOFT: `getBlockedVillaIds` hata durumunda boş Set döner
-       (kendi içinde loglar) → villa "müsait" kalır → MEVCUT davranış
-       korunur. Overbooking koruması bu katmanda DEĞİL; DB EXCLUDE
-       constraint `reservations_no_overlap` (migration 001) ile sağlanır
-       ve ona DOKUNULMADI.
+       SORGU SAYISI (villa sayısından BAĞIMSIZ):
+         Kademe 1 — her DISTINCT pencere için 1 sorgu (villalar gruplu).
+                    Pencerede hiç blocked villa yoksa gece taraması YOK.
+         Kademe 2 — yalnız blocked ALT KÜME için gece gece tarama; her
+                    gecede aday kümesi daralır, küme boşalınca ERKEN ÇIKIŞ.
+         ⇒ Sorgu = W + Σ(yalnız blocked pencereler) N_w
+           1500 villa aynı pencerede → yine 1..N_w+1 sorgu.
 
-       ⚠️ `getBlockedVillaIds` geçersiz/`start >= end` aralıkta RPC
-       ÇAĞIRMADAN boş Set döner (availability.helper:124-125). Tek
-       günlük indirim (start === end) bu yüzden sorgu üretmez ve
-       davranış ÖNCEKİ tur ile BİREBİR aynı kalır. */
-    const windowGroups = new Map<string, { start: string; end: string; ids: string[] }>();
-    for (const c of result) {
-      const d = c.discount;
-      if (!d?.start_date || !d?.end_date) continue;
-      /* RPC geçersiz/0-gecelik aralıkta zaten boş Set döndürür —
-         gereksiz çağrı üretmemek için burada da elenir. */
-      if (!(d.start_date < d.end_date)) continue;
-      const key = `${d.start_date}|${d.end_date}`;
-      const g = windowGroups.get(key);
-      if (g) g.ids.push(c.id);
-      else windowGroups.set(key, { start: d.start_date, end: d.end_date, ids: [c.id] });
-    }
+       GUARD: `MAX_NIGHT_SWEEP_NIGHTS` geceden uzun dönemlerde gece
+       taraması HİÇ çalışmaz → o dönem "tamamen dolu" SAYILMAZ (villa
+       ASLA yanlışlıkla gizlenmez); kademe 1 sonucuna göre kart kalır ve
+       gerekirse CTA villa detayına düşer — GÜVENLİ taraf.
 
-    if (windowGroups.size > 0) {
-      const groups = [...windowGroups.values()];
-      const blockedSets = await Promise.all(
-        groups.map((g) => getBlockedVillaIds(g.start, g.end, g.ids))
+       FAIL-SOFT: `getBlockedVillaIds` hata durumunda boş Set döner →
+       (a) overlap yok sayılır, (b) gece taramasında aday kümesi boşalır
+       → villa gizlenmez. Overbooking koruması bu katmanda DEĞİL; DB
+       EXCLUDE constraint `reservations_no_overlap` (migration 001).
+
+       TEK GÜNLÜK İNDİRİM (start === end): 0 gecelik dönem — sorgu
+       ÜRETİLMEZ, tamamen dolu SAYILMAZ, `discount_available` undefined
+       kalır → VillaCard MEVCUT davranışını korur (ÖNCEKİ tur ile birebir).
+
+       ⚠️ Envelope (min(start)…max(end)) tek sorgu BİLİNÇLİ REDDEDİLDİ:
+       Kasım'da dolu bir villa Ekim indirimi için yanlış işaretlenirdi. */
+
+    /** Gece bazlı taramanın çalışacağı en uzun dönem (gece). Üstündeki
+     *  dönemlerde tarama atlanır — villa ASLA gizlenmez (güvenli taraf). */
+    const MAX_NIGHT_SWEEP_NIGHTS = 31;
+
+    /** "YYYY-MM-DD" + 1 gün. `lib/date-format` helper'ları (LOCAL
+     *  midnight, UTC parse YOK) — `stay-rules.helper > shiftKey` ile aynı
+     *  desen. YALNIZ iç hesapta kullanılır; indirim tarihlerine veya
+     *  URL'ye ASLA yazılmaz (+1 gün eklenmez). */
+    const nextDayKey = (key: string): string => {
+      const d = parseLocalDate(key);
+      d.setDate(d.getDate() + 1);
+      return formatLocalDate(d);
+    };
+
+    const nightsIn = (start: string, end: string): number => {
+      const sD = parseLocalDate(start);
+      const eD = parseLocalDate(end);
+      if (Number.isNaN(sD.getTime()) || Number.isNaN(eD.getTime())) return 0;
+      return Math.max(
+        0,
+        Math.round((eD.getTime() - sD.getTime()) / 86400000)
       );
-      const blockedByVillaId = new Set<string>();
-      blockedSets.forEach((set, i) => {
-        for (const id of groups[i].ids) {
-          if (set.has(id)) blockedByVillaId.add(id);
+    };
+
+    /* ---- Aday pencereler: TÜM görünür dönemler (yalnız start < end) ---- */
+    type WindowGroup = { start: string; end: string; ids: string[] };
+    const windowGroups = new Map<string, WindowGroup>();
+    for (const [villaId, ctx] of discountCandidates) {
+      for (const d of ctx.periods) {
+        if (!d.start_date || !d.end_date) continue;
+        if (!(d.start_date < d.end_date)) continue; // 0 gecelik → sorgu yok
+        const key = `${d.start_date}|${d.end_date}`;
+        const g = windowGroups.get(key);
+        if (g) {
+          if (!g.ids.includes(villaId)) g.ids.push(villaId);
+        } else {
+          windowGroups.set(key, {
+            start: d.start_date,
+            end: d.end_date,
+            ids: [villaId],
+          });
         }
-      });
-      for (const c of result) {
-        if (!c.discount?.start_date || !c.discount?.end_date) continue;
-        if (!(c.discount.start_date < c.discount.end_date)) continue;
-        c.discount_available = !blockedByVillaId.has(c.id);
       }
     }
 
-    return result;
+    /** `${villaId}|${start}|${end}` → o pencerede EN AZ BİR gece dolu mu. */
+    const overlapKeys = new Set<string>();
+    /** `${villaId}|${start}|${end}` → o pencerenin TÜM geceleri dolu mu. */
+    const fullyBlockedKeys = new Set<string>();
+
+    if (windowGroups.size > 0) {
+      const groups = [...windowGroups.values()];
+
+      /* ---- KADEME 1 — pencere bazlı overlap (mevcut davranış) ---- */
+      const overlapSets = await Promise.all(
+        groups.map((g) => getBlockedVillaIds(g.start, g.end, g.ids))
+      );
+      groups.forEach((g, i) => {
+        for (const id of g.ids) {
+          if (overlapSets[i].has(id)) {
+            overlapKeys.add(`${id}|${g.start}|${g.end}`);
+          }
+        }
+      });
+
+      /* ---- KADEME 2 — yalnız blocked alt küme için gece taraması ---- */
+      const sweepTargets = groups
+        .map((g, i) => ({
+          g,
+          candidates: g.ids.filter((id) => overlapSets[i].has(id)),
+        }))
+        .filter(
+          (t) =>
+            t.candidates.length > 0 &&
+            nightsIn(t.g.start, t.g.end) <= MAX_NIGHT_SWEEP_NIGHTS
+        );
+
+      const sweepResults = await Promise.all(
+        sweepTargets.map(async ({ g, candidates }) => {
+          /* Her gece aday kümesi daralır; boşalınca ERKEN ÇIKIŞ. */
+          let alive = candidates;
+          let cursor = g.start;
+          let guard = 0;
+          while (
+            cursor < g.end &&
+            alive.length > 0 &&
+            guard < MAX_NIGHT_SWEEP_NIGHTS
+          ) {
+            const next = nextDayKey(cursor);
+            if (!(cursor < next)) break; // defansif: tarih ilerlemiyorsa dur
+            const blockedThisNight = await getBlockedVillaIds(
+              cursor,
+              next,
+              alive
+            );
+            alive = alive.filter((id) => blockedThisNight.has(id));
+            cursor = next;
+            guard += 1;
+          }
+          /* Döngü gece sayısını tüketmeden bittiyse (guard) TAMAMEN DOLU
+             DEMEK DEĞİLDİR — yalnız tüm geceler taranmışsa karar verilir. */
+          const fullySwept = !(cursor < g.end);
+          return { g, fullyBlocked: fullySwept ? alive : [] };
+        })
+      );
+
+      for (const { g, fullyBlocked } of sweepResults) {
+        for (const id of fullyBlocked) {
+          fullyBlockedKeys.add(`${id}|${g.start}|${g.end}`);
+        }
+      }
+    }
+
+    /* ---- Dönem yeniden seçimi + gizleme ---- */
+    const hiddenVillaIds = new Set<string>();
+    for (const c of result) {
+      const ctx = discountCandidates.get(c.id);
+      if (!ctx || ctx.periods.length === 0) continue;
+
+      const isFullyBlocked = (d: DiscountRange) =>
+        fullyBlockedKeys.has(`${c.id}|${d.start_date}|${d.end_date}`);
+
+      /* Mevcut start_date ASC sırası KORUNUR — yalnız tamamen dolu
+         dönemler atlanır. */
+      const usable = ctx.periods.find((d) => !isFullyBlocked(d)) ?? null;
+
+      if (!usable) {
+        /* TÜM dönemler tamamen dolu → kart hiç gösterilmez. */
+        hiddenVillaIds.add(c.id);
+        continue;
+      }
+
+      /* Seçilen dönem değiştiyse `discount` + fiyat alanlarını AYNI
+         kuralla yeniden türet (yeni fiyat mantığı YOK). */
+      const changed =
+        !c.discount ||
+        c.discount.start_date !== usable.start_date ||
+        c.discount.end_date !== usable.end_date;
+      if (changed) {
+        c.discount = {
+          start_date: usable.start_date,
+          end_date: usable.end_date,
+          discount_type: usable.discount_type,
+          discount_value: usable.discount_value,
+          currency: usable.currency ?? null,
+        };
+        const pr = ctx.priceForDiscount(usable);
+        c.price = pr.price;
+        c.currency = pr.currency;
+      }
+
+      /* 0 gecelik dönemde alan undefined bırakılır (mevcut davranış). */
+      if (usable.start_date < usable.end_date) {
+        c.discount_available = !overlapKeys.has(
+          `${c.id}|${usable.start_date}|${usable.end_date}`
+        );
+      }
+    }
+
+    return hiddenVillaIds.size > 0
+      ? result.filter((c) => !hiddenVillaIds.has(c.id))
+      : result;
   },
   ["discount-collection:get"],
   { tags: ["discount", "villa-reviews"], revalidate: 600 }
