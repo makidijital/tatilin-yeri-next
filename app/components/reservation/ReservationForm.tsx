@@ -936,12 +936,12 @@ export default function ReservationForm({
               ]
             ).map((f) => (
               <div key={f.key}>
-                <label
-                  htmlFor={`reservation-${f.key}`}
-                  className="block text-xs font-medium text-[var(--color-stone-500)] mb-1.5"
-                >
-                  {f.label} <span aria-hidden="true">*</span>
-                </label>
+                {/* 🛡️ GÖRÜNÜR ÜST LABEL KALDIRILDI ("Telefon 1 *" /
+                    "Telefon 2 *"). Diğer alanlarla (Ad/E-posta/TC) aynı
+                    şekilde yalnız placeholder gösterilir. `f.label`
+                    SİLİNMEDİ: select ve input'un aria-label'ında kalır →
+                    ekran okuyucu hangi telefon olduğunu bilmeye devam
+                    eder. Zorunluluk mantığı DEĞİŞMEDİ. */}
                 <div className="flex items-stretch gap-2">
                   <select
                     aria-label={`${f.label} — ${dict.form.phoneCountryAriaLabel}`}
@@ -967,6 +967,7 @@ export default function ReservationForm({
                   </select>
                   <input
                     id={`reservation-${f.key}`}
+                    aria-label={f.label}
                     type="tel"
                     inputMode="tel"
                     autoComplete={f.key === "phone" ? "tel" : "tel-national"}

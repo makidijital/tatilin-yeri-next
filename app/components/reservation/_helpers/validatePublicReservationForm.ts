@@ -32,7 +32,11 @@ import { isValidInternationalPhone } from "@/lib/phone.helper";
                            regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
      - identity (req)    → "TC zorunlu"
      - identity (regex)  → "11 haneli TC gir"
-                           regex: /^\d{11}$/
+                           ⚠️ ARTIK TC **veya** PASAPORT kabul edilir
+                           (bkz. isValidIdentityOrPassport). TC kuralı
+                           /^\d{11}$/ AYNEN korundu; pasaport EK bir
+                           daldır. Hata mesajı anahtarı DEĞİŞMEDİ
+                           (identityInvalid) — yeni metin eklenmedi.
      - payment_method_id → "Ödeme yöntemi seç"
      - !start || !end    → date: "Tarih seçmelisin"
 
@@ -42,6 +46,50 @@ import { isValidInternationalPhone } from "@/lib/phone.helper";
 
    PURE: input alır, error map döner. Toast/setErrors caller'da.
 =============================================================== */
+
+/* ===============================================================
+   🛡️ KİMLİK NO — TC Kimlik **veya** uluslararası pasaport
+   ===============================================================
+   NEDEN: alan etiketi "TC / Pasaport" olduğu hâlde validation
+   yalnız /^\d{11}$/ kabul ediyordu → yabancı misafirler pasaport
+   numarasıyla rezervasyon yapamıyordu.
+
+   İKİ DAL — sıra önemli:
+     1) TC KİMLİK: /^\d{11}$/ — MEVCUT KURAL BİREBİR KORUNDU.
+        11 haneli olmayan SALT RAKAM değerler (ör. "1234567890")
+        pasaport dalına DÜŞMEZ → geçersiz TC eskisi gibi reddedilir.
+     2) PASAPORT: harfle BAŞLAR, devamı harf/rakam, toplam 6..12,
+        en az bir RAKAM içerir.
+          A12345678 ✓   P1234567 ✓   X12345678 ✓   AB1234C5 ✓
+          12345ABCDEF ✗ (harfle başlamıyor — mevcut test korunur)
+          ABCDEFGH ✗ (rakam yok)   !!!!!! ✗   "" ✗   30 karakter ✗
+        Tek bir ülkenin formatına KİLİTLENMEZ.
+
+   ⚠️ SALT DOĞRULAMA: değer normalize EDİLMEZ/yazılmaz — payload ve
+     DB'ye giden `identity_number` kullanıcının yazdığı gibi kalır.
+     API sözleşmesi ve admin tarafı DEĞİŞMEDİ.
+   PURE: IO yok; testten doğrudan import edilebilir.
+=============================================================== */
+
+/** TC Kimlik — MEVCUT kural, değiştirilmedi. */
+const TC_IDENTITY_RE = /^\d{11}$/;
+/** Pasaport — ülke-bağımsız makul şablon. */
+const PASSPORT_RE = /^[A-Z][A-Z0-9]{5,11}$/;
+
+export function isValidIdentityOrPassport(
+  raw: string | null | undefined
+): boolean {
+  const v = String(raw ?? "").trim();
+  if (!v) return false;
+
+  /* 1) TC Kimlik — önce denenir (mevcut davranış). */
+  if (TC_IDENTITY_RE.test(v)) return true;
+
+  /* 2) Pasaport — boşluk/tire yazım tercihidir, doğrulama için
+     yok sayılır; değerin KENDİSİ değişmez. */
+  const p = v.replace(/[\s-]/g, "").toUpperCase();
+  return PASSPORT_RE.test(p) && /\d/.test(p);
+}
 
 export type ValidatePublicReservationFormInput = {
   form: PublicReservationFormData;
@@ -73,7 +121,7 @@ export function validatePublicReservationForm(
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
     newErrors.email = v.emailInvalid;
   if (!form.identity) newErrors.identity = v.identityRequired;
-  else if (!/^\d{11}$/.test(form.identity))
+  else if (!isValidIdentityOrPassport(form.identity))
     newErrors.identity = v.identityInvalid;
   if (!form.payment_method_id)
     newErrors.payment_method_id = v.paymentMethodRequired;

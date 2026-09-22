@@ -851,6 +851,133 @@ function mockReservationPost(
   );
 }
 
+/* ===============================================================
+   🛡️ TELEFON ALANLARI — GÖRÜNÜR ÜST LABEL YOK
+   ===============================================================
+   "Telefon 1 *" / "Telefon 2 *" üst etiketleri KALDIRILDI; alanların
+   kendisi, placeholder'ları, ülke kodu select'i ve ZORUNLULUK mantığı
+   AYNEN duruyor.
+=============================================================== */
+describe("ReservationForm — telefon üst label'ları kaldırıldı", () => {
+  it.each(LOCALES)("9-10-%s) 'Telefon 1' / 'Telefon 2' üst label'ı RENDER EDİLMEZ", (locale) => {
+    const d = getDictionary(locale).reservation;
+    renderForm(locale);
+    /* Görünür bir <label> elementi olarak bulunmamalı. */
+    for (const text of [d.form.phoneLabel, d.form.phone2Label]) {
+      const visible = screen.queryAllByText(
+        (_c, el) =>
+          el?.tagName === "LABEL" && el.textContent?.trim().startsWith(text) === true
+      );
+      expect(visible).toHaveLength(0);
+    }
+  });
+
+  it.each(LOCALES)("9b-10b-%s) yıldız (*) içeren telefon label'ı YOK", (locale) => {
+    const d = getDictionary(locale).reservation;
+    renderForm(locale);
+    for (const text of [d.form.phoneLabel, d.form.phone2Label]) {
+      expect(screen.queryByText(`${text} *`)).toBeNull();
+    }
+  });
+
+  it.each(LOCALES)("11-%s) iki telefon INPUT'u hâlâ render edilir", (locale) => {
+    const d = getDictionary(locale).reservation;
+    renderForm(locale);
+    expect(
+      screen.getByPlaceholderText(d.form.phonePlaceholder)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText(d.form.phone2Placeholder)
+    ).toBeInTheDocument();
+  });
+
+  it.each(LOCALES)("12-%s) ülke kodu select'leri + aria-label'lar korundu", (locale) => {
+    const d = getDictionary(locale).reservation;
+    renderForm(locale);
+    for (const label of [d.form.phoneLabel, d.form.phone2Label]) {
+      const sel = screen.getByLabelText(
+        `${label} — ${d.form.phoneCountryAriaLabel}`
+      );
+      expect(sel).toBeInTheDocument();
+      expect((sel as HTMLSelectElement).value).toBe("+90");
+      /* +90 dışındaki ülkeler hâlâ seçilebilir. */
+      expect(
+        Array.from((sel as HTMLSelectElement).options).map((o) => o.value)
+      ).toEqual(expect.arrayContaining(["+90", "+49", "+44", "+33", "+31", "+1"]));
+    }
+  });
+
+  it("12b) input'lar erişilebilir kalır (görünmez aria-label)", () => {
+    const d = getDictionary("tr").reservation;
+    renderForm("tr");
+    expect(screen.getByLabelText(d.form.phoneLabel)).toBeInTheDocument();
+    expect(screen.getByLabelText(d.form.phone2Label)).toBeInTheDocument();
+  });
+
+  it("12c) telefon ZORUNLULUĞU değişmedi — boş phone2 ile POST yok", async () => {
+    const d = getDictionary("tr").reservation;
+    renderForm("tr");
+    await waitFor(() =>
+      expect(screen.getByText("Havale / EFT")).toBeInTheDocument()
+    );
+    fireEvent.change(screen.getByPlaceholderText(d.form.namePlaceholder), {
+      target: { value: "Ahmet Yılmaz" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(d.form.emailPlaceholder), {
+      target: { value: "test@example.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(d.form.phonePlaceholder), {
+      target: { value: "5551112233" },
+    });
+    /* phone2 BİLEREK boş bırakıldı. */
+    fireEvent.change(screen.getByPlaceholderText(d.form.identityPlaceholder), {
+      target: { value: "12345678901" },
+    });
+    fireEvent.click(screen.getAllByRole("radio")[0]);
+    acceptTerms();
+
+    /* phone2 boş olduğu için gönderim kapısı AÇILMAZ (isFormValid) —
+       mevcut davranış; label kaldırma bunu DEĞİŞTİRMEDİ. */
+    const submit = screen
+      .getByText(d.form.submit)
+      .closest("button") as HTMLButtonElement;
+    expect(submit).toBeTruthy();
+    expect(submit.disabled).toBe(true);
+
+    fireEvent.click(submit);
+    const calls = (global.fetch as unknown as { mock: { calls: unknown[][] } })
+      .mock.calls;
+    expect(
+      calls.some((c) => String(c[0]) === "/api/public/reservations")
+    ).toBe(false);
+  });
+
+  it("12d) phone2 DOLDURULUNCA gönderim kapısı açılır (regresyon)", async () => {
+    const d = getDictionary("tr").reservation;
+    renderForm("tr");
+    await waitFor(() =>
+      expect(screen.getByText("Havale / EFT")).toBeInTheDocument()
+    );
+    fireEvent.change(screen.getByPlaceholderText(d.form.namePlaceholder), {
+      target: { value: "Ahmet Yılmaz" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(d.form.emailPlaceholder), {
+      target: { value: "test@example.com" },
+    });
+    fillPhones("tr");
+    fireEvent.change(screen.getByPlaceholderText(d.form.identityPlaceholder), {
+      target: { value: "12345678901" },
+    });
+    fireEvent.click(screen.getAllByRole("radio")[0]);
+    acceptTerms();
+
+    const submit = screen
+      .getByText(d.form.submit)
+      .closest("button") as HTMLButtonElement;
+    expect(submit.disabled).toBe(false);
+  });
+});
+
 describe("ReservationForm — sunucu hata metni SIZMAZ", () => {
   it.each(LOCALES)(
     "45) %s — 500 + ham DB hatası → generic dictionary mesajı",
