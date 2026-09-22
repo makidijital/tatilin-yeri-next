@@ -6,6 +6,13 @@ import { resolveVillaImageUrl } from "@/lib/storage.helpers";
    koleksiyon mapper'ları villa_prices[0] kullanıyordu → tutarsız. */
 import { getStartingPrice, type DiscountRange } from "@/lib/price.engine";
 import { parseLocalDate, formatLocalDate } from "@/lib/date-format";
+/* 🛡️ MÜSAİTLİK — MEVCUT, DOĞRULANMIŞ TOPLU MEKANİZMA.
+   `getBlockedVillaIds` → `get_blocked_villa_ids` RPC (migration 039,
+   SECURITY DEFINER, PII-safe). /arama (AramaPageBody:885) ve admin
+   villa-listesi (availability.action) ile AYNI fonksiyon/RPC. Yeni
+   repository/RPC/migration/availability sistemi OLUŞTURULMADI;
+   yalnız BURADAN DA çağrılıyor. */
+import { getBlockedVillaIds } from "@/lib/availability.helper";
 /* 🛡️ Villa Migration S2 + S8L — findActiveLocationIds (S2) +
    findActiveImagesByIds (S8L) native'e taşındı. cache.helpers zaten
    server-only (unstable_cache) → server-only native repo import'u güvenli.
@@ -262,6 +269,20 @@ export type HomepageCollectionVilla = {
     discount_value: number;
     currency: string | null;
   } | null;
+  /* 🛡️ İNDİRİM PENCERESİ MÜSAİTLİĞİ (yalnız discount-collection
+     tüketicisi doldurur; getCachedHomepageCollectionVillas bu alanı
+     HİÇ set etmez → homepage-collection kartları ETKİLENMEZ).
+
+     ANLAMI: `discount.start_date` → `discount.end_date` aralığının
+     TAMAMI boş mu? Aralıkta TEK BİR GECE bile dolu ise `false`.
+     Kaynak: get_blocked_villa_ids RPC (half-open [start,end) overlap:
+     `existing.start_date < end AND existing.end_date > start`) —
+     reservations(pending/confirmed) + manual_reservations + aktif
+     external_calendar_events. Yeni tarih matematiği İCAT EDİLMEDİ.
+
+     `undefined` = kontrol uygulanmadı/uygulanamadı → tüketici MEVCUT
+     davranışı korur (geriye dönük uyumlu, fail-soft). */
+  discount_available?: boolean;
 };
 
 export const getCachedHomepageCollectionVillas = unstable_cache(
@@ -671,6 +692,69 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
             }
           : null,
       });
+    }
+
+    /* ===============================================================
+       🛡️ İNDİRİM PENCERESİ MÜSAİTLİK KONTROLÜ — TOPLU, N+1 YOK
+       ===============================================================
+       KURAL: indirim aralığının TAMAMI boş olmalı. Aralıkta tek bir
+       gece bile dolu ise `discount_available = false` (kart CTA'sı
+       rezervasyon sayfasına DEĞİL, mevcut villa detay href'ine gider).
+       "En az 1 gece müsaitse yeter" mantığı YOKTUR.
+
+       N+1 YOK — villa başına sorgu ATILMAZ:
+         • Kartlar (start_date,end_date) penceresine göre GRUPLANIR.
+         • Her DISTINCT pencere için TEK `getBlockedVillaIds` çağrısı,
+           `villaIds` ile o gruba scope'lanmış.
+         • Gruplar `Promise.all` ile paralel — /arama'nın esnek pencere
+           bloğuyla (AramaPageBody:926-928) BİREBİR AYNI desen.
+         ⇒ sorgu sayısı = DISTINCT pencere sayısı ≤ kart sayısı.
+           (Bu bölüm `discount_collections` küratörlü tablosunu render
+           eder — villa tablosunu DEĞİL; 1500 villa senaryosu yok.)
+
+       ⚠️ Envelope (min(start)…max(end)) ile tek sorgu BİLİNÇLİ olarak
+       REDDEDİLDİ: Kasım'da dolu bir villa, Ekim indirimi için yanlışlıkla
+       dolu işaretlenirdi.
+
+       FAIL-SOFT: `getBlockedVillaIds` hata durumunda boş Set döner
+       (kendi içinde loglar) → villa "müsait" kalır → MEVCUT davranış
+       korunur. Overbooking koruması bu katmanda DEĞİL; DB EXCLUDE
+       constraint `reservations_no_overlap` (migration 001) ile sağlanır
+       ve ona DOKUNULMADI.
+
+       ⚠️ `getBlockedVillaIds` geçersiz/`start >= end` aralıkta RPC
+       ÇAĞIRMADAN boş Set döner (availability.helper:124-125). Tek
+       günlük indirim (start === end) bu yüzden sorgu üretmez ve
+       davranış ÖNCEKİ tur ile BİREBİR aynı kalır. */
+    const windowGroups = new Map<string, { start: string; end: string; ids: string[] }>();
+    for (const c of result) {
+      const d = c.discount;
+      if (!d?.start_date || !d?.end_date) continue;
+      /* RPC geçersiz/0-gecelik aralıkta zaten boş Set döndürür —
+         gereksiz çağrı üretmemek için burada da elenir. */
+      if (!(d.start_date < d.end_date)) continue;
+      const key = `${d.start_date}|${d.end_date}`;
+      const g = windowGroups.get(key);
+      if (g) g.ids.push(c.id);
+      else windowGroups.set(key, { start: d.start_date, end: d.end_date, ids: [c.id] });
+    }
+
+    if (windowGroups.size > 0) {
+      const groups = [...windowGroups.values()];
+      const blockedSets = await Promise.all(
+        groups.map((g) => getBlockedVillaIds(g.start, g.end, g.ids))
+      );
+      const blockedByVillaId = new Set<string>();
+      blockedSets.forEach((set, i) => {
+        for (const id of groups[i].ids) {
+          if (set.has(id)) blockedByVillaId.add(id);
+        }
+      });
+      for (const c of result) {
+        if (!c.discount?.start_date || !c.discount?.end_date) continue;
+        if (!(c.discount.start_date < c.discount.end_date)) continue;
+        c.discount_available = !blockedByVillaId.has(c.id);
+      }
     }
 
     return result;

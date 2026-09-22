@@ -62,10 +62,12 @@ function renderDiscountCard(opts?: {
   discount?: DiscountProp | null;
   slug?: string;
   locale?: "tr" | "en" | "de";
+  discountAvailable?: boolean;
 }) {
   render(
     <VillaCard
       variant="discount"
+      discountAvailable={opts?.discountAvailable}
       id="v-1"
       slug={opts?.slug ?? "ornek-villa"}
       title="Örnek Villa"
@@ -214,6 +216,47 @@ describe("İndirimli kart CTA — fırsat tarihlerini rezervasyona taşır", () 
     expect(cls).toContain("h-11");
     expect(cls).toContain("rounded-xl");
     expect(btn.getAttribute("type")).toBe("button");
+  });
+
+  it("15) MÜSAİTLİK — discountAvailable=false → rezervasyon YOK, villa detayına gider", () => {
+    renderDiscountCard({
+      discount: { ...BASE_DISCOUNT, start_date: "2026-10-10", end_date: "2026-10-17" },
+      discountAvailable: false,
+    });
+    clickCta();
+    expect(pushSpy.mock.calls[0][0]).toBe("/kiralik-villa/ornek-villa");
+    expect(String(pushSpy.mock.calls[0][0])).not.toContain("/rezervasyon/");
+  });
+
+  it("16) MÜSAİTLİK — discountAvailable=true → indirim tarihleriyle rezervasyon sayfası", () => {
+    renderDiscountCard({
+      discount: { ...BASE_DISCOUNT, start_date: "2026-10-10", end_date: "2026-10-17" },
+      discountAvailable: true,
+    });
+    clickCta();
+    expect(pushSpy.mock.calls[0][0]).toBe(
+      "/rezervasyon/ornek-villa?start=2026-10-10&end=2026-10-17"
+    );
+  });
+
+  it("17) FAIL-SOFT — discountAvailable verilmezse (undefined) MEVCUT davranış korunur", () => {
+    renderDiscountCard({
+      discount: { ...BASE_DISCOUNT, start_date: "2026-10-10", end_date: "2026-10-17" },
+    });
+    clickCta();
+    expect(pushSpy.mock.calls[0][0]).toBe(
+      "/rezervasyon/ornek-villa?start=2026-10-10&end=2026-10-17"
+    );
+  });
+
+  it("18) discountAvailable=false CTA'nın TASARIMINI değiştirmez", () => {
+    renderDiscountCard({ discountAvailable: false });
+    const btn = screen.getByRole("button", { name: "Hemen Rezervasyon Yap" });
+    const cls = btn.getAttribute("class") || "";
+    expect(cls).toContain("bg-[#ED7926]");
+    expect(cls).toContain("h-11");
+    expect(cls).toContain("rounded-xl");
+    expect(btn.hasAttribute("disabled")).toBe(false);
   });
 
   it("14) DEFAULT variant (indirimsiz liste kartı) DEĞİŞMEDİ", () => {

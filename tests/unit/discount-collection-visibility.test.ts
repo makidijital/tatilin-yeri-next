@@ -47,6 +47,15 @@ vi.mock("@/lib/db/discount.repository", () => ({
   },
 }));
 
+/* 🛡️ EKLENDİ (availability turu) — `cache.helpers` artık indirim
+   penceresi için `getBlockedVillaIds`i çağırıyor. Bu dosyadaki testler
+   GÖRÜNÜRLÜK kararını ölçer, müsaitliği DEĞİL; mock olmadan gerçek
+   native DB bağlantısı denenirdi. Hiçbir mevcut assertion
+   değiştirilmedi/gevşetilmedi — yalnız yeni bağımlılık izole edildi. */
+vi.mock("@/lib/availability.helper", () => ({
+  getBlockedVillaIds: async () => new Set<string>(),
+}));
+
 vi.mock("@/lib/storage.helpers", () => ({
   resolveVillaImageUrl: (u: string | null) => u,
   resolveAssetUrl: (u: string | null) => u,

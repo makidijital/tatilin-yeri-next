@@ -155,6 +155,13 @@ type Props = {
     discount_value: number;
     currency: string | null;
   } | null;
+  /* 🛡️ İndirim penceresinin TAMAMI müsait mi? (server-side hesaplanır:
+     lib/cache.helpers > getCachedDiscountCollectionVillas → toplu
+     get_blocked_villa_ids RPC). YALNIZ "Hemen Rezervasyon Yap" CTA'sının
+     HEDEF URL'ini etkiler; fiyat/indirim/tasarım/diğer variant'lar
+     ETKİLENMEZ. `undefined` (prop verilmemiş) → kontrol uygulanmamış →
+     MEVCUT davranış (geriye dönük uyumlu). */
+  discountAvailable?: boolean;
   /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış).
    *  Kart metinlerini ve detay linkinin locale prefix'ini belirler. */
   locale?: Locale;
@@ -185,6 +192,7 @@ export default function VillaCard({
   reserveInfo,
   isFlexible = false,
   discount = null,
+  discountAvailable,
   locale,
 }: Props) {
   const dict = getDictionary(locale);
@@ -500,6 +508,11 @@ export default function VillaCard({
      Buton JSX'i, className, metin ve tasarımı DEĞİŞMEDİ. */
   const discountReserveHref: string | null = (() => {
     if (!isDiscountVariant) return null;
+    /* 🛡️ TAM ARALIK MÜSAİTLİK KAPISI — indirim penceresinde TEK BİR
+       GECE bile doluysa rezervasyon sayfasına YÖNLENDİRME YOK; CTA
+       aşağıdaki mevcut `detailHref` fallback'ine düşer.
+       `undefined` (kontrol yapılmamış / fail-soft) → eski davranış. */
+    if (discountAvailable === false) return null;
     const startRaw = discount?.start_date;
     const endRaw = discount?.end_date;
     if (!startRaw || !endRaw) return null;

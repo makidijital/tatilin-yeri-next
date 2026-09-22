@@ -79,6 +79,11 @@ export default async function DiscountCollection({
       reviewAverage={c.review_average}
       reviewCount={c.review_count}
       discount={c.discount}
+      /* 🛡️ İndirim penceresinin TAMAMI müsait mi? (cache.helpers >
+         getCachedDiscountCollectionVillas, toplu get_blocked_villa_ids).
+         `undefined` → kontrol yok → VillaCard MEVCUT davranışını korur.
+         Yalnız CTA hedefini etkiler; tasarım/fiyat/veri akışı AYNI. */
+      discountAvailable={c.discount_available}
       /* 🛡️ PHASE 11 — VillaCard'ın mevcut locale desteği (Phase 10G). */
       locale={locale}
     />
