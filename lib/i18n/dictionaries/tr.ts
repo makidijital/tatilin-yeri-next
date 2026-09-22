@@ -722,6 +722,12 @@ export const tr: Dictionary = {
       errorGeneric:
         "İşlem sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.",
       errorDatesUnavailable: "Bu tarihler dolu",
+      termsLabel:
+        "{cancellation}, {distanceSales} ve {privacy} metinlerini okudum, tüm sözleşme ve kuralları kabul ediyorum.",
+      termsCancellationLink: "İptal ve İade Koşulları",
+      termsDistanceSalesLink: "Mesafeli Satış Sözleşmesi",
+      termsPrivacyLink: "Kişisel Verilerin Korunması",
+      termsRequired: "Devam etmek için sözleşmeleri kabul etmelisiniz.",
     },
     validation: {
       nameRequired: "Ad zorunlu",

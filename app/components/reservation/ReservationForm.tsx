@@ -56,6 +56,13 @@ import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
    ödeme/fiyat mantığı) DEĞİŞMEDİ — yalnız görünen etiket çözülür;
    çeviri yoksa/boşsa TR canonical'a düşer. */
 import { resolveTaxonomyName } from "@/lib/i18n/taxonomy-name.helper";
+/* 🛡️ SÖZLEŞME LİNKLERİ — projenin MEVCUT merkezi locale helper'ı
+   (lib/i18n/locale-href.ts; CookieConsent, Header, Footer ve diğer
+   public call-site'lar aynı helper'ı kullanır). Hedefler aktif
+   locale'i taşır: tr → `/p/...`, en → `/en/p/...`, de → `/de/p/...`.
+   Yeni i18n/routing mantığı YOK. */
+import Link from "next/link";
+import { localeHref } from "@/lib/i18n/locale-href";
 
 export default function ReservationForm({
   villa,
@@ -89,6 +96,10 @@ export default function ReservationForm({
      Başarı durumu artık tam sayfa redirect ile gösterilir
      (`/rezervasyon/basarili?ref=...&villa=...`); modal state YOK. */
   const [submitError, setSubmitError] = useState<string | null>(null);
+  /* 🛡️ SÖZLEŞME ONAYI — başlangıçta İŞARETSİZ. Gönderim butonunun
+     mevcut `isFormValid` kapısına EK bir koşul olarak bağlanır;
+     mevcut alan validasyonlarının hiçbiri değişmez. */
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PublicPaymentMethodOption[]>([]);
   const [errors, setErrors] = useState<PublicReservationFormErrors>({});
 
@@ -444,6 +455,25 @@ export default function ReservationForm({
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      return;
+    }
+
+    /* 🛡️ SÖZLEŞME ONAYI — GÖNDERİM KAPISI (alan validasyonlarından SONRA).
+       Onay verilmeden gönderim YAPILMAZ: fonksiyon burada erken döner,
+       API'ye POST atılmaz ve MEVCUT inline hata banner'ı (submitError)
+       nedenini gösterir — yeni bildirim sistemi YOK.
+
+       ⚠️ SIRA BİLİNÇLİ: `validatePublicReservationForm` handleSubmit'in
+       İLK çağrısı olmaya devam eder (mevcut orkestrasyon sözleşmesi ve
+       onu kilitleyen testler DEĞİŞMEDİ); kullanıcı önce eksik alanlarını,
+       sonra eksik onayı görür.
+
+       ⚠️ `isFormValid` KASITLI OLARAK DEĞİŞTİRİLMEDİ: butonu disable
+       etmek yerine guard kullanılır, çünkü disabled buton tıklama olayı
+       ÜRETMEZ → kullanıcı NEDEN ilerleyemediğini göremezdi. Bu yol hem
+       gönderimi engeller hem de anlaşılır bir mesaj verir. */
+    if (!termsAccepted) {
+      setSubmitError(dict.form.termsRequired);
       return;
     }
 
@@ -1107,6 +1137,82 @@ export default function ReservationForm({
             })}
           </div>
         </Section>
+
+        {/* ═══════════════════════════════════════════════════════
+            🛡️ SÖZLEŞME ONAYI — zorunlu checkbox (submit'in HEMEN ÖNÜ)
+            ═══════════════════════════════════════════════════════
+            • Native `<input type="checkbox">` + `<label htmlFor>` →
+              klavye ile seçilebilir, ekran okuyucuya bağlı.
+            • Metin sözlükten gelir (`termsLabel`, üç placeholder) →
+              EN/DE'de Türkçe sızıntısı YOK.
+            • Link hedefleri `localeHref` ile aktif locale'i taşır.
+            • Linkler `stopPropagation` + `target="_blank"`: tıklamak
+              checkbox'ı toggle ETMEZ ve doldurulmuş form kaybolmaz.
+            • Mevcut typography/spacing/renk token'ları; yeni global
+              CSS veya yeni component YOK. */}
+        <div className="flex items-start gap-3 mb-4">
+          <input
+            id="reservation-terms-accept"
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={(e) => {
+              setTermsAccepted(e.target.checked);
+              /* Onay verilince eksik-onay uyarısı kendiliğinden kalkar;
+                 diğer submitError mesajlarına DOKUNULMAZ. */
+              if (e.target.checked && submitError === dict.form.termsRequired) {
+                setSubmitError(null);
+              }
+            }}
+            className="!w-4 !h-4 mt-0.5 shrink-0 accent-[var(--color-champagne-500)]"
+          />
+          <label
+            htmlFor="reservation-terms-accept"
+            className="flex-1 text-[13px] leading-relaxed text-[var(--color-stone-600)] cursor-pointer"
+          >
+            {(() => {
+              /* Şablon placeholder'larından bölünür; metin sırası ve
+                 noktalama sözlükten AYNEN gelir (locale'e göre cümle
+                 kurgusu değişebilsin diye). */
+              /* ⚠️ Alan adı bilinçli olarak `path` (`href` DEĞİL): bunlar
+                 HAM canonical path'lerdir, gerçek `href` aşağıda
+                 `localeHref(...)` ile üretilir. Böylece "prefix'siz iç
+                 link" tarayıcısı (navigation-locale-persistence testi)
+                 yanlış alarm vermez ve gerçek koruma sürer. */
+              const LINKS: Record<string, { path: string; label: string }> = {
+                "{cancellation}": {
+                  path: "/p/rezervasyon-ve-iptal-kosullari",
+                  label: dict.form.termsCancellationLink,
+                },
+                "{distanceSales}": {
+                  path: "/p/mesafeli-satis-sozlesmesi",
+                  label: dict.form.termsDistanceSalesLink,
+                },
+                "{privacy}": {
+                  path: "/p/kvkk-aydinlatma-metni",
+                  label: dict.form.termsPrivacyLink,
+                },
+              };
+              return dict.form.termsLabel
+                .split(/(\{cancellation\}|\{distanceSales\}|\{privacy\})/)
+                .map((part, i) => {
+                  const link = LINKS[part];
+                  if (!link) return <span key={i}>{part}</span>;
+                  return (
+                    <Link
+                      key={i}
+                      href={localeHref(link.path, activeLocale)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="underline underline-offset-2 text-[var(--color-champagne-700)] hover:text-[var(--color-champagne-600)] transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                });
+            })()}
+          </label>
+        </div>
 
         {/* SUBMIT */}
         <button

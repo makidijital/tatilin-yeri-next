@@ -702,6 +702,12 @@ export const en: Dictionary = {
       errorDismissAriaLabel: "Dismiss error message",
       errorGeneric: "Something went wrong. Please try again later.",
       errorDatesUnavailable: "These dates are unavailable",
+      termsLabel:
+        "I have read the {cancellation}, {distanceSales} and {privacy} documents, and I accept all terms and conditions.",
+      termsCancellationLink: "Cancellation and Refund Policy",
+      termsDistanceSalesLink: "Distance Sales Agreement",
+      termsPrivacyLink: "Protection of Personal Data",
+      termsRequired: "You must accept the agreements to continue.",
     },
     validation: {
       nameRequired: "Name is required",

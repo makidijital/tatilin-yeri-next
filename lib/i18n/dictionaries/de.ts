@@ -708,6 +708,12 @@ export const de: Dictionary = {
       errorGeneric:
         "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
       errorDatesUnavailable: "Diese Termine sind belegt",
+      termsLabel:
+        "Ich habe die {cancellation}, den {distanceSales} und die {privacy} gelesen und akzeptiere alle Bedingungen und Regeln.",
+      termsCancellationLink: "Stornierungs- und Rückerstattungsbedingungen",
+      termsDistanceSalesLink: "Fernabsatzvertrag",
+      termsPrivacyLink: "Datenschutzerklärung",
+      termsRequired: "Sie müssen die Bedingungen akzeptieren, um fortzufahren.",
     },
     validation: {
       nameRequired: "Name ist erforderlich",

@@ -964,6 +964,17 @@ export type Dictionary = {
       errorGeneric: string;
       /** HTTP 409 — kullanıcı için anlamlı tek server durumu. */
       errorDatesUnavailable: string;
+      /* 🛡️ SÖZLEŞME ONAYI — gönderim öncesi zorunlu checkbox.
+         `termsLabel` ÜÇ placeholder içerir: `{cancellation}`,
+         `{distanceSales}`, `{privacy}`. ReservationForm bu şablonu
+         placeholder'lardan bölüp yerlerine `/p/...` link'lerini koyar
+         (link hedefleri `localeHref` ile aktif locale'i taşır). */
+      termsLabel: string;
+      termsCancellationLink: string;
+      termsDistanceSalesLink: string;
+      termsPrivacyLink: string;
+      /** Checkbox işaretlenmeden gönderim denenirse gösterilen hata. */
+      termsRequired: string;
     };
     validation: {
       nameRequired: string;

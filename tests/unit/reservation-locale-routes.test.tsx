@@ -729,6 +729,7 @@ describe.each(["en", "de"] as const)("ReservationForm — %s", (locale) => {
       target: { value: "42" },
     });
     fireEvent.click(screen.getAllByRole("radio")[0]);
+    acceptTerms();
     fireEvent.click(screen.getByText(d.form.submit));
 
     await waitFor(() =>
@@ -749,6 +750,17 @@ describe.each(["en", "de"] as const)("ReservationForm — %s", (locale) => {
    6) SUNUCU HATA METNİ SIZINTISI + LOCALE-AWARE REDIRECT
    =============================================================== */
 
+/* 🛡️ SÖZLEŞME ONAYI (yeni zorunlu adım) — gönderim artık checkbox
+   işaretlenmeden çalışmaz. Testler KULLANICI AKIŞINI tamamlar; hiçbir
+   assertion gevşetilmedi/kaldırılmadı. */
+function acceptTerms() {
+  const box = document.getElementById(
+    "reservation-terms-accept"
+  ) as HTMLInputElement | null;
+  expect(box).toBeTruthy();
+  fireEvent.click(box!);
+}
+
 async function fillAndSubmit(locale: Locale) {
   const d = getDictionary(locale).reservation;
   renderForm(locale);
@@ -768,6 +780,7 @@ async function fillAndSubmit(locale: Locale) {
     target: { value: "12345678901" },
   });
   fireEvent.click(screen.getAllByRole("radio")[0]);
+  acceptTerms();
   fireEvent.click(screen.getByText(d.form.submit));
 }
 
