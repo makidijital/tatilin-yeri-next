@@ -116,7 +116,12 @@ import { evaluateOrphanGap } from "@/lib/stay-rules.helper";
    min-stay/orphan-gap HESAP MANTIĞINA KESİNLİKLE DOKUNULMADI. */
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
-import type { Locale } from "@/lib/i18n/config";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+/* 🛡️ NAVIGATION LOCALE KORUMASI — projenin MEVCUT merkezi helper'ı
+   (lib/i18n/locale-href.ts). Yeni i18n/routing sistemi DEĞİL; Header,
+   Footer, BottomNav, AramaPageBody, HeroSearchPanel, VillaSearchBox ve
+   diğer public call-site'lar zaten bunu kullanıyor. */
+import { localeHref } from "@/lib/i18n/locale-href";
 
 /* ===============================================================
    INPUT KONTRAT
@@ -998,17 +1003,37 @@ export function useBookingEngine(
        yalnız bilinen alanlar (`sp.start`/`sp.end`/`sp.adults`/
        `sp.children`/`sp.poolHeating`) için okuyor — bilinmeyen bir query
        param (`locale`) sayfada asla okunmaz, TR akışını SIFIR etkiler.
-       Yine de locale bilgisini SESSİZCE KAYBETMEMEK için (gelecekteki bir
-       fazın ReservationForm'u locale-aware yapması için) EN/DE'de
+       Yine de locale bilgisini SESSİZCE KAYBETMEMEK için EN/DE'de
        `&locale=` eklenir. TR'de (locale undefined/"tr") URL BYTE-IDENTICAL
-       kalır — hiçbir ek query param eklenmez. EN/DE kullanıcıları hâlâ
-       `/en/rezervasyon/...` veya `/de/rezervasyon/...`'a YÖNLENDİRİLMEZ
-       (o route'lar hâlâ ComingSoon) — yalnız mevcut TR-only
-       `/rezervasyon/[slug]` route'una locale query param'ı ile gider. */
+       kalır — hiçbir ek query param eklenmez. */
     const url =
       locale && locale !== "tr" ? `${baseUrl}&locale=${locale}` : baseUrl;
 
-    window.location.href = url;
+    /* 🔄 NAVIGATION LOCALE KAYBI — DÜZELTME
+       ------------------------------------------------------------
+       ESKİ DAVRANIŞ (ve nedeni): bu satır `url`'i prefix'SİZ kullanıyordu;
+       o dönem `/en/rezervasyon/[slug]` ve `/de/rezervasyon/[slug]`
+       route'ları `LocaleRouteComingSoon` placeholder'ıydı, bu yüzden EN/DE
+       kullanıcısı bilinçli olarak TR route'una + `&locale=` query param'ı
+       ile gönderiliyordu.
+
+       BUGÜN O VARSAYIM GEÇERSİZ: her iki route da gerçek gövdeyi
+       (`ReservationPageBody`, `requirePublicLocaleEnabled` gate'i ile)
+       render ediyor. Prefix'siz gidildiği için `/de/...`'den gelen
+       kullanıcı `/rezervasyon/...` TR sayfasına düşüyor →
+       `localeFromPathname` "tr" döndürüyor → dil kendiliğinden TR'ye
+       dönüyordu. (`&locale=` param'ı sayfada HİÇ okunmadığı için locale'i
+       kurtarmıyordu.)
+
+       DÜZELTME: hedef, projenin MEVCUT merkezi helper'ı `localeHref` ile
+       prefix'lenir. Yeni mimari/state/cookie YOK; URL locale'in tek
+       kaynağı olarak KALIR.
+         tr → `/rezervasyon/<slug>?...`        (BYTE-IDENTICAL — değişmedi)
+         en → `/en/rezervasyon/<slug>?...`
+         de → `/de/rezervasyon/<slug>?...`
+       `localeHref` query/hash'i OPAK taşır → mevcut parametre seti
+       (start/end/adults/children/poolHeating[&locale]) AYNEN korunur. */
+    window.location.href = localeHref(url, locale ?? DEFAULT_LOCALE);
   };
 
   return {

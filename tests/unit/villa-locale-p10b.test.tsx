@@ -476,6 +476,14 @@ describe("BookingSummary — Phase 10B locale (TR default + EN/DE, yeni shortSta
    7) useBookingEngine — reservationError locale metinleri +
       handleReservation navigation URL '&locale=' davranışı
       (Section 7'nin YATIRIMI — TR byte-identical, EN/DE ek param)
+
+      🔄 GÜNCELLEME (navigation locale kaybı düzeltmesi):
+      Bu testler yazıldığında `/en|/de/rezervasyon/[slug]` route'ları
+      `LocaleRouteComingSoon` placeholder'ıydı; bu yüzden EN/DE hedefi
+      bilinçli olarak PREFİX'SİZ TR route'uydu. O route'lar artık gerçek
+      gövdeyi render ettiği için hedef `localeHref` ile prefix'lenir.
+      `&locale=` param'ı davranışı AYNEN KORUNDU (aşağıda ayrıca
+      `toContain` ile doğrulanıyor); TR beklentisi DEĞİŞMEDİ.
    =============================================================== */
 describe("useBookingEngine — Phase 10B locale (reservationError metinleri)", () => {
   const PRICES: PriceRange[] = [
@@ -622,8 +630,11 @@ describe("useBookingEngine — Phase 10B handleReservation navigation URL '&loca
       result.current.handleReservation();
     });
 
+    /* `&locale=en` EKLENİR (bu testin ASIL iddiası — korundu). */
+    expect(window.location.href).toContain("&locale=en");
+    /* Hedef artık EN route'u (locale kaybı düzeltmesi). */
     expect(window.location.href).toBe(
-      "/rezervasyon/test-villa?start=2026-10-05&end=2026-10-08&adults=2&children=0&poolHeating=0&locale=en"
+      "/en/rezervasyon/test-villa?start=2026-10-05&end=2026-10-08&adults=2&children=0&poolHeating=0&locale=en"
     );
   });
 
@@ -646,8 +657,11 @@ describe("useBookingEngine — Phase 10B handleReservation navigation URL '&loca
       result.current.handleReservation();
     });
 
+    /* `&locale=de` EKLENİR (bu testin ASIL iddiası — korundu). */
+    expect(window.location.href).toContain("&locale=de");
+    /* Hedef artık DE route'u (locale kaybı düzeltmesi). */
     expect(window.location.href).toBe(
-      "/rezervasyon/test-villa?start=2026-10-05&end=2026-10-08&adults=2&children=0&poolHeating=0&locale=de"
+      "/de/rezervasyon/test-villa?start=2026-10-05&end=2026-10-08&adults=2&children=0&poolHeating=0&locale=de"
     );
   });
 });
