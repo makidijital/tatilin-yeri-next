@@ -21,7 +21,14 @@ import type { ExternalEventDetail } from "@/lib/external-calendar.admin.types";
    /arama, reservation create — tüm yüzeyler aynı helper'ı
    kullanıyor; harici rezervasyon takvimi de aynı matematiğe
    bağlandı (eski inclusive day count `+1` bug fix). */
-import { calculateNights } from "@/lib/price.engine";
+import { calculateNights, type DiscountRange } from "@/lib/price.engine";
+/* 🛡️ GECELİK FİYAT GÖSTERİMİ — PUBLIC villa detay takvimiyle AYNI
+   pure fonksiyonlar üzerinden (lib/price.engine). Yeni motor YOK. */
+import { formatCurrency } from "@/lib/currency";
+import {
+  buildDayPriceMap,
+  type DayPriceRange,
+} from "./_helpers/dayPriceMap";
 
 /* ===============================================================
    🔥 ReservationCalendar — shared custom calendar
@@ -195,6 +202,20 @@ export type ReservationCalendarProps = {
   externalCheckoutDates?: Date[];
   externalMiddleDates?: Date[];
   externalDetailByDate?: Record<string, ExternalEventDetail>;
+
+  /* 🛡️ GECELİK FİYAT GÖSTERİMİ (additive, OPSİYONEL)
+     Verilmezse hücre render'ı ESKİSİYLE BİREBİR AYNI kalır →
+     manual-reservations formu ve villa seçilmemiş durum ETKİLENMEZ.
+     - prices     : villa_prices satırları (sayfada zaten mevcut)
+     - discounts  : villa_discounts → DiscountRange[] (aynı fetch'ten)
+     - rates      : /api/exchange-rates (sayfada zaten mevcut)
+     - priceCurrency: admin görüntüleme para birimi (mevcut davranış "TRY")
+     Fiyat/indirim hesabı bu component'te YAPILMAZ; `buildDayPriceMap`
+     price.engine'in pure fonksiyonlarını çağırır. */
+  prices?: DayPriceRange[] | null;
+  discounts?: DiscountRange[] | null;
+  rates?: Record<string, number>;
+  priceCurrency?: string;
 };
 
 export default function ReservationCalendar({
@@ -220,6 +241,10 @@ export default function ReservationCalendar({
   externalCheckoutDates = [],
   externalMiddleDates = [],
   externalDetailByDate = {},
+  prices = null,
+  discounts = null,
+  rates = { TRY: 1 },
+  priceCurrency = "TRY",
 }: ReservationCalendarProps) {
   /* ---------------------------------------------
      🔥 DRAG STATE — PricingCanvas patternine birebir.
@@ -423,6 +448,23 @@ export default function ReservationCalendar({
       : monthCount === 5
         ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5"
         : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3";
+
+  /* 🛡️ GÜNLÜK FİYAT HARİTASI — hücre başına DB/API sorgusu YOK.
+     Görünür tüm günler TEK seferde hesaplanır; `prices`/`discounts`/
+     `rates` değişmedikçe yeniden çalışmaz. Fiyat verilmemişse boş
+     Map döner → render eski haliyle kalır. */
+  const dayPriceMap = useMemo(() => {
+    if (!prices || prices.length === 0) return new Map();
+    const days: Date[] = [];
+    for (const vm of visibleMonths) {
+      for (const cell of buildMonthGrid(vm)) {
+        if (cell.inMonth) days.push(cell.date);
+      }
+    }
+    return buildDayPriceMap(days, prices, discounts, priceCurrency, rates);
+  }, [visibleMonths, prices, discounts, priceCurrency, rates]);
+
+  const hasPrices = dayPriceMap.size > 0;
 
   const todayKey = new Date().toDateString();
 
@@ -833,11 +875,20 @@ export default function ReservationCalendar({
                         </div>
                       )}
 
-                      {/* Layer 3: number — her zaman üstte, click'ler
-                          outer'a iletilsin diye pointer-events:none.
-                          Renk getDayStyle'dan AYNEN gelir. */}
+                      {/* Layer 3: number (+ opsiyonel gecelik fiyat).
+                          Click'ler outer'a iletilsin diye
+                          pointer-events:none. Renk getDayStyle'dan AYNEN.
+
+                          🛡️ FİYAT: yalnız `prices` verildiğinde ve o gün
+                          için fiyat VARSA gösterilir. `hasPrices` false
+                          iken bu blok ESKİ HALİYLE (tek satır, ortalanmış
+                          rakam) render edilir → mevcut kullanım yerleri
+                          ve hücre boyutu (aspect-square) DEĞİŞMEZ. */}
                       <div
-                        className="absolute inset-0 flex items-center justify-center text-[11px] select-none"
+                        className={
+                          "absolute inset-0 flex flex-col items-center justify-center text-[11px] select-none" +
+                          (hasPrices ? " leading-none gap-[1px]" : "")
+                        }
                         style={{
                           color,
                           pointerEvents: "none",
@@ -853,6 +904,57 @@ export default function ReservationCalendar({
                         >
                           {date.getDate()}
                         </span>
+
+                        {/* 🛡️ GECELİK FİYAT — PUBLIC villa detay takvimiyle
+                            AYNI gösterim: indirim varsa ÜZERİ ÇİZİLİ normal
+                            fiyat + altında indirimli fiyat; indirim yoksa
+                            tek satır normal fiyat. Tutarlar
+                            `buildDayPriceMap` → price.engine'den gelir;
+                            burada hesap YAPILMAZ. Bloklu günde fiyat
+                            basılmaz (public `!isBlocked` kuralının aynısı).
+                            `formatCurrency` public ile AYNI fonksiyon. */}
+                        {(() => {
+                          if (!hasPrices || disabled) return null;
+                          const dp = dayPriceMap.get(dateKey);
+                          if (!dp) return null;
+                          return dp.discounted !== null ? (
+                            <>
+                              <span
+                                className="text-[7px] font-medium tabular-nums line-through"
+                                style={{
+                                  color: "#dc2626",
+                                  opacity: 0.55,
+                                  letterSpacing: "0.02em",
+                                }}
+                              >
+                                {formatCurrency(dp.price, priceCurrency, "tr")}
+                              </span>
+                              <span
+                                className="text-[8px] font-semibold tabular-nums"
+                                style={{
+                                  opacity: 0.85,
+                                  letterSpacing: "0.02em",
+                                }}
+                              >
+                                {formatCurrency(
+                                  dp.discounted,
+                                  priceCurrency,
+                                  "tr"
+                                )}
+                              </span>
+                            </>
+                          ) : (
+                            <span
+                              className="text-[8px] font-medium tabular-nums"
+                              style={{
+                                opacity: 0.65,
+                                letterSpacing: "0.02em",
+                              }}
+                            >
+                              {formatCurrency(dp.price, priceCurrency, "tr")}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   );

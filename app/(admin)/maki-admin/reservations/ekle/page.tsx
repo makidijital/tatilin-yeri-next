@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 
 import {
   calculateGrandTotal,
+  type DiscountRange,
   accommodationBase,
   isPoolHeatingActiveForRange,
 } from "@/lib/price.engine";
@@ -213,6 +214,11 @@ export default function AdminReservationDetailPage() {
      normalize edildiğinde typed yapılacak. Mevcut runtime aynen. */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [prices, setPrices] = useState<any[]>([]);
+  /* 🛡️ villa_discounts — public villa detay takvimiyle AYNI indirim
+     verisi. Takvimde gösterilir VE calculateGrandTotal'a beslenir →
+     takvimde görünen fiyat ile toplam TUTARLI olur. Aynı fetch'ten
+     gelir; EK round-trip YOK. */
+  const [discounts, setDiscounts] = useState<DiscountRange[]>([]);
   const [selectedVilla, setSelectedVilla] = useState<SelectedVillaCreate>(null);
   const [priceDetail, setPriceDetail] = useState<PriceDetailSnapshot | null>(null);
   const [prepaymentRate, setPrepaymentRate] = useState(20);
@@ -369,12 +375,17 @@ export default function AdminReservationDetailPage() {
           ok?: boolean;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           prices?: any[];
+          discounts?: DiscountRange[];
         };
         setPrices(
           priceRes.ok && priceJson.ok ? priceJson.prices || [] : []
         );
+        setDiscounts(
+          priceRes.ok && priceJson.ok ? priceJson.discounts || [] : []
+        );
       } catch {
         setPrices([]);
+        setDiscounts([]);
       }
       try {
         const villaRes = await adminFetch(
@@ -599,6 +610,11 @@ export default function AdminReservationDetailPage() {
       prices,
       currency: "TRY",
       rates,
+      /* 🛡️ İNDİRİM — takvimde gösterilen indirimli gecelik fiyatın
+         AYNISI toplama da yansır. `calculateGrandTotal`/`calculateStayTotal`
+         bu parametreyi ZATEN destekliyordu (default null); yeni hesap
+         mantığı YAZILMADI, yalnız mevcut girdi bağlandı. */
+      discounts,
       cleaning_fee: selectedVilla?.cleaning_fee || 0,
       cleaning_currency: selectedVilla?.cleaning_currency || "TRY",
       cleaning_limit: selectedVilla?.cleaning_limit || 0,
@@ -681,6 +697,9 @@ export default function AdminReservationDetailPage() {
     startDate,
     endDate,
     prices,
+    /* 🛡️ İndirimler yüklendiğinde toplam yeniden hesaplansın —
+       takvim ile toplam aynı anda tutarlı hale gelir. */
+    discounts,
     rates,
     data?.custom_price,
     data?.pool_heating_selected,
@@ -995,6 +1014,12 @@ export default function AdminReservationDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-5 lg:gap-6">
               <div className="min-w-0">
                 <ReservationCalendar
+                  /* 🛡️ Gecelik fiyat gösterimi (salt görsel). Veriler
+                     ZATEN sayfada; ek fetch YOK. */
+                  prices={prices}
+                  discounts={discounts}
+                  rates={rates}
+                  priceCurrency="TRY"
                   startDate={startDate}
                   endDate={endDate}
                   freshSelection={freshSelection}

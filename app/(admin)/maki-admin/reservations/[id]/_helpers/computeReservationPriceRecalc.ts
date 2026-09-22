@@ -1,4 +1,8 @@
-import { calculateGrandTotal, accommodationBase } from "@/lib/price.engine";
+import {
+  calculateGrandTotal,
+  accommodationBase,
+  type DiscountRange,
+} from "@/lib/price.engine";
 import { formatLocalDate } from "@/lib/date-format";
 
 import type {
@@ -69,6 +73,11 @@ export function computeReservationPriceRecalc(
     endDate,
     prices,
     rates,
+    /* 🛡️ villa_discounts — OPSİYONEL (default []). Takvimde gösterilen
+       indirimli gecelik fiyatın AYNISI toplama yansısın diye
+       calculateGrandTotal'a iletilir. Verilmezse davranış ESKİSİYLE
+       BİREBİR AYNI (discounts=null → indirim uygulanmaz). */
+    discounts,
     originalStartDate,
     originalEndDate,
     originalVillaId,
@@ -201,6 +210,7 @@ export function computeReservationPriceRecalc(
     prices,
     currency: "TRY",
     rates,
+    discounts: discounts && discounts.length > 0 ? discounts : null,
     cleaning_fee:
       selectedVilla?.cleaning_fee ??
       data?.villa?.cleaning_fee ??

@@ -69,7 +69,7 @@ import VillaSelectCard from "./_components/VillaSelectCard";
 import PriceCard from "./_components/PriceCard";
 
 import { getPaymentDisplayValues } from "@/lib/payment.helper";
-import { accommodationBase } from "@/lib/price.engine";
+import { accommodationBase, type DiscountRange } from "@/lib/price.engine";
 
 import { reservationCodeDisplay } from "@/lib/reservation-code.helper";
 
@@ -189,6 +189,9 @@ export default function AdminReservationDetailPage() {
      typed yapılacak. */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [prices, setPrices] = useState<any[]>([]);
+  /* 🛡️ villa_discounts — takvimde gösterilir VE fiyat recalc'ına
+     beslenir (takvim ↔ toplam tutarlılığı). Aynı fetch; EK istek YOK. */
+  const [discounts, setDiscounts] = useState<DiscountRange[]>([]);
   const [priceDetail, setPriceDetail] = useState<PriceDetailSnapshot | null>(
     null
   );
@@ -512,13 +515,18 @@ export default function AdminReservationDetailPage() {
         const priceJson = (await priceRes.json().catch(() => ({}))) as {
           ok?: boolean;
           prices?: unknown[];
+          discounts?: DiscountRange[];
         };
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setPrices(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           priceRes.ok && priceJson.ok ? (priceJson.prices as any[]) || [] : []
+        );
+        setDiscounts(
+          priceRes.ok && priceJson.ok ? priceJson.discounts || [] : []
         );
       } catch {
         setPrices([]);
+        setDiscounts([]);
       }
     };
     fetchPrices();
@@ -577,6 +585,7 @@ export default function AdminReservationDetailPage() {
        snapshot / recalc. Page setter sıraları eski inline ile
        birebir uyumlu (setPriceDetail önce, setData sonra). */
     const r = computeReservationPriceRecalc({
+      discounts,
       data,
       startDate,
       endDate,
@@ -609,6 +618,8 @@ export default function AdminReservationDetailPage() {
   }, [
     startDate,
     endDate,
+    /* 🛡️ İndirimler yüklendiğinde recalc tetiklensin. */
+    discounts,
     prices,
     rates,
     originalStartDate,
@@ -1291,6 +1302,9 @@ export default function AdminReservationDetailPage() {
         {/* DATE (FAZ 2: DateRangeCard'a extract) */}
         {currentStep === 2 && (
           <DateRangeCard
+            prices={prices}
+            discounts={discounts}
+            rates={rates}
             data={data}
             startDate={startDate}
             endDate={endDate}

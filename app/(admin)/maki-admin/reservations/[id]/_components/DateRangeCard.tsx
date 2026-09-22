@@ -14,6 +14,7 @@
 import type { Dispatch, SetStateAction } from "react";
 
 import ReservationCalendar from "@/app/components/admin/reservation-form/ReservationCalendar";
+import type { DiscountRange } from "@/lib/price.engine";
 import LiveDatePriceSummary from "@/app/components/admin/reservation-form/LiveDatePriceSummary";
 import { getValidEndDate } from "@/lib/date-range";
 
@@ -40,6 +41,11 @@ export default function DateRangeCard({
   priceDetail,
   paymentDisplay,
   paymentDisplayPayNowLabel,
+  /* 🛡️ Takvimde gecelik fiyat gösterimi (salt görsel) — page.tsx'te
+     ZATEN mevcut state'ler; ek fetch YOK. */
+  prices,
+  discounts,
+  rates,
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>;
@@ -53,6 +59,10 @@ export default function DateRangeCard({
   setFreshSelection: Dispatch<SetStateAction<boolean>>;
   currentMonth: Date;
   setCurrentMonth: Dispatch<SetStateAction<Date>>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prices?: any[] | null;
+  discounts?: DiscountRange[] | null;
+  rates?: Record<string, number>;
   mergedBlockedDates: Date[];
   mergedCheckinDates: Date[];
   mergedCheckoutDates: Date[];
@@ -92,6 +102,10 @@ export default function DateRangeCard({
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-5 lg:gap-6">
         <div className="min-w-0">
           <ReservationCalendar
+            prices={prices ?? null}
+            discounts={discounts ?? null}
+            rates={rates ?? { TRY: 1 }}
+            priceCurrency="TRY"
             startDate={startDate}
             endDate={endDate}
             freshSelection={freshSelection}

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import { villaAdminRepository } from "@/lib/db/villa.repository.server";
+/* 🛡️ PUBLIC ile ORTAK indirim okuma servisi (DiscountRange[] döner). */
+import { getVillaDiscounts } from "@/app/services/villa-discount.service";
 
 /* ===============================================================
    🛡️ /api/admin/villas/[id]/prices — VILLA PRICES (admin-only)
@@ -11,6 +13,19 @@ import { villaAdminRepository } from "@/lib/db/villa.repository.server";
    FAZ 2 frontend purge — eski client davranışı:
      db.from("villa_prices").select("*").eq("villa_id", id)
    BYTE-IDENTICAL: aynı select * (tüm kolonlar), aynı filter.
+
+   🛡️ ADDITIVE — `discounts` (villa_discounts) AYNI cevaba eklendi.
+     NEDEN: admin rezervasyon takvimi public villa detay takvimiyle
+     AYNI indirimli gecelik fiyatı göstermeli ve aynı indirim
+     `calculateGrandTotal`'a da beslenmeli (takvim ile toplam
+     tutarlı olsun). Ayrı bir endpoint/round-trip AÇILMADI — bu
+     route'un yalnız 2 çağıranı var (reservations/ekle ve
+     reservations/[id]) ve ikisi de indirimi burada istiyor.
+     `prices` alanı ve mevcut hata/format davranışı DEĞİŞMEDİ →
+     eski cevap şekli geriye dönük uyumlu.
+     Veri kaynağı: `getVillaDiscounts` (app/services/villa-discount.service)
+     — PUBLIC tarafın kullandığı AYNI service + AYNI repository.
+     Yeni sorgu mantığı / yeni indirim motoru YAZILMADI.
    =============================================================== */
 
 export const runtime = "nodejs";
@@ -46,5 +61,19 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ ok: true, prices: data || [] });
+  /* 🛡️ ADDITIVE — indirimler. FAIL-SOFT: `getVillaDiscounts` kendi
+     içinde hatayı yutup [] döner; yine de savunma amaçlı sarmalandı.
+     İndirim alınamazsa `prices` cevabı ETKİLENMEZ → takvim ve toplam
+     indirimsiz (mevcut) davranışa düşer, istek 500 OLMAZ. */
+  let discounts: Awaited<ReturnType<typeof getVillaDiscounts>> = [];
+  try {
+    discounts = await getVillaDiscounts(id);
+  } catch (e) {
+    console.error(
+      "[admin.villas.prices] discounts FAILED",
+      e instanceof Error ? e.message : e
+    );
+  }
+
+  return NextResponse.json({ ok: true, prices: data || [], discounts });
 }

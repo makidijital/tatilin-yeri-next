@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
+import type { DiscountRange } from "@/lib/price.engine";
 
 import type {
   ReservationDetailData,
@@ -90,6 +91,10 @@ export type PriceRecalcInput = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   prices: any[];
   rates: Record<string, number>;
+  /** 🛡️ villa_discounts — OPSİYONEL. Verilmezse indirim uygulanmaz
+   *  (eski davranış birebir). Takvimdeki indirimli gecelik fiyatla
+   *  toplamın tutarlı olması için beslenir. */
+  discounts?: DiscountRange[] | null;
   originalStartDate: string | null;
   originalEndDate: string | null;
   originalVillaId: string | null;
