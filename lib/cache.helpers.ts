@@ -13,6 +13,10 @@ import { parseLocalDate, formatLocalDate } from "@/lib/date-format";
    repository/RPC/migration/availability sistemi OLUŞTURULMADI;
    yalnız BURADAN DA çağrılıyor. */
 import { getBlockedVillaIds } from "@/lib/availability.helper";
+/* 🛡️ MIGRATION 092 — admin küratörlük seçimi (hangi indirim dönemleri
+   public'te gösterilecek). Normalize helper'ı servis katmanında TEK
+   yerde tanımlı; burada yalnız okunur. */
+import { normalizeSelectedDiscountRanges } from "@/app/services/discount-collection.service";
 /* 🛡️ Villa Migration S2 + S8L — findActiveLocationIds (S2) +
    findActiveImagesByIds (S8L) native'e taşındı. cache.helpers zaten
    server-only (unstable_cache) → server-only native repo import'u güvenli.
@@ -283,6 +287,17 @@ export type HomepageCollectionVilla = {
      `undefined` = kontrol uygulanmadı/uygulanamadı → tüketici MEVCUT
      davranışı korur (geriye dönük uyumlu, fail-soft). */
   discount_available?: boolean;
+  /* 🛡️ P3 (MIGRATION 092) — KART ANAHTARI. Bir villa, admin'in seçtiği
+     her indirim dönemi için AYRI bir kayıt (=kart) üretir; bu yüzden
+     villa id/slug tek başına React key olarak BENZERSİZ DEĞİLDİR.
+     Format: `${villa_id}|${start_date}|${end_date}` — `(villa_id,
+     start_date, end_date)` villa içinde `villa_discounts_no_overlap`
+     EXCLUDE constraint'i (migration 079) sayesinde benzersiz, villalar
+     arası da villa_id ile ayrışır ⇒ GLOBAL BENZERSİZ ve deterministik
+     (index tabanlı key KULLANILMAZ).
+     `getCachedHomepageCollectionVillas` bu alanı HİÇ set etmez →
+     homepage-collection kartları ETKİLENMEZ. */
+  card_key?: string;
 };
 
 export const getCachedHomepageCollectionVillas = unstable_cache(
@@ -493,6 +508,8 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
       is_active: boolean;
       custom_title: string | null;
       custom_cover_image: string | null;
+      /* 🛡️ MIGRATION 092 — ham jsonb küratörlük seçimi. */
+      selected_discount_ranges: unknown;
       villa: {
         id: string;
         slug: string | null;
@@ -681,8 +698,42 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
           currency: ref?.currency || "TRY",
         };
       };
+      /* ═══════════════════════════════════════════════════════
+         🛡️ FAZ 3 — ADMIN KÜRATÖRLÜK SEÇİMİ (MIGRATION 092)
+         ═══════════════════════════════════════════════════════
+         `discount_collections.selected_discount_ranges` doluysa YALNIZ
+         seçilen dönemler aday olur. Seçim TARİH ÇİFTİ ile eşleşir
+         (`villa_discounts.id` DEĞİL) — `replace_villa_discounts`
+         DELETE+INSERT ile id'leri değiştirdiği için id tabanlı eşleşme
+         sessizce kaybolurdu; `(start_date, end_date)` ise
+         `villa_discounts_no_overlap` EXCLUDE constraint'i sayesinde
+         villa içinde KARARLI ve BENZERSİZDİR.
+
+         FAIL-SAFE (üç yol da AYNI güvenli noktaya düşer):
+           • NULL          → seçim yok (legacy)      → TÜM dönemler
+           • []            → admin hepsini kaldırdı  → TÜM dönemler
+           • hiç eşleşmedi → orphan (cleanup/replace)→ TÜM dönemler
+         Böylece kart hiçbir koşulda SESSİZCE kaybolmaz; "gösterme"
+         isteği zaten `is_active = false` ile karşılanıyor.
+
+         ⚠️ Seçilmeyen dönem availability sorgusuna HİÇ GİRMEZ (aday
+         havuzu burada daraldığı için pencere grupları da daralır). */
+      const selectedRanges = normalizeSelectedDiscountRanges(
+        r.selected_discount_ranges
+      );
+      let candidatePeriods = sortedVisibleDiscounts;
+      if (selectedRanges) {
+        const selectedKeys = new Set(
+          selectedRanges.map((x) => `${x.start}|${x.end}`)
+        );
+        const narrowed = sortedVisibleDiscounts.filter((d) =>
+          selectedKeys.has(`${d.start_date}|${d.end_date}`)
+        );
+        if (narrowed.length > 0) candidatePeriods = narrowed;
+      }
+
       discountCandidates.set(v.id, {
-        periods: sortedVisibleDiscounts,
+        periods: candidatePeriods,
         priceForDiscount,
       });
 
@@ -891,55 +942,74 @@ export const getCachedDiscountCollectionVillas = unstable_cache(
       }
     }
 
-    /* ---- Dönem yeniden seçimi + gizleme ---- */
-    const hiddenVillaIds = new Set<string>();
+    /* ═══════════════════════════════════════════════════════════
+       🛡️ FAZ 4 — P3: DÖNEM BAŞINA AYRI KART
+       ═══════════════════════════════════════════════════════════
+       Admin'in seçtiği (ya da seçim yoksa tüm görünür) dönemlerden
+       TAMAMEN DOLU olanlar elenir; KALAN HER DÖNEM için AYRI bir kayıt
+       üretilir. `HomepageCollectionVilla` zaten "tek kartlık veri"
+       taşıdığı için (tekil `discount`, tekil `discount_available`,
+       tekil `price`/`currency`) tip DEĞİŞMEDİ ve `VillaCard`'a
+       DOKUNULMADI — yalnız aynı tipten N adet üretiliyor.
+
+       ÜÇ DAVRANIŞ (hepsi korunur):
+         0/N gece dolu    → kart var · discount_available = true  → rezervasyon CTA
+         1..N-1 gece dolu → kart var · discount_available = false → villa detay CTA
+         N/N gece dolu    → O DÖNEM için kart ÜRETİLMEZ
+       Villanın başka uygun dönemi varsa o dönem(ler) normal gösterilir;
+       hiç uygun dönem kalmazsa o villadan HİÇ kart üretilmez.
+
+       SIRALAMA: `result` zaten `sort_order` ASC (repository `.order`),
+       `ctx.periods` zaten `start_date` ASC ⇒ nihai sıra
+       `(sort_order ASC, start_date ASC)` — tamamen deterministik.
+       Villa içinde eşit `start_date` İMKÂNSIZ (EXCLUDE no_overlap) →
+       ek tie-break gerekmez.
+
+       Availability post-pass (Kademe 1/2, guard, anahtar şeması)
+       DEĞİŞMEDİ — anahtarlar zaten `villaId|start|end`, yani
+       (villa, dönem) çifti başına karar üretiyordu. */
+    const expanded: HomepageCollectionVilla[] = [];
     for (const c of result) {
       const ctx = discountCandidates.get(c.id);
-      if (!ctx || ctx.periods.length === 0) continue;
+      if (!ctx || ctx.periods.length === 0) {
+        /* Aday dönem yok (indirim kaydı olmayan kayıt) → mevcut
+           davranış: kaydı olduğu gibi bırak. */
+        expanded.push(c);
+        continue;
+      }
 
       const isFullyBlocked = (d: DiscountRange) =>
         fullyBlockedKeys.has(`${c.id}|${d.start_date}|${d.end_date}`);
 
-      /* Mevcut start_date ASC sırası KORUNUR — yalnız tamamen dolu
-         dönemler atlanır. */
-      const usable = ctx.periods.find((d) => !isFullyBlocked(d)) ?? null;
+      const usableList = ctx.periods.filter((d) => !isFullyBlocked(d));
 
-      if (!usable) {
-        /* TÜM dönemler tamamen dolu → kart hiç gösterilmez. */
-        hiddenVillaIds.add(c.id);
-        continue;
-      }
+      /* TÜM (seçili) dönemler tamamen dolu → bu villadan hiç kart yok. */
+      if (usableList.length === 0) continue;
 
-      /* Seçilen dönem değiştiyse `discount` + fiyat alanlarını AYNI
-         kuralla yeniden türet (yeni fiyat mantığı YOK). */
-      const changed =
-        !c.discount ||
-        c.discount.start_date !== usable.start_date ||
-        c.discount.end_date !== usable.end_date;
-      if (changed) {
-        c.discount = {
-          start_date: usable.start_date,
-          end_date: usable.end_date,
-          discount_type: usable.discount_type,
-          discount_value: usable.discount_value,
-          currency: usable.currency ?? null,
-        };
-        const pr = ctx.priceForDiscount(usable);
-        c.price = pr.price;
-        c.currency = pr.currency;
-      }
-
-      /* 0 gecelik dönemde alan undefined bırakılır (mevcut davranış). */
-      if (usable.start_date < usable.end_date) {
-        c.discount_available = !overlapKeys.has(
-          `${c.id}|${usable.start_date}|${usable.end_date}`
-        );
+      for (const d of usableList) {
+        const pr = ctx.priceForDiscount(d);
+        expanded.push({
+          ...c,
+          card_key: `${c.id}|${d.start_date}|${d.end_date}`,
+          price: pr.price,
+          currency: pr.currency,
+          discount: {
+            start_date: d.start_date,
+            end_date: d.end_date,
+            discount_type: d.discount_type,
+            discount_value: d.discount_value,
+            currency: d.currency ?? null,
+          },
+          /* 0 gecelik dönemde alan undefined bırakılır (mevcut davranış). */
+          discount_available:
+            d.start_date < d.end_date
+              ? !overlapKeys.has(`${c.id}|${d.start_date}|${d.end_date}`)
+              : undefined,
+        });
       }
     }
 
-    return hiddenVillaIds.size > 0
-      ? result.filter((c) => !hiddenVillaIds.has(c.id))
-      : result;
+    return expanded;
   },
   ["discount-collection:get"],
   { tags: ["discount", "villa-reviews"], revalidate: 600 }

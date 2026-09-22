@@ -223,7 +223,13 @@ export default async function DiscountCollection({
           <ul role="list" className="flex flex-nowrap min-w-max gap-5">
             {collection.map((c) => (
               <li
-                key={c.slug || c.id}
+                /* 🛡️ P3 (MIGRATION 092) — aynı villa, seçilen her indirim
+                   dönemi için AYRI bir kart üretir; villa slug/id tek
+                   başına BENZERSİZ DEĞİLDİR. `card_key` server tarafında
+                   `${villa_id}|${start_date}|${end_date}` olarak üretilir
+                   (lib/cache.helpers). Alan yoksa (eski/başka tüketici)
+                   MEVCUT davranışa düşer. */
+                key={c.card_key || c.slug || c.id}
                 className="dc-flat-card snap-start shrink-0 w-[82vw] max-w-[320px] sm:w-[340px] md:w-[320px]"
               >
                 {renderCard(c)}

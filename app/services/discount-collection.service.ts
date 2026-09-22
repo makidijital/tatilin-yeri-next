@@ -20,6 +20,40 @@ export const DISCOUNT_COLLECTION_DEFAULTS = {
   title: "İndirimli Kiralık Villalar",
 } as const;
 
+/** 🛡️ MIGRATION 092 — public'te gösterilecek indirim dönemi seçimi.
+ *  Tarih çifti ile saklanır (`villa_discounts.id` DEĞİL), çünkü
+ *  `replace_villa_discounts` DELETE+INSERT yapıp id'leri değiştirir;
+ *  `(start_date, end_date)` ise `villa_discounts_no_overlap` EXCLUDE
+ *  constraint'i sayesinde villa içinde KARARLI ve BENZERSİZDİR. */
+export type SelectedDiscountRange = { start: string; end: string };
+
+/** Ham jsonb → güvenli `SelectedDiscountRange[]`. NULL/bozuk/boş değer
+ *  `null` döner = "seçim yok" = TÜM görünür dönemler (legacy davranış).
+ *  Hiçbir zaman throw etmez (projenin savunmacı okuma konvansiyonu). */
+export function normalizeSelectedDiscountRanges(
+  raw: unknown
+): SelectedDiscountRange[] | null {
+  if (!Array.isArray(raw)) return null;
+  const out: SelectedDiscountRange[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const r = item as { start?: unknown; end?: unknown };
+    const start = typeof r.start === "string" ? r.start.slice(0, 10) : "";
+    const end = typeof r.end === "string" ? r.end.slice(0, 10) : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) continue;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(end)) continue;
+    const key = `${start}|${end}`;
+    if (seen.has(key)) continue; // aynı dönem iki kez seçilemez
+    seen.add(key);
+    out.push({ start, end });
+  }
+  /* Boş dizi → "hiçbiri" DEĞİL; NULL ile AYNI (tüm dönemler). Admin
+     yanlışlıkla tüm kutuları kaldırırsa kart sessizce kaybolmasın;
+     "gösterme" isteği zaten `is_active = false` ile karşılanıyor. */
+  return out.length > 0 ? out : null;
+}
+
 export type DiscountCollectionItem = {
   id: string;
   villa_id: string;
@@ -27,6 +61,8 @@ export type DiscountCollectionItem = {
   is_active: boolean;
   custom_title: string | null;
   custom_cover_image: string | null;
+  /* 🛡️ MIGRATION 092 — ham jsonb (admin UI normalize ederek kullanır). */
+  selected_discount_ranges: SelectedDiscountRange[] | null;
   created_at: string | null;
   villa?: {
     id: string;
@@ -140,9 +176,20 @@ export async function updateDiscountCollectionItem(
   fields: {
     custom_title?: string | null;
     custom_cover_image?: string | null;
+    /* 🛡️ MIGRATION 092 — küratörlük seçimi. `null` → seçim temizlenir
+       (tüm görünür dönemler). `villa_discounts` kayıtlarına DOKUNMAZ. */
+    selected_discount_ranges?: SelectedDiscountRange[] | null;
   }
 ): Promise<boolean> {
   const payload: Record<string, unknown> = {};
+  if ("selected_discount_ranges" in fields) {
+    const normalized = normalizeSelectedDiscountRanges(
+      fields.selected_discount_ranges
+    );
+    /* normalize `[]`'i null'a indirger → "tüm dönemler" semantiği DB'de
+       de tek bir gösterimle (NULL) saklanır. */
+    payload.selected_discount_ranges = normalized;
+  }
   if ("custom_title" in fields) {
     payload.custom_title =
       (fields.custom_title ?? null) === null

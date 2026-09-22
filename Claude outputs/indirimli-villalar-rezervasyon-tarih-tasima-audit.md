@@ -159,15 +159,28 @@ const end   = getParam(sp.end);
 
 **Değişmeyenler:** buton JSX'i, `className`, metin, `type`, `preventDefault`/`stopPropagation` deseni, `reserveInfo` dalı, `detailHref`'in kendisi, kart tasarımı.
 
-### 6.1 KARAR NOKTASI — check-out tarihi (kullanıcı onayına açık)
+### 6.1 DÜZELTME (ürün sahibi geri bildirimi — `+1 gün` KALDIRILDI)
 
-| Seçenek | URL | Sonuç |
-|---|---|---|
-| **A (uygulanan)** | `start=start_date`, `end=end_date + 1g` | İndirim penceresinin **TAMAMI** (N gece). `price.engine` + migration 079 + admin "N gece" etiketi ile tutarlı. |
-| B | `start=start_date`, `end=end_date` | Kart etiketiyle birebir aynı iki tarih görünür, ama **son indirimli gece kaybolur** (N-1 gece). |
+İlk uygulamada check-out `end_date + 1 gün` olarak taşınıyordu (migration 079'un
+"kapalı interval / gece" semantiğinden türetilmişti). **Bu üründe doğru davranış bu değil.**
 
-**A seçildi** — çünkü B, kullanıcıya gösterilen indirimin bir gecesini sessizce düşürür.
-Karar tersine çevrilmek istenirse **tek satırlık** değişiklik (`+ 1` kaldırılır); kod içine bu not düşüldü.
+Ürün sahibi doğruladı: `villa_discounts.end_date` bu üründe **kullanıcıya gösterilen ÇIKIŞ tarihidir.**
+Kartta "10 – 17 Ekim" yazıyorsa rezervasyon sayfasında da **10 – 17 Ekim** görünmelidir.
+
+Gerekçe (kod üzerinden doğrulandı):
+* Kart etiketi `discountDateRangeLabel` (`VillaCard.tsx:277`) `start_date`/`end_date`'i **aynen** basar.
+* `/rezervasyon` özet paneli (`ReservationForm.tsx:594-620`) `start`/`end` param'larını **aynen** basar.
+* ⇒ İki ekranın birebir aynı görünmesi için değerler **değiştirilmeden** taşınmalı.
+
+**Uygulanan son hâl:** `?start=start_date&end=end_date` — **gün ekleme/çıkarma YOK.**
+Gece sayısı frontend'de yeniden hesaplanmaz; `/rezervasyon` sayfası kendi mevcut
+mantığıyla (`getNights` / `price.engine`) hesaplar, o mantığa dokunulmadı.
+
+| İndirim | Üretilen URL |
+|---|---|
+| 10 – 17 Ekim | `?start=2026-10-10&end=2026-10-17` |
+| 1 – 5 Kasım | `?start=2026-11-01&end=2026-11-05` |
+| 28 Aralık – 2 Ocak | `?start=2026-12-28&end=2027-01-02` |
 
 ### 6.2 Bilinen sınır durumu (uygulanmadı — kararınıza bırakıldı)
 

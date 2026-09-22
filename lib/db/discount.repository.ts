@@ -26,7 +26,7 @@ import { dbNative as db } from "@/lib/db/native";
 
 const LIST_SELECT = `
       id, villa_id, sort_order, is_active, custom_title,
-      custom_cover_image, created_at,
+      custom_cover_image, selected_discount_ranges, created_at,
       villa:villa_id (
         id, slug, title, is_active, deleted_at,
         villa_images ( image_url, is_cover, sort_order ),
@@ -68,6 +68,7 @@ export const discountRepository = {
         is_active,
         custom_title,
         custom_cover_image,
+        selected_discount_ranges,
         villa:villa_id (
           id,
           slug,

@@ -26,6 +26,8 @@ import {
   Save,
   Tag,
   Image as ImageIcon,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 import { adminFetch } from "@/lib/admin-fetch";
@@ -41,8 +43,13 @@ import {
   toggleDiscountCollectionActiveAction as toggleDiscountCollectionActive,
   updateDiscountCollectionItemAction as updateDiscountCollectionItem,
   reorderDiscountCollectionAction as reorderDiscountCollection,
+  listVillaDiscountPeriodsAction,
+  type VillaDiscountPeriodOption,
 } from "./discount-collection.action";
-import type { DiscountCollectionItem } from "@/app/services/discount-collection.service";
+import type {
+  DiscountCollectionItem,
+  SelectedDiscountRange,
+} from "@/app/services/discount-collection.service";
 import { revalidateDiscount } from "@/app/services/revalidate.actions";
 /* 🐛 FIX — /maki-admin/villas aramasıyla aynı Türkçe-tolerant normalize. */
 import { normalizeSearchText } from "@/lib/search";
@@ -208,6 +215,27 @@ export default function DiscountCollectionPage() {
     toast.success("Başlık güncellendi", { id: `dc-tt-${item.id}` });
   }
 
+  /* 🛡️ MIGRATION 092 — indirim dönemi küratörlük seçimi.
+     `villa_discounts` kayıtlarına DOKUNMAZ; yalnız
+     `discount_collections.selected_discount_ranges` güncellenir.
+     Mevcut `updateDiscountCollectionItem` yolu kullanılır (yeni
+     action/servis YOK). */
+  async function handleSaveRanges(
+    item: DiscountCollectionItem,
+    ranges: SelectedDiscountRange[]
+  ) {
+    const ok = await updateDiscountCollectionItem(item.id, {
+      selected_discount_ranges: ranges,
+    });
+    if (!ok) {
+      toast.error("Dönem seçimi kaydedilemedi", { id: `dc-rg-${item.id}` });
+      return;
+    }
+    await load();
+    fireRevalidate();
+    toast.success("Dönem seçimi güncellendi", { id: `dc-rg-${item.id}` });
+  }
+
   async function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
@@ -335,6 +363,7 @@ export default function DiscountCollectionPage() {
                   onRemove={() => handleRemove(item)}
                   onToggle={() => handleToggle(item)}
                   onSaveTitle={(t) => handleSaveTitle(item, t)}
+                  onSaveRanges={(r) => handleSaveRanges(item, r)}
                 />
               ))}
             </div>
@@ -359,11 +388,13 @@ function SortableRow({
   onRemove,
   onToggle,
   onSaveTitle,
+  onSaveRanges,
 }: {
   item: DiscountCollectionItem;
   onRemove: () => void;
   onToggle: () => void;
   onSaveTitle: (t: string) => void;
+  onSaveRanges: (ranges: SelectedDiscountRange[]) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: item.id });
@@ -382,6 +413,37 @@ function SortableRow({
     })[0]?.image_url
   );
 
+  /* ---- 🛡️ MIGRATION 092 — indirim dönemi seçimi (lazy) ----
+     Liste YALNIZ bölüm açılınca çekilir → sayfa ilk yüklemesinde
+     villa başına ek istek (N+1) OLUŞMAZ. */
+  const [periodsOpen, setPeriodsOpen] = useState(false);
+  const [periods, setPeriods] = useState<VillaDiscountPeriodOption[] | null>(
+    null
+  );
+  const [periodsLoading, setPeriodsLoading] = useState(false);
+  const [checked, setChecked] = useState<Set<string>>(
+    () =>
+      new Set(
+        (item.selected_discount_ranges ?? []).map((r) => `${r.start}|${r.end}`)
+      )
+  );
+  const [rangesSaving, setRangesSaving] = useState(false);
+  /* NULL/[] → seçim yok → TÜM görünür dönemler (legacy davranış). */
+  const hasExplicitSelection = (item.selected_discount_ranges ?? []).length > 0;
+
+  async function togglePeriodsOpen() {
+    const next = !periodsOpen;
+    setPeriodsOpen(next);
+    if (next && periods === null && !periodsLoading) {
+      setPeriodsLoading(true);
+      const rows = await listVillaDiscountPeriodsAction(item.villa_id).catch(
+        () => [] as VillaDiscountPeriodOption[]
+      );
+      setPeriods(rows);
+      setPeriodsLoading(false);
+    }
+  }
+
   const [title, setTitle] = useState(
     item.custom_title ?? item.villa?.title ?? ""
   );
@@ -390,14 +452,17 @@ function SortableRow({
     (item.custom_title ?? item.villa?.title ?? "").trim();
 
   return (
+    /* 🛡️ Dış sarmalayıcı: MEVCUT satır görünümü (card-premium p-3 +
+       opacity) AYNEN korunur; satırın kendisi değişmeden bir alt
+       bölüm eklenebilsin diye dikey konteyner yapıldı. */
     <div
       ref={setNodeRef}
       style={style}
       className={
-        "card-premium p-3 flex items-center gap-3 " +
-        (item.is_active ? "" : "opacity-60")
+        "card-premium p-3 " + (item.is_active ? "" : "opacity-60")
       }
     >
+    <div className="flex items-center gap-3">
       <button
         type="button"
         {...attributes}
@@ -463,6 +528,112 @@ function SortableRow({
         <Trash2 size={13} />
         Çıkar
       </button>
+    </div>
+
+    {/* ═══════════════════════════════════════════════════════
+        🛡️ MIGRATION 092 — İNDİRİM DÖNEMİ SEÇİMİ
+        ═══════════════════════════════════════════════════════
+        Admin bu villanın HANGİ indirim dönemlerinin public ana
+        sayfada gösterileceğini seçer. Seçilen her dönem public'te
+        AYRI bir kart olur.
+        ⚠️ Seçim YALNIZ küratörlük tercihidir — `villa_discounts`
+        kayıtları ASLA silinmez/değiştirilmez (fiyat sistemi onlara
+        bağlıdır).
+        ⚠️ Hiçbiri seçili değilse TÜM görünür dönemler gösterilir. */}
+    <div className="mt-2.5 border-t border-[var(--color-stone-100)] pt-2.5">
+      <button
+        type="button"
+        onClick={togglePeriodsOpen}
+        className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--color-stone-600)] hover:text-[var(--color-stone-900)] transition"
+      >
+        {periodsOpen ? (
+          <ChevronDown size={13} />
+        ) : (
+          <ChevronRight size={13} />
+        )}
+        İndirim dönemleri
+        <span className="text-[11px] text-[var(--color-stone-400)]">
+          {hasExplicitSelection
+            ? `(${(item.selected_discount_ranges ?? []).length} seçili)`
+            : "(tümü)"}
+        </span>
+      </button>
+
+      {periodsOpen && (
+        <div className="mt-2.5 pl-1">
+          {periodsLoading && (
+            <p className="text-[12px] text-[var(--color-stone-400)]">
+              Yükleniyor…
+            </p>
+          )}
+          {!periodsLoading && periods !== null && periods.length === 0 && (
+            <p className="text-[12px] text-[var(--color-stone-400)]">
+              Bu mülkte indirim dönemi yok.
+            </p>
+          )}
+          {!periodsLoading && periods !== null && periods.length > 0 && (
+            <>
+              <ul className="space-y-1.5">
+                {periods.map((p) => {
+                  const key = `${p.start_date}|${p.end_date}`;
+                  const isChecked = checked.has(key);
+                  return (
+                    <li key={key}>
+                      <label className="flex items-center gap-2 text-[13px] text-[var(--color-stone-700)] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() =>
+                            setChecked((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(key)) next.delete(key);
+                              else next.add(key);
+                              return next;
+                            })
+                          }
+                          className="accent-[var(--color-champagne-600)]"
+                        />
+                        <span className="font-mono text-[12px]">
+                          {p.start_date} – {p.end_date}
+                        </span>
+                        <span className="text-[12px] text-[var(--color-stone-500)]">
+                          {p.discount_type === "percent"
+                            ? `%${p.discount_value}`
+                            : `${p.discount_value} ${p.currency || ""}`.trim()}
+                        </span>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="flex items-center gap-3 mt-2.5">
+                <button
+                  type="button"
+                  disabled={rangesSaving}
+                  onClick={async () => {
+                    setRangesSaving(true);
+                    const ranges: SelectedDiscountRange[] = periods
+                      .filter((p) =>
+                        checked.has(`${p.start_date}|${p.end_date}`)
+                      )
+                      .map((p) => ({ start: p.start_date, end: p.end_date }));
+                    await onSaveRanges(ranges);
+                    setRangesSaving(false);
+                  }}
+                  className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-champagne-700)] hover:text-[var(--color-champagne-600)] px-3 py-1.5 rounded-lg hover:bg-[var(--color-sand-50)] transition disabled:opacity-40"
+                >
+                  <Save size={13} />
+                  Seçimi kaydet
+                </button>
+                <p className="text-[11px] text-[var(--color-stone-400)]">
+                  Hiçbiri seçili değilse tüm dönemler gösterilir.
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
     </div>
   );
 }
