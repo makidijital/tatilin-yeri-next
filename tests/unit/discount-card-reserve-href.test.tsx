@@ -7,9 +7,10 @@
    BU TEST ŞUNLARI KİLİTLER:
      1) URL standardı: /rezervasyon/<slug>?start=&end=  (ShortGaps +
         useBookingEngine ile AYNI param adları — yeni sözleşme yok).
-     2) TARİH SEMANTİĞİ: villa_discounts KAPALI interval (end_date = son
-        indirimli GECE) → checkout = end_date + 1 gün. Aksi halde son
-        indirimli gece kaybolur.
+     2) TARİH SEMANTİĞİ: `end_date` bu üründe kullanıcıya gösterilen
+        ÇIKIŞ tarihidir → start_date/end_date URL'e AYNEN taşınır.
+        ⛔ `+1 gün` UYGULANMAZ (kartta 10–17 Ekim ise rezervasyon
+        sayfasında da 10–17 Ekim görünmeli).
      3) Locale önekleri (/en, /de) doğru.
      4) Bozuk/eksik veride MEVCUT davranışa (villa detayı) düşüş.
      5) discount variant DIŞINDA hiçbir şey değişmedi.
@@ -98,54 +99,80 @@ describe("İndirimli kart CTA — fırsat tarihlerini rezervasyona taşır", () 
     clickCta();
     expect(pushSpy).toHaveBeenCalledTimes(1);
     expect(pushSpy.mock.calls[0][0]).toBe(
-      "/rezervasyon/ornek-villa?start=2026-10-08&end=2026-10-15"
+      "/rezervasyon/ornek-villa?start=2026-10-08&end=2026-10-14"
     );
   });
 
-  it("2) SEMANTİK: checkout = end_date + 1 gün (son indirimli gece KAYBOLMAZ)", () => {
-    renderDiscountCard();
+  it("2) REGRESYON: end_date AYNEN taşınır — +1 gün UYGULANMAZ", () => {
+    renderDiscountCard({
+      discount: { ...BASE_DISCOUNT, start_date: "2026-10-10", end_date: "2026-10-17" },
+    });
     clickCta();
     const url = new URL(pushSpy.mock.calls[0][0] as string, "https://x.test");
-    const start = url.searchParams.get("start")!;
-    const end = url.searchParams.get("end")!;
-    // villa_discounts [08..14] kapalı interval = 7 gece
-    const nights =
-      (new Date(end).getTime() - new Date(start).getTime()) / 86400000;
-    expect(nights).toBe(7);
-    expect(end).toBe("2026-10-15");
-    // Regresyon: end_date'in AYNEN taşınması YANLIŞTIR (6 gece olurdu).
-    expect(end).not.toBe("2026-10-14");
+    expect(url.searchParams.get("start")).toBe("2026-10-10");
+    expect(url.searchParams.get("end")).toBe("2026-10-17");
+    // 17 → 18 KESİNLİKLE olmayacak (kullanıcı bildirimi, düzeltildi).
+    expect(url.searchParams.get("end")).not.toBe("2026-10-18");
   });
 
-  it("3) Tek günlük indirim → 1 gece", () => {
+  it("3) ÖRNEK: 10–17 Ekim → 10–17 Ekim", () => {
+    renderDiscountCard({
+      discount: { ...BASE_DISCOUNT, start_date: "2026-10-10", end_date: "2026-10-17" },
+    });
+    clickCta();
+    expect(pushSpy.mock.calls[0][0]).toBe(
+      "/rezervasyon/ornek-villa?start=2026-10-10&end=2026-10-17"
+    );
+  });
+
+  it("4) ÖRNEK: 1–5 Kasım → 1–5 Kasım", () => {
+    renderDiscountCard({
+      discount: { ...BASE_DISCOUNT, start_date: "2026-11-01", end_date: "2026-11-05" },
+    });
+    clickCta();
+    expect(pushSpy.mock.calls[0][0]).toBe(
+      "/rezervasyon/ornek-villa?start=2026-11-01&end=2026-11-05"
+    );
+  });
+
+  it("5) ÖRNEK: 28 Aralık – 2 Ocak → 28 Aralık – 2 Ocak (yıl sınırı, kaydırma YOK)", () => {
+    renderDiscountCard({
+      discount: { ...BASE_DISCOUNT, start_date: "2026-12-28", end_date: "2027-01-02" },
+    });
+    clickCta();
+    expect(pushSpy.mock.calls[0][0]).toBe(
+      "/rezervasyon/ornek-villa?start=2026-12-28&end=2027-01-02"
+    );
+  });
+
+  it("6) Tek günlük indirim → iki tarih de aynı gün (kaydırma YOK)", () => {
     renderDiscountCard({
       discount: { ...BASE_DISCOUNT, start_date: "2026-10-08", end_date: "2026-10-08" },
     });
     clickCta();
     expect(pushSpy.mock.calls[0][0]).toBe(
-      "/rezervasyon/ornek-villa?start=2026-10-08&end=2026-10-09"
+      "/rezervasyon/ornek-villa?start=2026-10-08&end=2026-10-08"
     );
   });
 
-  it("4) Ay/yıl sınırını doğru aşar (31 Aralık → 1 Ocak)", () => {
-    renderDiscountCard({
-      discount: { ...BASE_DISCOUNT, start_date: "2026-12-28", end_date: "2026-12-31" },
-    });
+  it("7) Kartta gösterilen aralık ile URL'deki tarihler BİREBİR aynı", () => {
+    const d = { ...BASE_DISCOUNT, start_date: "2026-10-10", end_date: "2026-10-17" };
+    renderDiscountCard({ discount: d });
     clickCta();
-    expect(pushSpy.mock.calls[0][0]).toBe(
-      "/rezervasyon/ornek-villa?start=2026-12-28&end=2027-01-01"
-    );
+    const url = new URL(pushSpy.mock.calls[0][0] as string, "https://x.test");
+    expect(url.searchParams.get("start")).toBe(d.start_date);
+    expect(url.searchParams.get("end")).toBe(d.end_date);
   });
 
-  it("5) EN locale → /en/rezervasyon/...", () => {
+  it("8) EN locale → /en/rezervasyon/...", () => {
     renderDiscountCard({ locale: "en" });
     clickCta("Book Now");
     expect(pushSpy.mock.calls[0][0]).toBe(
-      "/en/rezervasyon/ornek-villa?start=2026-10-08&end=2026-10-15"
+      "/en/rezervasyon/ornek-villa?start=2026-10-08&end=2026-10-14"
     );
   });
 
-  it("6) DE locale → /de/rezervasyon/...", () => {
+  it("9) DE locale → /de/rezervasyon/...", () => {
     renderDiscountCard({ locale: "de" });
     const btn = screen.getAllByRole("button").find((b) =>
       (b.textContent || "").trim().length > 0 &&
@@ -153,17 +180,17 @@ describe("İndirimli kart CTA — fırsat tarihlerini rezervasyona taşır", () 
     )!;
     fireEvent.click(btn);
     expect(pushSpy.mock.calls[0][0]).toBe(
-      "/de/rezervasyon/ornek-villa?start=2026-10-08&end=2026-10-15"
+      "/de/rezervasyon/ornek-villa?start=2026-10-08&end=2026-10-14"
     );
   });
 
-  it("7) discount YOKSA → MEVCUT davranış: villa detay sayfası", () => {
+  it("10) discount YOKSA → MEVCUT davranış: villa detay sayfası", () => {
     renderDiscountCard({ discount: null });
     clickCta();
     expect(pushSpy.mock.calls[0][0]).toBe("/kiralik-villa/ornek-villa");
   });
 
-  it("8) BOZUK tarih → MEVCUT davranışa düşer (asla geçersiz URL üretmez)", () => {
+  it("11) BOZUK tarih → MEVCUT davranışa düşer (asla geçersiz URL üretmez)", () => {
     renderDiscountCard({
       discount: { ...BASE_DISCOUNT, start_date: "bozuk", end_date: "2026-10-14" },
     });
@@ -171,7 +198,7 @@ describe("İndirimli kart CTA — fırsat tarihlerini rezervasyona taşır", () 
     expect(pushSpy.mock.calls[0][0]).toBe("/kiralik-villa/ornek-villa");
   });
 
-  it("9) TERS aralık (end < start) → MEVCUT davranışa düşer", () => {
+  it("12) TERS aralık (end < start) → MEVCUT davranışa düşer", () => {
     renderDiscountCard({
       discount: { ...BASE_DISCOUNT, start_date: "2026-10-14", end_date: "2026-10-08" },
     });
@@ -179,7 +206,7 @@ describe("İndirimli kart CTA — fırsat tarihlerini rezervasyona taşır", () 
     expect(pushSpy.mock.calls[0][0]).toBe("/kiralik-villa/ornek-villa");
   });
 
-  it("10) CTA tasarımı DEĞİŞMEDİ — turuncu marka butonu aynı sınıflarla duruyor", () => {
+  it("13) CTA tasarımı DEĞİŞMEDİ — turuncu marka butonu aynı sınıflarla duruyor", () => {
     renderDiscountCard();
     const btn = screen.getByRole("button", { name: "Hemen Rezervasyon Yap" });
     const cls = btn.getAttribute("class") || "";
@@ -189,7 +216,7 @@ describe("İndirimli kart CTA — fırsat tarihlerini rezervasyona taşır", () 
     expect(btn.getAttribute("type")).toBe("button");
   });
 
-  it("11) DEFAULT variant (indirimsiz liste kartı) DEĞİŞMEDİ", () => {
+  it("14) DEFAULT variant (indirimsiz liste kartı) DEĞİŞMEDİ", () => {
     render(
       <VillaCard
         id="v-2"

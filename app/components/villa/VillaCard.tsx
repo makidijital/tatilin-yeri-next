@@ -481,19 +481,19 @@ export default function VillaCard({
      AYNI helper; "tr" → öneksiz, "en"/"de" → /en, /de — üç route da
      mevcut).
 
-     ⚠️ TARİH SEMANTİĞİ (KANIT, tahmin DEĞİL):
-       • villa_discounts.start_date/end_date = KAPALI interval, İKİSİ
-         DE DAHİL, GECE bazlı — migration 079 "TARİH MANTIĞI" bölümü +
-         price.engine > getActiveDiscount (`d >= s && d <= e`) + admin
-         DiscountsSection > nightsInclusive ("N gece" = e - s + 1).
-       • /rezervasyon `end` parametresi ise ÇIKIŞ (checkout) günüdür ve
-         ÜCRETLENDİRİLMEZ — price.engine > calculateStayTotal
-         (`while (current < endD)`); villa_short_gaps'te de
-         `gap_nights = gap_end - gap_start` (migration 055).
-       ⇒ İndirimin TAMAMI taşınsın diye check-out = son indirimli GECE
-         + 1 gün. `+ 1` kaldırılırsa son indirimli gece KAYBOLUR
-         (bilinçli karar; bkz. "Claude outputs/
-         indirimli-villalar-rezervasyon-tarih-tasima-audit.md" §6.1).
+     ⚠️ TARİH SEMANTİĞİ — GÜN EKLEME/ÇIKARMA YOK (İŞ KURALI, ürün
+     sahibi tarafından doğrulandı):
+       `discount.end_date` bu üründe kullanıcıya gösterilen ÇIKIŞ
+       tarihidir. Kart üzerindeki "İndirim geçerli: …" etiketi
+       (discountDateRangeLabel) start_date/end_date'i AYNEN basar;
+       /rezervasyon özet paneli de `start`/`end` param'larını AYNEN
+       basar (ReservationPageBody → ReservationForm). Dolayısıyla iki
+       ekranın BİREBİR aynı tarihleri göstermesi için değerler
+       DEĞİŞTİRİLMEDEN taşınır.
+       ⛔ `+ 1 gün` UYGULANMAZ. Gece sayısı burada YENİDEN
+          HESAPLANMAZ — rezervasyon sayfası kendi mevcut mantığıyla
+          (ReservationForm > getNights / price.engine) hesaplar; o
+          mantığa DOKUNULMADI.
 
      Geçersiz/eksik veri (slug yok, tarih parse edilemiyor, ters
      aralık) → `null` → CTA MEVCUT davranışına (detailHref) düşer.
@@ -512,15 +512,6 @@ export default function VillaCard({
     if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null;
     if (e.getTime() < s.getTime()) return null;
 
-    /* Son indirimli gecenin ERTESİ günü = checkout. parseLocalDate
-       LOCAL midnight ürettiği için (UTC parse YOK) gün kayması olmaz;
-       date-format helper'ları aynen kullanılır. */
-    const checkout = new Date(
-      e.getFullYear(),
-      e.getMonth(),
-      e.getDate() + 1
-    );
-
     const base = buildLocaleAlternates(
       `/rezervasyon/${cleanSlug}`,
       effectiveLocale
@@ -528,7 +519,8 @@ export default function VillaCard({
 
     const qs = new URLSearchParams();
     qs.set("start", formatLocalDate(s));
-    qs.set("end", formatLocalDate(checkout));
+    /* Normalize ("YYYY-MM-DDT…" → "YYYY-MM-DD"); gün DEĞİŞMEZ. */
+    qs.set("end", formatLocalDate(e));
     return `${base}?${qs.toString()}`;
   })();
 
