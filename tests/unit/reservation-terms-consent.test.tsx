@@ -46,7 +46,7 @@ const LOCALES: Locale[] = ["tr", "en", "de"];
 const SLUGS = {
   cancellation: "/p/rezervasyon-ve-iptal-kosullari",
   distanceSales: "/p/mesafeli-satis-sozlesmesi",
-  privacy: "/p/kvkk-aydinlatma-metni",
+  privacy: "/p/kvkk-ve-gizlilik-politikasi",
 } as const;
 
 const VILLA = {
@@ -276,7 +276,7 @@ describe("6-7-8) Link hedefleri aktif locale'i TAŞIR", () => {
     expect(hrefs).toEqual([
       "/p/rezervasyon-ve-iptal-kosullari",
       "/p/mesafeli-satis-sozlesmesi",
-      "/p/kvkk-aydinlatma-metni",
+      "/p/kvkk-ve-gizlilik-politikasi",
     ]);
   });
 
@@ -293,7 +293,7 @@ describe("6-7-8) Link hedefleri aktif locale'i TAŞIR", () => {
       expect(hrefs).toEqual([
         `/${loc}/p/rezervasyon-ve-iptal-kosullari`,
         `/${loc}/p/mesafeli-satis-sozlesmesi`,
-        `/${loc}/p/kvkk-aydinlatma-metni`,
+        `/${loc}/p/kvkk-ve-gizlilik-politikasi`,
       ]);
       cleanup();
     }

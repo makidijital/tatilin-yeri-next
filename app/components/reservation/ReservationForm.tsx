@@ -1188,7 +1188,7 @@ export default function ReservationForm({
                   label: dict.form.termsDistanceSalesLink,
                 },
                 "{privacy}": {
-                  path: "/p/kvkk-aydinlatma-metni",
+                  path: "/p/kvkk-ve-gizlilik-politikasi",
                   label: dict.form.termsPrivacyLink,
                 },
               };
