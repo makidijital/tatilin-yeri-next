@@ -706,9 +706,15 @@ export async function toggleFeaturedReview(
      kullanır (`sanitizeName`, `sanitizeComment`, MIN/MAX_NAME_LEN,
      MIN/MAX_COMMENT_LEN, MIN/MAX_RATING). Yeni kural İCAT EDİLMEDİ.
 
-   ⚠️ `created_at` PAYLOAD'A KONULMAZ — PostgreSQL kolon default'u
-     kullanılır (public akışla BİREBİR aynı davranış; DDL varsayımı
-     yapılmaz).
+   ⚠️ `created_at` OPSİYONELDİR (admin "Yorum Tarihi" alanı):
+     • verilmezse / boş ise → payload'a HİÇ KONULMAZ, PostgreSQL kolon
+       default'u kullanılır (ÖNCEKİ davranış birebir korunur).
+     • "YYYY-MM-DD" verilirse → o günün UTC 12:00'si olarak yazılır.
+       Öğlen seçimi kasıtlı: formatDateTr/formatDateForLocale UTC+3
+       shift uygular; 12:00Z ±11 saat tolerans bırakır, yani seçilen
+       gün hem admin listesinde hem anasayfada AYNI gün görünür.
+     • Tam ISO timestamp verilirse aynen (normalize edilmiş) yazılır.
+     PUBLIC akış (`createVillaReview`) bu alanı ASLA kullanmaz.
 
    ⚠️ `is_featured` HER ZAMAN `false`. Öne çıkarma işlemi villa başına
      tekil (partial unique index `(villa_id) WHERE is_featured`) ve
@@ -733,7 +739,43 @@ export type CreateVillaReviewAdminInput = {
   comment: string;
   /** true → is_approved=true + approved_at=now(); false → pending. */
   publish?: boolean;
+  /** Admin "Yorum Tarihi". "" / undefined / null → DB default.
+   *  "YYYY-MM-DD" veya tam ISO timestamp. */
+  created_at?: string | null;
 };
+
+/** Admin "Yorum Tarihi" normalizasyonu.
+ *  - boş/undefined/null → { ok:true, value:null }  (payload'a konmaz)
+ *  - "YYYY-MM-DD"       → o günün UTC 12:00'si (bkz. yukarıdaki not)
+ *  - parse edilebilir ISO timestamp → toISOString()
+ *  - diğer her şey      → { ok:false }
+ *  YENİ KÜTÜPHANE YOK; yalnız yerleşik Date kullanılır. */
+function normalizeAdminReviewDate(
+  raw: string | null | undefined
+): { ok: true; value: string | null } | { ok: false } {
+  const v = String(raw ?? "").trim();
+  if (!v) return { ok: true, value: null };
+
+  const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  if (ymd) {
+    const year = Number(ymd[1]);
+    const month = Number(ymd[2]);
+    const day = Number(ymd[3]);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return { ok: false };
+    /* UTC 12:00 — gün kayması bırakmayan güvenli saat. */
+    const d = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+    if (Number.isNaN(d.getTime())) return { ok: false };
+    /* 31 Şubat gibi taşan tarihleri reddet (Date sessizce ileri sarar). */
+    if (d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) {
+      return { ok: false };
+    }
+    return { ok: true, value: d.toISOString() };
+  }
+
+  const parsed = new Date(v);
+  if (Number.isNaN(parsed.getTime())) return { ok: false };
+  return { ok: true, value: parsed.toISOString() };
+}
 
 export async function createVillaReviewByAdmin(
   input: CreateVillaReviewAdminInput
@@ -766,6 +808,12 @@ export async function createVillaReviewByAdmin(
     return { ok: false, error: "Yorum çok uzun (maks. 1500 karakter)." };
   }
 
+  /* Admin "Yorum Tarihi" — boşsa DB default'u devrede kalır. */
+  const createdAt = normalizeAdminReviewDate(input?.created_at);
+  if (!createdAt.ok) {
+    return { ok: false, error: "Geçerli bir yorum tarihi seçin." };
+  }
+
   /* `publish` verilmezse yayına alınmaz (defansif default). UI "Hemen
      yayınla"yı AÇIK gönderir. `approved_at` timestamp'i mevcut
      `approveVillaReview` ile AYNI ifadeyle üretilir. */
@@ -779,6 +827,8 @@ export async function createVillaReviewByAdmin(
     is_approved: isApproved,
     is_featured: false,
     approved_at: isApproved ? new Date().toISOString() : null,
+    /* Tarih seçilmediyse anahtar HİÇ eklenmez → DB default. */
+    ...(createdAt.value ? { created_at: createdAt.value } : {}),
   });
 
   if (error) {

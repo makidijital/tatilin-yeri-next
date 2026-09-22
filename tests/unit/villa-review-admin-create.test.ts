@@ -6,7 +6,8 @@
      • sanitizeName / sanitizeComment davranışı
      • "Hemen yayınla" → is_approved + approved_at
      • is_featured HER ZAMAN false
-     • created_at payload'a HİÇ konulmaz (DB default)
+     • created_at: BOŞ ise payload'a konulmaz (DB default);
+       seçilirse UTC 12:00 normalize edilip yazılır
      • repo hata senaryosu
      • yetkisiz çağrıda service/repository'ye ULAŞILMAZ
      • REGRESYON: public `createVillaReview` davranışı DEĞİŞMEDİ
@@ -39,6 +40,7 @@ import {
   createVillaReviewByAdmin,
   createVillaReview,
 } from "@/app/services/villa-review.service";
+import { formatDateTr, formatDateForLocale } from "@/lib/date-format";
 
 const VALID = {
   villa_id: "villa-1",
@@ -250,14 +252,40 @@ describe("8) is_featured HER ZAMAN false", () => {
   });
 });
 
-describe("9) created_at payload'a KONULMAZ (DB default)", () => {
-  it("9a) payload'da created_at anahtarı YOK", async () => {
+/* ===============================================================
+   9) created_at — ADMIN "Yorum Tarihi" (opsiyonel)
+   ---------------------------------------------------------------
+   ⚠️ SÖZLEŞME DEĞİŞİKLİĞİ (kullanıcı talebi): önceki sürümde
+   `created_at` payload'a ASLA konulmuyordu. Artık OPSİYONEL:
+   boş → eski davranış birebir; dolu → normalize edilip yazılır.
+   Public akışın (`createVillaReview`) kilidi 12b'de AYNEN duruyor.
+   =============================================================== */
+describe("9) created_at — BOŞ ise DB default (eski davranış korunur)", () => {
+  it("9a) created_at verilmezse payload'da anahtar YOK", async () => {
     await createVillaReviewByAdmin(VALID);
     const p = insertMock.mock.calls[0][0] as Record<string, unknown>;
     expect(Object.keys(p)).not.toContain("created_at");
   });
 
-  it("9b) payload anahtar kümesi tam olarak beklenen 7 alan", async () => {
+  it('9b) created_at: "" → anahtar YOK', async () => {
+    await createVillaReviewByAdmin({ ...VALID, created_at: "" });
+    const p = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(Object.keys(p)).not.toContain("created_at");
+  });
+
+  it("9c) created_at: null → anahtar YOK", async () => {
+    await createVillaReviewByAdmin({ ...VALID, created_at: null });
+    const p = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(Object.keys(p)).not.toContain("created_at");
+  });
+
+  it('9d) created_at: "   " (whitespace) → anahtar YOK', async () => {
+    await createVillaReviewByAdmin({ ...VALID, created_at: "   " });
+    const p = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(Object.keys(p)).not.toContain("created_at");
+  });
+
+  it("9e) tarih YOKken payload anahtar kümesi tam olarak beklenen 7 alan", async () => {
     await createVillaReviewByAdmin(VALID);
     const p = insertMock.mock.calls[0][0] as Record<string, unknown>;
     expect(Object.keys(p).sort()).toEqual(
@@ -272,6 +300,108 @@ describe("9) created_at payload'a KONULMAZ (DB default)", () => {
       ].sort()
     );
   });
+});
+
+describe("9F) created_at — SEÇİLDİĞİNDE yazılır ve normalize edilir", () => {
+  it("9f) YYYY-MM-DD → o günün UTC 12:00'si", async () => {
+    await createVillaReviewByAdmin({ ...VALID, created_at: "2026-08-15" });
+    const p = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(p.created_at).toBe("2026-08-15T12:00:00.000Z");
+  });
+
+  it("9g) seçilen gün TR/locale formatlayıcılarda AYNI gün kalır (UTC+3 shift-proof)", async () => {
+    await createVillaReviewByAdmin({ ...VALID, created_at: "2026-08-15" });
+    const p = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(formatDateTr(p.created_at as string)).toBe("15 Ağu 2026");
+    expect(formatDateForLocale(p.created_at as string, "en")).toBe(
+      "15 Aug 2026"
+    );
+  });
+
+  it("9h) yıl başı/sonu sınırları kaymaz", async () => {
+    await createVillaReviewByAdmin({ ...VALID, created_at: "2026-01-01" });
+    expect(formatDateTr(
+      (insertMock.mock.calls[0][0] as Record<string, unknown>)
+        .created_at as string
+    )).toBe("1 Oca 2026");
+
+    insertMock.mockClear();
+    await createVillaReviewByAdmin({ ...VALID, created_at: "2026-12-31" });
+    expect(formatDateTr(
+      (insertMock.mock.calls[0][0] as Record<string, unknown>)
+        .created_at as string
+    )).toBe("31 Ara 2026");
+  });
+
+  it("9i) artık yıl 29 Şubat kabul edilir", async () => {
+    const res = await createVillaReviewByAdmin({
+      ...VALID,
+      created_at: "2028-02-29",
+    });
+    expect(res.ok).toBe(true);
+    const p = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(p.created_at).toBe("2028-02-29T12:00:00.000Z");
+  });
+
+  it("9j) tam ISO timestamp aynen (normalize) yazılır", async () => {
+    await createVillaReviewByAdmin({
+      ...VALID,
+      created_at: "2026-08-15T09:30:00.000Z",
+    });
+    const p = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(p.created_at).toBe("2026-08-15T09:30:00.000Z");
+  });
+
+  it("9k) tarih VARken payload anahtar kümesi 8 alan", async () => {
+    await createVillaReviewByAdmin({ ...VALID, created_at: "2026-08-15" });
+    const p = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(Object.keys(p).sort()).toEqual(
+      [
+        "approved_at",
+        "comment",
+        "created_at",
+        "guest_name",
+        "is_approved",
+        "is_featured",
+        "rating",
+        "villa_id",
+      ].sort()
+    );
+  });
+
+  it("9l) created_at diğer alanları BOZMAZ", async () => {
+    await createVillaReviewByAdmin({ ...VALID, created_at: "2026-08-15" });
+    const p = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(p.villa_id).toBe("villa-1");
+    expect(p.guest_name).toBe("Ayşe Yılmaz");
+    expect(p.rating).toBe(5);
+    expect(p.is_approved).toBe(true);
+    expect(p.is_featured).toBe(false);
+  });
+});
+
+describe("9G) created_at — GEÇERSİZ girdi reddedilir, insert ÇAĞRILMAZ", () => {
+  const BAD = [
+    "15.08.2026",
+    "2026-13-01",
+    "2026-00-10",
+    "2026-02-30",
+    "2026-08-32",
+    "abc",
+    "0000-00-00",
+  ];
+
+  for (const bad of BAD) {
+    it(`9m) "${bad}" → ok:false + insert yok`, async () => {
+      const res = await createVillaReviewByAdmin({
+        ...VALID,
+        created_at: bad,
+      });
+      expect(res.ok).toBe(false);
+      if (!res.ok) expect(res.error).toBe("Geçerli bir yorum tarihi seçin.");
+      expect(insertMock).not.toHaveBeenCalled();
+    });
+  }
 });
 
 describe("10) Repository hata senaryosu", () => {
@@ -409,5 +539,68 @@ describe("12) REGRESYON — public akış DEĞİŞMEDİ", () => {
     );
     const inserts = src.match(/async\s+insert\w*\s*\(/g) || [];
     expect(inserts).toHaveLength(1);
+  });
+});
+
+/* ===============================================================
+   13) ADMIN FORM UI — "Yorum Tarihi" bağlandı, public form KORUNDU
+   =============================================================== */
+describe("13) admin form UI kilidi", () => {
+  const ADMIN_SRC = readFileSync(
+    join(process.cwd(), "app/(admin)/maki-admin/reviews/ReviewAdminList.tsx"),
+    "utf-8"
+  );
+
+  it("13a) 'Yorum Tarihi' label'ı VAR", () => {
+    expect(ADMIN_SRC).toContain("Yorum Tarihi");
+  });
+
+  it("13b) mevcut AdminDateInput yeniden kullanılıyor (yeni picker YOK)", () => {
+    expect(ADMIN_SRC).toContain(
+      'import AdminDateInput from "@/app/components/admin/shared/AdminDateInput"'
+    );
+    expect(ADMIN_SRC).toMatch(/<AdminDateInput[\s\S]*?mode="date"/);
+    expect(ADMIN_SRC).not.toContain('type="date"');
+    expect(ADMIN_SRC).not.toContain("react-datepicker");
+  });
+
+  it("13c) form state'i action'a geçiriliyor", () => {
+    expect(ADMIN_SRC).toContain("created_at: form.created_at");
+    expect(ADMIN_SRC).toMatch(/value=\{form\.created_at\}/);
+  });
+
+  it("13d) EMPTY_FORM varsayılanı BOŞ (DB default korunur)", () => {
+    const start = ADMIN_SRC.indexOf("const EMPTY_FORM");
+    const block = ADMIN_SRC.slice(start, ADMIN_SRC.indexOf("};", start));
+    expect(block).toContain('created_at: ""');
+  });
+
+  it("13e) diğer alanlar duruyor (form bozulmadı)", () => {
+    for (const label of ["Ad Soyad", "Puan", "Yorum", "Hemen yayınla"]) {
+      expect(ADMIN_SRC).toContain(label);
+    }
+  });
+
+  it("13f) 🔒 PUBLIC yorum formunda tarih alanı YOK", () => {
+    const pub = readFileSync(
+      join(process.cwd(), "app/components/villa/VillaReviewsSection.tsx"),
+      "utf-8"
+    );
+    expect(pub).not.toContain("created_at:");
+    expect(pub).not.toContain("AdminDateInput");
+    expect(pub).not.toContain("Yorum Tarihi");
+  });
+
+  it("13g) 🔒 action pass-through — imza manuel yazılmadı", () => {
+    const act = readFileSync(
+      join(process.cwd(), "app/services/villa-review.action.ts"),
+      "utf-8"
+    );
+    expect(act).toContain(
+      "...args: Parameters<typeof createVillaReviewByAdmin>"
+    );
+    expect(act).toMatch(
+      /createVillaReviewByAdminAction[\s\S]{0,220}requirePermission\("reviews"\)/
+    );
   });
 });

@@ -64,6 +64,7 @@ import type { VillaReviewAdmin } from "@/app/services/villa-review.service";
 import { revalidateVillaReviews } from "@/app/services/revalidate.actions";
 import { logActivity } from "@/lib/activity-log.client";
 import { formatDateTr } from "@/lib/date-format";
+import AdminDateInput from "@/app/components/admin/shared/AdminDateInput";
 /* 🛡️ MANUEL YORUM — mülk seçimi. homepage-collection / discount-collection
    picker deseninin BİREBİR aynısı: adminFetch + /api/admin/villas?activeOnly=1
    + normalizeSearchText araması. Yeni endpoint/servis YOK. */
@@ -86,6 +87,8 @@ type AdminReviewForm = {
   comment: string;
   /** "Hemen yayınla" — VARSAYILAN AÇIK. */
   publish: boolean;
+  /** "Yorum Tarihi" — "" | "YYYY-MM-DD". BOŞ → DB default (bugün). */
+  created_at: string;
 };
 
 const EMPTY_FORM: AdminReviewForm = {
@@ -94,6 +97,7 @@ const EMPTY_FORM: AdminReviewForm = {
   rating: 5,
   comment: "",
   publish: true,
+  created_at: "",
 };
 
 export default function ReviewAdminList() {
@@ -200,6 +204,7 @@ export default function ReviewAdminList() {
       rating: form.rating,
       comment: form.comment,
       publish: form.publish,
+      created_at: form.created_at,
     });
     setSaving(false);
 
@@ -226,6 +231,8 @@ export default function ReviewAdminList() {
         rating: form.rating,
         is_approved: form.publish,
         is_featured: false,
+        /* Tarih elle seçildiyse audit log'a yazılır; boşsa DB default. */
+        created_at: form.created_at || null,
       },
     }).catch(() => {});
 
@@ -588,6 +595,26 @@ export default function ReviewAdminList() {
                 {form.rating}/5
               </span>
             </div>
+          </div>
+
+          {/* YORUM TARİHİ — mevcut AdminDateInput (admin design system).
+              Boş bırakılırsa payload'a konmaz → DB default devrede. */}
+          <div>
+            <label className="block text-[13px] font-medium text-[var(--color-stone-700)] mb-1.5">
+              Yorum Tarihi
+            </label>
+            <div className="max-w-[220px]">
+              <AdminDateInput
+                mode="date"
+                value={form.created_at}
+                onChange={(v) => setForm((f) => ({ ...f, created_at: v }))}
+                placeholder="Bugün"
+                ariaLabel="Yorum tarihi"
+              />
+            </div>
+            <p className="text-[11px] text-[var(--color-stone-400)] mt-1">
+              Boş bırakılırsa bugünün tarihi kullanılır.
+            </p>
           </div>
 
           {/* YORUM */}
