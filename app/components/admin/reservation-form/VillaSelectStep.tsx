@@ -32,7 +32,7 @@ export default function VillaSelectStep({
 }) {
   return (
     <Section
-      eyebrow="Adım 3"
+      eyebrow="Adım 2"
       title="Mülk"
       subtitle="Rezervasyon yapılacak mülkü seç"
     >

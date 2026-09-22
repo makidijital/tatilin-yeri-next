@@ -30,7 +30,7 @@ export default function GuestsStep({
 }) {
   return (
     <Section
-      eyebrow="Adım 5"
+      eyebrow="Adım 2"
       title="Misafir bilgisi"
       subtitle="Toplam misafir sayısı"
     >

@@ -37,7 +37,7 @@ export default function PaymentPreferenceStep({
 }) {
   return (
     <Section
-      eyebrow="Adım 8"
+      eyebrow="Adım 3"
       title="Ödeme Tercihi"
       subtitle="Misafir şimdi sadece ön ödeme mi yapacak, yoksa tamamını mı?"
     >

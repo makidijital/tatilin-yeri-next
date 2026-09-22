@@ -26,7 +26,7 @@ export default function PaymentMethodStep({
 }) {
   return (
     <Section
-      eyebrow="Adım 7"
+      eyebrow="Adım 3"
       title="Ödeme yöntemi"
       subtitle="Misafirin tercih ettiği ödeme yöntemini seç"
     >

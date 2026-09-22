@@ -59,7 +59,7 @@ export default function LocationStep({
 
   return (
     <Section
-      eyebrow="Adım 2"
+      eyebrow="Adım 1"
       title="Konum bilgisi"
       subtitle="Fatura ve doğrulama için"
     >

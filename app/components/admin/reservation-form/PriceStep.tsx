@@ -75,7 +75,7 @@ export default function PriceStep({
 }) {
   return (
     <Section
-      eyebrow="Adım 6"
+      eyebrow="Adım 3"
       title="Fiyat bilgisi"
       subtitle="Sezon fiyatlarına göre otomatik hesaplanır"
     >

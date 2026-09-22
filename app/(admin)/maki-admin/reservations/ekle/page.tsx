@@ -138,29 +138,41 @@ export default function AdminReservationDetailPage() {
      validateStep yalnız validateForm çıktısının step'e
      ait alt kümesini döner; yeni kural yazılmaz.
   ---------------------------------------------- */
+  /* 🛡️ STEP SADELEŞTİRME — 9 adım → 3 adım.
+     ESKİ → YENİ eşlemesi (hiçbir bölüm KALDIRILMADI, yalnız gruplandı):
+       1 Kişisel        ┐
+       2 Konum          ┘→ 1 "Kişisel Bilgiler ve Konum"
+       3 Mülk           ┐
+       4 Tarih          ├→ 2 "Mülk ve Tarih"
+       5 Misafir        ┘   (misafir sayısı bir REZERVASYON parametresi:
+                             villa/tarih ile birlikte fiyat hesabını besler)
+       6 Fiyat          ┐
+       7 Ödeme yöntemi  ├→ 3 "Ödeme Bilgileri"
+       8 Ödeme Tercihi  │
+       9 Not            ┘   (validation'ı yok; akışın sonunda kalır)
+
+     ⚠️ Bölümlerin İÇ SIRASI eski 1..9 sırasıyla BİREBİR aynı.
+     ⚠️ WizardStepBar / StickyActionBar `steps.length` üzerinden
+       çalışır → tasarım, progress ve "Adım N / M" sayacı otomatik
+       uyum sağlar; bu component'lere DOKUNULMADI. */
   const STEPS: { id: number; label: string }[] = [
-    { id: 1, label: "Kişisel" },
-    { id: 2, label: "Konum" },
-    { id: 3, label: "Mülk" },
-    { id: 4, label: "Tarih" },
-    { id: 5, label: "Misafir" },
-    { id: 6, label: "Fiyat" },
-    { id: 7, label: "Ödeme yöntemi" },
-    { id: 8, label: "Ödeme Tercihi" },
-    { id: 9, label: "Not" },
+    { id: 1, label: "Kişisel Bilgiler ve Konum" },
+    { id: 2, label: "Mülk ve Tarih" },
+    { id: 3, label: "Ödeme Bilgileri" },
   ];
   const TOTAL_STEPS = STEPS.length;
 
+  /* ⚠️ VALIDATION KURALLARI DEĞİŞMEDİ. `validateStep` hâlâ
+     `validateForm()` çıktısının alt kümesini döner; burada yalnız
+     eski adımların alan listeleri BİRLEŞTİRİLDİ — yeni kural yok,
+     hiçbir kural gevşetilmedi, hiçbir alan düşürülmedi. */
   const STEP_FIELDS: Record<number, string[]> = {
-    1: ["name", "phone", "email"],
-    2: ["country", "city"],
-    3: ["villa_id"],
-    4: ["start_date", "end_date"],
-    5: ["guests"],
-    6: ["total_price_try"],
-    7: ["payment_method_id"],
-    8: ["payment_preference"],
-    9: [],
+    /* eski 1 + 2 */
+    1: ["name", "phone", "email", "country", "city"],
+    /* eski 3 + 4 + 5 */
+    2: ["villa_id", "start_date", "end_date", "guests"],
+    /* eski 6 + 7 + 8 (+ 9: alanı yok) */
+    3: ["total_price_try", "payment_method_id", "payment_preference"],
   };
 
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -936,20 +948,23 @@ export default function AdminReservationDetailPage() {
           villaTitle={findVillaTitle(villas, data.villa_id)}
         />
 
-        {/* STEP 1 — Kişisel bilgiler */}
+        {/* ═══ STEP 1 — Kişisel Bilgiler ve Konum ═══
+            Eski Adım 1 (Kişisel) + Adım 2 (Konum) aynı adımda, alt
+            bölüm olarak. Component'ler, alanları ve sıraları AYNEN. */}
         {currentStep === 1 && (
-          <PersonalStep data={data} setData={setDataLoose} errors={errors} />
+          <>
+            <PersonalStep data={data} setData={setDataLoose} errors={errors} />
+            <LocationStep data={data} setData={setDataLoose} errors={errors} />
+          </>
         )}
 
-        {/* STEP 2 — Konum bilgisi */}
-        {currentStep === 2 && (
-          <LocationStep data={data} setData={setDataLoose} errors={errors} />
-        )}
-
-        {/* STEP 3 — Villa seçimi.
+        {/* ═══ STEP 2 — Mülk ve Tarih ═══
+            Eski Adım 3 (Mülk) + Adım 4 (Tarih) + Adım 5 (Misafir).
+            Villa seçimi.
             onVillaChange: villa_id güncel + tarihleri / priceDetail sıfırla
             (mevcut davranış birebir korunur). */}
-        {currentStep === 3 && (
+        {currentStep === 2 && (
+          <>
           <VillaSelectStep
             data={data}
             errors={errors}
@@ -961,17 +976,16 @@ export default function AdminReservationDetailPage() {
               setPriceDetail(null);
             }}
           />
-        )}
 
-        {/* STEP 4 — Tarih aralığı. Inline embedded calendar.
+
+        {/* Tarih aralığı. Inline embedded calendar.
             Popup/trigger pattern tamamen kaldırıldı; takvim doğrudan
             adımın içinde her zaman görünür. ReservationCalendar
             kendi nav header'ını render ediyor. Reservation logic
             (fullyBlockedDates, getValidEndDate, drag-select)
             BİREBİR korunuyor. */}
-        {currentStep === 4 && (
           <Section
-            eyebrow="Adım 4"
+            eyebrow="Adım 2"
             title="Tarih aralığı"
             subtitle="Giriş ve çıkış günleri — sürükleyerek aralık seç"
           >
@@ -1054,10 +1068,8 @@ export default function AdminReservationDetailPage() {
               />
             </div>
           </Section>
-        )}
 
-        {/* STEP 5 — Misafir bilgisi (toplam + ek isimler) */}
-        {currentStep === 5 && (
+          {/* Misafir bilgisi (toplam + ek isimler) */}
           <GuestsStep
             data={data}
             setData={setDataLoose}
@@ -1065,12 +1077,17 @@ export default function AdminReservationDetailPage() {
             guestNames={guestNames}
             setGuestNames={setGuestNames}
           />
+          </>
         )}
 
-        {/* STEP 6 — Fiyat bilgisi (custom toggle / normal flow / damage deposit).
+        {/* ═══ STEP 3 — Ödeme Bilgileri ═══
+            Eski Adım 6 (Fiyat) + Adım 7 (Ödeme yöntemi) + Adım 8
+            (Ödeme Tercihi) + Adım 9 (Not).
+            Fiyat bilgisi (custom toggle / normal flow / damage deposit).
             Custom toggle'ın state reset davranışı page'de kalır
             (handleCustomPriceToggle); component sadece tıklamayı bildirir. */}
-        {currentStep === 6 && (
+        {currentStep === 3 && (
+          <>
           <PriceStep
             data={data}
             setData={setDataLoose}
@@ -1161,25 +1178,21 @@ export default function AdminReservationDetailPage() {
               })
             }
           />
-        )}
-        {/* STEP 7 — Ödeme yöntemi */}
-        {currentStep === 7 && (
+
+          {/* Ödeme yöntemi */}
           <PaymentMethodStep
             data={data}
             setData={setDataLoose}
             errors={errors}
             paymentMethods={paymentMethods}
           />
-        )}
 
-        {/* STEP 8 — Ödeme Tercihi */}
-        {currentStep === 8 && (
+          {/* Ödeme Tercihi */}
           <PaymentPreferenceStep
             data={data}
             setData={setDataLoose}
             errors={errors}
           />
-        )}
 
         {/* TAHSILAT — create page'de gösterilmez.
             Yeni flow:
@@ -1194,8 +1207,10 @@ export default function AdminReservationDetailPage() {
             geçer; admin "Ödemeyi Onayla" akışıyla detail page'de
             "confirmed"a geçirir. */}
 
-        {/* STEP 9 — Not */}
-        {currentStep === 9 && <NoteStep data={data} setData={setDataLoose} />}
+          {/* Not — validation alanı yok; akışın sonunda kalır. */}
+          <NoteStep data={data} setData={setDataLoose} />
+          </>
+        )}
       </div>
 
       {/* STICKY WIZARD NAV — Geri / İleri / Oluştur

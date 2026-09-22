@@ -19,7 +19,7 @@ export default function NoteStep({
 }) {
   return (
     <Section
-      eyebrow="Adım 9"
+      eyebrow="Adım 3"
       title="Not"
       subtitle="Dahili not (isteğe bağlı)"
     >
