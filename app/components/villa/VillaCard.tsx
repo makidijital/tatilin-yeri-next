@@ -31,7 +31,11 @@ import {
   type DiscountRange,
 } from "@/lib/price.engine";
 import type { MonthNumber } from "@/lib/i18n/dictionaries/types";
-import { formatDiscountDateRange, parseLocalDate } from "@/lib/date-format";
+import {
+  formatDiscountDateRange,
+  formatLocalDate,
+  parseLocalDate,
+} from "@/lib/date-format";
 /* 🛡️ Seçilen tarih aralığı etiketi — Hero/arama panelinin KULLANDIĞI
    pure helper'ın AYNISI ("8 Eki – 11 Eki"). Yeni tarih formatlama
    sistemi YAZILMADI; locale etiketi (LOCALE_BCP47) helper içinde. */
@@ -459,6 +463,74 @@ export default function VillaCard({
     qs.set("end", stayEnd);
     detailHref = `${detailHref}?${qs.toString()}`;
   }
+
+  /* 🛡️ İNDİRİM KARTI CTA — FIRSAT TARİHLERİNİ REZERVASYONA TAŞI
+     ===============================================================
+     Yalnız `variant === "discount"` (ana sayfa "İndirimli Kiralık
+     Villalar") için türetilir. Kaynak: `discount` prop'u — yani
+     `villa_discounts` kaydının KENDİSİ (lib/cache.helpers >
+     getCachedDiscountCollectionVillas, RSC + unstable_cache). YENİ DB
+     SORGUSU YOK, yeni veri modeli YOK, tarih TAHMİN EDİLMEZ.
+
+     URL STANDARDI — projede ZATEN kullanılan desen (yeni sözleşme
+     İCAT EDİLMEDİ):
+       ShortGapsPageBody.tsx:466 →
+         `${localePrefix}/rezervasyon/${slug}?start=...&end=...`
+       useBookingEngine.ts:995   → aynı `start`/`end` param adları
+     Locale öneki `buildLocaleAlternates` ile üretilir (detailHref ile
+     AYNI helper; "tr" → öneksiz, "en"/"de" → /en, /de — üç route da
+     mevcut).
+
+     ⚠️ TARİH SEMANTİĞİ (KANIT, tahmin DEĞİL):
+       • villa_discounts.start_date/end_date = KAPALI interval, İKİSİ
+         DE DAHİL, GECE bazlı — migration 079 "TARİH MANTIĞI" bölümü +
+         price.engine > getActiveDiscount (`d >= s && d <= e`) + admin
+         DiscountsSection > nightsInclusive ("N gece" = e - s + 1).
+       • /rezervasyon `end` parametresi ise ÇIKIŞ (checkout) günüdür ve
+         ÜCRETLENDİRİLMEZ — price.engine > calculateStayTotal
+         (`while (current < endD)`); villa_short_gaps'te de
+         `gap_nights = gap_end - gap_start` (migration 055).
+       ⇒ İndirimin TAMAMI taşınsın diye check-out = son indirimli GECE
+         + 1 gün. `+ 1` kaldırılırsa son indirimli gece KAYBOLUR
+         (bilinçli karar; bkz. "Claude outputs/
+         indirimli-villalar-rezervasyon-tarih-tasima-audit.md" §6.1).
+
+     Geçersiz/eksik veri (slug yok, tarih parse edilemiyor, ters
+     aralık) → `null` → CTA MEVCUT davranışına (detailHref) düşer.
+     Buton JSX'i, className, metin ve tasarımı DEĞİŞMEDİ. */
+  const discountReserveHref: string | null = (() => {
+    if (!isDiscountVariant) return null;
+    const startRaw = discount?.start_date;
+    const endRaw = discount?.end_date;
+    if (!startRaw || !endRaw) return null;
+
+    const cleanSlug = String(slug || "").trim();
+    if (!cleanSlug) return null;
+
+    const s = parseLocalDate(startRaw);
+    const e = parseLocalDate(endRaw);
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null;
+    if (e.getTime() < s.getTime()) return null;
+
+    /* Son indirimli gecenin ERTESİ günü = checkout. parseLocalDate
+       LOCAL midnight ürettiği için (UTC parse YOK) gün kayması olmaz;
+       date-format helper'ları aynen kullanılır. */
+    const checkout = new Date(
+      e.getFullYear(),
+      e.getMonth(),
+      e.getDate() + 1
+    );
+
+    const base = buildLocaleAlternates(
+      `/rezervasyon/${cleanSlug}`,
+      effectiveLocale
+    ).canonical;
+
+    const qs = new URLSearchParams();
+    qs.set("start", formatLocalDate(s));
+    qs.set("end", formatLocalDate(checkout));
+    return `${base}?${qs.toString()}`;
+  })();
 
   /* 🛡️ Rezervasyon bilgi alanı + CTA — yalnız reserveInfo verilince
      (kısa-süreli tarihler sayfası). CTA <button> (kart Link'i içinde
@@ -1124,7 +1196,9 @@ export default function VillaCard({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                router.push(detailHref);
+                /* 🛡️ Fırsat tarihleri varsa /rezervasyon'a ÖN-SEÇİLİ
+                   tarihlerle; yoksa MEVCUT davranış (villa detayı). */
+                router.push(discountReserveHref ?? detailHref);
               }}
               className="mt-3 w-full inline-flex items-center justify-center h-11 rounded-xl bg-[#ED7926] hover:bg-[#D96A1F] text-white uppercase font-semibold text-[11.5px] tracking-[0.08em] shadow-[0_10px_24px_-8px_rgba(237,121,38,0.45)] hover:shadow-[0_14px_30px_-10px_rgba(237,121,38,0.55)] hover:-translate-y-px active:translate-y-0 transition-[box-shadow,transform,background-color] duration-200 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ED7926]/40"
             >
