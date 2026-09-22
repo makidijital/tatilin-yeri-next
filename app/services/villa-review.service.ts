@@ -7,6 +7,10 @@
    app-layer authz service/route sınırında. */
 import { villaReviewServerRepository as villaReviewRepository } from "@/lib/db/villa-review.repository.server";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+/* 🛡️ Tarih doğrulaması projenin MEVCUT timezone mantığını kullanır
+   (formatDateTr/formatDateForLocale ile aynı toIstanbulDate zinciri).
+   Yeni timezone sistemi İCAT EDİLMEDİ. */
+import { istanbulYmd, todayIstanbulYmd } from "@/lib/date-format";
 
 /* ===============================================================
    🛡️ FAZ 33 — VILLA REVIEW SERVICE
@@ -750,31 +754,63 @@ export type CreateVillaReviewAdminInput = {
  *  - parse edilebilir ISO timestamp → toISOString()
  *  - diğer her şey      → { ok:false }
  *  YENİ KÜTÜPHANE YOK; yalnız yerleşik Date kullanılır. */
+type AdminDateResult =
+  | { ok: true; value: string | null }
+  | { ok: false; reason: "invalid" | "future" };
+
+/** Geçersiz/ileri tarih hata mesajları — create ve update AYNI
+ *  metinleri kullanır (mevcut ReviewResult hata formatı). */
+const ADMIN_DATE_ERROR: Record<"invalid" | "future", string> = {
+  invalid: "Geçerli bir yorum tarihi seçin.",
+  future: "Yorum tarihi bugünden ileri olamaz.",
+};
+
 function normalizeAdminReviewDate(
   raw: string | null | undefined
-): { ok: true; value: string | null } | { ok: false } {
+): AdminDateResult {
   const v = String(raw ?? "").trim();
   if (!v) return { ok: true, value: null };
+
+  let iso: string;
 
   const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
   if (ymd) {
     const year = Number(ymd[1]);
     const month = Number(ymd[2]);
     const day = Number(ymd[3]);
-    if (month < 1 || month > 12 || day < 1 || day > 31) return { ok: false };
+    if (month < 1 || month > 12 || day < 1 || day > 31) {
+      return { ok: false, reason: "invalid" };
+    }
     /* UTC 12:00 — gün kayması bırakmayan güvenli saat. */
     const d = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
-    if (Number.isNaN(d.getTime())) return { ok: false };
+    if (Number.isNaN(d.getTime())) return { ok: false, reason: "invalid" };
     /* 31 Şubat gibi taşan tarihleri reddet (Date sessizce ileri sarar). */
     if (d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) {
-      return { ok: false };
+      return { ok: false, reason: "invalid" };
     }
-    return { ok: true, value: d.toISOString() };
+    iso = d.toISOString();
+  } else if (/^\d{4}-\d{2}-\d{2}T/.test(v)) {
+    /* 🛡️ YALNIZ ISO-8601 timestamp kabul edilir.
+       GEVŞEK `new Date(v)` KULLANILMAZ: "01.06.2025" gibi TR gün-ay-yıl
+       yazımını Node sessizce 6 Ocak 2025 olarak parse ediyordu → admin
+       1 Haziran yazıp 6 Ocak kaydediyordu. Artık reddediliyor. */
+    const parsed = new Date(v);
+    if (Number.isNaN(parsed.getTime())) return { ok: false, reason: "invalid" };
+    iso = parsed.toISOString();
+  } else {
+    return { ok: false, reason: "invalid" };
   }
 
-  const parsed = new Date(v);
-  if (Number.isNaN(parsed.getTime())) return { ok: false };
-  return { ok: true, value: parsed.toISOString() };
+  /* 🛡️ İLERİ TARİH YASAK — TEK KURAL, TEK YER.
+     Hem create hem update bu fonksiyondan geçer; kural kopyalanmaz.
+     Karşılaştırma İSTANBUL TAKVİM GÜNÜ üzerinden yapılır:
+     "2026-09-22" (bugün) kabul, "2026-09-23" RED. Sıfır dolgulu ISO
+     gün string'leri sözlüksel olarak kronolojik sıralanır. */
+  const day = istanbulYmd(iso);
+  if (!day) return { ok: false, reason: "invalid" };
+  if (day > todayIstanbulYmd()) return { ok: false, reason: "future" };
+
+  return { ok: true, value: iso };
 }
 
 export async function createVillaReviewByAdmin(
@@ -811,7 +847,7 @@ export async function createVillaReviewByAdmin(
   /* Admin "Yorum Tarihi" — boşsa DB default'u devrede kalır. */
   const createdAt = normalizeAdminReviewDate(input?.created_at);
   if (!createdAt.ok) {
-    return { ok: false, error: "Geçerli bir yorum tarihi seçin." };
+    return { ok: false, error: ADMIN_DATE_ERROR[createdAt.reason] };
   }
 
   /* `publish` verilmezse yayına alınmaz (defansif default). UI "Hemen
@@ -834,6 +870,100 @@ export async function createVillaReviewByAdmin(
   if (error) {
     console.error("[review.adminCreate] FAILED", error.message);
     return { ok: false, error: "Yorum kaydedilemedi. Lütfen tekrar deneyin." };
+  }
+
+  return { ok: true };
+}
+
+/* ===============================================================
+   🛡️ ADMIN — MEVCUT YORUMU DÜZENLE
+   ===============================================================
+   KAPSAM: Ad Soyad · Puan · Yorum · Yorum Tarihi (created_at).
+
+   ⚠️ YENİ ALTYAPI YOK:
+     • Validasyon: create ile AYNI helper/sabitler (sanitizeName,
+       sanitizeComment, MIN/MAX_NAME_LEN, MIN/MAX_COMMENT_LEN,
+       MIN/MAX_RATING). Yeni kural İCAT EDİLMEDİ.
+     • Tarih: AYNI `normalizeAdminReviewDate` (ileri tarih guard'ı
+       dahil) — mantık KOPYALANMADI.
+     • Repository: mevcut generic `updateById` (approveVillaReview'in
+       de kullandığı metot). YENİ REPOSITORY METODU YOK.
+
+   ⚠️ PAYLOAD BEYAZ LİSTESİ — yalnız şu alanlar yazılır:
+       guest_name, rating, comment (+ created_at verilmişse).
+     `is_featured` / `is_approved` / `approved_at` / `villa_id`
+     payload'a ASLA KONULMAZ:
+       - is_featured: partial unique index `(villa_id) WHERE
+         is_featured` davranışı yalnız `toggleFeaturedReview`
+         üzerinden yönetilir; buradan dokunmak o invariant'ı bozar.
+       - is_approved/approved_at: `approveVillaReview` akışına ait.
+       - villa_id: yorumun hangi mülke ait olduğu düzenlenemez.
+
+   ⚠️ created_at BOŞ ise payload'a KONULMAZ → mevcut tarih AYNEN
+     kalır (yanlışlıkla sıfırlama olmaz).
+
+   YETKİ: tek çağıranı `villa-review.action.ts >
+   updateVillaReviewByAdminAction` olup ilk satırında
+   `requirePermission("reviews")` çalışır → yetkisiz çağrıda buraya
+   ve repository'ye HİÇ ulaşılmaz.
+=============================================================== */
+
+export type UpdateVillaReviewAdminInput = {
+  id: string;
+  guest_name: string;
+  rating: number;
+  comment: string;
+  /** "" / undefined / null → mevcut created_at DEĞİŞMEZ. */
+  created_at?: string | null;
+};
+
+export async function updateVillaReviewByAdmin(
+  input: UpdateVillaReviewAdminInput
+): Promise<ReviewResult> {
+  const id = String(input?.id || "").trim();
+  if (!id) return { ok: false, error: "ID gerekli" };
+
+  const guestName = sanitizeName(input?.guest_name || "");
+  if (guestName.length < MIN_NAME_LEN) {
+    return { ok: false, error: "Ad Soyad en az 2 karakter olmalı." };
+  }
+  if (guestName.length > MAX_NAME_LEN) {
+    return { ok: false, error: "Ad çok uzun (maks. 80 karakter)." };
+  }
+
+  const ratingNum = Number(input?.rating);
+  if (!Number.isFinite(ratingNum)) {
+    return { ok: false, error: "Geçerli bir puan seçin." };
+  }
+  const rating = Math.round(ratingNum);
+  if (rating < MIN_RATING || rating > MAX_RATING) {
+    return { ok: false, error: "Puan 1-5 arasında olmalı." };
+  }
+
+  const comment = sanitizeComment(input?.comment || "");
+  if (comment.length < MIN_COMMENT_LEN) {
+    return { ok: false, error: "Yorum en az 10 karakter olmalı." };
+  }
+  if (comment.length > MAX_COMMENT_LEN) {
+    return { ok: false, error: "Yorum çok uzun (maks. 1500 karakter)." };
+  }
+
+  const createdAt = normalizeAdminReviewDate(input?.created_at);
+  if (!createdAt.ok) {
+    return { ok: false, error: ADMIN_DATE_ERROR[createdAt.reason] };
+  }
+
+  const { error } = await villaReviewRepository.updateById(id, {
+    guest_name: guestName,
+    rating,
+    comment,
+    /* Tarih verilmediyse anahtar HİÇ eklenmez → mevcut değer korunur. */
+    ...(createdAt.value ? { created_at: createdAt.value } : {}),
+  });
+
+  if (error) {
+    console.error("[review.adminUpdate] FAILED", error.message);
+    return { ok: false, error: "Yorum güncellenemedi. Lütfen tekrar deneyin." };
   }
 
   return { ok: true };

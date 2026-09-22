@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/auth/action-authz";
 import {
   createVillaReview,
   createVillaReviewByAdmin,
+  updateVillaReviewByAdmin,
   getVillaReviewsForAdmin,
   approveVillaReview,
   deleteVillaReview,
@@ -51,6 +52,17 @@ export async function createVillaReviewByAdminAction(
 ): ReturnType<typeof createVillaReviewByAdmin> {
   await requirePermission("reviews");
   return createVillaReviewByAdmin(...args);
+}
+
+/* 🛡️ ADMIN — mevcut yorumu düzenle (Ad Soyad / Puan / Yorum / Tarih).
+   Diğer admin wrapper'larıyla AYNI desen: `requirePermission("reviews")`
+   → yetkisiz çağrıda service ve repository'ye HİÇ ulaşılmaz.
+   PUBLIC `createVillaReviewAction` bilinçli gate'siz — DEĞİŞTİRİLMEDİ. */
+export async function updateVillaReviewByAdminAction(
+  ...args: Parameters<typeof updateVillaReviewByAdmin>
+): ReturnType<typeof updateVillaReviewByAdmin> {
+  await requirePermission("reviews");
+  return updateVillaReviewByAdmin(...args);
 }
 
 export async function getVillaReviewsForAdminAction(

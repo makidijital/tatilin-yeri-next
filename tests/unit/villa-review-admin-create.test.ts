@@ -12,7 +12,7 @@
      • yetkisiz çağrıda service/repository'ye ULAŞILMAZ
      • REGRESYON: public `createVillaReview` davranışı DEĞİŞMEDİ
 =============================================================== */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -50,9 +50,20 @@ const VALID = {
   publish: true,
 };
 
+/* 🛡️ SABİT SAAT — "ileri tarih" kuralı gerçek takvime bağlı
+   olmasın diye tüm dosyada bugün = 22.09.2026 (Istanbul) kabul
+   edilir. Aksi halde test geçen zamanla kendiliğinden kırılırdı. */
+const FROZEN_NOW = new Date("2026-09-22T10:00:00.000Z");
+
 beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(FROZEN_NOW);
   vi.clearAllMocks();
   insertMock.mockResolvedValue({ error: null });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 /* =============================================================== */
@@ -325,22 +336,27 @@ describe("9F) created_at — SEÇİLDİĞİNDE yazılır ve normalize edilir", (
         .created_at as string
     )).toBe("1 Oca 2026");
 
+    /* ⚠️ 2025-12-31 (2026 DEĞİL): ileri tarih artık yasak olduğu için
+       yıl-sonu sınırı GEÇMİŞ bir yıldan seçilir. Testin amacı (31 Ara
+       gün kayması olmaması) aynen korunuyor. */
     insertMock.mockClear();
-    await createVillaReviewByAdmin({ ...VALID, created_at: "2026-12-31" });
+    await createVillaReviewByAdmin({ ...VALID, created_at: "2025-12-31" });
     expect(formatDateTr(
       (insertMock.mock.calls[0][0] as Record<string, unknown>)
         .created_at as string
-    )).toBe("31 Ara 2026");
+    )).toBe("31 Ara 2025");
   });
 
   it("9i) artık yıl 29 Şubat kabul edilir", async () => {
+    /* ⚠️ 2024 (2028 DEĞİL) — ileri tarih yasağı nedeniyle geçmiş
+       artık yıl kullanılır; testin amacı değişmedi. */
     const res = await createVillaReviewByAdmin({
       ...VALID,
-      created_at: "2028-02-29",
+      created_at: "2024-02-29",
     });
     expect(res.ok).toBe(true);
     const p = insertMock.mock.calls[0][0] as Record<string, unknown>;
-    expect(p.created_at).toBe("2028-02-29T12:00:00.000Z");
+    expect(p.created_at).toBe("2024-02-29T12:00:00.000Z");
   });
 
   it("9j) tam ISO timestamp aynen (normalize) yazılır", async () => {
@@ -380,9 +396,78 @@ describe("9F) created_at — SEÇİLDİĞİNDE yazılır ve normalize edilir", (
   });
 });
 
+describe("9N) created_at — İLERİ TARİH YASAK (bugün = 22.09.2026)", () => {
+  it("9n1) BUGÜN (2026-09-22) → KABUL", async () => {
+    const res = await createVillaReviewByAdmin({
+      ...VALID,
+      created_at: "2026-09-22",
+    });
+    expect(res.ok).toBe(true);
+    const p = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(p.created_at).toBe("2026-09-22T12:00:00.000Z");
+  });
+
+  it("9n2) DÜN (2026-09-21) → KABUL", async () => {
+    const res = await createVillaReviewByAdmin({
+      ...VALID,
+      created_at: "2026-09-21",
+    });
+    expect(res.ok).toBe(true);
+  });
+
+  it("9n3) çok eski tarih (2026-01-01) → KABUL", async () => {
+    const res = await createVillaReviewByAdmin({
+      ...VALID,
+      created_at: "2026-01-01",
+    });
+    expect(res.ok).toBe(true);
+  });
+
+  it("9n4) YARIN (2026-09-23) → RED, insert ÇAĞRILMAZ", async () => {
+    const res = await createVillaReviewByAdmin({
+      ...VALID,
+      created_at: "2026-09-23",
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toBe("Yorum tarihi bugünden ileri olamaz.");
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it("9n5) gelecek yıl → RED", async () => {
+    const res = await createVillaReviewByAdmin({
+      ...VALID,
+      created_at: "2027-01-01",
+    });
+    expect(res.ok).toBe(false);
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it("9n6) ileri tarihli tam ISO timestamp → RED (action'a direkt gönderilse bile)", async () => {
+    const res = await createVillaReviewByAdmin({
+      ...VALID,
+      created_at: "2026-09-25T08:00:00.000Z",
+    });
+    expect(res.ok).toBe(false);
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it("9n7) bugünün ilerisindeki SAAT aynı gün olduğu için KABUL", async () => {
+    const res = await createVillaReviewByAdmin({
+      ...VALID,
+      created_at: "2026-09-22T20:00:00.000Z",
+    });
+    expect(res.ok).toBe(true);
+  });
+});
+
 describe("9G) created_at — GEÇERSİZ girdi reddedilir, insert ÇAĞRILMAZ", () => {
   const BAD = [
     "15.08.2026",
+    /* 🛡️ Node bunu sessizce 6 Ocak 2025 olarak parse EDİYORDU
+       (TR gün-ay-yıl yazımı). Gevşek parse kaldırıldı → RED. */
+    "01.06.2025",
+    "2025/06/01",
+    "1 Haziran 2025",
     "2026-13-01",
     "2026-00-10",
     "2026-02-30",

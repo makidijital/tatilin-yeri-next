@@ -230,6 +230,29 @@ function toIstanbulDate(value: string | Date): Date | null {
 }
 
 /* ---------------------------------------------
+   🔥 istanbulYmd(value) → "YYYY-MM-DD" veya null
+   - Bir instant'ın ISTANBUL TAKVİM GÜNÜ.
+   - formatDateTr / formatDateForLocale ile AYNI toIstanbulDate
+     mantığını kullanır → yeni timezone sistemi YOK.
+   - Karşılaştırma için: sıfır dolgulu ISO gün string'leri
+     sözlüksel olarak kronolojik sıralanır ("2026-09-22" < "2026-09-23").
+--------------------------------------------- */
+export function istanbulYmd(value: string | Date): string | null {
+  const ist = toIstanbulDate(value);
+  if (!ist) return null;
+  const y = ist.getUTCFullYear();
+  const m = String(ist.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(ist.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Istanbul saatine göre BUGÜN → "YYYY-MM-DD". */
+export function todayIstanbulYmd(): string {
+  /* toIstanbulDate her zaman geçerli bir Date için değer döndürür. */
+  return istanbulYmd(new Date()) as string;
+}
+
+/* ---------------------------------------------
    🔥 formatDateTr(value) → "11 May 2026" veya "—"
    - Manuel UTC→Istanbul shift, Intl-bypass-proof
    - Boş/null/invalid → "—"

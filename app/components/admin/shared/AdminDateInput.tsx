@@ -55,6 +55,11 @@ type Props = {
   mode?: AdminDateInputMode;
   placeholder?: string;
   ariaLabel?: string;
+  /** 🛡️ OPSİYONEL üst sınır — "YYYY-MM-DD". Verilirse bu günden SONRAKİ
+   *  günler grid'de pasifleşir. Verilmezse davranış ÖNCEKİYLE BİREBİR
+   *  AYNI (mevcut çağıranlar etkilenmez). UI kolaylığı; asıl doğrulama
+   *  her zaman service katmanındadır. */
+  maxDate?: string;
 };
 
 const TR_MONTHS_LONG = [
@@ -145,6 +150,7 @@ export default function AdminDateInput({
   mode = "date",
   placeholder = "Seç…",
   ariaLabel,
+  maxDate,
 }: Props) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -347,7 +353,10 @@ export default function AdminDateInput({
           {/* Day grid */}
           <div className="grid grid-cols-7 gap-0.5 px-0.5">
             {buildMonthGrid(currentMonth).map((cell, i) => {
-              const isInMonth = cell.inMonth;
+              const isAfterMax = maxDate
+                ? formatYmd(cell.date) > maxDate
+                : false;
+              const isInMonth = cell.inMonth && !isAfterMax;
               const isToday = cell.date.toDateString() === todayKey;
               const isSelected = selectedDate
                 ? sameDay(cell.date, selectedDate)

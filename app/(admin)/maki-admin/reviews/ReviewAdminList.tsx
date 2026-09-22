@@ -48,6 +48,8 @@ import {
   Sparkles,
   Inbox,
   Plus,
+  Pencil,
+  X,
 } from "lucide-react";
 
 /* 🛡️ Migration VR-B1 — client boundary: runtime villa-review.service
@@ -56,6 +58,7 @@ import {
 import {
   approveVillaReviewAction as approveVillaReview,
   createVillaReviewByAdminAction as createVillaReviewByAdmin,
+  updateVillaReviewByAdminAction as updateVillaReviewByAdmin,
   deleteVillaReviewAction as deleteVillaReview,
   getVillaReviewsForAdminAction as getVillaReviewsForAdmin,
   toggleFeaturedReviewAction as toggleFeaturedReview,
@@ -63,7 +66,7 @@ import {
 import type { VillaReviewAdmin } from "@/app/services/villa-review.service";
 import { revalidateVillaReviews } from "@/app/services/revalidate.actions";
 import { logActivity } from "@/lib/activity-log.client";
-import { formatDateTr } from "@/lib/date-format";
+import { formatDateTr, istanbulYmd, todayIstanbulYmd } from "@/lib/date-format";
 import AdminDateInput from "@/app/components/admin/shared/AdminDateInput";
 /* 🛡️ MANUEL YORUM — mülk seçimi. homepage-collection / discount-collection
    picker deseninin BİREBİR aynısı: adminFetch + /api/admin/villas?activeOnly=1
@@ -355,6 +358,65 @@ export default function ReviewAdminList() {
     refresh().catch(() => {});
   };
 
+  /* ═══════════════════════════════════════════════════════════
+     🛡️ MEVCUT YORUMU DÜZENLE (Ad Soyad / Puan / Yorum / Tarih)
+     ═══════════════════════════════════════════════════════════
+     Mevcut satır kartının İÇİNDE açılır — yeni route/modal/component
+     sistemi YOK. Mutasyon sonrası akış approve/featured/delete ile
+     BİREBİR aynı: optimistic update → audit log → cache invalidate
+     → authoritative refetch. */
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const handleUpdate = async (
+    id: string,
+    patch: { guest_name: string; rating: number; comment: string; created_at: string }
+  ): Promise<boolean> => {
+    if (busyId) return false;
+    const before = data.find((r) => r.id === id);
+
+    setBusyId(id);
+    const res = await updateVillaReviewByAdmin({ id, ...patch });
+    setBusyId(null);
+
+    if (!res.ok) {
+      toast.error("Yorum güncellenemedi", {
+        id: `review-update-${id}`,
+        description: res.error,
+      });
+      return false;
+    }
+
+    toast.success("Yorum güncellendi", { id: `review-update-${id}` });
+
+    /* 🛡️ FAZ 55F deseni — AUDIT LOG (fail-safe). is_featured/is_approved
+       DEĞİŞMEDİĞİ için log'a da yazılmaz. */
+    if (before) {
+      logActivity({
+        action: "review.updated",
+        entity_type: "review",
+        entity_id: id,
+        entity_title: before.villa_title
+          ? `${before.villa_title} · ${before.guest_name}`
+          : before.guest_name,
+        before_data: {
+          guest_name: before.guest_name,
+          rating: before.rating,
+          created_at: before.created_at,
+        },
+        after_data: {
+          guest_name: patch.guest_name,
+          rating: patch.rating,
+          created_at: patch.created_at || before.created_at,
+        },
+      }).catch(() => {});
+    }
+
+    setEditingId(null);
+    revalidateVillaReviews().catch(() => {});
+    refresh().catch(() => {});
+    return true;
+  };
+
   const handleDelete = async (id: string) => {
     if (busyId) return;
     const ok = await confirm({
@@ -610,10 +672,11 @@ export default function ReviewAdminList() {
                 onChange={(v) => setForm((f) => ({ ...f, created_at: v }))}
                 placeholder="Bugün"
                 ariaLabel="Yorum tarihi"
+                maxDate={todayIstanbulYmd()}
               />
             </div>
             <p className="text-[11px] text-[var(--color-stone-400)] mt-1">
-              Boş bırakılırsa bugünün tarihi kullanılır.
+              Boş bırakılırsa bugünün tarihi kullanılır. İleri tarih seçilemez.
             </p>
           </div>
 
@@ -734,6 +797,10 @@ export default function ReviewAdminList() {
             key={r.id}
             review={r}
             busy={busyId === r.id}
+            editing={editingId === r.id}
+            onEditOpen={() => setEditingId(r.id)}
+            onEditCancel={() => setEditingId(null)}
+            onSave={(patch) => handleUpdate(r.id, patch)}
             onApprove={() => handleApprove(r.id)}
             onToggleFeatured={() => handleToggleFeatured(r.id)}
             onDelete={() => handleDelete(r.id)}
@@ -753,12 +820,25 @@ export default function ReviewAdminList() {
 function ReviewRow({
   review,
   busy,
+  editing,
+  onEditOpen,
+  onEditCancel,
+  onSave,
   onApprove,
   onToggleFeatured,
   onDelete,
 }: {
   review: VillaReviewAdmin;
   busy: boolean;
+  editing: boolean;
+  onEditOpen: () => void;
+  onEditCancel: () => void;
+  onSave: (patch: {
+    guest_name: string;
+    rating: number;
+    comment: string;
+    created_at: string;
+  }) => Promise<boolean>;
   onApprove: () => void;
   onToggleFeatured: () => void;
   onDelete: () => void;
@@ -832,24 +912,50 @@ function ReviewRow({
           </div>
         </div>
 
-        {/* COMMENT PREVIEW (line-clamp-3) */}
-        <p
-          className="
-            text-[13.5px] text-[var(--admin-text)] leading-[1.65]
-            whitespace-pre-line
-          "
-          style={{
-            display: "-webkit-box",
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          {review.comment}
-        </p>
+        {/* COMMENT PREVIEW (line-clamp-3) — düzenleme modunda gizli */}
+        {!editing && (
+          <p
+            className="
+              text-[13.5px] text-[var(--admin-text)] leading-[1.65]
+              whitespace-pre-line
+            "
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {review.comment}
+          </p>
+        )}
+
+        {/* 🛡️ INLINE DÜZENLEME — createPanel ile AYNI label/input
+            desenleri; yeni modal/component sistemi YOK. */}
+        {editing && (
+          <ReviewEditFields
+            review={review}
+            busy={busy}
+            onCancel={onEditCancel}
+            onSave={onSave}
+          />
+        )}
 
         {/* ACTION TOOLBAR */}
         <div className="flex items-center gap-1.5 flex-wrap mt-1">
+          {!editing && (
+            <button
+              type="button"
+              onClick={onEditOpen}
+              disabled={busy}
+              className="admin-btn-ghost disabled:opacity-50"
+              title="Yorumu düzenle"
+            >
+              <Pencil size={13} />
+              Düzenle
+            </button>
+          )}
+
           {!review.is_approved && (
             <button
               type="button"
@@ -898,6 +1004,156 @@ function ReviewRow({
         </div>
       </div>
     </article>
+  );
+}
+
+/* ===============================================================
+   REVIEW EDIT FIELDS — mevcut kart İÇİNDE inline düzenleme
+   ===============================================================
+   Alanlar ve stiller "Yeni Yorum Ekle" panelinden BİREBİR devralındı
+   (label sınıfları, `input` class'ı, yıldız seçici, AdminDateInput,
+   admin-btn-primary / admin-btn-ghost). Yeni tasarım dili YOK.
+
+   ⚠️ "Öne Çıkan" ve "Yayında" alanları BİLEREK YOK: mevcut
+     toggleFeaturedReview / approveVillaReview akışları korunur,
+     partial unique index invariant'ı bozulmaz.
+=============================================================== */
+function ReviewEditFields({
+  review,
+  busy,
+  onCancel,
+  onSave,
+}: {
+  review: VillaReviewAdmin;
+  busy: boolean;
+  onCancel: () => void;
+  onSave: (patch: {
+    guest_name: string;
+    rating: number;
+    comment: string;
+    created_at: string;
+  }) => Promise<boolean>;
+}) {
+  /* Mevcut created_at → "YYYY-MM-DD" (Istanbul takvim günü).
+     Projenin mevcut tarih mantığı; yeni timezone sistemi YOK. */
+  const [guestName, setGuestName] = useState(review.guest_name);
+  const [rating, setRating] = useState(review.rating);
+  const [comment, setComment] = useState(review.comment);
+  const [createdAt, setCreatedAt] = useState(
+    () => istanbulYmd(review.created_at || "") || ""
+  );
+
+  return (
+    <div className="mt-2 pt-3 border-t border-[var(--admin-border)] flex flex-col gap-4">
+      {/* AD SOYAD */}
+      <div>
+        <label className="block text-[13px] font-medium text-[var(--color-stone-700)] mb-1.5">
+          Ad Soyad
+        </label>
+        <input
+          value={guestName}
+          onChange={(e) => setGuestName(e.target.value)}
+          maxLength={80}
+          className="input w-full"
+        />
+      </div>
+
+      {/* PUAN */}
+      <div>
+        <label className="block text-[13px] font-medium text-[var(--color-stone-700)] mb-1.5">
+          Puan
+        </label>
+        <div className="flex items-center gap-1.5">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setRating(n)}
+              aria-label={`${n} yıldız`}
+              aria-pressed={rating === n}
+              className="p-1"
+            >
+              <Star
+                size={18}
+                className={
+                  n <= rating
+                    ? "fill-amber-400 text-amber-400"
+                    : "text-[var(--color-stone-300)]"
+                }
+              />
+            </button>
+          ))}
+          <span className="text-[12px] text-[var(--color-stone-500)] ml-1 tabular-nums">
+            {rating}/5
+          </span>
+        </div>
+      </div>
+
+      {/* YORUM TARİHİ */}
+      <div>
+        <label className="block text-[13px] font-medium text-[var(--color-stone-700)] mb-1.5">
+          Yorum Tarihi
+        </label>
+        <div className="max-w-[220px]">
+          <AdminDateInput
+            mode="date"
+            value={createdAt}
+            onChange={setCreatedAt}
+            placeholder="Tarih seç"
+            ariaLabel="Yorum tarihi"
+            maxDate={todayIstanbulYmd()}
+          />
+        </div>
+        <p className="text-[11px] text-[var(--color-stone-400)] mt-1">
+          İleri tarih seçilemez. Boş bırakılırsa mevcut tarih korunur.
+        </p>
+      </div>
+
+      {/* YORUM */}
+      <div>
+        <label className="block text-[13px] font-medium text-[var(--color-stone-700)] mb-1.5">
+          Yorum
+        </label>
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          rows={4}
+          maxLength={1500}
+          className="input w-full resize-y"
+        />
+        <p className="text-[11px] text-[var(--color-stone-400)] mt-1 tabular-nums">
+          {comment.trim().length} / 1500
+        </p>
+      </div>
+
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() =>
+            onSave({
+              guest_name: guestName,
+              rating,
+              comment,
+              created_at: createdAt,
+            })
+          }
+          className="admin-btn-primary disabled:opacity-50"
+        >
+          <Check size={13} />
+          {busy ? "Kaydediliyor…" : "Kaydet"}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onCancel}
+          className="admin-btn-ghost disabled:opacity-50"
+        >
+          <X size={13} />
+          Vazgeç
+        </button>
+      </div>
+    </div>
   );
 }
 
