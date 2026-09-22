@@ -10,6 +10,8 @@ import { useRouter } from "next/navigation";
 
 import {
   calculateGrandTotal,
+  /* 🛡️ PUBLIC ile ORTAK indirim snapshot üreticisi. */
+  buildStayDiscountSnapshot,
   type DiscountRange,
   accommodationBase,
   isPoolHeatingActiveForRange,
@@ -635,6 +637,26 @@ export default function AdminReservationDetailPage() {
     setPriceDetail(result);
 
     /* ---------------------------------------------
+       🛡️ İNDİRİM SNAPSHOT (migration 080 kolonları)
+       ---------------------------------------------
+       PUBLIC akışın (`price-verify.ts` > FAZ 4) kullandığı AYNI
+       fonksiyon: `buildStayDiscountSnapshot` (lib/price.engine.ts).
+       Yeni hesap YAZILMADI; `result.stay` zaten indirim uygulanmış
+       konaklama tutarıdır ve aynen geçilir.
+       İndirim yoksa → discount_applied=false + 5 alan null (public
+       ile AYNI kural). Değerler `data`'ya yazılır; payload builder
+       ve `payload-create.ts` bunları PUBLIC ile AYNI şekilde okur.
+    ---------------------------------------------- */
+    const discountSnapshot = buildStayDiscountSnapshot(
+      startISO,
+      endISO,
+      prices,
+      discounts,
+      rates,
+      Number(result.stay) || 0
+    );
+
+    /* ---------------------------------------------
        🔥 KUR SNAPSHOT
        Stay’in orijinal currency’si üzerinden
        sabitleniyor. (ReservationForm ile aynı mantık.)
@@ -691,6 +713,11 @@ export default function AdminReservationDetailPage() {
         // KUR
         exchange_rate:
           isForeignStay || isForeignCleaning ? exchangeRate : 1,
+
+        /* 🛡️ İNDİRİM SNAPSHOT — always-write (pool heating deseniyle
+           aynı). İndirim yoksa false + null'lar yazılır → eski
+           rezervasyonlarla ve indirimsiz akışla davranış aynı. */
+        ...discountSnapshot,
       };
     });
   }, [

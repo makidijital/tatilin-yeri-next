@@ -33,6 +33,15 @@ import type {
    =============================================================== */
 
 export type ReservationCreatePayloadShape = {
+  /* 🛡️ Migration 080 — indirim snapshot (public ile AYNI 6 kolon).
+     Normal payload `data`'dan taşır; custom price payload her zaman
+     "indirim yok" yazar. */
+  discount_applied: boolean;
+  discount_type: "percent" | "fixed" | null;
+  discount_value: number | null;
+  discount_currency: string | null;
+  original_stay_total_try: number | null;
+  stay_discount_amount_try: number | null;
   name: string;
   phone: string;
   phone2?: string | null;
@@ -121,6 +130,18 @@ export function buildCreateCustomPricePayload(
   const customRemaining = customWritePayment.remainingOnArrival;
 
   return {
+    /* 🛡️ İNDİRİM SNAPSHOT — CUSTOM PRICE'ta indirim UYGULANMAZ.
+       Admin tutarı elle giriyor; bu dalda calculateGrandTotal (ve
+       dolayısıyla villa_discounts) hiç çalışmaz. Snapshot AÇIKÇA
+       "indirim yok" yazılır — mevcut custom price davranışı
+       DEĞİŞMEZ, yalnız 6 kolon tutarlı doldurulur. */
+    discount_applied: false,
+    discount_type: null,
+    discount_value: null,
+    discount_currency: null,
+    original_stay_total_try: null,
+    stay_discount_amount_try: null,
+
     name: data.name,
     phone: data.phone,
     phone2: data.phone2 || null,

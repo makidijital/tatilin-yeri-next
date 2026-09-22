@@ -178,6 +178,19 @@ export function buildCreateNormalPayload(
        cleaning_fee_try ile aynı desen). Villa'da ücret yoksa/seçili
        değilse tüm alanlar 0/false olur — eski (havuz ısıtmasız)
        davranışla BYTE-IDENTICAL. */
+    /* 🛡️ İNDİRİM SNAPSHOT — migration 080. PUBLIC akışla AYNI alanlar;
+       değerler `buildStayDiscountSnapshot` (lib/price.engine.ts) ile
+       sayfada üretilip `data`'ya yazıldı. Burada yalnız TAŞINIR —
+       hesap YAPILMAZ. `payload-create.ts` zaten bu 6 kolonu
+       always-write ile DB'ye yazıyor (public ile ortak builder).
+       İndirim yoksa false + null'lar → eski davranış birebir. */
+    discount_applied: !!data.discount_applied,
+    discount_type: data.discount_type ?? null,
+    discount_value: data.discount_value ?? null,
+    discount_currency: data.discount_currency ?? null,
+    original_stay_total_try: data.original_stay_total_try ?? null,
+    stay_discount_amount_try: data.stay_discount_amount_try ?? null,
+
     pool_heating_selected: !!data.pool_heating_selected,
     original_pool_heating_total:
       Number(data.original_pool_heating_total) || 0,

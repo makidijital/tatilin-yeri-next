@@ -130,6 +130,18 @@ export type ReservationCreateData = ReservationFormShape & {
   phone: string;
   /** 🛡️ Migration 094 — ikinci telefon. Admin'de OPSİYONEL. */
   phone2: string;
+
+  /* 🛡️ Migration 080 — İNDİRİM SNAPSHOT (public ile AYNI alanlar).
+     `buildStayDiscountSnapshot` (lib/price.engine.ts) tarafından
+     doldurulur; payload builder → `payload-create.ts` ile DB'ye yazılır.
+     OPSİYONEL: indirim hesaplanmamış durumda (tarih/villa seçilmeden)
+     alanlar undefined kalır → payload-create null/false'a düşürür. */
+  discount_applied?: boolean;
+  discount_type?: "percent" | "fixed" | null;
+  discount_value?: number | null;
+  discount_currency?: string | null;
+  original_stay_total_try?: number | null;
+  stay_discount_amount_try?: number | null;
   email: string;
   identity_number: string;
 

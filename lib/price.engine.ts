@@ -766,3 +766,118 @@ export const calculatePrepayment = (
     (total * rate) / 100
   );
 };
+
+/* ===============================================================
+   🛡️ İNDİRİM SNAPSHOT (migration 080 kolonları) — TEK KAYNAK
+   ===============================================================
+   Bu blok `app/services/reservation/_helpers/price-verify.ts`
+   içindeki "FAZ 4" mantığının BİREBİR kendisidir; oradan BURAYA
+   TAŞINDI (kopyalanmadı — price-verify artık bu fonksiyonları
+   çağırır). Böylece PUBLIC ve ADMIN akışları AYNI kodu kullanır.
+
+   NEDEN TAŞINDI: `price-verify.ts` `import "server-only"` ile
+   başlar → admin rezervasyon sayfası (client component) onu
+   import EDEMEZ. `price.engine.ts` zaten client-safe ve
+   `getActiveDiscount` burada tanımlı.
+
+   ⚠️ YENİ HESAP YOK: kullanılan her şey bu dosyanın zaten export
+     ettiği pure fonksiyonlar (`getActiveDiscount`,
+     `calculateStayTotal`).
+=============================================================== */
+
+/** Konaklama aralığındaki İLK indirimli geceye ait `villa_discounts`
+ *  kaydını döner. Half-open `[start, end)` — çıkış günü gece değildir.
+ *  Hiçbir gece eşleşmezse null. */
+export function detectAppliedDiscountForStay(
+  start: string,
+  end: string,
+  discounts: DiscountRange[] | null | undefined
+): DiscountRange | null {
+  if (!Array.isArray(discounts) || discounts.length === 0) return null;
+  if (!start || !end) return null;
+
+  const current = parseLocalDate(start);
+  const endD = parseLocalDate(end);
+  if (!(current < endD)) return null;
+
+  while (current < endD) {
+    const active = getActiveDiscount(current, discounts);
+    if (active) return active;
+    current.setDate(current.getDate() + 1);
+  }
+  return null;
+}
+
+/** `reservations` tablosundaki 6 indirim snapshot kolonu. */
+export type StayDiscountSnapshot = {
+  discount_applied: boolean;
+  discount_type: "percent" | "fixed" | null;
+  discount_value: number | null;
+  discount_currency: string | null;
+  original_stay_total_try: number | null;
+  stay_discount_amount_try: number | null;
+};
+
+/** İndirim uygulanmamış snapshot — 5 alan null, flag false. */
+export const EMPTY_STAY_DISCOUNT_SNAPSHOT: StayDiscountSnapshot = {
+  discount_applied: false,
+  discount_type: null,
+  discount_value: null,
+  discount_currency: null,
+  original_stay_total_try: null,
+  stay_discount_amount_try: null,
+};
+
+/**
+ * İndirim snapshot'ını üretir.
+ *
+ * @param start              Giriş tarihi "YYYY-MM-DD"
+ * @param end                Çıkış tarihi "YYYY-MM-DD"
+ * @param prices             normalize edilmiş villa_prices satırları
+ * @param discounts          villa_discounts → DiscountRange[]
+ * @param rates              kur haritası
+ * @param finalStayTotalTry  İNDİRİM UYGULANMIŞ konaklama tutarı (TRY).
+ *                           TEKRAR hesaplanmaz; çağıranın elindeki
+ *                           `calculateGrandTotal(...).stay` değeridir.
+ *
+ * ⚠️ `original_stay_total_try` için `calculateStayTotal` İKİNCİ KEZ,
+ *   bu sefer `discounts` VERİLMEDEN çağrılır — bu ayrı bir motor
+ *   değil, AYNI fonksiyonun "indirimsiz" varyantıdır.
+ * ⚠️ CLAMP YOK: fixed özel fiyat normal fiyattan yüksekse fark
+ *   negatif olabilir (mevcut public kuralı, aynen korundu).
+ * ⚠️ `discount_currency`: percent → null; fixed → kaydın HAM
+ *   currency'si (TRY'ye çevrilmez).
+ */
+export const buildStayDiscountSnapshot = (
+  start: string,
+  end: string,
+  prices: PriceRange[],
+  discounts: DiscountRange[] | null | undefined,
+  rates: Record<string, number>,
+  finalStayTotalTry: number
+): StayDiscountSnapshot => {
+  const appliedDiscount = detectAppliedDiscountForStay(start, end, discounts);
+  if (!appliedDiscount) return { ...EMPTY_STAY_DISCOUNT_SNAPSHOT };
+
+  const undiscountedStay = calculateStayTotal(
+    start,
+    end,
+    prices,
+    "TRY",
+    rates
+    // discounts parametresi BİLEREK verilmiyor → "indirim yok" hesabı
+  );
+  const originalStayTotalTry = undiscountedStay.stay || 0;
+
+  return {
+    discount_applied: true,
+    discount_type: appliedDiscount.discount_type,
+    discount_value: Number(appliedDiscount.discount_value) || 0,
+    discount_currency:
+      appliedDiscount.discount_type === "fixed"
+        ? appliedDiscount.currency || null
+        : null,
+    original_stay_total_try: originalStayTotalTry,
+    stay_discount_amount_try: originalStayTotalTry - (finalStayTotalTry || 0),
+  };
+};

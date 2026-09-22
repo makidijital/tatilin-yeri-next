@@ -3,14 +3,13 @@ import "server-only";
 import { reservationRepository } from "@/lib/db/reservation.repository";
 import {
   calculateGrandTotal,
-  calculateStayTotal,
   calculateNights,
   calculatePrepayment,
   accommodationBase,
-  getActiveDiscount,
-  type DiscountRange,
+  /* 🛡️ İndirim snapshot'ı artık price.engine'de (public+admin ORTAK). */
+  detectAppliedDiscountForStay,
+  buildStayDiscountSnapshot,
 } from "@/lib/price.engine";
-import { parseLocalDate } from "@/lib/date-format";
 import { normalizePriceRanges } from "@/lib/villa-row.types";
 import { getVillaPrices } from "@/app/services/villa-price.service";
 import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
@@ -145,25 +144,12 @@ export type ServerPriceResult = {
    metadata bu basitleştirmeyi taşır (pratikte: bir rezervasyon
    aralığını kapsayan tek bir indirim/özel fiyat tanımı — mevcut admin
    UI akışının tipik kullanımı). */
-export function detectAppliedDiscountForStay(
-  start: string,
-  end: string,
-  discounts: DiscountRange[] | null | undefined
-): DiscountRange | null {
-  if (!Array.isArray(discounts) || discounts.length === 0) return null;
-  if (!start || !end) return null;
-
-  const current = parseLocalDate(start);
-  const endD = parseLocalDate(end);
-  if (!(current < endD)) return null;
-
-  while (current < endD) {
-    const active = getActiveDiscount(current, discounts);
-    if (active) return active;
-    current.setDate(current.getDate() + 1);
-  }
-  return null;
-}
+/* 🛡️ DEDUP — bu fonksiyon `lib/price.engine.ts`'e TAŞINDI (gövde
+   BİREBİR aynı). Admin rezervasyon sayfası bir CLIENT component
+   olduğu ve bu dosya `import "server-only"` ile başladığı için buradan
+   import edilemiyordu. Mevcut import'lar kırılmasın diye AYNI isimle
+   re-export ediliyor — davranış değişmedi. */
+export { detectAppliedDiscountForStay };
 
 export async function recomputePublicReservationPrice(input: {
   villa_id: string;
@@ -338,45 +324,28 @@ export async function recomputePublicReservationPrice(input: {
 
      Discount UYGULANMADIYSA (hiçbir gece eşleşmediyse) TÜM detay alanları
      null (discount_applied hariç → false) — kullanıcı KURALI. */
-  const appliedDiscount = detectAppliedDiscountForStay(
+  /* 🛡️ DEDUP — bu blok `lib/price.engine.ts > buildStayDiscountSnapshot`
+     fonksiyonuna TAŞINDI (gövde BİREBİR aynı: detectAppliedDiscountForStay
+     + discounts'suz calculateStayTotal + clamp'siz fark + percent→null /
+     fixed→ham currency). ADMIN rezervasyon akışı da AYNI fonksiyonu
+     çağırır → public ve admin snapshot'ı TEK kaynaktan üretilir.
+     `snapshot.stay` ZATEN indirim uygulanmış değerdir; tekrar
+     hesaplanmaz, aynen geçilir. */
+  const discountSnapshot = buildStayDiscountSnapshot(
     start_date,
     end_date,
-    discounts
+    normalizedPrices,
+    discounts,
+    rates,
+    snapshot.stay || 0
   );
-  const discountApplied = appliedDiscount !== null;
 
-  let originalStayTotalTry: number | null = null;
-  let stayDiscountAmountTry: number | null = null;
-  let discountType: "percent" | "fixed" | null = null;
-  let discountValue: number | null = null;
-  let discountCurrency: string | null = null;
-
-  if (discountApplied && appliedDiscount) {
-    const undiscountedStay = calculateStayTotal(
-      start_date,
-      end_date,
-      normalizedPrices,
-      "TRY",
-      rates
-      // discounts parametresi BİLEREK verilmiyor → "indirim yok" hesabı
-    );
-    originalStayTotalTry = undiscountedStay.stay || 0;
-    // finalStayTotalTry: snapshot.stay ZATEN indirim uygulanmış (FAZ 3'ten
-    // beri mevcut) — burada TEKRAR hesaplanmaz, aynen okunur.
-    const finalStayTotalTry = snapshot.stay || 0;
-    // 🛡️ CLAMP YOK — fixed özel fiyat normal fiyattan yüksekse negatif
-    // olabilir (kullanıcı KURALI, verbatim).
-    stayDiscountAmountTry = originalStayTotalTry - finalStayTotalTry;
-
-    discountType = appliedDiscount.discount_type;
-    discountValue = Number(appliedDiscount.discount_value) || 0;
-    // percent → NULL; fixed → villa_discounts.currency (ham/raw — TRY'ye
-    // ÇEVRİLMEZ, snapshot "kaydın kendisi" olarak saklanır).
-    discountCurrency =
-      appliedDiscount.discount_type === "fixed"
-        ? appliedDiscount.currency || null
-        : null;
-  }
+  const discountApplied = discountSnapshot.discount_applied;
+  const originalStayTotalTry = discountSnapshot.original_stay_total_try;
+  const stayDiscountAmountTry = discountSnapshot.stay_discount_amount_try;
+  const discountType = discountSnapshot.discount_type;
+  const discountValue = discountSnapshot.discount_value;
+  const discountCurrency = discountSnapshot.discount_currency;
 
   return {
     /* 🛡️ Motorun kapsama kararı AYNEN taşınır (yeni hesap YOK). */
