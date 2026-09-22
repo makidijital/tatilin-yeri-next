@@ -47,6 +47,7 @@ import {
   CalendarRange,
   Sparkles,
   Inbox,
+  Plus,
 } from "lucide-react";
 
 /* 🛡️ Migration VR-B1 — client boundary: runtime villa-review.service
@@ -54,6 +55,7 @@ import {
    client bundle'a sızmaz. Call-site'lar alias ile değişmez. Type type-only. */
 import {
   approveVillaReviewAction as approveVillaReview,
+  createVillaReviewByAdminAction as createVillaReviewByAdmin,
   deleteVillaReviewAction as deleteVillaReview,
   getVillaReviewsForAdminAction as getVillaReviewsForAdmin,
   toggleFeaturedReviewAction as toggleFeaturedReview,
@@ -62,10 +64,37 @@ import type { VillaReviewAdmin } from "@/app/services/villa-review.service";
 import { revalidateVillaReviews } from "@/app/services/revalidate.actions";
 import { logActivity } from "@/lib/activity-log.client";
 import { formatDateTr } from "@/lib/date-format";
+/* 🛡️ MANUEL YORUM — mülk seçimi. homepage-collection / discount-collection
+   picker deseninin BİREBİR aynısı: adminFetch + /api/admin/villas?activeOnly=1
+   + normalizeSearchText araması. Yeni endpoint/servis YOK. */
+import { adminFetch } from "@/lib/admin-fetch";
+import { normalizeSearchText } from "@/lib/search";
 import {
   useNotify,
   useConfirm,
 } from "@/app/components/admin/notifications/NotificationProvider";
+
+/* 🛡️ MANUEL YORUM — form tipleri. `/api/admin/villas?activeOnly=1`
+   yanıtındaki mülk şekli (homepage-collection/discount-collection ile
+   AYNI alanlar). */
+type VillaOption = { id: string; title: string | null; slug: string | null };
+
+type AdminReviewForm = {
+  villa_id: string;
+  guest_name: string;
+  rating: number;
+  comment: string;
+  /** "Hemen yayınla" — VARSAYILAN AÇIK. */
+  publish: boolean;
+};
+
+const EMPTY_FORM: AdminReviewForm = {
+  villa_id: "",
+  guest_name: "",
+  rating: 5,
+  comment: "",
+  publish: true,
+};
 
 export default function ReviewAdminList() {
   const toast = useNotify();
@@ -109,6 +138,105 @@ export default function ReviewAdminList() {
     }
     return { pendingCount: p, approvedCount: a };
   }, [data]);
+
+  /* ═══════════════════════════════════════════════════════════
+     🛡️ MANUEL YORUM EKLEME (admin)
+     ═══════════════════════════════════════════════════════════
+     Mevcut ekrana entegre — yeni route/sayfa/modal YOK. Panel
+     `discount-collection` / `homepage-collection` picker deseniyle
+     aynı: buton → açılır `admin-card` paneli.
+
+     ⚠️ Mevcut moderation akışlarına (approve / featured / delete)
+     DOKUNULMADI; bu blok tamamen EK. */
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [villas, setVillas] = useState<VillaOption[] | null>(null);
+  const [villasLoading, setVillasLoading] = useState(false);
+  const [villaSearch, setVillaSearch] = useState("");
+  const [form, setForm] = useState<AdminReviewForm>(EMPTY_FORM);
+
+  /* Mülk listesi YALNIZ panel ilk açıldığında çekilir → sayfa ilk
+     yüklemesinde ek istek YOK. */
+  const openForm = async () => {
+    const next = !showForm;
+    setShowForm(next);
+    if (!next) return;
+    if (villas !== null || villasLoading) return;
+    setVillasLoading(true);
+    try {
+      const res = await adminFetch("/api/admin/villas?activeOnly=1");
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        villas?: Array<{ id: string; title: string | null; slug: string | null }>;
+      };
+      setVillas(res.ok && json.ok ? json.villas || [] : []);
+    } catch {
+      setVillas([]);
+    } finally {
+      setVillasLoading(false);
+    }
+  };
+
+  const filteredVillas = useMemo(() => {
+    const list = villas || [];
+    const q = villaSearch.trim();
+    if (q.length === 0) return list;
+    return list.filter((v) =>
+      normalizeSearchText(v.title || "").includes(normalizeSearchText(q))
+    );
+  }, [villas, villaSearch]);
+
+  const selectedVilla = useMemo(
+    () => (villas || []).find((v) => v.id === form.villa_id) || null,
+    [villas, form.villa_id]
+  );
+
+  const handleCreate = async () => {
+    if (saving) return;
+    setSaving(true);
+    const res = await createVillaReviewByAdmin({
+      villa_id: form.villa_id,
+      guest_name: form.guest_name,
+      rating: form.rating,
+      comment: form.comment,
+      publish: form.publish,
+    });
+    setSaving(false);
+
+    if (!res.ok) {
+      toast.error("Yorum eklenemedi", {
+        id: "review-create",
+        description: res.error,
+      });
+      return;
+    }
+
+    toast.success("Yorum eklendi", { id: "review-create" });
+
+    /* 🛡️ FAZ 55F deseni — AUDIT LOG (fail-safe). Yeni kayıt olduğu için
+       before_data YOK. entity_type "review" KORUNUR. */
+    logActivity({
+      action: "review.created",
+      entity_type: "review",
+      entity_title: selectedVilla?.title
+        ? `${selectedVilla.title} · ${form.guest_name.trim()}`
+        : form.guest_name.trim(),
+      after_data: {
+        villa_id: form.villa_id,
+        rating: form.rating,
+        is_approved: form.publish,
+        is_featured: false,
+      },
+    }).catch(() => {});
+
+    /* Mevcut akış: public cache invalidate + authoritative refetch. */
+    revalidateVillaReviews().catch(() => {});
+    refresh().catch(() => {});
+
+    setForm(EMPTY_FORM);
+    setVillaSearch("");
+    setShowForm(false);
+  };
 
   /* ---------------- HANDLERS ---------------- */
 
@@ -328,11 +456,209 @@ export default function ReviewAdminList() {
     </div>
   );
 
+  /* ═══════════════════════════════════════════════════════════
+     MANUEL YORUM PANELİ
+     ═══════════════════════════════════════════════════════════
+     Mevcut tasarım dili: `admin-card` + `btn-primary` + `input`
+     class'ları, `useNotify` toast'ları, `Star` ikonu (liste ile aynı).
+     Yeni tasarım sistemi/komponent kütüphanesi YOK. */
+  const createPanel = (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-[15px] font-medium text-[var(--color-stone-900)]">
+          Manuel yorum
+        </h2>
+        <button
+          type="button"
+          onClick={openForm}
+          className="btn-primary"
+        >
+          <Plus size={15} />
+          {showForm ? "Kapat" : "Yeni Yorum Ekle"}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="admin-card p-4 md:p-5 space-y-4">
+          {/* MÜLK SEÇİMİ */}
+          <div>
+            <label className="block text-[13px] font-medium text-[var(--color-stone-700)] mb-1.5">
+              Mülk
+            </label>
+            {selectedVilla ? (
+              <div className="flex items-center gap-3">
+                <span className="text-[14px] text-[var(--color-stone-900)] truncate">
+                  {selectedVilla.title}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((f) => ({ ...f, villa_id: "" }))
+                  }
+                  className="text-[12px] text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] underline underline-offset-2"
+                >
+                  Değiştir
+                </button>
+              </div>
+            ) : (
+              <>
+                <input
+                  value={villaSearch}
+                  onChange={(e) => setVillaSearch(e.target.value)}
+                  placeholder="Mülk ara…"
+                  className="input w-full"
+                />
+                {villasLoading ? (
+                  <p className="text-[12px] text-[var(--color-stone-400)] mt-2">
+                    Yükleniyor…
+                  </p>
+                ) : filteredVillas.length === 0 ? (
+                  <p className="text-[12px] text-[var(--color-stone-400)] mt-2">
+                    Eşleşen mülk bulunamadı.
+                  </p>
+                ) : (
+                  <ul className="max-h-56 overflow-auto divide-y divide-[var(--color-stone-100)] mt-2 border border-[var(--color-stone-100)] rounded-xl">
+                    {filteredVillas.slice(0, 50).map((v) => (
+                      <li key={v.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForm((f) => ({ ...f, villa_id: v.id }));
+                            setVillaSearch("");
+                          }}
+                          className="w-full text-left px-3 py-2.5 hover:bg-[var(--color-sand-50)] flex items-center justify-between gap-3"
+                        >
+                          <span className="text-[14px] text-[var(--color-stone-900)] truncate">
+                            {v.title}
+                          </span>
+                          <span className="text-[11px] text-[var(--color-stone-400)] tracking-[0.06em] font-mono">
+                            /{v.slug || "—"}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* AD SOYAD */}
+          <div>
+            <label className="block text-[13px] font-medium text-[var(--color-stone-700)] mb-1.5">
+              Ad Soyad
+            </label>
+            <input
+              value={form.guest_name}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, guest_name: e.target.value }))
+              }
+              placeholder="Örn. Ayşe Yılmaz"
+              maxLength={80}
+              className="input w-full"
+            />
+          </div>
+
+          {/* PUAN */}
+          <div>
+            <label className="block text-[13px] font-medium text-[var(--color-stone-700)] mb-1.5">
+              Puan
+            </label>
+            <div className="flex items-center gap-1.5">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, rating: n }))}
+                  aria-label={`${n} yıldız`}
+                  aria-pressed={form.rating === n}
+                  className="p-1"
+                >
+                  <Star
+                    size={18}
+                    className={
+                      n <= form.rating
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-[var(--color-stone-300)]"
+                    }
+                  />
+                </button>
+              ))}
+              <span className="text-[12px] text-[var(--color-stone-500)] ml-1 tabular-nums">
+                {form.rating}/5
+              </span>
+            </div>
+          </div>
+
+          {/* YORUM */}
+          <div>
+            <label className="block text-[13px] font-medium text-[var(--color-stone-700)] mb-1.5">
+              Yorum
+            </label>
+            <textarea
+              value={form.comment}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, comment: e.target.value }))
+              }
+              rows={4}
+              maxLength={1500}
+              placeholder="En az 10 karakter…"
+              className="input w-full resize-y"
+            />
+            <p className="text-[11px] text-[var(--color-stone-400)] mt-1 tabular-nums">
+              {form.comment.trim().length} / 1500
+            </p>
+          </div>
+
+          {/* HEMEN YAYINLA */}
+          <label className="flex items-center gap-2 text-[13px] text-[var(--color-stone-700)] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.publish}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, publish: e.target.checked }))
+              }
+              className="accent-[var(--color-champagne-600)]"
+            />
+            Hemen yayınla
+            <span className="text-[11px] text-[var(--color-stone-400)]">
+              (kapalıysa yorum onay bekleyenlere düşer)
+            </span>
+          </label>
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={saving}
+              className="btn-primary disabled:opacity-40"
+            >
+              <Check size={15} />
+              {saving ? "Kaydediliyor…" : "Yorumu Kaydet"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowForm(false);
+                setForm(EMPTY_FORM);
+                setVillaSearch("");
+              }}
+              className="text-[13px] text-[var(--color-stone-500)] hover:text-[var(--color-stone-900)] px-3 py-2"
+            >
+              Vazgeç
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   /* ---------------- LOADING SKELETON ---------------- */
   if (loading && data.length === 0) {
     return (
       <div className="space-y-5">
         {counterStrip}
+        {createPanel}
         <div className="flex flex-col gap-3" aria-busy="true">
           {[0, 1, 2].map((i) => (
             <div
@@ -354,6 +680,7 @@ export default function ReviewAdminList() {
     return (
       <div className="space-y-5">
         {counterStrip}
+        {createPanel}
         <div className="card-premium p-10 text-center">
           <div className="w-11 h-11 rounded-full bg-[var(--color-sand-100)] flex items-center justify-center mx-auto">
             <Inbox size={16} className="text-[var(--color-champagne-700)]" />
@@ -373,6 +700,7 @@ export default function ReviewAdminList() {
   return (
     <div className="space-y-5">
       {counterStrip}
+      {createPanel}
       <div className="flex flex-col gap-3">
         {data.map((r) => (
           <ReviewRow

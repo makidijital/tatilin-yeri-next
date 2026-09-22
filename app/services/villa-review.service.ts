@@ -685,3 +685,103 @@ export async function toggleFeaturedReview(
   }
   return { ok: true };
 }
+
+/* ===============================================================
+   🛡️ ADMIN — MANUEL YORUM EKLE
+   ===============================================================
+   `/maki-admin/reviews` ekranından admin'in elle yorum girmesi.
+
+   ⚠️ NEDEN AYRI FONKSİYON (public `createVillaReview` yerine):
+     Public fonksiyon `is_approved: false` değerini HARDCODE eder
+     (guest yorumu admin onayına düşer). Admin manuel girişinde yorumun
+     anında yayınlanabilmesi gerekiyor. Public fonksiyonu parametreli
+     hale getirmek misafir formunun davranışını riske atardı →
+     `createVillaReview` fonksiyonuna TEK SATIR DOKUNULMADI.
+
+   ⚠️ KURAL DUPLİKASYONU YOK: isim/yorum/puan validation'ı ve sanitize
+     adımları public akışla AYNI modül-seviyesi helper ve sabitleri
+     kullanır (`sanitizeName`, `sanitizeComment`, MIN/MAX_NAME_LEN,
+     MIN/MAX_COMMENT_LEN, MIN/MAX_RATING). Yeni kural İCAT EDİLMEDİ.
+
+   ⚠️ `created_at` PAYLOAD'A KONULMAZ — PostgreSQL kolon default'u
+     kullanılır (public akışla BİREBİR aynı davranış; DDL varsayımı
+     yapılmaz).
+
+   ⚠️ `is_featured` HER ZAMAN `false`. Öne çıkarma işlemi villa başına
+     tekil (partial unique index `(villa_id) WHERE is_featured`) ve
+     kendi defansif akışı var (`toggleFeaturedReview`) — manuel ekleme
+     o akışa GİRMEZ.
+
+   ⚠️ Yeni repository metodu YOK: mevcut `villaReviewRepository.insert`
+     (public akışın da kullandığı metod) aynen çağrılır.
+
+   YETKİ: bu fonksiyonun tek çağıranı `villa-review.action.ts >
+   createVillaReviewByAdminAction` olup ilk satırında
+   `requirePermission("reviews")` çalışır; yetkisiz çağrıda buraya
+   HİÇ ulaşılmaz.
+=============================================================== */
+
+/** Admin manuel yorum payload'ı. Public `CreateVillaReviewInput`'un
+ *  üzerine yalnız `publish` ("Hemen yayınla") eklenir. */
+export type CreateVillaReviewAdminInput = {
+  villa_id: string;
+  guest_name: string;
+  rating: number;
+  comment: string;
+  /** true → is_approved=true + approved_at=now(); false → pending. */
+  publish?: boolean;
+};
+
+export async function createVillaReviewByAdmin(
+  input: CreateVillaReviewAdminInput
+): Promise<ReviewResult> {
+  const villaId = String(input?.villa_id || "").trim();
+  if (!villaId) return { ok: false, error: "Mülk seçin." };
+
+  const guestName = sanitizeName(input?.guest_name || "");
+  if (guestName.length < MIN_NAME_LEN) {
+    return { ok: false, error: "Ad Soyad en az 2 karakter olmalı." };
+  }
+  if (guestName.length > MAX_NAME_LEN) {
+    return { ok: false, error: "Ad çok uzun (maks. 80 karakter)." };
+  }
+
+  const ratingNum = Number(input?.rating);
+  if (!Number.isFinite(ratingNum)) {
+    return { ok: false, error: "Geçerli bir puan seçin." };
+  }
+  const rating = Math.round(ratingNum);
+  if (rating < MIN_RATING || rating > MAX_RATING) {
+    return { ok: false, error: "Puan 1-5 arasında olmalı." };
+  }
+
+  const comment = sanitizeComment(input?.comment || "");
+  if (comment.length < MIN_COMMENT_LEN) {
+    return { ok: false, error: "Yorum en az 10 karakter olmalı." };
+  }
+  if (comment.length > MAX_COMMENT_LEN) {
+    return { ok: false, error: "Yorum çok uzun (maks. 1500 karakter)." };
+  }
+
+  /* `publish` verilmezse yayına alınmaz (defansif default). UI "Hemen
+     yayınla"yı AÇIK gönderir. `approved_at` timestamp'i mevcut
+     `approveVillaReview` ile AYNI ifadeyle üretilir. */
+  const isApproved = input?.publish === true;
+
+  const { error } = await villaReviewRepository.insert({
+    villa_id: villaId,
+    guest_name: guestName,
+    rating,
+    comment,
+    is_approved: isApproved,
+    is_featured: false,
+    approved_at: isApproved ? new Date().toISOString() : null,
+  });
+
+  if (error) {
+    console.error("[review.adminCreate] FAILED", error.message);
+    return { ok: false, error: "Yorum kaydedilemedi. Lütfen tekrar deneyin." };
+  }
+
+  return { ok: true };
+}

@@ -3,6 +3,7 @@
 import { requirePermission } from "@/lib/auth/action-authz";
 import {
   createVillaReview,
+  createVillaReviewByAdmin,
   getVillaReviewsForAdmin,
   approveVillaReview,
   deleteVillaReview,
@@ -37,6 +38,19 @@ export async function createVillaReviewAction(
   ...args: Parameters<typeof createVillaReview>
 ): ReturnType<typeof createVillaReview> {
   return createVillaReview(...args);
+}
+
+/* 🛡️ ADMIN — manuel yorum ekleme.
+   ⚠️ Yukarıdaki `createVillaReviewAction` (PUBLIC misafir formu) ile
+     KARIŞTIRILMAMALI: o bilinçli olarak gate'sizdir ve DEĞİŞTİRİLMEDİ.
+     Bu action diğer admin wrapper'larıyla AYNI desende
+     `requirePermission("reviews")` uygular → yetkisiz çağrıda service
+     ve repository'ye HİÇ ulaşılmaz (action gövdesi çalışmaz). */
+export async function createVillaReviewByAdminAction(
+  ...args: Parameters<typeof createVillaReviewByAdmin>
+): ReturnType<typeof createVillaReviewByAdmin> {
+  await requirePermission("reviews");
+  return createVillaReviewByAdmin(...args);
 }
 
 export async function getVillaReviewsForAdminAction(
