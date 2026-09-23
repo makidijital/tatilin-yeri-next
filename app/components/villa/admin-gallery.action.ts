@@ -9,6 +9,7 @@ import {
    Yalnız gate; auth.caller kullanılmaz. Service'ler native (dbAdminNative);
    eski sağlayıcı session client injection IMG-P3R'de kaldırıldı. */
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
+import { invalidateVillasCache } from "@/lib/villas-cache-invalidation.server";
 
 /* ===============================================================
    🛡️ ADMIN GALLERY — WRITE ORCHESTRATION (SERVER ACTIONS)
@@ -32,6 +33,11 @@ export async function reorderGalleryImages(
   }
 
   await updateImageOrder(updates);
+  /* 🛡️ Sıralama → kart kapak görseli (is_cover yoksa ilk sort_order)
+     değişebilir. `updateImageOrder` hata durumunda throw etmez (yalnız
+     loglar) → invalidation yetkili yazma denemesinden sonra yapılır;
+     başarısız yazmada cache yalnız değişmemiş DB verisiyle yeniden kurulur. */
+  invalidateVillasCache("admin.gallery.reorder");
 }
 
 export async function setGalleryCover(
@@ -45,4 +51,7 @@ export async function setGalleryCover(
   }
 
   await setCoverImage(id, villaId);
+  /* 🛡️ Kapak değişimi → kart görseli değişir (aynı hata notu: servis
+     throw etmez; bkz. reorderGalleryImages). */
+  invalidateVillasCache("admin.gallery.cover");
 }

@@ -4,6 +4,7 @@ import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { villaDiscountRepository } from "@/lib/db/villa-discount.repository.server";
 import { createVillaFull } from "@/app/services/villa-admin.service";
+import { invalidateVillasCache } from "@/lib/villas-cache-invalidation.server";
 import type { VillaFormPayload } from "@/app/services/villa-admin/types";
 
 /* ===============================================================
@@ -120,6 +121,8 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   try {
     const newId = await createVillaFull(body);
+    /* 🛡️ Başarılı oluşturma → public villa listesi cache'i tazelenir. */
+    invalidateVillasCache("admin.villas.create");
     return NextResponse.json({ ok: true, id: newId });
   } catch (err) {
     const msg =

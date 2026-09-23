@@ -17,6 +17,7 @@ import {
    auth-bağımsız (DECISION A) olduğundan RLS gate uygulanmıyordu; authz
    burada. Yalnız gate; auth.caller kullanılmaz. */
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
+import { invalidateVillasCache } from "@/lib/villas-cache-invalidation.server";
 /* 🛡️ FALLBACK — discount.action.ts'in saveDiscountData'da KULLANDIĞI
    AYNI kanonik yöntem (getVillaPrices + getStartingPrice). getVillaCurrency
    villa.currency NULL/boş olduğunda artık aynı fallback'i uygular; böylece
@@ -99,4 +100,11 @@ export async function savePricingData(
   }
 
   await setVillaPrices(villaId, prices);
+  /* 🛡️ Fiyat takvimi kaydı → kart "…'den başlayan" fiyatı değişebilir;
+     public villa listesi cache'i tazelenir. NOT: `setVillaPrices` hata
+     durumunda throw etmez (yalnız loglar) → başarı buradan ayırt
+     edilemez; invalidation yetkili yazma denemesinden sonra yapılır.
+     Başarısız yazmada gereksiz invalidation yalnız cache'i DB'deki
+     (değişmemiş) veriyle yeniden kurar — bayat veri üretmez. */
+  invalidateVillasCache("admin.pricing.save");
 }

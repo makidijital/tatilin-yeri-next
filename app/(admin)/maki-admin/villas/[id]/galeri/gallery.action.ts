@@ -19,6 +19,7 @@ import { villaAdminRepository as villaRepository } from "@/lib/db/villa.reposito
    Yalnız gate; auth.caller kullanılmaz. Service'ler native (dbAdminNative);
    eski sağlayıcı session client injection IMG-P3R'de kaldırıldı. */
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
+import { invalidateVillasCache } from "@/lib/villas-cache-invalidation.server";
 
 /* ===============================================================
    🛡️ GALERİ — READ ORCHESTRATION (SERVER ACTION)
@@ -54,7 +55,10 @@ export async function addGalleryImage(
     return false;
   }
 
-  return addVillaImage(villaId, imageUrl);
+  const ok = await addVillaImage(villaId, imageUrl);
+  /* 🛡️ Başarılı ekleme → kart kapak görseli değişebilir. */
+  if (ok) invalidateVillasCache("admin.gallery.add");
+  return ok;
 }
 
 export async function deleteGalleryImage(imageId: string): Promise<boolean> {
@@ -64,7 +68,10 @@ export async function deleteGalleryImage(imageId: string): Promise<boolean> {
     return false;
   }
 
-  return deleteVillaImage(imageId);
+  const ok = await deleteVillaImage(imageId);
+  /* 🛡️ Başarılı silme → kart kapak görseli değişebilir. */
+  if (ok) invalidateVillasCache("admin.gallery.delete");
+  return ok;
 }
 
 export async function deleteAllGalleryImages(
@@ -76,5 +83,8 @@ export async function deleteAllGalleryImages(
     return { ok: false, removed: 0, orphans: [] };
   }
 
-  return deleteAllVillaImages(villaId);
+  const result = await deleteAllVillaImages(villaId);
+  /* 🛡️ Başarılı toplu silme → kart kapak görseli değişir. */
+  if (result.ok) invalidateVillasCache("admin.gallery.deleteAll");
+  return result;
 }

@@ -34,7 +34,7 @@ import { homepageRepository } from "@/lib/db/homepage.repository";
 import { discountRepository } from "@/lib/db/discount.repository";
 import { getPublicSettings } from "@/app/services/settings.service";
 import { getMenu } from "@/app/services/menu.service";
-import { getVillas } from "@/app/services/villa.service";
+import { getVillas, type VillaDTO } from "@/app/services/villa.service";
 import { getFaqs, type Faq } from "@/app/services/faq.service";
 /* 🛡️ PHASE 11 — SSS çevirisi (faq_translations, migration 082). Locale
    BAŞINA AYRI cache key'i kullanılır (aşağıya bkz.) — çapraz-dil
@@ -108,10 +108,70 @@ export const getCachedMenu = unstable_cache(
     de invalidate etmeli ki card UI'ı taze stat'lerle render olsun.
     Mevcut "villas" semantic'i aynen; ek tag yalnız invalidate yolunu
     genişletir. */
+/* 🛡️ 2 MB CACHE LİMİTİ — KART PAYLOAD'I
+   ===============================================================
+   `getVillas()` 52 alanlı tam `VillaDTO` döndürür (açıklama, harita
+   embed'i, SEO, oda düzeni, token…). ~1.400 villada bu, Next data
+   cache'in giriş başına 2 MB sınırını aştığı için kayıt HİÇ
+   yazılmıyor ve her istek tam listeyi DB'den yeniden çekiyordu
+   ("items over 2MB can not be cached").
+
+   Bu cache'in TÜM tüketicileri (`KiralikVillalarPageBody`,
+   `VillaList`) yalnız aşağıdaki kart alanlarını okur: `VillaCard`
+   prop'ları, `applyPublicSort` (price/currency/guests), JSON-LD
+   (slug/title/images[0]), rozet çevirisi (id), sayfalama (length).
+   Cache'e YALNIZ bu alanlar yazılır; değerler `getVillas()`'tan
+   AYNEN kopyalanır (dönüşüm YOK) → satır kümesi, sıra ve kart
+   çıktısı birebir aynı. `getVillas`, `listPublic`, `mapVilla`,
+   `VillaDTO` DEĞİŞMEDİ.
+
+   🛡️ "taxonomy" tag'i: kartta görünen bölge adı (`location`)
+   villa_locations'tan gelir; bölge adı değişince mevcut
+   `revalidateTaxonomy()` bu listeyi de tazelesin diye eklendi.
+   TTL (600 sn) ve cache key AYNI. */
+export type PublicVillaCard = Pick<
+  VillaDTO,
+  | "id"
+  | "slug"
+  | "title"
+  | "location"
+  | "price"
+  | "currency"
+  | "images"
+  | "badge"
+  | "bedrooms"
+  | "bathrooms"
+  | "guests"
+  | "review_average"
+  | "review_count"
+>;
+
+function toPublicVillaCard(v: VillaDTO): PublicVillaCard {
+  const card: PublicVillaCard = {
+    id: v.id,
+    slug: v.slug,
+    title: v.title,
+    location: v.location,
+    price: v.price,
+    currency: v.currency,
+    images: v.images,
+    badge: v.badge,
+    bedrooms: v.bedrooms,
+    bathrooms: v.bathrooms,
+    guests: v.guests,
+  };
+  /* Review alanları servis tarafında yalnız yorum varken set edilir;
+     aynı "anahtar yok" davranışı korunur. */
+  if (v.review_average !== undefined) card.review_average = v.review_average;
+  if (v.review_count !== undefined) card.review_count = v.review_count;
+  return card;
+}
+
 export const getCachedVillas = unstable_cache(
-  async () => getVillas(),
+  async (): Promise<PublicVillaCard[]> =>
+    (await getVillas()).map(toPublicVillaCard),
   ["villas:get"],
-  { tags: ["villas", "villa-reviews"], revalidate: 600 }
+  { tags: ["villas", "villa-reviews", "taxonomy"], revalidate: 600 }
 );
 
 /* ===============================================================

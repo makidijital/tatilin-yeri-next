@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import { updateVillaFull } from "@/app/services/villa-admin.service";
+import { invalidateVillasCache } from "@/lib/villas-cache-invalidation.server";
 import type { VillaUpdatePayload } from "@/app/services/villa-admin/types";
 
 /* ===============================================================
@@ -68,6 +69,9 @@ export async function PUT(
 
   try {
     await updateVillaFull({ id, ...body } as VillaUpdatePayload);
+    /* 🛡️ Başarılı güncelleme (başlık/kapasite/bölge/fiyat/rozet…) →
+       public villa listesi cache'i tazelenir. */
+    invalidateVillasCache("admin.villas.full.update");
     return NextResponse.json({ ok: true });
   } catch (err) {
     const msg =

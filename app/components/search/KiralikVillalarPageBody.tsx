@@ -10,7 +10,9 @@ import {
   getCachedVillaLocations,
   getCachedVillaTypes,
 } from "@/lib/cache.helpers";
-import type { VillaDTO } from "@/app/services/villa.service";
+/* 🛡️ `getCachedVillas` artık yalnız kart alanlarını döndürür
+   (bkz. lib/cache.helpers.ts — 2 MB cache limiti). */
+import type { PublicVillaCard } from "@/lib/cache.helpers";
 
 import VillaCard from "@/app/components/villa/VillaCard";
 import FilterSidebar from "@/app/(public)/arama/FilterSidebar";
@@ -297,7 +299,7 @@ export default async function KiralikVillalarPageBody({
     totalCount > 0
       ? buildItemList(
           /* 🛡️ Faz 9 hardening: `(v: any)` → `VillaDTO`. */
-          villas.map((v: VillaDTO) => ({
+          villas.map((v: PublicVillaCard) => ({
             slug: String(v.slug || ""),
             title: String(v.title || ""),
             image: Array.isArray(v.images) ? v.images[0] : undefined,
@@ -406,7 +408,7 @@ export default async function KiralikVillalarPageBody({
                       {/* 🛡️ Faz 9 hardening: `(villa: any)` → `VillaDTO`.
                          🛡️ SCALE HARDENING: `villas` yerine `villasOnPage`
                          (PAGE_SIZE'la dilimlenmiş). */}
-                      {villasOnPage.map((villa: VillaDTO) => (
+                      {villasOnPage.map((villa: PublicVillaCard) => (
                         <VillaCard
                           key={villa.slug || villa.id}
                           /* 🛡️ FAZ 36 — favorites identity. */
