@@ -65,6 +65,20 @@ import {
   type TaxonomyNameByLocale,
 } from "@/lib/i18n/taxonomy-name.helper";
 
+/* 🛡️ KART GÖRSELİ `sizes` — yalnız bu sayfanın grid'ine göre (sidebar
+   md+ 260/300px; kart 1 / sm 2 / xl 3 sütun). Değerler ölçülen kart
+   genişliği × 1.41 güvenlik payı (16:9 cover kırpma × hover 1.06) ile
+   hesaplandı; mevcut değerden daha KÜÇÜK bir görsel seçilmesi yalnız
+   gereken genişliğin üstünde kalındığı yerde olur. ≤767px AYNEN.
+   Grid/padding sınıfları değişirse bu değer yeniden hesaplanmalı. */
+const KIRALIK_VILLALAR_CARD_SIZES =
+  "(max-width: 640px) 100vw, " +
+  "(max-width: 767px) 50vw, " +
+  "(max-width: 1023px) calc(70.5vw - 287px), " +
+  "(max-width: 1279px) calc(70.5vw - 360px), " +
+  "(max-width: 1407px) calc(47vw - 256px), " +
+  "406px";
+
 type ArchiveDictionary = Dictionary["villasArchive"];
 type SearchDictionary = Dictionary["search"];
 
@@ -408,7 +422,7 @@ export default async function KiralikVillalarPageBody({
                       {/* 🛡️ Faz 9 hardening: `(villa: any)` → `VillaDTO`.
                          🛡️ SCALE HARDENING: `villas` yerine `villasOnPage`
                          (PAGE_SIZE'la dilimlenmiş). */}
-                      {villasOnPage.map((villa: PublicVillaCard) => (
+                      {villasOnPage.map((villa: PublicVillaCard, index) => (
                         <VillaCard
                           key={villa.slug || villa.id}
                           /* 🛡️ FAZ 36 — favorites identity. */
@@ -429,6 +443,9 @@ export default async function KiralikVillalarPageBody({
                           /* 🛡️ PHASE 10G — kart metinleri + detay linki
                              locale-aware (VillaCard DEĞİŞTİRİLMEDİ). */
                           locale={locale}
+                          sizes={KIRALIK_VILLALAR_CARD_SIZES}
+                          /* 🛡️ İlk kart = olası LCP → eager + high. */
+                          isLcp={index === 0}
                         />
                       ))}
                     </div>

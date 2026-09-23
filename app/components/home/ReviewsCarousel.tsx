@@ -274,6 +274,7 @@ function ActiveTestimonial({
                     <img
                       src={review.villaCover}
                       alt={review.villaTitle}
+                      loading="lazy"
                       className="w-full h-full object-cover object-center"
                     />
                   ) : (

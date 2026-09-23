@@ -106,6 +106,19 @@ import Link from "next/link";
 import Script from "next/script";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+/* 🛡️ KART GÖRSELİ `sizes` — yalnız /arama grid'ine göre (sidebar md+
+   260/300px; kart 1 / sm 2 / md 1 / lg 2 / xl 3 sütun). Değerler ölçülen
+   kart genişliği × 1.41 güvenlik payı (16:9 cover kırpma × hover 1.06)
+   ile hesaplandı; ≤1023px mevcut değer AYNEN korunur. Ana liste ve
+   esnek tarih bölümü aynı grid'i kullanır. Grid/padding sınıfları
+   değişirse bu değer yeniden hesaplanmalı. */
+const ARAMA_CARD_SIZES =
+  "(max-width: 640px) 100vw, " +
+  "(max-width: 1023px) 50vw, " +
+  "(max-width: 1279px) calc(70.5vw - 360px), " +
+  "(max-width: 1407px) calc(47vw - 256px), " +
+  "406px";
+
 /* 🛡️ Next.js 16: searchParams-bağımlı sayfalar zaten dynamic
    olmalı, ama bir caching / PPR sürprizi olmadığından emin
    olmak için explicit declaration. Bu, build-time pre-render
@@ -1461,7 +1474,7 @@ export default async function AramaPageBody({
                      `villasOnPage` (PAGE_SIZE dilim). Tüm filtreleme +
                      availability semantic'i aynen `visibleVillas`'da.
                      Yalnız client HTML 1 sayfa kart taşır. */}
-                  {villasOnPage.map((villa) => (
+                  {villasOnPage.map((villa, index) => (
                     <VillaCard
                       key={villa.id}
                       /* 🛡️ PHASE 13 — kart metinleri + detay linki
@@ -1525,6 +1538,10 @@ export default async function AramaPageBody({
                       /* 🛡️ FAZ 35 — review trust meta (★ avg · count). */
                       reviewAverage={villa.review_average}
                       reviewCount={villa.review_count}
+                      sizes={ARAMA_CARD_SIZES}
+                      /* 🛡️ İlk kart = olası LCP → eager + high. Esnek
+                         tarih bölümü (sayfa altı) lazy kalır. */
+                      isLcp={index === 0}
                     />
                   ))}
                 </div>
@@ -1598,6 +1615,7 @@ export default async function AramaPageBody({
                           isFlexible
                           reviewAverage={villa.review_average}
                           reviewCount={villa.review_count}
+                          sizes={ARAMA_CARD_SIZES}
                         />
                       ))}
                     </div>

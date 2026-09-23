@@ -165,6 +165,18 @@ type Props = {
   /** 🛡️ PHASE 10G — opsiyonel; verilmezse "tr" (eski davranış).
    *  Kart metinlerini ve detay linkinin locale prefix'ini belirler. */
   locale?: Locale;
+  /** 🛡️ OPSİYONEL — yalnız "default" variant kart görselinin `sizes`
+   *  değeri. Verilmezse mevcut değer AYNEN kullanılır → prop geçmeyen
+   *  tüm çağrı noktaları (arama, ana sayfa, favoriler, …) birebir aynı.
+   *  Görsel kaynağı/kalite/boyut/CSS'e etkisi YOK; yalnız tarayıcının
+   *  srcset'ten seçeceği genişliği belirler. */
+  sizes?: string;
+  /** 🛡️ OPSİYONEL — liste sayfalarında yalnız İLK kart (olası LCP
+   *  görseli) için. true → görsel `loading="eager"` + `fetchPriority="high"`
+   *  (Next 16'da deprecated `priority` yerine önerilen yöntem). Verilmezse
+   *  mevcut `loading="lazy"` AYNEN. Görsel kaynağı / sizes / srcSet /
+   *  kalite / CSS'e etkisi YOK; yalnız yükleme zamanı ve önceliği. */
+  isLcp?: boolean;
 };
 
 export default function VillaCard({
@@ -194,6 +206,8 @@ export default function VillaCard({
   discount = null,
   discountAvailable,
   locale,
+  sizes: imageSizes,
+  isLcp = false,
 }: Props) {
   const dict = getDictionary(locale);
   const effectiveLocale: Locale = locale ?? "tr";
@@ -1238,8 +1252,12 @@ export default function VillaCard({
               src={cover}
               alt={title || dict.card.villaAlt}
               fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-              loading="lazy"
+              sizes={
+                imageSizes ??
+                "(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+              }
+              loading={isLcp ? "eager" : "lazy"}
+              fetchPriority={isLcp ? "high" : undefined}
               onError={() => setImgFailed(true)}
               className="
                 object-cover object-center
