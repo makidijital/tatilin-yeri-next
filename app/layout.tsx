@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, Inter, Fraunces, Geist_Mono } from "next/font/google";
+import { Outfit, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
@@ -21,21 +21,10 @@ const outfit = Outfit({
   display: "swap",
 });
 
-/* 🛡️ Inter — YALNIZ admin gövde tipografisi için korunur. Public gövde
-   Outfit'e geçti; admin `.admin-shell --font-sans` Inter'e pinli
-   (admin typography'ye dokunulmadı). */
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  display: "swap",
-  axes: ["opsz", "SOFT"],
-});
+/* 🛡️ Inter + Fraunces — YALNIZ admin (`.admin-shell`) tipografisi.
+   Tanımları `app/(admin)/maki-admin/admin-fonts.ts`'e taşındı: public
+   sayfalarda kullanılmadıkları halde her sayfada preload edilip
+   indiriliyorlardı. Font ayarları ve admin görünümü AYNEN. */
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -155,7 +144,7 @@ export default async function RootLayout({
   return (
     <html
       lang="tr"
-      className={`${outfit.variable} ${inter.variable} ${fraunces.variable} ${geistMono.variable}`}
+      className={`${outfit.variable} ${geistMono.variable}`}
     >
       <head>
         {/* 🛡️ Custom head HTML — admin tarafından kontrol edilen

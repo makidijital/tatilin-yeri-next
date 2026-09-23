@@ -8,6 +8,7 @@ import {
   getAdminLogoUrl,
   getAdminIconUrl,
 } from "@/lib/admin-branding";
+import { adminFontVariables } from "./admin-fonts";
 import {
   LayoutDashboard,
   Home,
@@ -955,7 +956,7 @@ function AdminShell({
   }, [activeHref, pendingCounts]);
 
   return (
-    <div className="admin-shell flex min-h-screen">
+    <div className={`admin-shell flex min-h-screen ${adminFontVariables}`}>
       {/* SIDEBAR (desktop) + DRAWER (mobile) */}
       <aside
         className={`

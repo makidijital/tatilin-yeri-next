@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin-auth";
 
 import { getAdminLogoUrl } from "@/lib/admin-branding";
+import { adminFontVariables } from "../admin-fonts";
 
 /* ===============================================================
    🔥 ADMIN LOGIN
@@ -184,7 +185,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="admin-shell min-h-screen flex bg-white">
+    <div className={`admin-shell min-h-screen flex bg-white ${adminFontVariables}`}>
       {/* ===================================================
           LEFT PANEL — premium branding (desktop only)
           - Admin sidebar palette: deep navy (#0b1220 / #111a2c)
