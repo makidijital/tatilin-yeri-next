@@ -13,7 +13,9 @@ import {
   getVillasByIdsAction as getVillasByIds,
   getVillaBadgesAction,
 } from "@/app/services/villa.action";
-import type { VillaDTO } from "@/app/services/villa.service";
+/* 🔒 Action artık tam VillaDTO değil, yalnız kart alanlarını döndürür
+   (bkz. villa.action.ts PUBLIC PAYLOAD SINIRI). Tip action'dan türetilir. */
+type FavoriteVilla = Awaited<ReturnType<typeof getVillasByIds>>[number];
 /* 🛡️ FAZ 37 — Paylaşılabilir favori listesi service (DB snapshot). */
 import { createSharedFavoritesListAction as createSharedFavoritesList } from "./shared-favorites.action";
 
@@ -72,7 +74,7 @@ export default function FavoritesGrid({
     count,
   } = useFavorites();
 
-  const [villas, setVillas] = useState<VillaDTO[]>([]);
+  const [villas, setVillas] = useState<FavoriteVilla[]>([]);
   /* 🛡️ Kart rozeti çevirileri — villa fetch'i ile AYNI effect'te TEK
      batch çağrısı (villa başına istek YOK). TR'de action boş obje
      döner (sorgu atılmaz) → TR davranışı BİREBİR eskisi gibi. */

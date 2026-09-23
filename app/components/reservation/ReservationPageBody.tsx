@@ -113,6 +113,27 @@ export default async function ReservationPageBody({
   const children = getParam(sp.children);
   const poolHeating = getParam(sp.poolHeating);
 
+  /* 🔒 CLIENT PAYLOAD SINIRI — `ReservationForm` bir client component;
+     verilen prop'lar RSC ile HTML'e serileştirilir. Tam `VillaDTO`
+     (ör. `private_access_token`, `commission_rate`, açıklama/SEO/harita)
+     tarayıcıya GÖNDERİLMEZ; yalnız formun ve
+     `buildPublicReservationPayload`'ın okuduğu alanlar AYNEN (dönüşüm
+     YOK) geçirilir. Komisyon server'da DB'den okunur
+     (reservation.repository) — client değerine ihtiyaç yok. */
+  const reservationVilla = {
+    id: villa.id,
+    slug: villa.slug,
+    title: villa.title,
+    deposit: villa.deposit,
+    cleaning_fee: villa.cleaning_fee,
+    cleaning_currency: villa.cleaning_currency,
+    cleaning_limit: villa.cleaning_limit,
+    pool_heating_fee: villa.pool_heating_fee,
+    pool_heating_currency: villa.pool_heating_currency,
+    pool_heating_months: villa.pool_heating_months,
+    custom_prepayment_rate: villa.custom_prepayment_rate,
+  };
+
   return (
     <>
       {/* HERO — paylaşılan premium PageHero (kompakt editorial band) */}
@@ -138,7 +159,7 @@ export default async function ReservationPageBody({
 
       <div className="section-narrow pt-12 md:pt-16 pb-20">
         <ReservationForm
-          villa={villa}
+          villa={reservationVilla}
           prices={prices}
           discounts={discounts}
           start={start}

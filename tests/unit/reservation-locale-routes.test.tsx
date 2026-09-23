@@ -96,6 +96,10 @@ const VILLA = {
   pool_heating_fee: 0,
   pool_heating_currency: "TRY",
   pool_heating_months: null,
+  /* 🔒 Server-only alanlar — ReservationForm (client) sınırına ASLA
+     geçmemeli; test 14 bunu kilitler. Form bu alanları okumaz. */
+  private_access_token: "SECRET-TOKEN-TEST",
+  commission_rate: 17.5,
 };
 
 function renderForm(locale?: Locale, overrides: Record<string, unknown> = {}) {
@@ -365,7 +369,31 @@ describe("ReservationPageBody — locale-aware gövde", () => {
       (c) => c?.props?.className === "section-narrow pt-12 md:pt-16 pb-20"
     );
     const form = childrenOf(wrapper)[0];
-    expect(form.props.villa).toBe(VILLA);
+    /* 🔒 Tam VillaDTO değil, yalnız formun okuduğu alanlar AYNI
+       değerlerle geçer; server-only alanlar client'a gitmez. */
+    const expectedVilla = Object.fromEntries(
+      Object.entries(VILLA).filter(
+        ([k]) => k !== "private_access_token" && k !== "commission_rate"
+      )
+    );
+    expect(form.props.villa).toEqual(expectedVilla);
+    expect(form.props.villa).not.toHaveProperty("private_access_token");
+    expect(form.props.villa).not.toHaveProperty("commission_rate");
+    expect(Object.keys(form.props.villa).sort()).toEqual(
+      [
+        "id",
+        "slug",
+        "title",
+        "deposit",
+        "cleaning_fee",
+        "cleaning_currency",
+        "cleaning_limit",
+        "pool_heating_fee",
+        "pool_heating_currency",
+        "pool_heating_months",
+        "custom_prepayment_rate",
+      ].sort()
+    );
     expect(form.props.start).toBe("2026-06-01");
     expect(form.props.end).toBe("2026-06-08");
     expect(form.props.adults).toBe("2");
