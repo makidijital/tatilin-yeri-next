@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { translationRepository } from "@/lib/db/translation.repository.server";
 import { DEFAULT_LOCALE, toLocale, type Locale } from "@/lib/i18n/config";
 import {
@@ -7,6 +9,38 @@ import {
   type TranslationEntity,
   type TranslationRowFor,
 } from "@/lib/i18n/translations.types";
+
+/* ===============================================================
+   🛡️ REQUEST-SCOPED DEDUPE — React `cache()` (Aşama 6)
+   ===============================================================
+   Aynı request/render içinde AYNI çeviri sorgusu birden çok kez
+   çalışıyordu (ör. HeaderWrapper/FooterWrapper hem `(public)/layout`
+   hem root `not-found.tsx` ağacında render oluyor; blog/CMS çevirisi
+   hem generateMetadata hem sayfa gövdesinde okunuyor). Bu sarmalayıcılar
+   yalnız DB okumasını request-scoped memoize eder:
+     • Anahtar = (entity, parentId, locale) / (entity, locale, parentIds
+       sıralı JSON listesi) — hepsi primitive; farklı locale / entity /
+       id listesi ASLA aynı sonucu paylaşmaz. id listesi sırası dahil
+       birebir aynı değilse ayrı (eskisiyle aynı) sorgu atılır.
+     • SQL, parametreler, fallback ve dönüş şekli DEĞİŞMEZ; Map her
+       çağrıda yeniden kurulur.
+     • `cache()` yalnız React server render'ında memoize eder; request
+       dışı (route handler / server action / test) bağlamlarda doğrudan
+       çağrı gibi davranır. Request'ler arası paylaşım YOK (stale yok).
+   =============================================================== */
+const findOneCached = cache(
+  (entity: TranslationEntity, parentId: string, locale: Locale) =>
+    translationRepository.findOne(entity, parentId, locale)
+);
+
+const findManyForLocaleCached = cache(
+  (entity: TranslationEntity, locale: Locale, parentIdsKey: string) =>
+    translationRepository.findManyForLocale(
+      entity,
+      JSON.parse(parentIdsKey) as string[],
+      locale
+    )
+);
 
 /* ===============================================================
    🛡️ TRANSLATION READ LAYER — PHASE 5 (Translation Read Layer)
@@ -122,7 +156,7 @@ export async function getTranslation<E extends TranslationEntity>(
   if (!isTranslationEntity(entity)) return null;
   if (!parentId) return null;
 
-  const { data, error } = await translationRepository.findOne(
+  const { data, error } = await findOneCached(
     entity,
     parentId,
     resolvedLocale
@@ -171,10 +205,10 @@ export async function getTranslationsForParents<E extends TranslationEntity>(
   if (!isTranslationEntity(entity)) return new Map();
   if (parentIds.length === 0) return new Map();
 
-  const { data, error } = await translationRepository.findManyForLocale(
+  const { data, error } = await findManyForLocaleCached(
     entity,
-    parentIds,
-    resolvedLocale
+    resolvedLocale,
+    JSON.stringify(parentIds)
   );
   if (error) return new Map();
 
@@ -185,7 +219,7 @@ export async function getTranslationsForParents<E extends TranslationEntity>(
       parentIdColumn
     ];
     if (typeof parentId === "string") {
-      result.set(parentId, row);
+      result.set(parentId, row as TranslationRowFor<E>);
     }
   }
   return result;
