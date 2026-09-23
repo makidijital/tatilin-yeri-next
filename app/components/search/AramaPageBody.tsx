@@ -15,7 +15,10 @@ import { villaFeatureRepository } from "@/lib/db/villa-feature.repository";
    YAZILMADI. Locale-aware adlar (TR'de ek sorgu yok) buradan gelir. */
 import { loadHeroFeatures } from "@/app/components/ui/hero/_components/hero-features.action";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
-import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
+import {
+  getExchangeRatesMap,
+  type ExchangeRatesMap,
+} from "@/app/services/exchange-rate.service";
 import VillaCard from "@/app/components/villa/VillaCard";
 import {
   calculateGrandTotal,
@@ -284,15 +287,36 @@ export default async function AramaPageBody({
      revalidateTaxonomy() invalidate eder. Category slug→id resolver
      için types listesi bu noktada lazım.
      =============================================================== */
-  const [regionOptions, categoryOptions, featureOptions] = await Promise.all([
+  /* 🛡️ Villa özellikleri — sidebar'daki "Villa Özellikleri" bölümü
+     ve `ozellikler` token resolve'u için TEK liste. Hata durumunda
+     boş liste → bölüm boş metin gösterir, arama ETKİLENMEZ.
+
+     🛡️ PERF (O4) — Sorgu ESKİSİ GİBİ taxonomy okumalarıyla AYNI ANDA
+     başlar; ancak artık villa akışını BLOKLAMAZ. Liste yalnız iki yerde
+     kullanılır: (1) `ozellikler` token'larının UUID doğrulaması — URL'de
+     token VARSA aşağıda, çözümden ÖNCE await edilir (davranış birebir);
+     token YOKSA `resolveTokens([], …)` listeden bağımsız olarak `[]` döner,
+     (2) sidebar prop'u — render'dan ÖNCE await edilir. `.catch(() => [])`
+     fallback'i BİREBİR aynı ve oluşturma anında bağlı (reject etmez). */
+  const featureOptionsPromise = loadHeroFeatures(locale).catch(() => []);
+  const [regionOptions, categoryOptions] = await Promise.all([
     getCachedVillaLocations(),
     getCachedVillaTypes(),
-    /* 🛡️ Villa özellikleri — sidebar'daki "Villa Özellikleri" bölümü
-       ve `ozellikler` token resolve'u için TEK liste. Mevcut
-       `Promise.all` içine girdiği için EK RTT YOKTUR. Hata durumunda
-       boş liste → bölüm boş metin gösterir, arama ETKİLENMEZ. */
-    loadHeroFeatures(locale).catch(() => []),
   ]);
+
+  /* 🛡️ PERF (O3) — EN/DE sidebar tip adı çevirisi YALNIZ `categoryOptions`
+     (cached taxonomy) listesine bağlıdır; arama sonucuna/URL filtresine
+     bağlı DEĞİLDİR. Bu yüzden burada, villa akışıyla EŞZAMANLI başlatılır
+     ve ESKİSİ GİBİ aşağıdaki sidebar bloğunda await edilir. Koşul, argüman
+     ve `.catch(() => ({}))` fallback'i BİREBİR aynı; TR'de sorgu HİÇ
+     başlatılmaz (null). `.catch` oluşturma anında bağlı → erken bir hata
+     sayfayı düşürürse unhandled rejection oluşmaz. */
+  const typeNamesPromise: Promise<Record<string, TaxonomyNameByLocale>> | null =
+    locale !== DEFAULT_LOCALE && categoryOptions.length > 0
+      ? getVillaTypeNamesByLocale(
+          categoryOptions.map((t) => String(t.id))
+        ).catch(() => ({}))
+      : null;
 
   /* ===============================================================
      🛡️ CATEGORY + REGION TOKEN → UUID RESOLVE
@@ -346,11 +370,15 @@ export default async function AramaPageBody({
 
      DEDUPE: aynı özellik iki kez gelirse (`ozellikler=a,a`) AND eşiği
      şişip yanlışlıkla 0 sonuç üretmesin diye tekilleştirilir. */
+  /* O4 — token varsa liste ÇÖZÜMDEN ÖNCE beklenir (eski davranış);
+     token yoksa sonuç listeden bağımsız `[]` olduğundan beklenmez. */
+  const featureOptionsForTokens =
+    featureTokensRaw.length > 0 ? await featureOptionsPromise : [];
   const featureIds = Array.from(
     new Set(
       resolveTokens(
         featureTokensRaw,
-        featureOptions.map((f) => ({ id: String(f.id), slug: null }))
+        featureOptionsForTokens.map((f) => ({ id: String(f.id), slug: null }))
       )
     )
   );
@@ -586,6 +614,28 @@ export default async function AramaPageBody({
      🛡️ FAZ 35 — Review stats batch paralel fetch: tek SQL ile
      tüm villa yorumlarının aggregate'i. main villa query ile
      Promise.all → ek RTT yok (net latency = max of two). */
+  /* 🛡️ PERF (O1) — kur haritası YALNIZ fiyat sıralamasında okunur.
+     `rates` bu gövdede yalnız iki yerde kullanılır: `needsStayTotalSort`
+     dalındaki `calculateGrandTotal` (yalnız price-asc/desc) ve
+     `applyPublicSort`'un `priceOpts`'u (yalnız price-asc/desc'te okunur —
+     lib/pagination.ts priceKey). smart/capacity'de değer HİÇBİR çıktıya
+     ulaşmaz → sorgu atlanır; boş harita, servisin hata dalıyla AYNI şekil.
+     Kart fiyat gösterimi client kurlarıyla yapılır; bu değerden bağımsız.
+
+     🛡️ PERF (O2) — kur okuması villa/müsaitlik akışının HİÇBİR çıktısına
+     bağlı değildir → villa sorgusuyla EŞZAMANLI başlatılır; değer ESKİSİ
+     GİBİ sıralamadan hemen önce (aşağıda, `cookies()` ile birlikte) await
+     edilir. Değer, argüman ve kullanım noktası DEĞİŞMEDİ; yalnız başlama
+     anı erkene alındı. `.catch` yan-dalı: aradaki bir await hata fırlatıp
+     sayfa bu promise'e hiç ulaşmazsa "unhandled rejection" oluşmasın diye
+     (asıl await hatayı ESKİSİ GİBİ görür; servis zaten reject etmez). */
+  const sort: PublicSort = parsePublicSort(sp.sort);
+  const isPriceSort = sort === "price-asc" || sort === "price-desc";
+  const ratesMapPromise: Promise<ExchangeRatesMap> = isPriceSort
+    ? getExchangeRatesMap()
+    : Promise.resolve({ rates: {}, updatedAt: null });
+  ratesMapPromise.catch(() => undefined);
+
   const [villaRes, reviewStatsMap] = await Promise.all([
     villaAdminRepository.findSearchResults({
       /* Tip + özellik kesişimi. Repository imzası/SQL'i DEĞİŞMEDİ. */
@@ -965,10 +1015,11 @@ export default async function AramaPageBody({
           VillaCard'la AYNI formül ve AYNI rates → gösterilen
           ekonomik değer === sıralama anahtarı.
      Capacity/smart sıralarda priceOpts kullanılmaz → ek maliyet 0. */
-  const sort: PublicSort = parsePublicSort(sp.sort);
+  /* `sort` + kur haritası promise'i yukarıda (O1/O2 — villa sorgusundan
+     önce) kurulur; burada AYNI noktada await edilir. */
   const [cookieStore, ratesMap] = await Promise.all([
     cookies(),
-    getExchangeRatesMap(),
+    ratesMapPromise,
   ]);
   const userCurrency =
     cookieStore.get("currency")?.value || "TRY";
@@ -1108,10 +1159,9 @@ export default async function AramaPageBody({
      =============================================================== */
   let sidebarCategoryOptions = categoryOptions;
   if (locale !== DEFAULT_LOCALE && categoryOptions.length > 0) {
+    /* O3 — promise yukarıda AYNI koşul + AYNI argümanla başlatıldı. */
     const typeNameByLocale: Record<string, TaxonomyNameByLocale> =
-      await getVillaTypeNamesByLocale(
-        categoryOptions.map((t) => String(t.id))
-      ).catch(() => ({}));
+      (await typeNamesPromise) ?? {};
     sidebarCategoryOptions = categoryOptions.map((t) => ({
       ...t,
       name: resolveTaxonomyName(
@@ -1121,6 +1171,9 @@ export default async function AramaPageBody({
       ),
     }));
   }
+
+  /* O4 — sidebar'ın özellik listesi render'dan ÖNCE hazır (aynı promise). */
+  const featureOptions = await featureOptionsPromise;
 
   /* Sidebar initial state — server'dan client'a tek seferde geçer.
      Çocuk Sayısı UI breakdown'u client'ta yapılır (URL semantic'i
