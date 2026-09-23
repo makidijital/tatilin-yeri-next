@@ -7,7 +7,11 @@ import HeaderWrapper from "@/app/components/layout/HeaderWrapper";
    (async server, DB'den veri çeker) kullanılır. Davranış BİREBİR aynı;
    yalnızca veri-çekme sorumluluğu Footer'dan FooterWrapper'a taşındı. */
 import FooterWrapper from "@/app/components/layout/FooterWrapper";
-import { getCachedVillas } from "@/lib/cache.helpers";
+/* 🛡️ PERF — öneri villaları artık dar, LIMIT 3'lü, istek-içi dedupe'lu
+   (React cache) sorgudan gelir; `getCachedVillas` (tüm liste, ~3 MB,
+   cache'lenemiyordu) KULLANILMAZ. Sıra/kapak/fiyat dönüşümü aynı
+   (`mapVilla`) — bkz. villa.service.ts > getNotFoundSuggestionVillas. */
+import { getNotFoundSuggestionVillas } from "@/app/services/villa.service";
 /* 🛡️ PUBLIC ÇOKLU DİL — görünen 404 gövdesi client island'a taşındı
    (locale `usePathname` ile türetilir; Header/Footer ile AYNI desen).
    Veri akışı (`getCachedVillas`) ve DOM/CSS DEĞİŞMEDİ. */
@@ -40,10 +44,10 @@ export const metadata: Metadata = {
 };
 
 export default async function NotFound() {
-  /* Öne çıkan villalar — getCachedVillas (aktif + sort_order/created_at
-     sıralı). İlk 3 = öne çıkan/son eklenen. Hata olursa bölüm gizlenir. */
-  const allVillas = await getCachedVillas().catch(() => []);
-  const featured = (allVillas || []).slice(0, 3);
+  /* Öne çıkan villalar — aktif + sort_order/created_at sıralı İLK 3
+     (eski `getCachedVillas().slice(0, 3)` ile aynı küme ve sıra).
+     Hata olursa bölüm gizlenir. */
+  const featured = await getNotFoundSuggestionVillas().catch(() => []);
 
   return (
     <div className="flex flex-col min-h-screen bg-[var(--color-ivory)]">

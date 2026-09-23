@@ -440,6 +440,62 @@ export const villaAdminRepository = {
   },
 
   /* ===============================================================
+     READ — root 404 öneri kartları (YALNIZ `app/not-found.tsx`)
+     ===============================================================
+     `listPublic` ile AYNI filtre (is_active=true + deleted_at IS NULL),
+     AYNI top-level order (sort_order ASC, created_at DESC) ve AYNI
+     cover-slim embed (villa_images is_cover desc/sort_order asc + limit1).
+     Fark yalnız: (1) kartın okuduğu SLIM kolonlar (`findActiveCuratorCards`
+     ile aynı desen), (2) villa_prices'ta yalnız `getStartingPrice`'ın
+     okuduğu price/currency, (3) top-level `LIMIT`.
+
+     NEDEN: not-found eskiden `getCachedVillas()` (1.417 villa, ~3 MB →
+     Next 2 MB data-cache limiti yüzünden HİÇ cache'lenemiyor) çekip
+     `.slice(0, 3)` yapıyordu; not-found tüm public sayfalarda fallback
+     olarak 2× render olduğu için bu sorgu her istekte 2× koşuyordu.
+
+     ⚠️ `listPublic` DEĞİŞMEDİ (/kiralik-villalar + anasayfa kullanıyor).
+     ⚠️ Hata tutumu `listPublic` ile aynı: log + [] (caller bölümü gizler).
+  =============================================================== */
+  async findNotFoundSuggestions(
+    limit: number
+  ): Promise<Record<string, unknown>[]> {
+    const { data, error } = await dbAdmin
+      .from("villa")
+      .select(
+        `
+        id, slug, title, guests, bedrooms, bathrooms,
+        location:villa_locations(name),
+        villa_images (image_url, is_cover, sort_order),
+        villa_prices (price, currency)
+      `
+      )
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("is_cover", {
+        referencedTable: "villa_images",
+        ascending: false,
+      })
+      .order("sort_order", {
+        referencedTable: "villa_images",
+        ascending: true,
+      })
+      .limit(1, { referencedTable: "villa_images" })
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error(
+        "[villa.repo.server.findNotFoundSuggestions] FAILED",
+        error.message
+      );
+      return [];
+    }
+    return (data || []) as Record<string, unknown>[];
+  },
+
+  /* ===============================================================
      READ — public /arama results (NATIVE EMBED twin, Migration S5B)
      ===============================================================
      🛡️ villa_discounts embed'i EKLENDİ — kart toplamı `calculateGrandTotal`'a

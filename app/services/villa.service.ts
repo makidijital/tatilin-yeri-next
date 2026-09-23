@@ -28,11 +28,13 @@
    native villaAdminRepository'ye bağlanır → call-site'lar
    (villaRepository.findByIds / villaAdminRepository.X) DEĞİŞMEZ. Anon
    villa.repository import'u kaldırıldı. */
+import { cache } from "react";
 import {
   villaAdminRepository,
   villaAdminRepository as villaRepository,
 } from "@/lib/db/villa.repository.server";
 import { getVillaReviewStatsBatch } from "./villa-review.service";
+import type { NotFoundSuggestionVilla } from "@/app/components/not-found/NotFoundContent";
 import { normalizeYouTubeVideos } from "@/lib/youtube.helper";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 /* 🛡️ Kart "…'den başlayan" fiyatı — villa_prices içindeki MIN nightly
@@ -611,6 +613,50 @@ export async function getVillas(): Promise<VillaDTO[]> {
     return dto;
   });
 }
+
+/* ===============================================================
+   📦 ROOT 404 ÖNERİ VİLLALARI — yalnız `app/not-found.tsx`
+   ===============================================================
+   ESKİ: `getCachedVillas()` → tüm public liste (1.417 villa, ~3 MB;
+   Next 2 MB data-cache limitini aştığı için HİÇ cache'lenmiyordu) →
+   `.slice(0, 3)`. not-found tüm public sayfalarda fallback olarak 2×
+   render olduğundan bu iş her istekte 2× koşuyordu.
+
+   YENİ: `findNotFoundSuggestions(3)` — AYNI filtre/sıra/cover-slim,
+   yalnız kart kolonları + LIMIT 3.
+
+   PARITY:
+     • Satırlar `mapVilla` ile map'lenir → images/price(?? 0)/currency
+       (|| "TRY")/location/slug/guests… dönüşümleri BİREBİR aynı helper.
+     • Çıktı yalnız `NotFoundSuggestionVilla` alanlarına daraltılır (kartın
+       okuduğu alanlar); görünen DOM değişmez, yalnız RSC payload küçülür.
+     • Review stats EKLENMEZ: NotFoundContent kartlara review geçirmiyor.
+
+   CACHE: YALNIZ React `cache()` — aynı istek içindeki 2 render tek
+   sorguyu paylaşır. İstekler arası cache YOK (unstable_cache/TTL yok) →
+   veri her istekte canlı, eski davranışla aynı tazelik.
+
+   ⚠️ getVillas / getCachedVillas / listPublic DEĞİŞMEDİ. */
+export const getNotFoundSuggestionVillas = cache(
+  async (): Promise<NotFoundSuggestionVilla[]> => {
+    const rows = await villaAdminRepository.findNotFoundSuggestions(3);
+    return (rows as unknown as Villa[]).map((row) => {
+      const dto = mapVilla(row);
+      return {
+        id: dto.id,
+        slug: dto.slug,
+        title: dto.title,
+        location: dto.location,
+        price: dto.price,
+        currency: dto.currency,
+        images: dto.images,
+        bedrooms: dto.bedrooms,
+        bathrooms: dto.bathrooms,
+        guests: dto.guests,
+      };
+    });
+  }
+);
 
 // 📦 ADMIN LISTING — pasif villalar dahil, soft-deleted hariç.
 // 🛡️ Sadece deleted_at IS NULL filter; is_active filter YOK
