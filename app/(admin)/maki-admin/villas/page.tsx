@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getVillasForAdminPage } from "@/app/services/villa.service";
 import { Plus, Home, Trash as TrashBin, ArrowDownUp } from "lucide-react";
 import VillaOperationsList from "./_components/VillaOperationsList";
+import { authorizeAdminSession } from "@/lib/admin-route-auth";
+import AdminPageSessionRefresh from "@/app/components/admin/AdminPageSessionRefresh";
 
 /* 🛡️ FORCE-DYNAMIC — production statik cache problemi çözümü.
    `searchParams` dinamik API olduğu için Next.js 16'da bu sayfa
@@ -75,6 +77,10 @@ export default async function VillasPage({
 }: {
   searchParams?: SearchParams;
 }) {
+  /* 🛡️ SEC-01 — AUTH ÖNCE, VERİ SONRA (bkz. maki-admin/page.tsx). */
+  const auth = await authorizeAdminSession();
+  if (!auth.ok) return <AdminPageSessionRefresh />;
+
   const sp = (await searchParams) || {};
   const page = parsePage(sp.page);
   const pageSize = parsePageSize(sp.pageSize);

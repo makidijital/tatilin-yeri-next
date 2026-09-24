@@ -4,6 +4,8 @@ import ManualReservationForm from "./ManualReservationForm";
    import'u güvenli. villaRepository yalnız findAllIdTitleSlug için
    kullanılıyor; call-site aynı (villaAdminRepository → villaRepository alias). */
 import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
+import { authorizeAdminSession } from "@/lib/admin-route-auth";
+import AdminPageSessionRefresh from "@/app/components/admin/AdminPageSessionRefresh";
 
 async function getVillas() {
   const { data, error } = await villaRepository.findAllIdTitleSlug();
@@ -23,6 +25,10 @@ export default async function Page({
 }: {
   searchParams?: SearchParams;
 }) {
+  /* 🛡️ SEC-01 — AUTH ÖNCE, VERİ SONRA (bkz. maki-admin/page.tsx). */
+  const auth = await authorizeAdminSession();
+  if (!auth.ok) return <AdminPageSessionRefresh />;
+
   const villas = await getVillas();
 
   const sp = (await searchParams) || {};

@@ -9,8 +9,17 @@ import { getOperationsSnapshot } from "@/app/services/operations.service";
 import ReservationsChart from "@/app/components/admin/dashboard/ReservationsChart";
 import UpcomingOperations from "@/app/components/admin/dashboard/UpcomingOperations";
 import HideableSection from "@/app/components/admin/dashboard/HideableSection";
+import { authorizeAdminSession } from "@/lib/admin-route-auth";
+import AdminPageSessionRefresh from "@/app/components/admin/AdminPageSessionRefresh";
 
 export default async function AdminHome() {
+  /* 🛡️ SEC-01 — AUTH ÖNCE, VERİ SONRA. Middleware yalnız optimistic
+     redirect kapısıdır (refresh cookie'nin varlığına bakar); gerçek
+     oturum burada mevcut `authorizeAdminSession()` ile doğrulanır.
+     Başarısızsa HİÇBİR sorgu çalışmaz, veri üretilmez. */
+  const auth = await authorizeAdminSession();
+  if (!auth.ok) return <AdminPageSessionRefresh />;
+
   /* Dashboard data fetch — yalnız operasyon odaklı sectionlar için
      gerçek veri çekilir. Eski statik KPI counts (toplam villa,
      toplam rezervasyon, tahmini gelir) UI cleanup'ı sonrası

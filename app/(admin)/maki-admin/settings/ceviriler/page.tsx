@@ -8,6 +8,8 @@ import { getPublicSettings } from "@/app/services/settings.service";
    turu YOK). Okuma başarısız olursa ekran boş çevirilerle açılır. */
 import { getSettingsTranslations } from "@/app/services/settings-translation.service";
 import type { SettingsTranslationsByLocale } from "@/lib/i18n/settings-translations.types";
+import { authorizeAdminSession } from "@/lib/admin-route-auth";
+import AdminPageSessionRefresh from "@/app/components/admin/AdminPageSessionRefresh";
 
 /* ===============================================================
    🛡️ ADMIN > SETTINGS > ÇEVİRİLER — server wrapper
@@ -46,6 +48,10 @@ function text(value: string | null | undefined): string {
 }
 
 export default async function SettingsCevirilerPage() {
+  /* 🛡️ SEC-01 — AUTH ÖNCE, VERİ SONRA (bkz. maki-admin/page.tsx). */
+  const auth = await authorizeAdminSession();
+  if (!auth.ok) return <AdminPageSessionRefresh />;
+
   const [settings, translationsResult] = await Promise.all([
     getPublicSettings().catch(() => null),
     getSettingsTranslations().catch(() => null),

@@ -5,6 +5,8 @@ import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { villaLocationRepository } from "@/lib/db/villa-location.repository";
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+import { authorizeAdminSession } from "@/lib/admin-route-auth";
+import AdminPageSessionRefresh from "@/app/components/admin/AdminPageSessionRefresh";
 
 import VillaListesiClient, {
   type VillaListesiRow,
@@ -82,6 +84,10 @@ type RawVilla = {
 };
 
 export default async function VillaListesiPage() {
+  /* 🛡️ SEC-01 — AUTH ÖNCE, VERİ SONRA (bkz. maki-admin/page.tsx). */
+  const auth = await authorizeAdminSession();
+  if (!auth.ok) return <AdminPageSessionRefresh />;
+
   /* Active villas + locations + categories + type relations paralel
      fetch. SELECT pattern /arama ve villaRepository.listPublic ile
      birebir aynı (yıldız + embed). */

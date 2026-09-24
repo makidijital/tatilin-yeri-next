@@ -3,6 +3,8 @@ import { ChevronLeft } from "lucide-react";
 
 import { getVillasForSortOrder } from "@/app/services/villa.service";
 import VillaSortPanel from "./_components/VillaSortPanel";
+import { authorizeAdminSession } from "@/lib/admin-route-auth";
+import AdminPageSessionRefresh from "@/app/components/admin/AdminPageSessionRefresh";
 
 /* ===============================================================
    🛡️ ADMIN — VILLA SIRALA (drag-drop only)
@@ -38,6 +40,10 @@ import VillaSortPanel from "./_components/VillaSortPanel";
 export const dynamic = "force-dynamic";
 
 export default async function VillaSiralaPage() {
+  /* 🛡️ SEC-01 — AUTH ÖNCE, VERİ SONRA (bkz. maki-admin/page.tsx). */
+  const auth = await authorizeAdminSession();
+  if (!auth.ok) return <AdminPageSessionRefresh />;
+
   // 🛡️ Admin listing: pasif villalar dahil; soft-deleted hariç.
   //    Minimal projection — panel yalnız id + title okuyor.
   const villas = await getVillasForSortOrder();
