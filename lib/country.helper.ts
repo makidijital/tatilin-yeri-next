@@ -1,10 +1,14 @@
 import { Country } from "country-state-city";
 
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+/* 🛡️ Aşama 7A — display mantığı (override + Intl + fallback sırası)
+   `lib/country-label.ts`'e BİREBİR taşındı; bu helper aynı sonucu
+   üretmek için ona delege eder. Server/admin/mail/voucher çağıranları
+   için imza ve çıktı DEĞİŞMEDİ. */
 import {
-  DEFAULT_LOCALE,
-  LOCALE_BCP47,
-  type Locale,
-} from "@/lib/i18n/config";
+  COUNTRY_DISPLAY_OVERRIDES,
+  formatCountryLabel,
+} from "@/lib/country-label";
 
 /* ===============================================================
    🌍 COUNTRY HELPER — display-side localization wrapper
@@ -35,11 +39,8 @@ import {
      library default'una düşmeye devam eder.
    =============================================================== */
 
-/* TR-specific Türkçe display override.
-   Sadece kullanıcının görünür text'ini etkiler; ISO code aynı kalır. */
-const COUNTRY_DISPLAY_OVERRIDES: Readonly<Record<string, string>> = {
-  TR: "Türkiye",
-};
+/* TR-specific Türkçe display override → `lib/country-label.ts`
+   (COUNTRY_DISPLAY_OVERRIDES). Değer DEĞİŞMEDİ. */
 
 /* ---------------------------------------------------------------
    getCountryLabel — ISO country code → display label
@@ -53,38 +54,11 @@ export function getCountryLabel(
   iso: string | null | undefined,
   locale: Locale = DEFAULT_LOCALE
 ): string {
-  if (!iso) return "";
-  const code = iso.toUpperCase();
-
-  /* 🛡️ PUBLIC ÇOKLU DİL — TR yolu BİREBİR korunur (override + library).
-     `locale` verilmediğinde de DEFAULT_LOCALE = "tr" → admin, mail ve
-     voucher çağıranlarının çıktısı DEĞİŞMEDİ. */
-  if (locale === DEFAULT_LOCALE) {
-    const override = COUNTRY_DISPLAY_OVERRIDES[code];
-    if (override) return override;
-    return Country.getCountryByCode(code)?.name || iso;
-  }
-
-  /* EN/DE: ülke adı platformun MEVCUT `Intl` altyapısından çözülür
-     (yeni bağımlılık/veri tablosu YOK). Çözülemezse library default'una,
-     o da yoksa ham koda düşer — sessiz UI kırılması yok. */
-  const localized = intlRegionName(code, locale);
-  return localized || Country.getCountryByCode(code)?.name || iso;
-}
-
-/** ISO 3166-1 alpha-2 → locale'e göre ülke adı. Desteklenmiyorsa "". */
-function intlRegionName(code: string, locale: Locale): string {
-  if (!/^[A-Z]{2}$/.test(code)) return "";
-  try {
-    const dn = new Intl.DisplayNames([LOCALE_BCP47[locale]], {
-      type: "region",
-    });
-    const name = dn.of(code);
-    /* `of()` bilinmeyen kodda kodun kendisini döndürebilir. */
-    return typeof name === "string" && name !== code ? name : "";
-  } catch {
-    return "";
-  }
+  return formatCountryLabel(
+    iso,
+    locale,
+    (code) => Country.getCountryByCode(code)?.name
+  );
 }
 
 /* ---------------------------------------------------------------

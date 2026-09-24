@@ -3,13 +3,18 @@
 import { convertPrice, formatCurrency } from "@/lib/currency";
 import { useCurrency } from "@/app/context/CurrencyContext";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 /* 🛡️ FAZ 2 frontend purge — `import { eski sağlayıcı }` KALDIRILDI.
    payment_methods fetch artık /api/public/payment-methods route'u
    üzerinden (aynı anon RLS bağlamı, aynı select shape). */
 import { getPublicSettingsAction as getPublicSettings } from "@/app/services/settings.action";
-import { Country, State } from "country-state-city";
-import { getCountryLabel } from "@/lib/country.helper";
+/* 🛡️ Aşama 7A — `country-state-city` (country.json + state.json,
+   ~636 KB ham) artık STATİK import EDİLMEZ; ilk JS bundle'dan çıktı.
+   Veri, mount sonrası `loadCountryStateModule()` ile lazy chunk'tan
+   yüklenir (listeler zaten useEffect'te doluyordu → SSR HTML aynı).
+   Görünen ülke adı için paketi import ETMEYEN saf helper kullanılır
+   (`getCountryLabel` ile BİREBİR aynı mantık). */
+import { formatCountryLabel } from "@/lib/country-label";
 import { Calendar, Users, CreditCard, CheckCircle2 } from "lucide-react";
 
 import {
@@ -66,6 +71,23 @@ import { localeHref } from "@/lib/i18n/locale-href";
 /* 🛡️ Uluslararası telefon — mevcut helper; yeni kütüphane YOK. */
 import { DIAL_CODES, joinPhone } from "@/lib/phone.helper";
 
+/* 🛡️ Aşama 7A — lazy `country-state-city` yükleyici.
+   Modül seviyesinde tek promise (aynı sayfada tekrar tekrar indirilmez).
+   Yükleme hata verirse promise sıfırlanır → sonraki mount yeniden dener. */
+type CountryStateModule = typeof import("@/lib/country-state.lazy");
+let countryStateModulePromise: Promise<CountryStateModule> | null = null;
+function loadCountryStateModule(): Promise<CountryStateModule> {
+  if (!countryStateModulePromise) {
+    countryStateModulePromise = import("@/lib/country-state.lazy").catch(
+      (err: unknown) => {
+        countryStateModulePromise = null;
+        throw err;
+      }
+    );
+  }
+  return countryStateModulePromise;
+}
+
 export default function ReservationForm({
   villa,
   prices,
@@ -120,21 +142,49 @@ export default function ReservationForm({
     initialPublicReservationFormData()
   );
 
-  useEffect(() => {
-    const allCountries = Country.getAllCountries();
-    setCountries(allCountries);
-  }, []);
+  /* 🛡️ Aşama 7A — lazy yüklenen modül + kullanıcının SON ülke seçimi.
+     `selectedCountryRef` null → kullanıcı henüz ülke seçmedi (mevcut
+     davranış: varsayılan TR). Async sonuç geldiğinde HER ZAMAN o anki
+     seçim okunur → eski/yarışan sonuç yeni seçimin state'ini EZEMEZ. */
+  const countryStateRef = useRef<CountryStateModule | null>(null);
+  const selectedCountryRef = useRef<string | null>(null);
 
+  /* Eski iki mount effect'inin (liste → sıralı liste + varsayılan TR +
+     TR şehirleri) BİRLEŞİK hâli. Aynı commit'te batch'lendikleri için
+     ekranda yalnız sıralı liste görünüyordu; nihai state BİREBİR aynı.
+     - Varsayılan ülke "TR" eskisi gibi mount'ta SENKRON atanır → form
+       state'i (payload, şehir select'inin aktifliği/metni) ilk client
+       render'dan itibaren AYNI kalır.
+     - Yalnız ülke/şehir LİSTELERİ lazy chunk yüklendikten sonra dolar.
+       SSR ve ilk client render'da listeler (eskisi gibi) boştur. */
   useEffect(() => {
-    const all = Country.getAllCountries();
-    const sorted = [
-      ...all.filter((c) => c.isoCode === "TR"),
-      ...all.filter((c) => c.isoCode !== "TR"),
-    ];
-    setCountries(sorted);
+    let cancelled = false;
     setForm((prev) => ({ ...prev, country: "TR" }));
-    const trCities = State.getStatesOfCountry("TR");
-    setCities(trCities);
+    loadCountryStateModule()
+      .then((mod) => {
+        /* Unmount sonrası state güncellemesi YAPILMAZ. */
+        if (cancelled) return;
+        countryStateRef.current = mod;
+        const all = mod.Country.getAllCountries();
+        const sorted = [
+          ...all.filter((c) => c.isoCode === "TR"),
+          ...all.filter((c) => c.isoCode !== "TR"),
+        ];
+        setCountries(sorted);
+        /* Yükleme sürerken kullanıcı ülke değiştirdiyse ONUN şehirleri;
+           değiştirmediyse varsayılan TR şehirleri (eski davranış). */
+        setCities(
+          mod.State.getStatesOfCountry(selectedCountryRef.current ?? "TR")
+        );
+      })
+      .catch(() => {
+        /* Chunk yüklenemezse listeler boş kalır (SSR çıktısıyla aynı
+           durum); ülke/şehir public formda zorunlu DEĞİL → gönderim
+           engellenmez, varsayılan ülke "TR" eskisi gibi payload'a gider. */
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -152,13 +202,19 @@ export default function ReservationForm({
   }, [form.guests]);
 
   const handleCountryChange = (countryCode: string) => {
+    selectedCountryRef.current = countryCode;
     setForm((prev) => ({
       ...prev,
       country: countryCode,
       city: "",
     }));
-    const stateList = State.getStatesOfCountry(countryCode);
-    setCities(stateList);
+    /* Modül yüklüyse eskisi gibi SENKRON güncellenir. Henüz yüklenmediyse
+       mount effect'i yüklenince `selectedCountryRef`'teki GÜNCEL seçimin
+       şehirlerini uygular (yarış yok). */
+    const mod = countryStateRef.current;
+    if (mod) {
+      setCities(mod.State.getStatesOfCountry(countryCode));
+    }
   };
 
   useEffect(() => {
@@ -1014,7 +1070,7 @@ export default function ReservationForm({
                       EN/DE'de Intl ülke adı. Option value hâlâ ISO code
                       (`c.isoCode`); form payload ve validation aynen
                       ISO code akar. */}
-                  {getCountryLabel(c.isoCode, activeLocale)}
+                  {formatCountryLabel(c.isoCode, activeLocale, () => c.name)}
                 </option>
               ))}
             </select>
