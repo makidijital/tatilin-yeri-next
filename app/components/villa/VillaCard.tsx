@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 
 import {
   MapPin,
@@ -50,19 +49,53 @@ import type { Locale } from "@/lib/i18n/config";
 /* 🛡️ FAZ 36 — Guest favorites button. localStorage-only;
    no DB / no API / no server action / no auth. */
 import FavoriteButton from "@/app/components/favorites/FavoriteButton";
+/* Tip-only import → bundle'a modal kodunu SOKMAZ (7C lazy yükleme). */
+import type BookingModalComponent from "./VillaCardBookingModal";
 
 /* ===============================================================
-   🛡️ VillaCardBookingModal — LAZY import
+   🛡️ VillaCardBookingModal — LAZY import (Aşama 7C: GERÇEK lazy)
    ===============================================================
-   ssr:false → modal closed iken bundle parse YOK, network YOK.
-   Modal mount yalnız user "Müsaitlik / Tarih Seç" butonuna
-   tıklayınca olur. Aynı useBookingEngine + child component'leri
-   kullanır (BookingSidebar ile TEK source-of-truth).
+   Önceki durum: `next/dynamic(ssr:false)` + modal `isOpen={false}` ile
+   HER kartta render ediliyordu → modal chunk'ı (+ BookingCalendar,
+   react-day-picker, date-fns, RDP CSS) hydration'dan hemen sonra,
+   kullanıcı hiç tıklamadan indiriliyordu; SSR HTML'e de her kart için
+   boş bir BAILOUT_TO_CLIENT_SIDE_RENDERING <template> yazılıyordu.
+
+   Şimdi: modal modülü yalnız açılış niyetinde (fare üstüne gelme /
+   basma / klavye odağı / tıklama) `import()` ile yüklenir ve modal
+   YALNIZ `isBookingOpen && modül hazır` iken mount edilir. Suspense/
+   next/dynamic kullanılmaz → React'in Suspense yeniden-deneme
+   gecikmesi (fallback throttle) yok; modül hazır olduğu an açılır.
+   Modal kapalıyken zaten `null` döndürüyor ve her açılışta içeriğini
+   sıfırdan kuruyordu (apiData reset + ModalContent yeniden mount) →
+   kapanma/yeniden açılma davranışı AYNI kalır. Aynı useBookingEngine
+   + child component'leri kullanır (BookingSidebar ile TEK
+   source-of-truth).
    =============================================================== */
-const VillaCardBookingModal = dynamic(
-  () => import("./VillaCardBookingModal"),
-  { ssr: false }
-);
+type LazyBookingModalType = typeof BookingModalComponent;
+let bookingModalPromise: Promise<LazyBookingModalType> | null = null;
+let loadedBookingModal: LazyBookingModalType | null = null;
+function loadVillaCardBookingModal(): Promise<LazyBookingModalType> {
+  if (!bookingModalPromise) {
+    bookingModalPromise = import("./VillaCardBookingModal").then(
+      (mod) => {
+        loadedBookingModal = mod.default;
+        return mod.default;
+      },
+      (err: unknown) => {
+        /* Hata → promise sıfırlanır; sonraki niyet/tıklama yeniden dener. */
+        bookingModalPromise = null;
+        throw err;
+      }
+    );
+  }
+  return bookingModalPromise;
+}
+function preloadVillaCardBookingModal() {
+  loadVillaCardBookingModal().catch(() => {
+    /* Önyükleme başarısızsa sessiz geç; tıklama yeniden dener. */
+  });
+}
 
 type StayPrice = {
   price: number;
@@ -229,10 +262,38 @@ export default function VillaCard({
      — gradient bg zaten skeleton görevi görüyor, hydration-safe.) */
   const [imgFailed, setImgFailed] = useState(false);
 
-  /* 🛡️ Booking modal — lazy mount. isOpen=false iken
-     VillaCardBookingModal HİÇ mount edilmez (next/dynamic ssr:false +
-     erken-return), bu yüzden fetch/engine de çalışmaz. */
+  /* 🛡️ Booking modal — lazy mount. isBookingOpen=false iken
+     VillaCardBookingModal HİÇ mount edilmez (Aşama 7C) ve modülü
+     indirilmez; bu yüzden fetch/engine de çalışmaz. */
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  /* 🛡️ Aşama 7C — lazy yüklenen modal bileşeni (null → henüz hazır
+     değil). Tıklamada `isBookingOpen` HEMEN true olur (niyet kaybolmaz);
+     bileşen hazır olduğu an modal açılır. Bu sayfada modül daha önce
+     yüklendiyse (başka kart) anında hazırdır. */
+  const [VillaCardBookingModal, setVillaCardBookingModal] =
+    useState<LazyBookingModalType | null>(() => loadedBookingModal);
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+  const ensureBookingModal = () => {
+    if (VillaCardBookingModal) return;
+    if (loadedBookingModal) {
+      setVillaCardBookingModal(() => loadedBookingModal);
+      return;
+    }
+    loadVillaCardBookingModal()
+      .then((Modal) => {
+        /* Unmount sonrası state güncellemesi YAPILMAZ. */
+        if (isMountedRef.current) setVillaCardBookingModal(() => Modal);
+      })
+      .catch(() => {
+        /* Yüklenemezse modal açılmaz; sonraki tıklama yeniden dener. */
+      });
+  };
 
   const { currency, rates } = useCurrency();
 
@@ -897,7 +958,11 @@ export default function VillaCard({
               e.preventDefault();
               e.stopPropagation();
               setIsBookingOpen(true);
+              ensureBookingModal();
             }}
+            onPointerEnter={preloadVillaCardBookingModal}
+            onPointerDown={preloadVillaCardBookingModal}
+            onFocus={preloadVillaCardBookingModal}
             aria-label={dict.card.availabilityAriaLabel}
             className={
               "w-full inline-flex items-center justify-center gap-2 " +
@@ -1551,7 +1616,11 @@ export default function VillaCard({
                 e.preventDefault();
                 e.stopPropagation();
                 setIsBookingOpen(true);
+                ensureBookingModal();
               }}
+              onPointerEnter={preloadVillaCardBookingModal}
+              onPointerDown={preloadVillaCardBookingModal}
+              onFocus={preloadVillaCardBookingModal}
               aria-label={dict.card.availabilityAriaLabel}
               className={
                 "shrink-0 mx-auto inline-flex items-center justify-center gap-1.5 whitespace-nowrap " +
@@ -1596,7 +1665,7 @@ export default function VillaCard({
             buton görsel olarak çalışır ama modal mount olmaz —
             UX'i bozmaz, sadece açılmaz.
         ──────────────────────────────────────────────────── */}
-    {id && (
+    {id && isBookingOpen && VillaCardBookingModal && (
       /* Modal artık `prices` / `cleaning_*` prop'larını ALMAZ — kendi
          server-side API çağrısıyla (BookingSidebar ile birebir aynı
          kaynaktan) çeker. Bu drift kapatır: VillaCard caller'ları
