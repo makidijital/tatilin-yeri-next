@@ -21,7 +21,6 @@ import type { Locale } from "@/lib/i18n/config";
 
 const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.NEXT_PUBLIC_VERCEL_URL ||
   ""
 ).replace(/\/+$/, "");
 

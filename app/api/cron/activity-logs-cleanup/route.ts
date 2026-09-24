@@ -6,8 +6,8 @@ import { adminActivityLogRepository } from "@/lib/db/admin-activity-log.reposito
 /* ===============================================================
    🛡️ CRON — ACTIVITY LOGS RETENTION (thin wrapper)
    ===============================================================
-   Vercel cron schedule: her gece (vercel.json crons[]).
-   Tetikleyici: Vercel cron infrastructure → GET /api/cron/activity-
+   Zamanlama: her gece (Coolify Scheduled Task).
+   Tetikleyici: zamanlanmış görev → GET /api/cron/activity-
    logs-cleanup (Authorization: Bearer <CRON_SECRET>).
 
    ⚠️ TASARIM PRENSİBİ:

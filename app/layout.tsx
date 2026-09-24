@@ -102,7 +102,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     /* 🛡️ metadataBase — TÜM relative canonical/OG URL'lerini canonical
        domain'e çözer (yoksa Next localhost'a düşerdi). Yalnız
-       NEXT_PUBLIC_SITE_URL'den; preview/VERCEL domain canonical'a sızmaz. */
+       NEXT_PUBLIC_SITE_URL'den (bkz. lib/seo.ts). */
     metadataBase: siteMetadataBase(),
     title,
     description,

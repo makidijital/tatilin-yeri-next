@@ -61,7 +61,6 @@ export async function buildVillasArchiveMetadata(
      yoksa relative path. Locale canonical'ı kullanılır. */
   const siteUrl = (
     process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.NEXT_PUBLIC_VERCEL_URL ||
     ""
   ).replace(/\/+$/, "");
   const pageUrl = siteUrl ? `${siteUrl}${canonical}` : canonical;

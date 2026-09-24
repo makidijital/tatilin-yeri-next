@@ -6,8 +6,8 @@ import { STORAGE_BUCKETS, type StorageBucket } from "./storage.constants";
    AMAÇ:
      Read (public URL) tarafı. `getPublicUrl` bucket başına CDN base
      URL'inden absolute R2 URL üretir:
-       villa-images → NEXT_PUBLIC_CDN_BASE_VILLA_IMAGES (cdn.villayagel.com)
-       site-assets  → NEXT_PUBLIC_CDN_BASE_SITE_ASSETS  (assets.villayagel.com)
+       villa-images → NEXT_PUBLIC_CDN_BASE_VILLA_IMAGES
+       site-assets  → NEXT_PUBLIC_CDN_BASE_SITE_ASSETS
 
    ⚠️ KAPSAM — yalnız READ (public URL üretimi):
      upload / remove bu dosyaya dokunmaz.
@@ -45,7 +45,7 @@ export function getCdnBaseForBucket(bucket: string): string | null {
 /**
  * Bucket için CDN base tanımlıysa absolute R2 URL döner; aksi halde null.
  *   resolveCdnPublicUrl("tatilinyeri-villa-images", "villas/x/y.webp")
- *     → "https://cdn.villayagel.com/villas/x/y.webp"
+ *     → "<NEXT_PUBLIC_CDN_BASE_VILLA_IMAGES>/villas/x/y.webp"
  */
 export function resolveCdnPublicUrl(
   bucket: string,
@@ -61,7 +61,7 @@ export function resolveCdnPublicUrl(
 
 /**
  * CDN host → bucket eşlemesi (parseVillaStorageUrl remove yolu için).
- * Bir CDN URL'inin (cdn./assets.villayagel.com) hangi bucket'a ait
+ * Bir CDN URL'inin (NEXT_PUBLIC_CDN_BASE_* host'ları) hangi bucket'a ait
  * olduğunu, env'deki CDN base host'larıyla eşleştirerek bulur.
  * Eşleşme yoksa null.
  */

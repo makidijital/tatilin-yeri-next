@@ -126,14 +126,36 @@ describe("SEC-05 — next.config headers()", () => {
     }
   });
 
-  it("images.remotePatterns aynen korunur (legacy + CDN)", () => {
+  it("images.remotePatterns: legacy korunur; CDN env yoksa eski/sabit domain'e dönülmez", () => {
     const pats = nextConfig.images?.remotePatterns ?? [];
     expect(pats[0]).toEqual({
       protocol: "https",
       hostname: "**.supabase.co",
       pathname: "/storage/v1/object/public/**",
     });
-    expect(pats.length).toBeGreaterThanOrEqual(2);
+    /* Test ortamında NEXT_PUBLIC_CDN_BASE_* tanımsız → yalnız legacy. */
+    expect(pats).toHaveLength(1);
+    expect(JSON.stringify(pats)).not.toMatch(/villayagel/i);
+  });
+
+  it("images.remotePatterns: CDN host'ları env'den eklenir", async () => {
+    vi.resetModules();
+    vi.stubEnv("NEXT_PUBLIC_CDN_BASE_VILLA_IMAGES", "https://cdn.env-test.example");
+    vi.stubEnv("NEXT_PUBLIC_CDN_BASE_SITE_ASSETS", "https://assets.env-test.example/");
+    try {
+      const cfg = (await import("@/next.config")).default;
+      const hosts = (cfg.images?.remotePatterns ?? []).map((p) =>
+        typeof p === "object" && "hostname" in p ? p.hostname : ""
+      );
+      expect(hosts).toEqual([
+        "**.supabase.co",
+        "cdn.env-test.example",
+        "assets.env-test.example",
+      ]);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
   });
 });
 

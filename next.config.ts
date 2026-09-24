@@ -4,30 +4,36 @@ import type { NextConfig } from "next";
    🛡️ NEXT.JS CONFIG — next/image remote patterns
    ===============================================================
    Görseller Cloudflare R2'den, CDN host'ları üzerinden servis edilir.
-   Host'lar env'den türetilir; env yoksa proje default'larına düşer.
+   Host'lar YALNIZ env'den (`NEXT_PUBLIC_CDN_BASE_*`) türetilir. Env
+   yoksa/geçersizse o CDN host'u remotePatterns'a EKLENMEZ (eski/sabit
+   bir domain'e sessizce dönülmez) ve build/start sırasında uyarı
+   yazılır. `lib/storage/cdn.config.ts` ve CSP de aynı kuralı izler.
    =============================================================== */
-function hostFromBase(
-  base: string | undefined,
-  fallback: string
-): string {
+function hostFromBase(base: string | undefined, envName: string): string | null {
   try {
-    return base ? new URL(base).hostname : fallback;
+    if (base) return new URL(base).hostname || null;
   } catch {
-    return fallback;
+    /* geçersiz URL → aşağıda uyarı */
   }
+  if (process.env.NODE_ENV === "production") {
+    console.warn(
+      `[next.config] ${envName} tanımsız/geçersiz — bu CDN host'u next/image remotePatterns'a eklenmedi.`
+    );
+  }
+  return null;
 }
 const villaImagesCdnHost = hostFromBase(
   process.env.NEXT_PUBLIC_CDN_BASE_VILLA_IMAGES,
-  "cdn.villayagel.com"
+  "NEXT_PUBLIC_CDN_BASE_VILLA_IMAGES"
 );
 const siteAssetsCdnHost = hostFromBase(
   process.env.NEXT_PUBLIC_CDN_BASE_SITE_ASSETS,
-  "assets.villayagel.com"
+  "NEXT_PUBLIC_CDN_BASE_SITE_ASSETS"
 );
 
 const cdnHosts = Array.from(
   new Set([villaImagesCdnHost, siteAssetsCdnHost])
-).filter(Boolean);
+).filter((h): h is string => !!h);
 
 /* ⚠️ LEGACY ASSET HOST — GEÇİCİ, VERİ TEMİZLİĞİ BEKLİYOR
    Veritabanındaki bazı asset alanları (villa_images.image_url,

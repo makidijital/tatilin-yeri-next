@@ -28,12 +28,12 @@ import { Redis } from "@upstash/redis";
        → Production'da bu env'ler set EDİLMELİ.
 
    IP RESOLUTION (graceful fallback chain):
-     1) `x-forwarded-for` (Vercel/proxy chain ilk IP)
+     1) `x-forwarded-for` (reverse proxy chain ilk IP)
      2) `x-real-ip` (bazı reverse proxy'ler)
      3) `cf-connecting-ip` (Cloudflare)
      4) → "unknown" (rate-limit yine uygulanır, bucket "unknown"
         olur — tüm anonim trafik aynı bucket'ı paylaşır;
-        production'da Vercel `x-forwarded-for` her zaman set
+        production'da reverse proxy (Coolify/Traefik) `x-forwarded-for`'u set
         edildiği için pratik bir sorun yok)
 
    KEY NAMESPACE:
@@ -45,8 +45,8 @@ import { Redis } from "@upstash/redis";
      - Her grup için Ratelimit instance singleton (modül-level cache)
      - Sliding window: daha gerçekçi davranış (sabit pencere edge'lerinde
        burst patlamaz)
-     - ~3-10ms typical Upstash latency (Europe edge), Vercel function
-       cold start dışında trivial
+     - ~3-10ms typical Upstash latency (Europe edge); pratikte
+       trivial
 
    GROUP LIMITS:
      mail              → 5  req/dakika/IP   (spam koruması)
@@ -186,7 +186,7 @@ function getRatelimit(group: RateLimitGroup): Ratelimit | null {
 }
 
 /* ---------------------------------------------------------------
-   IP resolution — Vercel/proxy chain fallback
+   IP resolution — reverse proxy chain fallback
    --------------------------------------------------------------- */
 function resolveClientIp(req: Request): string {
   const h = req.headers;

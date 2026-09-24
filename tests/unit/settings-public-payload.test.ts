@@ -60,7 +60,7 @@ describe("getPublicSettings — §5 çeviri payload'ı", () => {
   it("1) multilingual KAPALI → çeviri sorgusu HİÇ atılmaz, AYNI referans döner", async () => {
     const rpcObject = {
       id: "settings-1",
-      site_name: "VillayaGel",
+      site_name: "Tatilin Yeri",
       multilingual_enabled: false,
       footer_copyright: "© {year} {site_name} · Tüm hakları saklıdır",
     };
@@ -74,7 +74,7 @@ describe("getPublicSettings — §5 çeviri payload'ı", () => {
   });
 
   it("2) multilingual alanı HİÇ YOKSA (null/undefined) → yine sorgu atılmaz", async () => {
-    const rpcObject = { id: "settings-1", site_name: "VillayaGel" };
+    const rpcObject = { id: "settings-1", site_name: "Tatilin Yeri" };
     findPublicViaRpcMock.mockResolvedValue({ data: rpcObject, error: null });
 
     const result = await getPublicSettings();

@@ -178,7 +178,7 @@ export default async function FooterWrapper() {
   );
 
   const year = new Date().getFullYear();
-  const siteName = settings?.site_name || "VillayaGel";
+  const siteName = settings?.site_name || "Villa Kiralama";
   const phoneDigits = settings?.phone?.replace(/[^\d]/g, "") || "";
 
   return (

@@ -7,24 +7,17 @@
      için TEK source-of-truth sağlar.
 
    İKİ AYRI KAVRAM (bilinçli):
-     • SITE_URL — genel kullanım (sitemap/robots base). VERCEL_URL
-       fallback'i dahil (preview deploy'larda da bir base olsun diye).
+     • SITE_URL — genel kullanım (sitemap/robots base). Yalnız
+       NEXT_PUBLIC_SITE_URL; tanımsızsa "" (relative).
      • siteMetadataBase() — CANONICAL domain. YALNIZ explicit
-       NEXT_PUBLIC_SITE_URL. Preview/VERCEL domain'i canonical'a ASLA
-       sızmasın diye fallback YOK. Tanımsızsa undefined → Next default
-       (prod'da NEXT_PUBLIC_SITE_URL set EDİLMELİ).
-
-   ⚠️ Canonical neden VERCEL_URL kullanmamalı:
-     VERCEL_URL preview/deploy domain'idir (proje-hash.vercel.app) ve
-     şema-sizdir. Canonical'a girerse arama motoru yanlış domain'i
-     kanonik sanar (duplicate-domain). Bu yüzden metadataBase yalnız
-     gerçek canonical domain'den türetilir.
+       NEXT_PUBLIC_SITE_URL; şema yoksa https:// eklenir. Tanımsızsa
+       undefined → Next default (prod'da NEXT_PUBLIC_SITE_URL set
+       EDİLMELİ; build anında da tanımlı olmalı).
    =============================================================== */
 
-/** Genel site URL — sitemap/robots base. VERCEL_URL fallback dahil. */
+/** Genel site URL — sitemap/robots base (yalnız NEXT_PUBLIC_SITE_URL). */
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.NEXT_PUBLIC_VERCEL_URL ||
   ""
 ).replace(/\/+$/, "");
 

@@ -1,13 +1,11 @@
 # Coolify Scheduled Tasks — Kurulum Dokümanı
 
-**Bağlam:** Deploy ortamı Hetzner VPS + Coolify. `vercel.json` içindeki `crons[]`
-**yalnız Vercel platformunda** çalışır → bu ortamda **hiçbiri tetiklenmiyor**.
-Coolify "Scheduled Tasks" ekranı boş olduğu için 4 mevcut cron şu an otomatik
-çalışmıyor. Bu doküman, aynı işleri Coolify Scheduled Tasks ile çalıştırmak için
-eksiksiz kurulumu verir.
+**Bağlam:** Deploy ortamı Hetzner VPS + Coolify. Cron işleri Coolify
+"Scheduled Tasks" ile tetiklenir. Eski Vercel'e özgü `vercel.json` (`crons[]`)
+Coolify tarafından okunmadığı için repodan kaldırıldı; zamanlamaların tek
+kaynağı bu dokümandır.
 
-> Kod/dosya değişikliği YOK. Bu yalnız operasyon dokümanıdır. `vercel.json`
-> olduğu gibi kalabilir (Vercel'e taşınırsa diye); Coolify onu yok sayar.
+> Bu yalnız operasyon dokümanıdır.
 
 ---
 
@@ -60,7 +58,7 @@ env'indeki `$CRON_SECRET`'ten okur (secret task tanımına yazılmaz).
 2. Container'da `curl` olmalı. Next.js node image'larında genelde vardır;
    yoksa komutu `wget` ile değiştir (bkz. her task'ın altındaki not).
 3. **Zaman dilimi:** Coolify cron'ları container TZ'sinde (genelde **UTC**)
-   çalışır. Aşağıdaki saatler `vercel.json`'daki UTC değerleridir. Türkiye
+   çalışır. Aşağıdaki saatler UTC değerleridir. Türkiye
    saati (UTC+3) istiyorsan saatleri 3 saat geri al (örn. TR 06:00 → UTC `0 3 * * *`).
 4. **`DOMAIN`** = sitenin public host'u (`NEXT_PUBLIC_SITE_URL`). Aşağıda
    `https://DOMAIN` yerine onu yaz. Alternatif: container içinden

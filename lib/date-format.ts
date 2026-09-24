@@ -108,7 +108,7 @@ export function parseLocalDate(s: string): Date {
    🛡️ MANUAL OFFSET (Intl-INDEPENDENT) — NEDEN:
    Üst üste yapılan denemelerde Intl.DateTimeFormat'in `dateStyle/
    timeStyle` ve hatta granular options + `timeZone` kombinasyonları
-   bazı production runtime'larda (Vercel edge, Next.js minified
+   bazı production runtime'larda (edge runtime, Next.js minified
    bundle, ICU-small) sessizce `timeZone`'u yutuyor → UTC bleed.
 
    Çözüm: hiç Intl'a girmeden manuel matematik. Türkiye 2016'da

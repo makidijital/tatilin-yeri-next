@@ -1,11 +1,10 @@
 import "server-only";
 
 /* ===============================================================
-   🛡️ CRON AUTH GUARD — Vercel cron Bearer secret doğrulama
+   🛡️ CRON AUTH GUARD — zamanlanmış görev Bearer secret doğrulama
    ===============================================================
-   Vercel cron her scheduled invocation'da `Authorization: Bearer
-   <CRON_SECRET>` header'ı otomatik gönderir (env CRON_SECRET set
-   ise). Bu guard:
+   Zamanlanmış görev (Coolify Scheduled Task) her çağrıda
+   `Authorization: Bearer <CRON_SECRET>` header'ı gönderir. Bu guard:
      • CRON_SECRET env eksik → 503 (fail-closed; production'da
        cron'un sessiz çalışıyor görünmesin)
      • Authorization header yok / yanlış → 401

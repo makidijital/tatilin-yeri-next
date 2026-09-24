@@ -32,7 +32,7 @@ import { applyRateLimit } from "@/lib/rate-limit";
 
    CACHE SEMANTICS:
      `runtime=nodejs` + `dynamic=force-dynamic` + `Cache-Control:
-     no-store` → Next/Vercel/CDN cache'lemesin. exchange_rates
+     no-store` → Next/proxy/CDN cache'lemesin. exchange_rates
      güncellenince public sayfa anında yeni değeri görsün.
      (Rate-limit zaten request başına çalışıyor; cache olsa idi
      limit anlamsızlaşırdı.)

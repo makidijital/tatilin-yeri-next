@@ -7,8 +7,8 @@ import { syncExternalCalendarSource } from "@/app/services/external-calendar.ser
 /* ===============================================================
    🛡️ CRON — EXTERNAL CALENDAR SYNC (thin wrapper)
    ===============================================================
-   Vercel cron schedule: her 4 saatte bir (vercel.json crons[]).
-   Tetikleyici: Vercel cron infrastructure → GET /api/cron/external-
+   Zamanlama: her 4 saatte bir (Coolify Scheduled Task).
+   Tetikleyici: zamanlanmış görev → GET /api/cron/external-
    calendar-sync (Authorization: Bearer <CRON_SECRET>).
 
    ⚠️ TASARIM PRENSİBİ:
@@ -27,7 +27,7 @@ import { syncExternalCalendarSource } from "@/app/services/external-calendar.ser
    ⚠️ ACTIVITY LOG:
      Admin sync route'undaki `insertAdminActivityLog` cron context'inde
      YOK (cron operation admin değil; activity log admin operasyonları
-     içindir). Cron sonucu Vercel cron logs'unda izlenir. Sentry'ye
+     içindir). Cron sonucu uygulama log'larında izlenir. Sentry'ye
      fail durumunda otomatik akar (instrumentation onRequestError).
 
    ⚠️ KAPSAM:
@@ -39,7 +39,7 @@ import { syncExternalCalendarSource } from "@/app/services/external-calendar.ser
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/* GET — Vercel cron varsayılan method.
+/* GET — zamanlanmış görevin çağırdığı method.
    POST eklemiyoruz; tek entry point yeterli. */
 export async function GET(req: Request) {
   const auth = authorizeCronRequest(req);
@@ -124,9 +124,9 @@ export async function GET(req: Request) {
     `fail=${failCount}`
   );
 
-  /* HTTP 200 — Vercel cron başarı kabul eder; partial failure
-     individual source error'larında. Aggregate JSON Vercel cron logs
-     panel'inde görünür. */
+  /* HTTP 200 — zamanlayıcı başarı kabul eder; partial failure
+     individual source error'larında. Aggregate JSON yanıtta ve
+     uygulama log'larında görünür. */
   return NextResponse.json({
     ok: true,
     total: results.length,

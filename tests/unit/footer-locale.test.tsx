@@ -38,7 +38,7 @@ const BASE_PROPS = {
   villaTypes: [],
   corporatePages: [],
   year: 2026,
-  siteName: "VillayaGel",
+  siteName: "Tatilin Yeri",
   phoneDigits: "",
 };
 
@@ -222,7 +222,7 @@ const PROPS_WITH_TAXONOMY_AND_CMS = {
     },
   ],
   year: 2026,
-  siteName: "VillayaGel",
+  siteName: "Tatilin Yeri",
   phoneDigits: "",
 };
 

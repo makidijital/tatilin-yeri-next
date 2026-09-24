@@ -4,7 +4,7 @@ import { getCachedSettings } from "@/lib/cache.helpers";
 import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
 
 /* ===============================================================
-   🛡️ PageHero — "YazVillam Signature" (from-scratch, v2)
+   🛡️ PageHero — "Signature" (from-scratch, v2)
    ===============================================================
    Tüm public iç sayfaların ortak üst başlık bandı. Ortalanmış
    editorial masthead; tipografi odak. Async server component.

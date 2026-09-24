@@ -22,9 +22,8 @@ import { NextResponse } from "next/server";
 
    YORUM:
    - serverStartTime: bu Node process'in başladığı an (module load
-     zamanı). Vercel serverless'te cold start anı. Self-hosted'da
-     `next start` çağrı anı. Deploy sonrası bu değerin değişmesi
-     beklenir → eğer aynı kalıyorsa stale runtime.
+     zamanı); Coolify'da `next start` çağrı anı. Deploy sonrası bu
+     değerin değişmesi beklenir → eğer aynı kalıyorsa stale runtime.
    - now: current request time. serverStartTime ile farkı uptime
      verir.
    - nodeVersion: pin doğrulama (.nvmrc ile uyumlu mu).

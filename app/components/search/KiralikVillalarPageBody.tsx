@@ -127,7 +127,6 @@ const SORT_DICT_KEY: Record<PublicSort, keyof SearchDictionary["sortOptions"]> =
 
 const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.NEXT_PUBLIC_VERCEL_URL ||
   ""
 ).replace(/\/+$/, "");
 

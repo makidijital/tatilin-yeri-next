@@ -208,7 +208,7 @@ const FOOTER_BASE = {
   locations: [],
   corporatePages: [],
   year: 2026,
-  siteName: "VillayaGel",
+  siteName: "Tatilin Yeri",
   phoneDigits: "",
 };
 

@@ -233,7 +233,7 @@ describe("FooterWrapper — settings cache'ten, taksonomi AYNEN repository'den",
     const el = await FooterWrapper();
 
     expect(el.props.settings).toBeNull();
-    expect(el.props.siteName).toBe("VillayaGel");
+    expect(el.props.siteName).toBe("Villa Kiralama");
     /* Diğer fetch'ler etkilenmez — ÖNCEKİ davranış. */
     expect(el.props.locations[0].name).toBe("REPO-REGION");
   });

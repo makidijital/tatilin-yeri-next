@@ -208,11 +208,11 @@ export async function POST(req: Request) {
        AYNEN gönderildi; bu EK gönderim BEST-EFFORT — başarısızlığı
        müşteri response'unu ETKİLEMEZ. Ayrı `mailType` → müşteri
        mail_logs satırı değişmez (admin için ayrı satır eklenir).
-       Adres env'den (default rezervasyon@villayagel.com); boşsa atlanır.
+       Adres yalnız env'den (MAIL_ADMIN_NOTIFY_TO); boşsa atlanır.
        Şablon / diğer route'lar / müşteri subject DOKUNULMADI. */
-    const adminNotifyTo = (
-      process.env.MAIL_ADMIN_NOTIFY_TO || "rezervasyon@villayagel.com"
-    ).trim();
+    /* Alıcı YALNIZ env'den; tanımsız/boşsa admin kopyası atlanır
+       (sabit/eski bir adrese fallback YOK). */
+    const adminNotifyTo = (process.env.MAIL_ADMIN_NOTIFY_TO || "").trim();
     if (adminNotifyTo) {
       const adminSubject = subject.replace(
         "Rezervasyon talebiniz alındı",
@@ -238,6 +238,8 @@ export async function POST(req: Request) {
           adminErr instanceof Error ? adminErr.message : adminErr
         );
       }
+    } else {
+      console.warn("[mail.reservation_request.admin] SKIPPED — MAIL_ADMIN_NOTIFY_TO tanımsız");
     }
 
     console.log("[mail.reservation_request] SENT", {

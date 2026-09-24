@@ -191,7 +191,7 @@ const FOOTER_BASE = {
   villaTypes: [],
   corporatePages: [],
   year: 2026,
-  siteName: "VillayaGel",
+  siteName: "Tatilin Yeri",
   phoneDigits: "",
 };
 
@@ -207,7 +207,7 @@ describe("Footer — footer_copyright locale-aware (§7)", () => {
       />
     );
     expect(
-      screen.getByText("© 2026 VillayaGel · Tüm hakları saklıdır.")
+      screen.getByText("© 2026 Tatilin Yeri · Tüm hakları saklıdır.")
     ).toBeInTheDocument();
   });
 
@@ -220,10 +220,10 @@ describe("Footer — footer_copyright locale-aware (§7)", () => {
       />
     );
     expect(
-      screen.getByText("© 2026 VillayaGel · All rights reserved.")
+      screen.getByText("© 2026 Tatilin Yeri · All rights reserved.")
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("© 2026 VillayaGel · Tüm hakları saklıdır.")
+      screen.queryByText("© 2026 Tatilin Yeri · Tüm hakları saklıdır.")
     ).not.toBeInTheDocument();
   });
 
@@ -236,7 +236,7 @@ describe("Footer — footer_copyright locale-aware (§7)", () => {
       />
     );
     expect(
-      screen.getByText("© 2026 VillayaGel · Alle Rechte vorbehalten.")
+      screen.getByText("© 2026 Tatilin Yeri · Alle Rechte vorbehalten.")
     ).toBeInTheDocument();
   });
 
@@ -249,7 +249,7 @@ describe("Footer — footer_copyright locale-aware (§7)", () => {
       />
     );
     expect(
-      screen.getByText("© 2026 VillayaGel · Tüm hakları saklıdır.")
+      screen.getByText("© 2026 Tatilin Yeri · Tüm hakları saklıdır.")
     ).toBeInTheDocument();
   });
 
@@ -257,7 +257,7 @@ describe("Footer — footer_copyright locale-aware (§7)", () => {
     usePathnameMock.mockReturnValue("/");
     render(<Footer {...FOOTER_BASE} settings={{ footer_copyright: "" }} />);
     expect(
-      screen.getByText("© 2026 VillayaGel · Tüm hakları saklıdır")
+      screen.getByText("© 2026 Tatilin Yeri · Tüm hakları saklıdır")
     ).toBeInTheDocument();
   });
 
@@ -265,7 +265,7 @@ describe("Footer — footer_copyright locale-aware (§7)", () => {
     usePathnameMock.mockReturnValue("/");
     render(<Footer {...FOOTER_BASE} settings={null} />);
     expect(
-      screen.getByText("© 2026 VillayaGel · Tüm hakları saklıdır")
+      screen.getByText("© 2026 Tatilin Yeri · Tüm hakları saklıdır")
     ).toBeInTheDocument();
   });
 
@@ -278,7 +278,7 @@ describe("Footer — footer_copyright locale-aware (§7)", () => {
       />
     );
     expect(
-      screen.getByText("© 2026 VillayaGel · All rights reserved.")
+      screen.getByText("© 2026 Tatilin Yeri · All rights reserved.")
     ).toBeInTheDocument();
   });
 });

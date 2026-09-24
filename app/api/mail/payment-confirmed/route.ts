@@ -217,9 +217,9 @@ export async function POST(req: Request) {
        müşteri response'unu ve aşağıdaki status update'i ETKİLEMEZ.
        Ayrı mailType → müşteri mail_logs satırı değişmez.
        Şablon / diğer route'lar DOKUNULMADI. */
-    const adminNotifyTo = (
-      process.env.MAIL_ADMIN_NOTIFY_TO || "rezervasyon@villayagel.com"
-    ).trim();
+    /* Alıcı YALNIZ env'den; tanımsız/boşsa admin kopyası atlanır
+       (sabit/eski bir adrese fallback YOK). */
+    const adminNotifyTo = (process.env.MAIL_ADMIN_NOTIFY_TO || "").trim();
     if (adminNotifyTo) {
       const adminSubject = subject.replace(
         "Ödemeniz alındı",
@@ -245,6 +245,8 @@ export async function POST(req: Request) {
           adminErr instanceof Error ? adminErr.message : adminErr
         );
       }
+    } else {
+      console.warn("[mail.payment_confirmed.admin] SKIPPED — MAIL_ADMIN_NOTIFY_TO tanımsız");
     }
 
     // 🔥 STATUS UPDATE — payment_link_status = "paid"

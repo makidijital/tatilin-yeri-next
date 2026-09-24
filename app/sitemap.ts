@@ -58,9 +58,8 @@ import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
 
    ⚠️ ÖN KOŞUL — ABSOLUTE URL:
      Sitemap spec absolute URL ister. SITE_URL boşsa URL'ler relative
-     kalır → geçersiz sitemap. NEXT_PUBLIC_SITE_URL (veya
-     NEXT_PUBLIC_VERCEL_URL) prod'da SET EDİLMELİ. StructuredData ile
-     aynı kaynak/öncelik.
+     kalır → geçersiz sitemap. NEXT_PUBLIC_SITE_URL prod'da SET
+     EDİLMELİ. StructuredData ile aynı kaynak.
 
    SCALING:
      - Tek sitemap.ts → 50.000 URL / 50MB limitine kadar (1000+ villa
@@ -74,7 +73,6 @@ import { buildLocaleAlternates } from "@/lib/i18n/seo-alternates";
 
 const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.NEXT_PUBLIC_VERCEL_URL ||
   ""
 ).replace(/\/+$/, "");
 

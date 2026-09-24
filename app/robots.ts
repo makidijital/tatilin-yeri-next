@@ -40,9 +40,7 @@ import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/lib/i18n/config";
      referans basılmaz) + uyarı loglanır.
 
    ⚠️ ÖN KOŞUL: NEXT_PUBLIC_SITE_URL prod'da `https://<domain>` olarak
-     SET EDİLMELİ. NEXT_PUBLIC_VERCEL_URL fallback şema-siz/preview-domain
-     olduğundan production canonical host için GÜVENİLİR DEĞİL (yanlış
-     domain'e crawl yönlendirme riski) — yalnız son-çare.
+     SET EDİLMELİ (build anında da; robots.txt static üretilir).
 
    FUTURE-PROOF: yeni public route eklenince DEFAULT ALLOW olur (kök açık).
      Yalnız yeni bir internal/token/duplicate path çıkarsa buraya disallow
@@ -85,7 +83,6 @@ function withLocalePrefixes(paths: readonly string[]): string[] {
 
 const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.NEXT_PUBLIC_VERCEL_URL ||
   ""
 ).replace(/\/+$/, "");
 

@@ -25,7 +25,7 @@ import SiteTrackingScripts from "@/app/components/layout/SiteTrackingScripts";
 import { getCachedSettings } from "@/lib/cache.helpers";
 
 /* ===============================================================
-   🛡️ ÖZEL 404 — VillaYaGel (app/not-found.tsx)
+   🛡️ ÖZEL 404 (app/not-found.tsx)
    ===============================================================
    Global eşleşmeyen URL'ler için. Root layout içinde render olur
    (header/footer (public) layout'ta olduğundan burada KENDİMİZ

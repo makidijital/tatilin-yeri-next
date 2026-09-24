@@ -6,8 +6,8 @@ import { mailLogServerRepository } from "@/lib/db/mail-log.repository.server";
 /* ===============================================================
    🛡️ CRON — MAIL LOGS RETENTION (thin wrapper)
    ===============================================================
-   Vercel cron schedule: her gece (vercel.json crons[]).
-   Tetikleyici: Vercel cron infrastructure → GET /api/cron/mail-logs-
+   Zamanlama: her gece (Coolify Scheduled Task).
+   Tetikleyici: zamanlanmış görev → GET /api/cron/mail-logs-
    cleanup (Authorization: Bearer <CRON_SECRET>).
 
    ⚠️ TASARIM PRENSİBİ:
@@ -26,7 +26,7 @@ import { mailLogServerRepository } from "@/lib/db/mail-log.repository.server";
    ⚠️ ACTIVITY LOG:
      Admin cleanup route'undaki `insertAdminActivityLog` cron
      context'inde YOK (cron operation admin değil; existing cron
-     wrapper'larıyla aynı disiplin). Cron sonucu Vercel cron logs +
+     wrapper'larıyla aynı disiplin). Cron sonucu uygulama log'ları +
      console.log üzerinden izlenir; fail → Sentry instrumentation
      onRequestError üzerinden otomatik akar.
 =============================================================== */

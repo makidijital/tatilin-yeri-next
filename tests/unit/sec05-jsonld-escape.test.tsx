@@ -43,7 +43,7 @@ describe("SEC-05 — serializeJsonLd", () => {
     const data = {
       "@context": "https://schema.org",
       "@type": "Organization",
-      name: "VillaYaGel",
+      name: "Tatilin Yeri",
       url: "https://example.test/",
       sameAs: ["https://instagram.com/x"],
       text: "Çok güzel & şık > villa",

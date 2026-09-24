@@ -7,7 +7,7 @@ import { fetchTcmbRates } from "@/lib/exchange-rate.tcmb";
 /* ===============================================================
    🛡️ CRON — EXCHANGE RATES REFRESH (thin wrapper)
    ===============================================================
-   Vercel cron schedule: `0 6 * * *` (UTC) → 09:00 TR saati.
+   Zamanlama: `0 6 * * *` (UTC) → 09:00 TR saati (Coolify Scheduled Task).
    TCMB merkez bankası gün içi 15:30 TR'ye kadar günceller; sabah
    ilk refresh ile günlük başlangıç kuru DB'de hazır olur.
 
@@ -25,7 +25,7 @@ import { fetchTcmbRates } from "@/lib/exchange-rate.tcmb";
 
    ⚠️ BEFORE SNAPSHOT diff log YOK:
      Admin route activity log için before/after diff hesaplıyordu.
-     Cron için bu gereksiz; refresh sonucu Vercel cron logs +
+     Cron için bu gereksiz; refresh sonucu uygulama log'ları +
      console.log'da görünür. DB upsert davranışı aynen.
 =============================================================== */
 

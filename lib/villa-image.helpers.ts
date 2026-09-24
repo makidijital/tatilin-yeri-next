@@ -321,7 +321,7 @@ export function parseVillaStorageUrl(
     return { bucket, path: pathWithoutQuery };
   }
 
-  /* 🛡️ FAZ B — Pattern 1b: CDN host (cdn./assets.villayagel.com).
+  /* 🛡️ FAZ B — Pattern 1b: CDN host (NEXT_PUBLIC_CDN_BASE_* host'ları).
      CDN path R2'ye eski sağlayıcı path'i ile BİREBİR kopyalandığı için,
      CDN URL'inin pathname'i hem R2 hem eski sağlayıcı bucket-relative
      path'ine eşittir → remove (eski sağlayıcı) doğru hedefi bulur. */
