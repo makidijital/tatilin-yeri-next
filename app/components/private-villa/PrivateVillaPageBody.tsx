@@ -49,6 +49,7 @@ import {
 } from "@/lib/storage.helpers";
 /* 🛡️ Rich text — render'da XSS-güvenli HTML. */
 import { sanitizeHtml } from "@/lib/html-sanitize";
+import { extractSafeMapEmbedSrc } from "@/lib/map-embed.helper";
 import { getVillaPrices } from "@/app/services/villa-price.service";
 import { getVillaDistances } from "@/app/services/villa-distance.service";
 import { getVillaFeaturesByVilla } from "@/app/services/villa-feature.service";
@@ -725,22 +726,29 @@ export default async function PrivateVillaPageBody({
                     </>
                   )}
 
-                {villa.map_type === "iframe" && villa.map_embed && (
-                  <>
-                    <div
-                      className="w-full h-[400px]"
-                      dangerouslySetInnerHTML={{ __html: villa.map_embed }}
-                    />
-                    <div className="p-4 md:px-5 border-t border-[var(--color-stone-100)] text-sm text-[var(--color-stone-500)]">
-                      {dictionary.map.poweredByGoogle}
-                    </div>
-                  </>
-                )}
+                {villa.map_type === "iframe" &&
+                  extractSafeMapEmbedSrc(villa.map_embed) && (
+                    <>
+                      {/* 🛡️ SEC-05 — ham iframe HTML yerine allow-list'li
+                         güvenli Google Maps src; iframe'i biz üretiriz. */}
+                      <iframe
+                        src={extractSafeMapEmbedSrc(villa.map_embed) as string}
+                        title={dictionary.map.whereTitle}
+                        className="w-full h-[400px] border-0"
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                      />
+                      <div className="p-4 md:px-5 border-t border-[var(--color-stone-100)] text-sm text-[var(--color-stone-500)]">
+                        {dictionary.map.poweredByGoogle}
+                      </div>
+                    </>
+                  )}
 
                 {(!villa.map_type ||
                   (villa.map_type === "coords" &&
                     (!villa.latitude || !villa.longitude)) ||
-                  (villa.map_type === "iframe" && !villa.map_embed)) && (
+                  (villa.map_type === "iframe" &&
+                    !extractSafeMapEmbedSrc(villa.map_embed))) && (
                   <div className="h-[200px] flex items-center justify-center text-[var(--color-stone-400)] italic">
                     {dictionary.map.noLocation}
                   </div>

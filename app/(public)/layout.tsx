@@ -17,6 +17,9 @@ import BottomNav from "@/app/components/layout/BottomNav";
 import ScrollToTopButton from "@/app/components/layout/ScrollToTopButton";
 import { getCachedSettings } from "@/lib/cache.helpers";
 import { resolvePublicHome } from "@/lib/i18n/public-home";
+/* 🛡️ SEC-05 Phase 2 — GTM + custom head/analytics alanları root
+   layout'tan buraya taşındı (admin panelinde çalışmasın diye). */
+import SiteTrackingScripts from "@/app/components/layout/SiteTrackingScripts";
 
 /* ===============================================================
    🛡️ PUBLIC LAYOUT — MAINTENANCE MODE GATE
@@ -49,8 +52,13 @@ export default async function PublicLayout({
     /* 🛡️ `settings.maintenance_message` CANONICAL kalır (migration 084
        kararı DEĞİŞMEDİ). Boşsa dictionary varsayılanı gösterilir; "Bakım"
        etiketi ve varsayılan metin locale-aware (bkz. MaintenanceScreen). */
+    /* 🛡️ SEC-05 Phase 2 — root layout'tayken bakım modunda da
+       yükleniyordu; davranış korunur. */
     return (
-      <MaintenanceScreen brand={brand} message={settings?.maintenance_message} />
+      <>
+        <SiteTrackingScripts settings={settings} />
+        <MaintenanceScreen brand={brand} message={settings?.maintenance_message} />
+      </>
     );
   }
 
@@ -71,6 +79,10 @@ export default async function PublicLayout({
   const { trHomeHref } = resolvePublicHome(settings);
 
   return (
+    <>
+    {/* 🛡️ SEC-05 Phase 2 — takip/özel script alanları (public-only).
+       public-shell'in ÖNCESİNDE → önceki DOM sırası (body başı) korunur. */}
+    <SiteTrackingScripts settings={settings} />
     <div className="public-shell flex flex-col min-h-screen bg-[var(--color-ivory)]">
       {/* HEADER */}
       <HeaderWrapper />
@@ -110,5 +122,6 @@ export default async function PublicLayout({
          Bakım modunda render edilmez (yukarıdaki early-return). */}
       <CookieConsent />
     </div>
+    </>
   );
 }

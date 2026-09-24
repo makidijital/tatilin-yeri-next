@@ -35,6 +35,7 @@ import { X, Map as MapIcon, Navigation } from "lucide-react";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import type { Locale } from "@/lib/i18n/config";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
+import { extractSafeMapEmbedSrc } from "@/lib/map-embed.helper";
 
 type Props = {
   mapType?: string;
@@ -79,7 +80,12 @@ export default function VillaMapModal({
 
   const hasCoords =
     mapType === "coords" && !!latitude && !!longitude;
-  const hasEmbed = mapType === "iframe" && !!mapEmbed;
+  /* 🛡️ SEC-05 — ham iframe HTML basmak yerine yalnız güvenli
+     (allow-list'li) Google Maps `src` URL'ini çıkar; iframe'i biz
+     üretiriz. Geçerli embed yoksa harita bölümü gösterilmez. */
+  const safeMapEmbedSrc =
+    mapType === "iframe" ? extractSafeMapEmbedSrc(mapEmbed) : null;
+  const hasEmbed = !!safeMapEmbedSrc;
   const hasDirections = !!latitude && !!longitude;
 
   return (
@@ -204,9 +210,12 @@ export default function VillaMapModal({
 
               {hasEmbed && (
                 <>
-                  <div
-                    className="w-full h-[60vh] max-h-[480px]"
-                    dangerouslySetInnerHTML={{ __html: mapEmbed as string }}
+                  <iframe
+                    src={safeMapEmbedSrc as string}
+                    title={villaTitle || dict.map.whereTitle}
+                    className="w-full h-[60vh] max-h-[480px] border-0"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
                   />
                   <div className="p-4 md:px-5 border-t border-[var(--color-stone-100)] text-sm text-[var(--color-stone-500)]">
                     {dict.map.poweredByGoogle}

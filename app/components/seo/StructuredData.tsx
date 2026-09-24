@@ -53,6 +53,17 @@ export const SCHEMA_IN_LANGUAGE: Record<Locale, string> = {
 /* ---------------------------------------------
    🔥 Generic JSON-LD <script> renderer
 ---------------------------------------------- */
+/* 🛡️ SEC-05 — JSON-LD inline <script> breakout koruması.
+   `JSON.stringify` `<` karakterini escape ETMEZ; admin kontrollü bir
+   metin (villa başlığı, SSS, blog başlığı…) `</script>` içerirse HTML
+   parser script bloğunu erken kapatır ve arkasındaki içerik ÇALIŞIR.
+   `<` → `<`: JSON açısından AYNI string (JSON.parse sonucu birebir
+   aynı → Google/schema.org verisi değişmez), HTML açısından `</script`
+   ve `<!--` dizileri oluşamaz. */
+export function serializeJsonLd(data: unknown): string {
+  return (JSON.stringify(data) ?? "").replace(/</g, "\\u003c");
+}
+
 export function JsonLd({ data }: { data: unknown }) {
   // <script> SSR'de inline JSON; client'ta re-parse edilmez.
   return (
@@ -60,7 +71,7 @@ export function JsonLd({ data }: { data: unknown }) {
       type="application/ld+json"
       // eslint-disable-next-line react/no-danger
       dangerouslySetInnerHTML={{
-        __html: JSON.stringify(data),
+        __html: serializeJsonLd(data),
       }}
     />
   );

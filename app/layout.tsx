@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Outfit, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
@@ -136,46 +135,18 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const settings = await getCachedSettings().catch(() => null);
-  const gtmId = settings?.gtm_container_id?.trim();
-  const customHead = settings?.custom_head_scripts?.trim();
-  const analyticsScript = settings?.analytics_script?.trim();
-
+  /* 🛡️ SEC-05 Phase 2 — GTM, `custom_head_scripts` ve `analytics_script`
+     artık root layout'ta DEĞİL; yalnız public kabuklarda render edilir
+     (bkz. app/components/layout/SiteTrackingScripts.tsx). Böylece admin
+     paneli ve login sayfası admin girdisi ham HTML / GTM tag'lerini
+     çalıştırmaz. Public sayfalarda içerik ve sıra AYNEN korunur. */
   return (
     <html
       lang="tr"
       className={`${outfit.variable} ${geistMono.variable}`}
     >
-      <head>
-        {/* 🛡️ Custom head HTML — admin tarafından kontrol edilen
-           raw inject. XSS vektör; sadece admin'in girdiği güvenilir
-           HTML. dangerouslySetInnerHTML kullanılır. */}
-        {customHead ? (
-          <div
-            // eslint-disable-next-line react/no-unknown-property
-            dangerouslySetInnerHTML={{ __html: customHead }}
-          />
-        ) : null}
-      </head>
+      <head />
       <body className="min-h-screen bg-[var(--color-ivory)] text-[var(--color-stone-900)] antialiased font-sans">
-        {/* 🛡️ GTM Container — admin GTM-ID girdiğinde otomatik load.
-           next/script `afterInteractive` → main bundle'ı bloklamaz. */}
-        {gtmId ? (
-          <Script id="gtm-init" strategy="afterInteractive">
-            {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-              new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-              j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-              'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-              })(window,document,'script','dataLayer','${gtmId}');`}
-          </Script>
-        ) : null}
-        {/* 🛡️ Custom analytics script — admin raw HTML. */}
-        {analyticsScript ? (
-          <div
-            // eslint-disable-next-line react/no-unknown-property
-            dangerouslySetInnerHTML={{ __html: analyticsScript }}
-          />
-        ) : null}
         <CurrencyProvider>{children}</CurrencyProvider>
       </body>
     </html>

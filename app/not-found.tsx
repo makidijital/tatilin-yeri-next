@@ -18,6 +18,11 @@ import { getNotFoundSuggestionVillas } from "@/app/services/villa.service";
 import NotFoundContent from "@/app/components/not-found/NotFoundContent";
 import { DEFAULT_LOCALE } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+/* 🛡️ SEC-05 Phase 2 — root layout'tan taşınan takip alanları; 404
+   sayfası (public) layout DIŞINDA olduğu için burada ayrıca render
+   edilir → 404 takibi (GTM vb.) korunur. */
+import SiteTrackingScripts from "@/app/components/layout/SiteTrackingScripts";
+import { getCachedSettings } from "@/lib/cache.helpers";
 
 /* ===============================================================
    🛡️ ÖZEL 404 — VillaYaGel (app/not-found.tsx)
@@ -48,8 +53,11 @@ export default async function NotFound() {
      (eski `getCachedVillas().slice(0, 3)` ile aynı küme ve sıra).
      Hata olursa bölüm gizlenir. */
   const featured = await getNotFoundSuggestionVillas().catch(() => []);
+  const settings = await getCachedSettings().catch(() => null);
 
   return (
+    <>
+    <SiteTrackingScripts settings={settings} />
     <div className="flex flex-col min-h-screen bg-[var(--color-ivory)]">
       <HeaderWrapper />
 
@@ -60,5 +68,6 @@ export default async function NotFound() {
 
       <FooterWrapper />
     </div>
+    </>
   );
 }
