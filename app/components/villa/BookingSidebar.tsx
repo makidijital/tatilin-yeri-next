@@ -46,7 +46,13 @@ import {
 } from "@/lib/external-calendar.public.shared";
 
 import { useBookingEngine } from "@/app/components/villa/booking/useBookingEngine";
-import BookingCalendar from "@/app/components/villa/booking/BookingCalendar";
+/* 🛡️ Aşama 7B — BookingCalendar (react-day-picker + date-fns + RDP CSS)
+   artık STATİK import EDİLMEZ → villa detayının ilk JS bundle'ından çıktı.
+   Takvim zaten yalnız `openCalendar` true iken render ediliyordu (SSR'da
+   hiç yok); chunk ilk açılış niyetinde (hover / pointerdown / click)
+   yüklenir, dropdown ancak bileşen HAZIR olunca açılır → boş/yarım takvim
+   kutusu veya layout shift OLUŞMAZ, ilk tıklama kaybolmaz. */
+import type BookingCalendarComponent from "@/app/components/villa/booking/BookingCalendar";
 import BookingSummary from "@/app/components/villa/booking/BookingSummary";
 import BookingMinStayWarning from "@/app/components/villa/booking/BookingMinStayWarning";
 /* 🛡️ PHASE 10B — locale-aware UI stringleri. `locale` opsiyonel,
@@ -112,6 +118,33 @@ type Props = {
   /* 🛡️ PHASE 10B — opsiyonel, default "tr". */
   locale?: Locale;
 };
+
+/* 🛡️ Aşama 7B — lazy BookingCalendar yükleyici (modül seviyesi, tek
+   promise). Aynı sayfada tekrar tekrar indirilmez; hata olursa promise
+   sıfırlanır → sonraki açılış denemesi yeniden yükler. `loadedBookingCalendar`
+   client-side navigasyonla sayfaya yeniden gelindiğinde bileşenin
+   anında hazır olmasını sağlar (openCalendar=false başladığı için SSR/
+   hydration çıktısını etkilemez). */
+type LazyCalendarComponentType = typeof BookingCalendarComponent;
+let bookingCalendarPromise: Promise<LazyCalendarComponentType> | null = null;
+let loadedBookingCalendar: LazyCalendarComponentType | null = null;
+function loadBookingCalendar(): Promise<LazyCalendarComponentType> {
+  if (!bookingCalendarPromise) {
+    bookingCalendarPromise = import(
+      "@/app/components/villa/booking/BookingCalendar"
+    ).then(
+      (mod) => {
+        loadedBookingCalendar = mod.default;
+        return mod.default;
+      },
+      (err: unknown) => {
+        bookingCalendarPromise = null;
+        throw err;
+      }
+    );
+  }
+  return bookingCalendarPromise;
+}
 
 export default function BookingSidebar({
   villaSlug,
@@ -193,6 +226,34 @@ export default function BookingSidebar({
   const [openGuests, setOpenGuests] = useState(false);
   const [openCalendar, setOpenCalendar] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  /* 🛡️ Aşama 7B — lazy takvim bileşeni. null → henüz yüklenmedi.
+     Dropdown yalnız `openCalendar && BookingCalendar` iken render edilir:
+     kullanıcı tıkladığında `openCalendar` HEMEN true olur (niyet
+     kaybolmaz); bileşen hazır olduğu an takvim açılır. Bu arada dışarı
+     tıklanırsa mevcut click-outside handler'ı `openCalendar`'ı kapatır →
+     bekleyen açılış da iptal olur (eski davranışla aynı semantik). */
+  const [BookingCalendar, setBookingCalendar] =
+    useState<LazyCalendarComponentType | null>(() => loadedBookingCalendar);
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+  const ensureBookingCalendar = () => {
+    if (BookingCalendar) return;
+    loadBookingCalendar()
+      .then((Cal) => {
+        /* Unmount sonrası state güncellemesi YAPILMAZ. */
+        if (isMountedRef.current) setBookingCalendar(() => Cal);
+      })
+      .catch(() => {
+        /* Chunk yüklenemezse takvim açılmaz; sonraki tıklama yeniden
+           dener (promise sıfırlandı). */
+      });
+  };
   const guestsRef = useRef<HTMLDivElement>(null);
 
   /* currentMonth: takvim ilk açıldığında hangi ayı göstereceği.
@@ -265,10 +326,16 @@ export default function BookingSidebar({
          Yalnız anchor; tasarım/tarih-seçim mantığı DEĞİŞMEZ. */}
       <div ref={ref} id="booking-date-field" className="relative">
         <div
+          /* 🛡️ Aşama 7B — açılış niyetinde (fare üstüne gelme / basma)
+             chunk'ı önceden yükle; yalnız network isteği başlatır,
+             UI/state DEĞİŞMEZ. */
+          onPointerEnter={ensureBookingCalendar}
+          onPointerDown={ensureBookingCalendar}
           onClick={() => {
             const targetMonth = endDate || startDate || new Date();
             setCurrentMonth(targetMonth);
             setOpenCalendar(true);
+            ensureBookingCalendar();
           }}
           className="group flex items-center gap-4 cursor-pointer"
         >
@@ -307,7 +374,7 @@ export default function BookingSidebar({
           />
         </div>
 
-        {openCalendar && (
+        {openCalendar && BookingCalendar && (
           <div
             className="
               absolute right-0 z-[999] mt-4 bg-white border border-[var(--color-stone-100)]
