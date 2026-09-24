@@ -3,6 +3,10 @@ import { adminAuthProvider } from "@/lib/auth/server";
 import { adminUserServerRepository } from "@/lib/db/admin-user.repository.server";
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import {
+  callerHasPermission,
+  FORBIDDEN_MESSAGE,
+} from "@/lib/auth/action-authz";
+import {
   extractAdminContextFromRequest,
   insertAdminActivityLog,
 } from "@/app/services/admin-activity-log.service";
@@ -54,6 +58,18 @@ export async function POST(req: Request): Promise<NextResponse> {
       return NextResponse.json(
         { ok: false, error: auth.error },
         { status: auth.status }
+      );
+    }
+
+    /* 🛡️ SEC-03 (Faz 1) — admin oluşturma `users` izni ister.
+       İzin yoksa input okunmaz, DB'ye hiçbir şey yazılmaz. */
+    if (!(await callerHasPermission(auth.caller.id, "users"))) {
+      console.error("[admin.create_user] FORBIDDEN", {
+        callerId: auth.caller.id,
+      });
+      return NextResponse.json(
+        { ok: false, error: FORBIDDEN_MESSAGE },
+        { status: 403 }
       );
     }
     const caller = auth.caller;

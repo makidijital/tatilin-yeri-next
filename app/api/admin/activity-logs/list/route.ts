@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
+import {
+  callerHasPermission,
+  FORBIDDEN_MESSAGE,
+} from "@/lib/auth/action-authz";
 import { adminActivityLogRepository } from "@/lib/db/admin-activity-log.repository.server";
 
 /* ===============================================================
@@ -43,6 +47,15 @@ export async function GET(req: Request) {
     return NextResponse.json(
       { ok: false, error: auth.error },
       { status: auth.status }
+    );
+  }
+
+  /* 🛡️ SEC-03 (Faz 1) — aktivite logları `activity_logs` izni ister.
+     İzin yoksa log tablosuna hiç sorgu atılmaz. */
+  if (!(await callerHasPermission(auth.caller.id, "activity_logs"))) {
+    return NextResponse.json(
+      { ok: false, error: FORBIDDEN_MESSAGE },
+      { status: 403 }
     );
   }
 

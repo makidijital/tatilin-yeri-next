@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
+import {
+  callerHasPermission,
+  FORBIDDEN_MESSAGE,
+} from "@/lib/auth/action-authz";
 import { adminUserServerRepository } from "@/lib/db/admin-user.repository.server";
 import { adminTotpServerRepository } from "@/lib/db/admin-totp.repository.server";
 import {
@@ -40,6 +44,17 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { ok: false, error: auth.error },
       { status: auth.status }
+    );
+  }
+
+  /* 🛡️ SEC-03 (Faz 1) — BAŞKA bir adminin 2FA'sını sıfırlamak admin
+     yönetimidir → `users` izni. Adminin KENDİ 2FA işlemleri
+     (enroll/disable/recovery-codes) bu route değildir; onlar login-only
+     kalır. İzin yoksa hedef admin okunmaz/değiştirilmez. */
+  if (!(await callerHasPermission(auth.caller.id, "users"))) {
+    return NextResponse.json(
+      { ok: false, error: FORBIDDEN_MESSAGE },
+      { status: 403 }
     );
   }
   const caller = auth.caller;

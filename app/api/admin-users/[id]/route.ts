@@ -3,6 +3,10 @@ import { adminUserServerRepository } from "@/lib/db/admin-user.repository.server
 import { adminUserPanelServerRepository } from "@/lib/db/admin-user-panel.repository.server";
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
 import {
+  callerHasPermission,
+  FORBIDDEN_MESSAGE,
+} from "@/lib/auth/action-authz";
+import {
   extractAdminContextFromRequest,
   insertAdminActivityLog,
 } from "@/app/services/admin-activity-log.service";
@@ -62,6 +66,19 @@ export async function PATCH(
       return NextResponse.json(
         { ok: false, error: auth.error },
         { status: auth.status }
+      );
+    }
+
+    /* 🛡️ SEC-03 (Faz 1) — admin kaydı yönetimi `users` izni ister.
+       Auth → İZİN → input/DB sırası: izin yoksa hiçbir admin verisi
+       okunmaz/değiştirilmez. */
+    if (!(await callerHasPermission(auth.caller.id, "users"))) {
+      console.error("[admin-users.update] FORBIDDEN", {
+        callerId: auth.caller.id,
+      });
+      return NextResponse.json(
+        { ok: false, error: FORBIDDEN_MESSAGE },
+        { status: 403 }
       );
     }
 

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
+import {
+  callerHasPermission,
+  FORBIDDEN_MESSAGE,
+} from "@/lib/auth/action-authz";
 import { settingsServerRepository } from "@/lib/db/settings.repository.server";
 
 /* ===============================================================
@@ -76,6 +80,16 @@ export async function PUT(req: Request): Promise<NextResponse> {
       return NextResponse.json(
         { ok: false, error: auth.error },
         { status: auth.status }
+      );
+    }
+
+    /* 🛡️ SEC-03 (Faz 1) — ayar yazma `settings` izni ister. İzin yoksa
+       body okunmaz, settings satırı okunmaz/güncellenmez. (GET bu fazda
+       DEĞİŞMEDİ — SEC-04 kapsamında ele alınacak.) */
+    if (!(await callerHasPermission(auth.caller.id, "settings"))) {
+      return NextResponse.json(
+        { ok: false, error: FORBIDDEN_MESSAGE },
+        { status: 403 }
       );
     }
 
