@@ -4,6 +4,7 @@ import { createReservation } from "@/app/services/reservation.service";
 import { reservationServerRepository } from "@/lib/db/reservation.repository.server";
 import { verifyPublicReservationPrice } from "@/app/services/reservation/_helpers/price-verify";
 import { verifyPublicReservationStayRules } from "@/app/services/reservation/_helpers/stay-verify";
+import { validatePublicReservationDates } from "@/app/services/reservation/_helpers/date-verify";
 import { applyRateLimit } from "@/lib/rate-limit";
 /* 🛡️ Uluslararası telefon — TR-only regex KALDIRILDI. Yeni kütüphane YOK. */
 import {
@@ -87,6 +88,32 @@ export async function POST(req: Request): Promise<Response> {
     body.phone2 = p2;
   }
 
+  /* 🛡️ SEC-06 F1 — SIKI TARİH DOĞRULAMASI (fiyat hesabından ÖNCE).
+     Yalnız "YYYY-MM-DD" + gerçek takvim günü + en az 1 gece; tamamı
+     geçmişte kalan konaklama reddedilir. Otomatik parse YOK. Mevcut
+     datepicker/link akışları zaten bu biçimi üretir → etkilenmez.
+     Hata zarfı ({ ok:false, error }, 400) mevcut catch ile AYNI. */
+  {
+    const dateError = validatePublicReservationDates(
+      body?.start_date,
+      body?.end_date
+    );
+    if (dateError) {
+      console.error("[api.public.reservations] create FAILED:", dateError);
+      return NextResponse.json(
+        { ok: false, error: dateError },
+        { status: 400 }
+      );
+    }
+  }
+
+  /* 🛡️ SEC-06 F2 — `paid_amount` ASLA client'tan alınmaz. Public
+     rezervasyon her zaman ödenmemiş (pending) başlar; tahsilat admin
+     tarafından sonradan işlenir. Client zaten 0 gönderiyor
+     (buildPublicReservationPayload) ve payload builder'ın alan yokken
+     yazdığı değer de 0 → meşru akış için sonuç BİREBİR aynı. */
+  body.paid_amount = 0;
+
   /* 🛡️ SERVER-SIDE PRICE VERIFY + FAZ 3 SERVER-AUTHORITATIVE OVERRIDE.
      Client'ın gönderdiği finansal alanları (total_price / total_price_try /
      original_price / original_currency / exchange_rate / original_cleaning_fee /
@@ -99,8 +126,8 @@ export async function POST(req: Request): Promise<Response> {
      ilgili finansal alanları server-authoritative değerlerle OVERRIDE
      edilir — pool heating'in ZATEN VAR OLAN 4-kolon override desenini
      BİREBİR TEKRARLAR, yalnız kapsam finansal alanlara genişletildi.
-     Recompute başarısızsa (fail-open) `body` DEĞİŞTİRİLMEZ — mevcut
-     fail-open felsefe (pool heating precedent'i) KORUNUR.
+     🛡️ SEC-06 F5: Recompute başarısızsa artık FAIL-CLOSED — aşağıdaki
+     try bloğunda rezervasyon reddedilir (client tutarlarına düşülmez).
 
      🛡️ HAVUZ ISITMA — 6. adım: EXPLICIT ENFORCEMENT (kullanıcı kuralı —
      bu 4 kolon ASLA client'tan güvenilmez). `verification.poolHeating`
@@ -108,9 +135,8 @@ export async function POST(req: Request): Promise<Response> {
      snapshot alanı server-authoritative değerlerle OVERRIDE edilir —
      `createReservation`'a ve dolayısıyla `create.service.ts`'e (DOKUNULMADI,
      admin path ile paylaşılıyor) bu adımdan SONRA, zaten düzeltilmiş
-     `body` geçer. Recompute başarısızsa (fail-open) `body` DEĞİŞTİRİLMEZ —
-     client'ın gönderdiği (zaten ReservationForm'da doğru hesaplanan)
-     değerler aynen kullanılır. */
+     `body` geçer. Recompute başarısızsa (SEC-06 F5) rezervasyon
+     aşağıda reddedilir. */
   const verification = await verifyPublicReservationPrice(body);
   if (verification.poolHeating) {
     body.pool_heating_selected = verification.poolHeating.pool_heating_selected;
@@ -140,8 +166,7 @@ export async function POST(req: Request): Promise<Response> {
      için server recompute başarılıysa yine de false/null'a sabitlenir
      (defense-in-depth; fiyat hesabını ETKİLEMEZ, yalnız admin-only bir
      flag'in public path'ten sızmasını engeller).
-     Recompute başarısızsa (fail-open, pool heating İLE AYNI davranış)
-     `body` DEĞİŞTİRİLMEZ — mevcut çalışan akış BOZULMAZ. */
+     Recompute başarısızsa (SEC-06 F5) rezervasyon aşağıda reddedilir. */
   if (verification.authoritative) {
     body.total_price = verification.authoritative.total_price;
     body.total_price_try = verification.authoritative.total_price_try;
@@ -169,6 +194,9 @@ export async function POST(req: Request): Promise<Response> {
       verification.authoritative.original_stay_total_try;
     body.stay_discount_amount_try =
       verification.authoritative.stay_discount_amount_try;
+    /* 🛡️ SEC-06 F4 — hasar depozitosu villanın kendi kaydından
+       (client formülüyle aynı: Number(villa.deposit) || 0). */
+    body.damage_deposit = verification.authoritative.damage_deposit;
   }
 
   try {
@@ -180,12 +208,23 @@ export async function POST(req: Request): Promise<Response> {
        yazılıyordu). Burada throw edilir → aşağıdaki catch 400 döner;
        mevcut hata zarfı ({ ok:false, error }) AYNEN kullanılır.
 
-       ⚠️ Bu, fail-open dalından AYRIDIR: recompute'un kendisi patlarsa
-       (`priceUnavailable === false`, `authoritative === null`) mevcut
-       fail-open davranışı DEĞİŞMEDEN korunur. */
-    if (verification.priceUnavailable) {
+       ⚠️ Recompute'un kendisi patlarsa (`recomputeFailed`) aşağıdaki
+       SEC-06 F5 kapısı reddeder. */
+    /* 🛡️ SEC-06 F3 — hesapta kullanılan dövizin geçerli kuru yoksa
+       (eskiden sessiz 1:1) aynı mesajla reddedilir. */
+    if (verification.priceUnavailable || verification.rateUnavailable) {
       throw new Error(
         "Seçilen tarihler için fiyat hesaplanamadı"
+      );
+    }
+
+    /* 🛡️ SEC-06 F5 — FAIL-CLOSED. Sunucu fiyatı güvenilir şekilde
+       hesaplayamadıysa (villa ayarı/settings okunamadı, beklenmeyen
+       hata) rezervasyon OLUŞTURULMAZ; client tutarlarına ASLA
+       düşülmez. Başarılı hesapta `authoritative` daima doludur. */
+    if (verification.recomputeFailed || !verification.authoritative) {
+      throw new Error(
+        "Fiyat şu anda doğrulanamadı. Lütfen biraz sonra tekrar deneyin."
       );
     }
 

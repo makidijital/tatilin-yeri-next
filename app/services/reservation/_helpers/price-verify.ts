@@ -9,7 +9,14 @@ import {
   /* 🛡️ İndirim snapshot'ı artık price.engine'de (public+admin ORTAK). */
   detectAppliedDiscountForStay,
   buildStayDiscountSnapshot,
+  /* 🛡️ SEC-06 F3 — yalnız "hangi para birimleri gerçekten kullanıldı"
+     tespiti için (hesaplama DEĞİL; motorun kendi eşleştirme kuralları). */
+  getDailyPrice,
+  getActiveDiscount,
+  type DiscountRange,
 } from "@/lib/price.engine";
+import { parseLocalDate } from "@/lib/date-format";
+import type { PriceRange } from "@/lib/villa-row.types";
 import { normalizePriceRanges } from "@/lib/villa-row.types";
 import { getVillaPrices } from "@/app/services/villa-price.service";
 import { getExchangeRatesMap } from "@/app/services/exchange-rate.service";
@@ -68,10 +75,11 @@ import { getVillaDiscounts } from "@/app/services/villa-discount.service";
        bilgisine erişip DOĞRU final fiyatı hesaplayabilmesi bu fazın
        kapsamı (kalıcı snapshot persistansı SONRAKİ bir faz).
 
-   FAIL-OPEN (DEĞİŞMEDİ): herhangi bir fetch/parse hatası → null döner;
-   route loglar ve booking'i ASLA bloklamaz — bu durumda `authoritative`
-   de `poolHeating` gibi null döner, route body'yi DEĞİŞTİRMEDEN bırakır
-   (mevcut fail-open felsefe — pool heating precedent'iyle BİREBİR aynı).
+   🛡️ SEC-06 — FAIL-CLOSED (eskiden fail-open): recompute tamamlanamazsa
+   (villa ayarı/settings okunamadı, hata) `recomputeFailed`, hesapta
+   kullanılan bir dövizin kuru yoksa `rateUnavailable` döner; her iki
+   durumda `authoritative`/`poolHeating` null'dır ve route rezervasyonu
+   OLUŞTURMAZ. Başarılı hesapların sonuçları DEĞİŞMEDİ.
 
    server-only: client bundle'a sızmaz.
    =============================================================== */
@@ -120,7 +128,67 @@ export type ServerPriceResult = {
   discountCurrency: string | null;
   originalStayTotalTry: number | null;
   stayDiscountAmountTry: number | null;
+  /* 🛡️ SEC-06 F4 — hasar depozitosu villanın KENDİ kaydından
+     (`villa.deposit`, TRY). Client formülüyle BİREBİR:
+     `Number(villa.deposit) || 0` (buildPublicReservationPayload). */
+  damageDeposit: number;
+  /* 🛡️ SEC-06 F3 — hesapta GERÇEKTEN kullanılan ama geçerli kuru
+     (finite, > 0) bulunmayan para birimleri. Boş değilse `convertPrice`
+     bu dövizleri sessizce 1:1 çevirmiştir → sonuç GEÇERSİZ sayılır. */
+  missingRates: string[];
 };
+
+/* 🛡️ SEC-06 F3 — HESAPTA KULLANILAN DÖVİZLER İÇİN KUR KONTROLÜ
+   ===============================================================
+   `convertPrice` → `resolveRate` geçersiz/eksik kurda sessizce 1'e
+   düşer (lib/currency.ts). Bu fallback DEĞİŞTİRİLMEDİ (UI'ler de
+   kullanıyor); bunun yerine sunucu, hesabın gerçekten dokunduğu
+   dövizlerin kurunu doğrular:
+     - Her gece için eşleşen villa_prices satırının para birimi
+       (`getDailyPrice` — motorun kendi "ilk eşleşen" kuralı),
+     - O gece aktif "fixed" özel fiyatın para birimi, gecenin para
+       biriminden farklıysa (`getActiveDiscount` — motorun kuralı),
+     - Tahsil edilen temizlik ücreti (> 0) para birimi,
+     - Tahsil edilen havuz ısıtma ücreti (> 0) para birimi.
+   TRY kur gerektirmez. Kur geçerliliği `resolveRate` ile AYNI ölçüt
+   (finite ve > 0). Hesaplanan TUTARLARA dokunulmaz. */
+function findMissingRates(input: {
+  start: string;
+  end: string;
+  prices: PriceRange[];
+  discounts: DiscountRange[] | null | undefined;
+  rates: Record<string, number>;
+  extraCharges: Array<{ amount: number; currency: string | null | undefined }>;
+}): string[] {
+  const used = new Set<string>();
+
+  const current = parseLocalDate(input.start);
+  const endD = parseLocalDate(input.end);
+  while (current < endD) {
+    const daily = getDailyPrice(current, input.prices, "TRY", input.rates);
+    if (daily.original > 0) {
+      used.add(daily.original_currency);
+      const disc = getActiveDiscount(current, input.discounts);
+      if (disc && disc.discount_type !== "percent") {
+        const discCurrency = disc.currency || daily.original_currency;
+        if (discCurrency !== daily.original_currency) used.add(discCurrency);
+      }
+    }
+    current.setDate(current.getDate() + 1);
+  }
+
+  for (const c of input.extraCharges) {
+    if ((Number(c.amount) || 0) > 0) used.add(c.currency || "TRY");
+  }
+
+  const missing: string[] = [];
+  for (const code of used) {
+    if (code === "TRY") continue;
+    const rate = Number(input.rates?.[code]);
+    if (!(Number.isFinite(rate) && rate > 0)) missing.push(code);
+  }
+  return missing.sort();
+}
 
 /* 🛡️ FAZ 4 — bir rezervasyon tarih aralığındaki GECELERDEN en az biri
    için villa_discounts'ta aktif bir kayıt var mı, varsa HANGİSİ?
@@ -174,8 +242,21 @@ export async function recomputePublicReservationPrice(input: {
     getVillaDiscounts(villa_id),
   ]);
 
+  /* 🛡️ SEC-06 F5 — villa ayarları okunamazsa veya villa yoksa hesap
+     GÜVENİLİR DEĞİLDİR (eskiden temizlik/havuz/ön ödeme oranı sessizce
+     0/varsayılana düşüyordu). Throw → verifyPublicReservationPrice
+     `recomputeFailed` döner → route rezervasyonu OLUŞTURMAZ. Başarılı
+     okumada villaRow AYNEN eskisi gibi kullanılır. */
+  if (villaRes?.error) {
+    throw new Error(
+      `villa config okunamadı: ${villaRes.error.message ?? "unknown"}`
+    );
+  }
   const villaRow =
-    (villaRes.data as Record<string, unknown> | null) || null;
+    (villaRes?.data as Record<string, unknown> | null) || null;
+  if (!villaRow) {
+    throw new Error("villa config bulunamadı");
+  }
 
   /* Engine `rates: Record<string, number>` bekler; getExchangeRatesMap
      `Partial<Record<"USD"|"EUR"|"GBP", number>>` döner — yapı uyumlu. */
@@ -216,8 +297,17 @@ export async function recomputePublicReservationPrice(input: {
      custom_prepayment_rate (null/undefined/"" değilse) → onu kullan,
      yoksa settings.prepayment_rate (truthy ise), yoksa 20. */
   const override = villaRow?.custom_prepayment_rate;
+  const hasVillaOverride =
+    override !== null && override !== undefined && override !== "";
+  /* 🛡️ SEC-06 F5 — oran settings'ten gelecekse ve settings OKUNAMADIYSA
+     (getPublicSettings hata → null) sessiz 20 varsayılanı KULLANILMAZ;
+     hesap güvenilir değildir. Okunan settings'te prepayment_rate boş
+     ise mevcut 20 varsayılanı AYNEN geçerli (değişmedi). */
+  if (!hasVillaOverride && !settings) {
+    throw new Error("settings okunamadı (ön ödeme oranı belirsiz)");
+  }
   let prepaymentRate = 20;
-  if (override !== null && override !== undefined && override !== "") {
+  if (hasVillaOverride) {
     prepaymentRate = Number(override);
   } else if (settings?.prepayment_rate) {
     prepaymentRate = Number(settings.prepayment_rate);
@@ -347,7 +437,32 @@ export async function recomputePublicReservationPrice(input: {
   const discountValue = discountSnapshot.discount_value;
   const discountCurrency = discountSnapshot.discount_currency;
 
+  /* 🛡️ SEC-06 F3 — yalnız TESPİT; yukarıdaki hiçbir tutar değişmez.
+     Eksik gece varsa (priceAvailable=false) zaten reddedilir → atlanır. */
+  const missingRates = snapshot.priceAvailable
+    ? findMissingRates({
+        start: start_date,
+        end: end_date,
+        prices: normalizedPrices,
+        discounts,
+        rates,
+        extraCharges: [
+          {
+            amount: snapshot.original_cleaning,
+            currency: snapshot.original_cleaning_currency,
+          },
+          {
+            amount: poolHeatingSnapshot.original_pool_heating_total,
+            currency: poolHeatingSnapshot.original_pool_heating_currency,
+          },
+        ],
+      })
+    : [];
+
   return {
+    // 🛡️ SEC-06 F3 / F4
+    missingRates,
+    damageDeposit: Number(villaRow?.deposit) || 0,
     /* 🛡️ Motorun kapsama kararı AYNEN taşınır (yeni hesap YOK). */
     priceAvailable: snapshot.priceAvailable,
     totalPriceTry,
@@ -474,6 +589,8 @@ export type PublicReservationAuthoritativeSnapshot = {
   discount_currency: string | null;
   original_stay_total_try: number | null;
   stay_discount_amount_try: number | null;
+  // 🛡️ SEC-06 F4 — villa.deposit snapshot (client değeri YOK SAYILIR).
+  damage_deposit: number;
 };
 
 export type PublicReservationServerVerification = {
@@ -493,6 +610,14 @@ export type PublicReservationServerVerification = {
      "client'a güven" durumu DEĞİLDİR: route bu bayrağı görünce
      rezervasyonu REDDEDER. Tam kapsanan hesaplarda DAİMA false. */
   priceUnavailable: boolean;
+  /* 🛡️ SEC-06 F3 — hesapta kullanılan bir dövizin geçerli kuru yok
+     (eskiden sessizce 1:1 çevriliyordu). Route REDDEDER. */
+  rateUnavailable: boolean;
+  /* 🛡️ SEC-06 F5 — recompute tamamlanamadı (villa ayarı/settings
+     okunamadı, beklenmeyen hata). Eskiden fail-open idi (client
+     tutarları kaydediliyordu); artık route rezervasyonu OLUŞTURMAZ.
+     `authoritative`/`poolHeating`/`comparison` yine null döner. */
+  recomputeFailed: boolean;
 };
 
 /* ---------------------------------------------------------------
@@ -529,15 +654,37 @@ export async function verifyPublicReservationPrice(
         poolHeating: null,
         authoritative: null,
         priceUnavailable: true,
+        rateUnavailable: false,
+        recomputeFailed: false,
       };
     }
+    /* 🛡️ SEC-06 F5 — girdi eksik → recompute yapılamadı; route
+       rezervasyonu oluşturmaz (eskiden client tutarlarına güveniliyordu). */
     if (!server)
       return {
         comparison: null,
         poolHeating: null,
         authoritative: null,
         priceUnavailable: false,
+        rateUnavailable: false,
+        recomputeFailed: true,
       };
+    /* 🛡️ SEC-06 F3 — kullanılan bir dövizin kuru yok → tutar 1:1
+       çevrilmiş olur; authoritative ÜRETİLMEZ, route reddeder. */
+    if (server.missingRates.length > 0) {
+      console.warn("[price-verify] EKSİK KUR — rezervasyon reddedilecek", {
+        villa_id: payload.villa_id,
+        missingRates: server.missingRates,
+      });
+      return {
+        comparison: null,
+        poolHeating: null,
+        authoritative: null,
+        priceUnavailable: false,
+        rateUnavailable: true,
+        recomputeFailed: false,
+      };
+    }
 
     const cmp = comparePublicReservationPrice(payload, server);
 
@@ -560,6 +707,8 @@ export async function verifyPublicReservationPrice(
     return {
       /* Tam kapsanan hesap → fiyat geçerli (eski davranış aynen). */
       priceUnavailable: false,
+      rateUnavailable: false,
+      recomputeFailed: false,
       comparison: cmp,
       poolHeating: {
         pool_heating_selected: server.poolHeatingSelected,
@@ -586,14 +735,16 @@ export async function verifyPublicReservationPrice(
         discount_currency: server.discountCurrency,
         original_stay_total_try: server.originalStayTotalTry,
         stay_discount_amount_try: server.stayDiscountAmountTry,
+        // 🛡️ SEC-06 F4
+        damage_deposit: server.damageDeposit,
       },
     };
   } catch (err) {
-    /* FAIL-OPEN: recompute patlasa bile booking sürer; pool heating
-       snapshot'ı ve FAZ 3 authoritative snapshot'ı da override EDİLMEZ
-       (route client değerlerini korur). */
+    /* 🛡️ SEC-06 F5 — FAIL-CLOSED: recompute patlarsa authoritative
+       ÜRETİLMEZ ve `recomputeFailed` işaretlenir; route rezervasyonu
+       OLUŞTURMAZ (eskiden client tutarlarıyla devam ediliyordu). */
     console.error(
-      "[price-verify] recompute FAILED (fail-open, booking sürüyor):",
+      "[price-verify] recompute FAILED (fail-closed, rezervasyon reddedilecek):",
       err instanceof Error ? err.message : err
     );
     return {
@@ -601,6 +752,8 @@ export async function verifyPublicReservationPrice(
       poolHeating: null,
       authoritative: null,
       priceUnavailable: false,
+      rateUnavailable: false,
+      recomputeFailed: true,
     };
   }
 }
