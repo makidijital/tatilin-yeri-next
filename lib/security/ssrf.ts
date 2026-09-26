@@ -33,7 +33,8 @@ export type SsrfReason =
   | "dns-private-ipv4"
   | "dns-private-ipv6"
   | "too-many-redirects"
-  | "redirect-missing-location";
+  | "redirect-missing-location"
+  | "host-not-allowed";
 
 export type SsrfValidationResult =
   | { ok: true; url: URL }
@@ -91,60 +92,153 @@ function parseIPv4(host: string): number | null {
 export function isPrivateOrReservedIPv4(host: string): boolean {
   const n = parseIPv4(host);
   if (n === null) return false;
+  /* ⚠️ `>>> 0` ZORUNLU: JS bitwise `&` işaretli 32-bit döner; ilk okteti
+     ≥128 olan adreslerde (169.254/16, 172.16/12, 192.168/16, 224/4, …)
+     maske sonucu NEGATİF olur ve pozitif hex sabitle `===` ASLA eşleşmez.
+     Eski kodda bu yüzden 169.254.169.254 (metadata), 172.16/12 ve
+     192.168/16 hiç ENGELLENMİYORDU (H-03 incelemesinde doğrulandı). */
   // 0.0.0.0/8 — "this" network
-  if ((n & 0xff000000) === 0x00000000) return true;
+  if (((n & 0xff000000) >>> 0) === 0x00000000) return true;
   // 10.0.0.0/8
-  if ((n & 0xff000000) === 0x0a000000) return true;
+  if (((n & 0xff000000) >>> 0) === 0x0a000000) return true;
   // 100.64.0.0/10 — CGNAT
-  if ((n & 0xffc00000) === 0x64400000) return true;
+  if (((n & 0xffc00000) >>> 0) === 0x64400000) return true;
   // 127.0.0.0/8 — loopback
-  if ((n & 0xff000000) === 0x7f000000) return true;
+  if (((n & 0xff000000) >>> 0) === 0x7f000000) return true;
   // 169.254.0.0/16 — link-local
-  if ((n & 0xffff0000) === 0xa9fe0000) return true;
+  if (((n & 0xffff0000) >>> 0) === 0xa9fe0000) return true;
   // 172.16.0.0/12
-  if ((n & 0xfff00000) === 0xac100000) return true;
+  if (((n & 0xfff00000) >>> 0) === 0xac100000) return true;
   // 192.0.0.0/24 — IETF protocol assignments
-  if ((n & 0xffffff00) === 0xc0000000) return true;
+  if (((n & 0xffffff00) >>> 0) === 0xc0000000) return true;
   // 192.168.0.0/16
-  if ((n & 0xffff0000) === 0xc0a80000) return true;
+  if (((n & 0xffff0000) >>> 0) === 0xc0a80000) return true;
   // 198.18.0.0/15 — benchmarking
-  if ((n & 0xfffe0000) === 0xc6120000) return true;
+  if (((n & 0xfffe0000) >>> 0) === 0xc6120000) return true;
   // 224.0.0.0/4 — multicast
-  if ((n & 0xf0000000) === 0xe0000000) return true;
+  if (((n & 0xf0000000) >>> 0) === 0xe0000000) return true;
   // 240.0.0.0/4 — reserved (255.255.255.255 dahil)
-  if ((n & 0xf0000000) === 0xf0000000) return true;
+  if (((n & 0xf0000000) >>> 0) === 0xf0000000) return true;
   return false;
 }
 
 /* ---------------------------------------------------------------
-   IPv6 — string-level blocked range check
+   IPv6 — TAM PARSE + range check (H-03 / M-01 düzeltmesi)
    --------------------------------------------------------------
-   WHATWG URL.hostname IPv6 literal'i `[::1]` → `::1` (bracket
-   strip) ve canonical lower-case verir. Buraya canonical form
-   beklenir. */
-function isV6Literal(host: string): boolean {
-  if (!host.includes(":")) return false;
-  // Geniş tolerans — sadece `0-9a-f:.` karakterleri varsa
-  return /^[0-9a-f:.]+$/i.test(host);
+   ⚠️ ESKİ HATA (doğrulandı): WHATWG `URL.hostname` IPv6 literal'in
+   köşeli parantezini KORUR (`new URL("http://[::1]/").hostname ===
+   "[::1]"`). Eski `isV6Literal` yalnız `[0-9a-f:.]` kabul ettiği için
+   "[::1]" IPv6 sayılmıyor → bloklanmıyordu; server tarafı da ":" içeren
+   host'ta DNS'i atlayıp KABUL ediyordu. Ayrıca `[::ffff:127.0.0.1]`
+   parser tarafından `[::ffff:7f00:1]` (hex) biçimine çevrildiği için
+   eski "::ffff:a.b.c.d" regex'i de ıskalıyordu.
+
+   ŞİMDİ: parantez soyulur, adres 8 × 16-bit gruba TAM parse edilir
+   (:: kısaltması, gömülü IPv4 kuyruğu, zone-id) ve aralık kontrolü
+   sayısal yapılır. Yalnız global unicast (2000::/3) izinli; onun
+   içindeki özel/tünel/dokümantasyon blokları da reddedilir. IPv4
+   gömen biçimlerde (mapped/compat/NAT64/6to4) gömülü IPv4, IPv4
+   kurallarıyla kontrol edilir. */
+
+/** "[::1]" → "::1"; diğerleri aynen. */
+export function stripIpv6Brackets(host: string): string {
+  return host.length > 1 && host.startsWith("[") && host.endsWith("]")
+    ? host.slice(1, -1)
+    : host;
+}
+
+function parseIPv6(input: string): number[] | null {
+  let v = stripIpv6Brackets(input).toLowerCase();
+  const zone = v.indexOf("%");
+  if (zone !== -1) v = v.slice(0, zone); // fe80::1%eth0 → fe80::1
+  if (!v.includes(":") || !/^[0-9a-f:.]+$/.test(v)) return null;
+
+  let tail: number[] = [];
+  const lastColon = v.lastIndexOf(":");
+  const maybeV4 = v.slice(lastColon + 1);
+  if (maybeV4.includes(".")) {
+    const n = parseIPv4(maybeV4);
+    if (n === null) return null;
+    tail = [(n >>> 16) & 0xffff, n & 0xffff];
+    v = v.slice(0, lastColon + 1) + "0"; // yer tutucu; aşağıda kırpılır
+  }
+
+  const parts = v.split("::");
+  if (parts.length > 2) return null;
+  const toGroups = (seg: string): number[] | null => {
+    if (seg === "") return [];
+    const out: number[] = [];
+    for (const g of seg.split(":")) {
+      if (!/^[0-9a-f]{1,4}$/.test(g)) return null;
+      out.push(parseInt(g, 16));
+    }
+    return out;
+  };
+  let head = toGroups(parts[0]);
+  let rest = parts.length === 2 ? toGroups(parts[1]) : [];
+  if (!head || !rest) return null;
+  if (tail.length) {
+    // yer tutucu "0" son grubu IPv4 kuyruğuyla değiştir
+    if (parts.length === 2 && rest.length) rest = [...rest.slice(0, -1), ...tail];
+    else if (parts.length === 2) return null;
+    else head = [...head.slice(0, -1), ...tail];
+  }
+  const total = head.length + rest.length;
+  if (parts.length === 2) {
+    if (total > 7) return null;
+    return [...head, ...new Array(8 - total).fill(0), ...rest];
+  }
+  return total === 8 ? head : null;
+}
+
+function embeddedV4(g: number[], hi: number): string {
+  const a = g[hi], b = g[hi + 1];
+  return `${a >>> 8}.${a & 0xff}.${b >>> 8}.${b & 0xff}`;
 }
 
 export function isBlockedIPv6(host: string): boolean {
-  if (!isV6Literal(host)) return false;
-  const v = host.toLowerCase();
-  // :: (unspecified) ve ::1 (loopback)
-  if (v === "::" || v === "::0" || v === "::1") return true;
-  // IPv4-mapped ::ffff:a.b.c.d → underlying IPv4 kontrol
-  const mapped = /^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/.exec(v);
-  if (mapped) return isPrivateOrReservedIPv4(mapped[1]);
-  // ::ffff:7f00:1 gibi hex form da olabilir — pragmatik kapsam dışı,
-  // çoğu host bunu üretmez; URL.hostname normalize edilmiş bekleniyor.
-  // fc00::/7 — Unique Local Address
-  if (/^f[cd][0-9a-f]{2}:/.test(v)) return true;
-  // fe80::/10 — link-local
-  if (/^fe[89ab][0-9a-f]:/.test(v)) return true;
-  // ff00::/8 — multicast
-  if (/^ff[0-9a-f]{2}:/.test(v)) return true;
+  const g = parseIPv6(host);
+  if (!g) return false; // IPv6 literal değil → bu kontrolün kapsamı dışında
+  // ::/96 — unspecified (::), loopback (::1), eski IPv4-compatible
+  if (g.slice(0, 6).every((x) => x === 0)) return true;
+  // ::ffff:0:0/96 — IPv4-mapped → gömülü IPv4 kuralları
+  if (g.slice(0, 5).every((x) => x === 0) && g[5] === 0xffff) {
+    return isPrivateOrReservedIPv4(embeddedV4(g, 6));
+  }
+  // ::ffff:0:0:0/96 — IPv4-translated (SIIT) → reddet
+  if (g.slice(0, 4).every((x) => x === 0) && g[4] === 0xffff && g[5] === 0) return true;
+  // 64:ff9b::/96 — NAT64 well-known → gömülü IPv4 kuralları
+  if (g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((x) => x === 0)) {
+    return isPrivateOrReservedIPv4(embeddedV4(g, 6));
+  }
+  // 64:ff9b:1::/48 — NAT64 local-use
+  if (g[0] === 0x64 && g[1] === 0xff9b && g[2] === 1) return true;
+  // 100::/64 — discard-only
+  if (g[0] === 0x100 && g[1] === 0 && g[2] === 0 && g[3] === 0) return true;
+  // 2000::/3 DIŞINDAKİ her şey (fc00::/7 ULA, fe80::/10 link-local,
+  // fec0::/10 site-local, ff00::/8 multicast, rezerve bloklar) → reddet
+  if ((g[0] & 0xe000) !== 0x2000) return true;
+  // 2001::/32 Teredo (tünel), 2001:db8::/32 dokümantasyon,
+  // 2001:10::/28 ORCHID, 2001:20::/28 ORCHIDv2
+  if (g[0] === 0x2001 && (g[1] === 0 || g[1] === 0xdb8)) return true;
+  if (g[0] === 0x2001 && (g[1] & 0xfff0) === 0x10) return true;
+  if (g[0] === 0x2001 && (g[1] & 0xfff0) === 0x20) return true;
+  // 2002::/16 — 6to4 → gömülü IPv4 kuralları
+  if (g[0] === 0x2002) return isPrivateOrReservedIPv4(embeddedV4(g, 1));
   return false;
+}
+
+/** IPv4 veya IPv6 (parantezli/parantezsiz) adres engelli mi? IP değilse false. */
+export function isBlockedIpAddress(address: string): boolean {
+  const a = stripIpv6Brackets(address.trim());
+  if (parseIPv4(a) !== null) return isPrivateOrReservedIPv4(a);
+  return isBlockedIPv6(a);
+}
+
+/** Host bir IP literal mı (IPv4 dotted veya IPv6, parantezli olabilir)? */
+export function isIpLiteralHost(host: string): boolean {
+  const h = stripIpv6Brackets(host);
+  return parseIPv4(h) !== null || parseIPv6(h) !== null;
 }
 
 /* ---------------------------------------------------------------
@@ -189,7 +283,10 @@ export function validateExternalUrlStatic(
     };
   }
 
-  const host = parsed.hostname; // WHATWG URL already lower-cases & strips brackets
+  /* WHATWG URL hostname'i küçük harfe çevirir ama IPv6 köşeli parantezini
+     KORUR ("[::1]") → soyulur. Sondaki nokta ("localhost.") FQDN yazımıdır;
+     blocklist'i atlatmasın diye kontrol için kırpılır. */
+  const host = stripIpv6Brackets(parsed.hostname).replace(/\.+$/, "");
   if (!host) {
     return {
       ok: false,

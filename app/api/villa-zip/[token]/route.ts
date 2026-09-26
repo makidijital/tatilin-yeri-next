@@ -6,6 +6,9 @@ import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { settingsServerRepository } from "@/lib/db/settings.repository.server";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
+import { getCdnBaseForBucket } from "@/lib/storage/cdn.config";
+import { STORAGE_BUCKETS } from "@/lib/storage/storage.constants";
+import { safeGetStream } from "@/lib/security/ssrf.server";
 
 /* ===============================================================
    🛡️ GET /api/villa-zip/[token] — STREAMING ZIP DOWNLOAD
@@ -37,6 +40,48 @@ import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/* ===============================================================
+   🛡️ H-03 — ZIP GÖRSEL İNDİRME: HOST ALLOWLIST + SSRF GUARD
+   ===============================================================
+   `villa_images.image_url` admin girdisidir; tam URL kayıtları
+   (legacy) `resolveVillaImageUrl` tarafından AYNEN geçirilir. Eskiden
+   bu URL doğrulamasız `fetch()` ile (redirect takipli, timeout'suz)
+   çekilip ZIP'e konuyordu → iç ağ/metadata yanıtı okunabiliyordu.
+
+   Artık yalnız uygulamanın gerçekten kullandığı görsel host'larına
+   istek atılır — next.config.ts `images.remotePatterns` ile AYNI küme:
+     • NEXT_PUBLIC_CDN_BASE_VILLA_IMAGES / _SITE_ASSETS host'ları (R2)
+     • LEGACY: https://*.supabase.co (DB'de kalmış eski tam URL'ler)
+   Üstüne `safeGetStream`: static + DNS + bağlantı-anı IP doğrulaması,
+   redirect'ler elle ve her hop'ta aynı allowlist ile.
+   Allowlist dışı / engellenen görsel ZIP'e EKLENMEZ (mevcut "skip"
+   davranışı); diğer görseller normal iner. */
+const LEGACY_ASSET_HOST_SUFFIX = ".supabase.co";
+
+function zipAllowedHosts(): Set<string> {
+  const hosts = new Set<string>();
+  for (const bucket of [STORAGE_BUCKETS.VILLA_IMAGES, STORAGE_BUCKETS.SITE_ASSETS]) {
+    const base = getCdnBaseForBucket(bucket);
+    if (!base) continue;
+    try {
+      hosts.add(new URL(base).host.toLowerCase()); // host:port (varsa)
+    } catch {
+      /* geçersiz base → allowlist'e girmez */
+    }
+  }
+  return hosts;
+}
+
+function isAllowedZipImageUrl(url: URL, cdnHosts: Set<string>): boolean {
+  if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+  if (cdnHosts.has(url.host.toLowerCase())) return true;
+  return (
+    url.protocol === "https:" &&
+    url.port === "" &&
+    url.hostname.toLowerCase().endsWith(LEGACY_ASSET_HOST_SUFFIX)
+  );
+}
 
 function slugifyForFile(input: string | null | undefined): string {
   return (input || "")
@@ -133,6 +178,7 @@ export async function GET(
      archiver kuyruğu sırayla drain eder (store mode); okunmayan stream'ler
      kaynakta backpressure ile DURUR → tüm görseller aynı anda RAM'e
      ALINMAZ. Buffer array / Promise.all(tüm görseller) YOK. */
+  const cdnHosts = zipAllowedHosts();
   void (async () => {
     let index = 0;
     for (const row of imageRows) {
@@ -146,12 +192,17 @@ export async function GET(
       const urlStr = resolveVillaImageUrl(rawPath);
       if (!urlStr) continue;
       try {
-        const res = await fetch(urlStr);
-        if (!res.ok || !res.body) {
+        const got = await safeGetStream(urlStr, {
+          allowUrl: (u) => isAllowedZipImageUrl(u, cdnHosts),
+          maxRedirects: 3,
+          headersTimeoutMs: 15_000,
+        });
+        if (!got.ok) {
+          /* Engellenen hedefin ham adresi loglanmaz (iç ağ bilgisi). */
           console.warn(
-            "[villa-zip.download] image skip (fetch):",
-            res.status,
-            urlStr
+            "[villa-zip.download] image skip:",
+            got.reason,
+            got.status ?? ""
           );
           continue;
         }
@@ -159,9 +210,9 @@ export async function GET(
         const extMatch = urlStr.split("?")[0].match(/\.([a-zA-Z0-9]{2,5})$/);
         const ext = extMatch ? extMatch[1].toLowerCase() : "jpg";
         const entryName = `${String(index).padStart(3, "0")}-${villaSlug}.${ext}`;
-        /* Web ReadableStream → Node Readable; archiver consume edene
+        /* Node IncomingMessage (Readable); archiver consume edene
            kadar kaynakta paused (RAM-safe). */
-        archive.append(Readable.fromWeb(res.body as never), {
+        archive.append(got.res, {
           name: entryName,
         });
       } catch (err) {
