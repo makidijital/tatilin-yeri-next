@@ -33,6 +33,9 @@
        veya klavye/tab ile rail butonları.
      - Sağ/sol ok butonları kaldırıldı; yerine isim rail'i + ince
        progress çizgisi geldi (brief'teki "story rail" alternatifi).
+     - GÜNCEL: alttaki isim rail'i (misafir isim butonları) KALDIRILDI.
+       Gezinme Embla sürükleme/swipe ile; ince progress çizgisi ve
+       select/reInit senkronu AYNEN duruyor.
 
    prefers-reduced-motion: tüm geçişler zaten kısa/hafif (renk,
    width, opacity) — motion-reduce:transition-none ile tamamen
@@ -49,7 +52,6 @@ import { formatDateForLocale } from "@/lib/date-format";
    DEĞİŞMEDİ. */
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
-import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 
 export type CarouselReview = {
   id: string;
@@ -71,7 +73,6 @@ export default function ReviewsCarousel({
   reviews,
   locale = DEFAULT_LOCALE,
 }: Props & { locale?: Locale }) {
-  const dict = getDictionary(locale).home.reviews;
   const canNavigate = reviews.length > 1;
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -97,11 +98,6 @@ export default function ReviewsCarousel({
       emblaApi.off("reInit", onSelect);
     };
   }, [emblaApi, onSelect]);
-
-  const scrollTo = useCallback(
-    (idx: number) => emblaApi?.scrollTo(idx),
-    [emblaApi]
-  );
 
   const total = reviews.length;
 
@@ -133,39 +129,6 @@ export default function ReviewsCarousel({
               className="h-full bg-gradient-to-r from-[#ED7926] to-[#0973BA] transition-[width] duration-500 ease-out motion-reduce:transition-none"
               style={{ width: `${((selectedIndex + 1) / total) * 100}%` }}
             />
-          </div>
-
-          {/* STORY RAIL — diğer misafirlerin isimleri, minimal navigasyon.
-              Embla ile senkron: tıklama → scrollTo(idx); aktif seçim
-              select event'i üzerinden geri yansır. */}
-          <div
-            className="mt-4 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1 py-1"
-            aria-label={dict.navigationLabel}
-          >
-            {reviews.map((r, idx) => {
-              const isActive = idx === selectedIndex;
-              return (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => scrollTo(idx)}
-                  aria-pressed={isActive}
-                  aria-label={formatDictionaryString(dict.showReview, {
-                    name: r.guest_name,
-                  })}
-                  className={
-                    "shrink-0 px-3.5 py-2 rounded-full text-[13px] font-medium whitespace-nowrap " +
-                    "transition-colors duration-200 motion-reduce:transition-none " +
-                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0973BA]/40 " +
-                    (isActive
-                      ? "text-white bg-gradient-to-r from-[#ED7926] to-[#0973BA]"
-                      : "text-[var(--color-stone-500)] hover:text-[var(--color-stone-800)] hover:bg-[var(--color-stone-50)]")
-                  }
-                >
-                  {r.guest_name}
-                </button>
-              );
-            })}
           </div>
         </>
       )}
