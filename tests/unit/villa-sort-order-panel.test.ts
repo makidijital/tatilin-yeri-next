@@ -93,7 +93,9 @@ describe("B) API sözleşmesi — kaynak kilidi", () => {
     expect(src).toContain("closestCenter");
     expect(src).toContain("verticalListSortingStrategy");
     expect(src).toContain("arrayMove(items, oldIndex, newIndex)");
-    expect(src).toContain("useSortable({ id: villa.id })");
+    /* id aynı; yalnız performans seçenekleri eklendi (transition +
+       O(1) getNewIndex) — bkz. villa-sort-drag-speed.test.ts. */
+    expect(src).toMatch(/useSortable\(\{\s*id: villa\.id,/);
   });
 
   it("fail-revert + cache invalidation + refresh duruyor", () => {
