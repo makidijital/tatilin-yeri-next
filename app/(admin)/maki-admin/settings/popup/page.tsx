@@ -485,7 +485,15 @@ export default function SettingsPopupPage() {
           </FieldShell>
         </SettingsSection>
 
-        {/* GÖSTERİM */}
+        {/* GÖSTERİM
+            🛡️ KATMAN: `.card-premium:hover` → transform (translateY) →
+            bölüm hover'da stacking context olur; tarih seçici popover'ı
+            (z-[60]) bu bölümün İÇİNDE hapsolur ve DOM'da sonra gelen
+            "Önizleme" kartının konumlu (relative/absolute) katmanları
+            popover'ın üstüne boyanır. Bu sarmalayıcı bölümü sonraki kardeşlerin
+            üstüne alır (yalnız bu sayfa; global CSS / AdminDateInput
+            değişmedi). z-20 < admin topbar (z-30), mobil menü (z-40/50). */}
+        <div className="relative z-20">
         <SettingsSection
           title="Gösterim"
           description="Nerede ve ne sıklıkla gösterileceği. Tarihler boşsa yalnız aktif/pasif durumu geçerlidir."
@@ -556,7 +564,14 @@ export default function SettingsPopupPage() {
               </fieldset>
             </FieldShell>
             <FieldShell label="Bitiş tarihi (opsiyonel)" hint="Bu günün sonuna kadar (dahil).">
-              <fieldset disabled={loading || !!loadError} className="min-w-0">
+              {/* 🛡️ KONUM: iki sütunda (sm+) sağ sütundaki popover, alanın
+                  SOL kenarından açılınca dar ekranlarda (≈820–1024px)
+                  viewport'un sağından taşıyordu → alanın SAĞ kenarına
+                  hizalanır. Tek sütunda (mobil) mevcut davranış aynen. */}
+              <fieldset
+                disabled={loading || !!loadError}
+                className="min-w-0 sm:[&_[role=dialog]]:left-auto sm:[&_[role=dialog]]:right-0"
+              >
                 <AdminDateInput
                   mode="date"
                   value={endDate}
@@ -568,6 +583,7 @@ export default function SettingsPopupPage() {
             </FieldShell>
           </div>
         </SettingsSection>
+        </div>
 
         {/* ÖNİZLEME */}
         <SettingsSection
