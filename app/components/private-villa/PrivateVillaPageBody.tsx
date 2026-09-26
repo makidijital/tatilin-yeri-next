@@ -779,6 +779,9 @@ export default async function PrivateVillaPageBody({
                 minimum_stay_nights={villa.minimum_stay_nights ?? null}
                 initialStart={hasInitialRange ? initialStart : undefined}
                 initialEnd={hasInitialRange ? initialEnd : undefined}
+                /* 🛡️ Gizli link: pasif villa → rezervasyon akışı yok;
+                   yalnız tarih seçimi + fiyat hesabı (CTA gizli). */
+                hideReservationCta
               />
 
               {/* TOURISM DOCUMENT TRUST CARD (Faz 24) — aynı semantic */}

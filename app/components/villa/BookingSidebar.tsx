@@ -117,6 +117,12 @@ type Props = {
   externalBlocks?: ExternalCalendarStringArrays;
   /* 🛡️ PHASE 10B — opsiyonel, default "tr". */
   locale?: Locale;
+  /* 🛡️ Gizli villa linki (/v/[token]) — villa pasif/yayında değil;
+     amaç yalnız "göster + tarih seç + fiyat hesapla". true → yalnız
+     "Rezervasyon Yap" butonu render EDİLMEZ (normal rezervasyon sayfası
+     pasif villayı bulamaz). Tarih seçimi, fiyat hesabı ve özet AYNEN.
+     Default false → normal villa sayfaları DEĞİŞMEZ. */
+  hideReservationCta?: boolean;
 };
 
 /* 🛡️ Aşama 7B — lazy BookingCalendar yükleyici (modül seviyesi, tek
@@ -165,6 +171,7 @@ export default function BookingSidebar({
   initialStart = null,
   initialEnd = null,
   locale,
+  hideReservationCta = false,
 }: Props) {
   const dict = getDictionary(locale);
   const bcp47 = LOCALE_BCP47[locale ?? "tr"];
@@ -532,22 +539,24 @@ export default function BookingSidebar({
       {/* CTA — FAZ 26B: minimum stay invalid → disabled (koşul AYNEN).
           onClick/disabled/handler DEĞİŞMEDİ; yalnız görünüm yenilendi. */}
       <div className="space-y-3">
-        <button
-          onClick={handleReservation}
-          disabled={!minimumStayValid || priceUnavailable}
-          className={`
-            w-full rounded-full py-4
-            text-[14px] font-semibold tracking-[0.01em] text-white
-            transition-all duration-200 motion-reduce:transition-none
-            ${
-              !minimumStayValid || priceUnavailable
-                ? "bg-[var(--color-stone-300)] cursor-not-allowed"
-                : "bg-gradient-to-r from-[#ED7926] to-[#0973BA] shadow-[0_16px_32px_-12px_rgba(9,115,186,0.45)] hover:shadow-[0_20px_40px_-12px_rgba(9,115,186,0.55)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
-            }
-          `}
-        >
-          {dict.booking.bookNow}
-        </button>
+        {!hideReservationCta && (
+          <button
+            onClick={handleReservation}
+            disabled={!minimumStayValid || priceUnavailable}
+            className={`
+              w-full rounded-full py-4
+              text-[14px] font-semibold tracking-[0.01em] text-white
+              transition-all duration-200 motion-reduce:transition-none
+              ${
+                !minimumStayValid || priceUnavailable
+                  ? "bg-[var(--color-stone-300)] cursor-not-allowed"
+                  : "bg-gradient-to-r from-[#ED7926] to-[#0973BA] shadow-[0_16px_32px_-12px_rgba(9,115,186,0.45)] hover:shadow-[0_20px_40px_-12px_rgba(9,115,186,0.55)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
+              }
+            `}
+          >
+            {dict.booking.bookNow}
+          </button>
+        )}
 
         <p className="text-[11px] text-[var(--color-stone-400)] text-center leading-relaxed">
           {dict.booking.feeAutoCalculated}
