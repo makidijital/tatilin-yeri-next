@@ -12,6 +12,7 @@ import {
   Plug,
   Wrench,
   Languages,
+  Megaphone,
 } from "lucide-react";
 
 /* ===============================================================
@@ -46,6 +47,9 @@ const ITEMS: NavItem[] = [
   /* 🛡️ PHASE 10K — settings'in yönetilebilir doğal dil metinlerinin
      EN/DE içerikleri. Mevcut 8 bölümün sırası/yapısı DEĞİŞMEDİ. */
   { href: "/maki-admin/settings/ceviriler", label: "Çeviriler", icon: Languages },
+  /* 🛡️ Açılış/kampanya popup'ı (migration 095) — ayrı tablo, ayrı
+     action'lar; mevcut bölümler DEĞİŞMEDİ (yalnız sona eklendi). */
+  { href: "/maki-admin/settings/popup", label: "Açılış Popup", icon: Megaphone },
 ];
 
 export default function SettingsNav() {

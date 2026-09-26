@@ -20,6 +20,10 @@ import { resolvePublicHome } from "@/lib/i18n/public-home";
 /* 🛡️ SEC-05 Phase 2 — GTM + custom head/analytics alanları root
    layout'tan buraya taşındı (admin panelinde çalışmasın diye). */
 import SiteTrackingScripts from "@/app/components/layout/SiteTrackingScripts";
+/* 🛡️ Açılış/kampanya popup'ı (migration 095). Kapalıysa hiç render
+   edilmez; aktifse hafif client loader karar verip modalı lazy yükler. */
+import SitePopupLoader from "@/app/components/layout/site-popup/SitePopupLoader";
+import { getCachedSitePopup } from "@/lib/site-popup.cache";
 
 /* ===============================================================
    🛡️ PUBLIC LAYOUT — MAINTENANCE MODE GATE
@@ -78,6 +82,10 @@ export default async function PublicLayout({
      kapalı → "/" (BYTE-IDENTICAL). */
   const { trHomeHref } = resolvePublicHome(settings);
 
+  /* Popup — ayrı cache tag'i ("site-popup"); hata/tablo yok → null
+     (site etkilenmez). */
+  const sitePopup = await getCachedSitePopup().catch(() => null);
+
   return (
     <>
     {/* 🛡️ SEC-05 Phase 2 — takip/özel script alanları (public-only).
@@ -121,6 +129,8 @@ export default async function PublicLayout({
       {/* 🍪 Çerez onay banner'ı — client-only island, SSR-safe, additive.
          Bakım modunda render edilmez (yukarıdaki early-return). */}
       <CookieConsent />
+
+      {sitePopup && <SitePopupLoader popup={sitePopup} />}
     </div>
     </>
   );
