@@ -5,6 +5,10 @@ import { sendMail } from "@/app/lib/mail/send";
 import { renderReservationApprovedEmail } from "@/app/lib/mail/templates/ReservationApprovedEmail";
 import { getMailConfig } from "@/app/lib/mail/client";
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
+import {
+  callerHasPermission,
+  FORBIDDEN_MESSAGE,
+} from "@/lib/auth/action-authz";
 
 import {
   getPaymentDisplayValues,
@@ -57,6 +61,15 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { ok: false, error: auth.error },
         { status: auth.status }
+      );
+    }
+
+    /* 🛡️ Admin yetki (reservations) — izin yoksa 403; hiçbir veri
+       okunmaz/değiştirilmez (lib/auth/admin-permission-map.ts). */
+    if (!(await callerHasPermission(auth.caller.id, "reservations"))) {
+      return NextResponse.json(
+        { ok: false, error: FORBIDDEN_MESSAGE },
+        { status: 403 }
       );
     }
     console.info("[mail.reservation_approved.auth] ADMIN_VERIFIED", {

@@ -11,6 +11,7 @@ import UpcomingOperations from "@/app/components/admin/dashboard/UpcomingOperati
 import HideableSection from "@/app/components/admin/dashboard/HideableSection";
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
 import AdminPageSessionRefresh from "@/app/components/admin/AdminPageSessionRefresh";
+import { adminPermissionGate } from "@/app/components/admin/AdminSectionGuard";
 
 export default async function AdminHome() {
   /* 🛡️ SEC-01 — AUTH ÖNCE, VERİ SONRA. Middleware yalnız optimistic
@@ -19,6 +20,12 @@ export default async function AdminHome() {
      Başarısızsa HİÇBİR sorgu çalışmaz, veri üretilmez. */
   const auth = await authorizeAdminSession();
   if (!auth.ok) return <AdminPageSessionRefresh />;
+
+  /* 🛡️ Yetki ("dashboard") — VERİDEN ÖNCE. Yetkisiz admin (login sonrası
+     herkes buraya gelir) menü sırasındaki ilk izinli bölüme yönlendirilir;
+     rezervasyon/misafir verisi hiç sorgulanmaz. */
+  const denied = await adminPermissionGate(auth.caller.id, "dashboard");
+  if (denied) return denied;
 
   /* Dashboard data fetch — yalnız operasyon odaklı sectionlar için
      gerçek veri çekilir. Eski statik KPI counts (toplam villa,

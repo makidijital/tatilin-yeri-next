@@ -5,6 +5,7 @@ import { getVillasForSortOrder } from "@/app/services/villa.service";
 import VillaSortPanel from "./_components/VillaSortPanel";
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
 import AdminPageSessionRefresh from "@/app/components/admin/AdminPageSessionRefresh";
+import { adminPermissionGate } from "@/app/components/admin/AdminSectionGuard";
 
 /* ===============================================================
    🛡️ ADMIN — VILLA SIRALA (drag-drop only)
@@ -43,6 +44,11 @@ export default async function VillaSiralaPage() {
   /* 🛡️ SEC-01 — AUTH ÖNCE, VERİ SONRA (bkz. maki-admin/page.tsx). */
   const auth = await authorizeAdminSession();
   if (!auth.ok) return <AdminPageSessionRefresh />;
+
+  /* 🛡️ Yetki ("villas") — VERİDEN ÖNCE. Bölüm layout'u sayfanın
+     server render'ını durdurmadığı için kontrol burada da yapılır. */
+  const denied = await adminPermissionGate(auth.caller.id, "villas");
+  if (denied) return denied;
 
   // 🛡️ Admin listing: pasif villalar dahil; soft-deleted hariç.
   //    Minimal projection — panel yalnız id + title okuyor.

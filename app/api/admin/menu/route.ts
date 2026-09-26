@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
+import {
+  callerHasPermission,
+  FORBIDDEN_MESSAGE,
+} from "@/lib/auth/action-authz";
 import { menuRepository } from "@/lib/db/menu.repository";
 import { menuServerRepository } from "@/lib/db/menu.repository.server";
 import { pagesServerRepository } from "@/lib/db/pages.repository.server";
@@ -38,6 +42,15 @@ export async function GET(req: Request): Promise<NextResponse> {
     );
   }
 
+  /* 🛡️ Admin yetki (menu) — izin yoksa 403; hiçbir veri
+     okunmaz/değiştirilmez (lib/auth/admin-permission-map.ts). */
+  if (!(await callerHasPermission(auth.caller.id, "menu"))) {
+    return NextResponse.json(
+      { ok: false, error: FORBIDDEN_MESSAGE },
+      { status: 403 }
+    );
+  }
+
   /* 4-source paralel fetch (menu list ekleme — admin/menu/page tree
      builder bunu kullanır; menu/new/page yalnız pages/types/locations
      okur ve menu alanını yok sayar). Eski client davranışında 4
@@ -72,6 +85,15 @@ export async function POST(req: Request): Promise<NextResponse> {
     return NextResponse.json(
       { ok: false, error: auth.error },
       { status: auth.status }
+    );
+  }
+
+  /* 🛡️ Admin yetki (menu) — izin yoksa 403; hiçbir veri
+     okunmaz/değiştirilmez (lib/auth/admin-permission-map.ts). */
+  if (!(await callerHasPermission(auth.caller.id, "menu"))) {
+    return NextResponse.json(
+      { ok: false, error: FORBIDDEN_MESSAGE },
+      { status: 403 }
     );
   }
 
@@ -142,6 +164,15 @@ export async function PATCH(req: Request): Promise<NextResponse> {
     );
   }
 
+  /* 🛡️ Admin yetki (menu) — izin yoksa 403; hiçbir veri
+     okunmaz/değiştirilmez (lib/auth/admin-permission-map.ts). */
+  if (!(await callerHasPermission(auth.caller.id, "menu"))) {
+    return NextResponse.json(
+      { ok: false, error: FORBIDDEN_MESSAGE },
+      { status: 403 }
+    );
+  }
+
   let id = "";
   try {
     id = (new URL(req.url).searchParams.get("id") || "").trim();
@@ -191,6 +222,15 @@ export async function DELETE(req: Request): Promise<NextResponse> {
     return NextResponse.json(
       { ok: false, error: auth.error },
       { status: auth.status }
+    );
+  }
+
+  /* 🛡️ Admin yetki (menu) — izin yoksa 403; hiçbir veri
+     okunmaz/değiştirilmez (lib/auth/admin-permission-map.ts). */
+  if (!(await callerHasPermission(auth.caller.id, "menu"))) {
+    return NextResponse.json(
+      { ok: false, error: FORBIDDEN_MESSAGE },
+      { status: 403 }
     );
   }
 

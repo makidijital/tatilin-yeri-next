@@ -1,3 +1,5 @@
+import AdminSectionGuard from "@/app/components/admin/AdminSectionGuard";
+
 import SettingsNav from "./_components/SettingsNav";
 
 /* ===============================================================
@@ -17,12 +19,16 @@ export default function SettingsLayout({
 }: {
   children: React.ReactNode;
 }) {
+  /* 🛡️ Admin yetki kapısı — /maki-admin/settings/* ("settings");
+     yetkisiz admin alt menüyü de görmez. */
   return (
-    <div className="w-full">
-      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] xl:grid-cols-[240px_1fr] gap-6 lg:gap-10">
-        <SettingsNav />
-        <div className="min-w-0">{children}</div>
+    <AdminSectionGuard need="settings">
+      <div className="w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] xl:grid-cols-[240px_1fr] gap-6 lg:gap-10">
+          <SettingsNav />
+          <div className="min-w-0">{children}</div>
+        </div>
       </div>
-    </div>
+    </AdminSectionGuard>
   );
 }

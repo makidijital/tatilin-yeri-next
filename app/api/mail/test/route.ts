@@ -4,6 +4,10 @@ import { applyRateLimit } from "@/lib/rate-limit";
 import { renderTestEmail } from "@/app/lib/mail/templates/TestEmail";
 import { getMailConfig } from "@/app/lib/mail/client";
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
+import {
+  callerHasPermission,
+  FORBIDDEN_MESSAGE,
+} from "@/lib/auth/action-authz";
 
 /* ===============================================================
    🔥 POST /api/mail/test
@@ -70,6 +74,15 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { ok: false, error: auth.error },
         { status: auth.status }
+      );
+    }
+
+    /* 🛡️ Admin yetki (["settings", "system_logs"]) — izin yoksa 403; hiçbir veri
+       okunmaz/değiştirilmez (lib/auth/admin-permission-map.ts). */
+    if (!(await callerHasPermission(auth.caller.id, ["settings", "system_logs"]))) {
+      return NextResponse.json(
+        { ok: false, error: FORBIDDEN_MESSAGE },
+        { status: 403 }
       );
     }
     console.info("[mail.test.auth] ADMIN_VERIFIED", {

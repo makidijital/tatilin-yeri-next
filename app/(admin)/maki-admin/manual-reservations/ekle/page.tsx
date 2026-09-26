@@ -6,6 +6,7 @@ import ManualReservationForm from "./ManualReservationForm";
 import { villaAdminRepository as villaRepository } from "@/lib/db/villa.repository.server";
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
 import AdminPageSessionRefresh from "@/app/components/admin/AdminPageSessionRefresh";
+import { adminPermissionGate } from "@/app/components/admin/AdminSectionGuard";
 
 async function getVillas() {
   const { data, error } = await villaRepository.findAllIdTitleSlug();
@@ -28,6 +29,11 @@ export default async function Page({
   /* 🛡️ SEC-01 — AUTH ÖNCE, VERİ SONRA (bkz. maki-admin/page.tsx). */
   const auth = await authorizeAdminSession();
   if (!auth.ok) return <AdminPageSessionRefresh />;
+
+  /* 🛡️ Yetki ("manual_reservations") — VERİDEN ÖNCE. Bölüm layout'u sayfanın
+     server render'ını durdurmadığı için kontrol burada da yapılır. */
+  const denied = await adminPermissionGate(auth.caller.id, "manual_reservations");
+  if (denied) return denied;
 
   const villas = await getVillas();
 

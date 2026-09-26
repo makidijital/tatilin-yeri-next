@@ -77,12 +77,27 @@ const h = vi.hoisted(() => {
     },
     routerRefresh: vi.fn(),
     adminState: { admin: null as unknown },
+    /* 🛡️ Sayfa yetki kapısı (AdminSectionGuard > callerHasPermission)
+       izinleri mevcut repository'den okur → DB yerine bu durum. */
+    perms: { current: [] as string[] },
+    redirect: vi.fn(),
   };
 });
-const { callLog, authResult, routerRefresh, adminState } = h;
+const { callLog, authResult, routerRefresh, adminState, perms } = h;
 
 vi.mock("@/lib/admin-route-auth", () => ({
   authorizeAdminSession: h.authorizeAdminSession,
+}));
+vi.mock("@/lib/db/admin-user.repository.server", () => ({
+  adminUserServerRepository: {
+    findByIdForSession: vi.fn(async (id: string) => {
+      h.callLog.push("perm");
+      return {
+        data: { id, is_active: true, sidebar_permissions: h.perms.current },
+        error: null,
+      };
+    }),
+  },
 }));
 
 /* ---------------- veri modülleri (sayfaların kullandıkları) ---------------- */
@@ -118,7 +133,7 @@ vi.mock("@/app/(admin)/maki-admin/settings/ceviriler/SettingsTranslationsPage", 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: h.routerRefresh, replace: vi.fn(), push: vi.fn() }),
   usePathname: () => "/maki-admin",
-  redirect: vi.fn(),
+  redirect: h.redirect,
 }));
 
 vi.mock("@/app/components/admin/AdminSessionGuard", () => ({
@@ -146,29 +161,36 @@ type PageCase = {
 
 const noParams = { searchParams: Promise.resolve({}) };
 
-const PAGES: PageCase[] = [
+type PageCaseWithNeed = PageCase & { need: string };
+
+const PAGES: PageCaseWithNeed[] = [
   {
     name: "/maki-admin (dashboard)",
+    need: "dashboard",
     run: () => DashboardPage(),
     dataCalls: ["findRecentForDashboard", "getDailyReservationCounts", "getOperationsSnapshot"],
   },
   {
     name: "/maki-admin/villas",
+    need: "villas",
     run: () => VillasPage(noParams as never),
     dataCalls: ["getVillasForAdminPage"],
   },
   {
     name: "/maki-admin/manual-reservations/ekle",
+    need: "manual_reservations",
     run: () => ManualReservationAddPage(noParams as never),
     dataCalls: ["findAllIdTitleSlug"],
   },
   {
     name: "/maki-admin/villas/siralama",
+    need: "villas",
     run: () => VillaSortPage(),
     dataCalls: ["getVillasForSortOrder"],
   },
   {
     name: "/maki-admin/villa-listesi",
+    need: "villa_lists",
     run: () => VillaListesiPage(),
     dataCalls: [
       "findActiveCuratorCards",
@@ -179,6 +201,7 @@ const PAGES: PageCase[] = [
   },
   {
     name: "/maki-admin/settings/ceviriler",
+    need: "settings",
     run: () => SettingsCevirilerPage(),
     dataCalls: ["getPublicSettings", "getSettingsTranslations"],
   },
@@ -223,6 +246,7 @@ describe("SEC-01 — geçerli oturumda sıra AUTH → DATA", () => {
   for (const page of PAGES) {
     it(`${page.name}`, async () => {
       authResult.current = OK;
+      perms.current = [page.need];
       const el = (await page.run()) as { type?: unknown };
 
       expect(callLog[0]).toBe("auth");
@@ -232,6 +256,42 @@ describe("SEC-01 — geçerli oturumda sıra AUTH → DATA", () => {
         expect(callLog.indexOf(fn)).toBeGreaterThan(callLog.indexOf("auth"));
       }
       expect(el?.type).not.toBe(AdminPageSessionRefresh);
+    });
+  }
+});
+
+/* ---------------------------------------------------------------
+   🛡️ ADMIN YETKİ — oturum geçerli ama bölüm izni YOK → veri ÜRETİLMEZ;
+   ilk izinli bölüme yönlendirilir; hiç izin yoksa bilgi kartı.
+--------------------------------------------------------------- */
+describe("Admin yetki — izin yoksa server page veri ÜRETMEZ (AUTH → PERM → DATA)", () => {
+  for (const page of PAGES) {
+    it(`${page.name} — başka bölüm izni olan admin`, async () => {
+      authResult.current = OK;
+      perms.current = page.need === "blog" ? ["pages"] : ["blog"];
+      const el = (await page.run()) as { type?: unknown };
+      for (const fn of page.dataCalls) expect(callLog).not.toContain(fn);
+      expect(callLog.filter((c) => c !== "auth" && c !== "perm")).toEqual([]);
+      expect(h.redirect).toHaveBeenCalledWith("/maki-admin/blog");
+      expect(el?.type).not.toBe(AdminPageSessionRefresh);
+    });
+
+    it(`${page.name} — hiç izni olmayan admin`, async () => {
+      authResult.current = OK;
+      perms.current = [];
+      await page.run();
+      for (const fn of page.dataCalls) expect(callLog).not.toContain(fn);
+      expect(h.redirect).not.toHaveBeenCalled();
+    });
+
+    it(`${page.name} — yetkili admin: izin kontrolü veriden ÖNCE`, async () => {
+      authResult.current = OK;
+      perms.current = [page.need];
+      await page.run();
+      const firstData = Math.min(...page.dataCalls.map((fn) => callLog.indexOf(fn)));
+      expect(callLog.indexOf("perm")).toBeGreaterThan(callLog.indexOf("auth"));
+      expect(callLog.indexOf("perm")).toBeLessThan(firstData);
+      expect(h.redirect).not.toHaveBeenCalled();
     });
   }
 });
@@ -267,6 +327,8 @@ describe("SEC-01 — kayıt taraması: veri çeken server admin sayfaları gate'
       const src = readFileSync(p, "utf8");
       expect(src).toContain("await authorizeAdminSession()");
       expect(src).toMatch(/if \(!auth\.ok\) return <AdminPageSessionRefresh \/>;/);
+      /* 🛡️ Admin yetki: oturumdan SONRA, veriden ÖNCE izin kapısı. */
+      expect(src).toMatch(/const denied = await adminPermissionGate\(auth\.caller\.id, "[a-z_]+"\);\s*if \(denied\) return denied;/);
     });
   }
 });

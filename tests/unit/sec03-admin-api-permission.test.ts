@@ -352,12 +352,29 @@ describe("SEC-03 Faz 1 — D/G) doğru izinli admin → mevcut başarılı yanı
 });
 
 describe("SEC-03 Faz 1 — kapsam dışı davranışlar DEĞİŞMEDİ", () => {
-  it("GET /api/admin/settings — izinsiz (yalnız reservations) admin hâlâ okuyabilir (SEC-04'e bırakıldı)", async () => {
-    setCaller(["reservations"]);
+  /* 🛡️ Admin yetki (SEC-04) — önceki "izinsiz admin de okuyabilir"
+     davranışı BİLİNÇLİ OLARAK kapatıldı: tam satır yalnız `settings`
+     iznine; rezervasyon ekranlarının tek ihtiyacı `prepayment_rate`
+     `reservations` iznine dar projeksiyonla; diğerleri 403. */
+  it("GET /api/admin/settings — `settings` izni → tam satır (mevcut yanıt birebir)", async () => {
+    setCaller(["settings"]);
     const res = await getSettings(new Request("http://x/api/admin/settings"));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true, settings: { id: "s1", site_name: "X" } });
-    expect(h.log).not.toContain("perm-lookup");
+  });
+
+  it("GET /api/admin/settings — yalnız `reservations` → yalnız prepayment_rate (secret/diğer alan YOK)", async () => {
+    setCaller(["reservations"]);
+    const res = await getSettings(new Request("http://x/api/admin/settings"));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, settings: { prepayment_rate: null } });
+  });
+
+  it("GET /api/admin/settings — ne `settings` ne `reservations` → 403, satır OKUNMAZ", async () => {
+    setCaller(["villas"]);
+    const res = await getSettings(new Request("http://x/api/admin/settings"));
+    expect(res.status).toBe(403);
+    expect(h.log).not.toContain("settingsFindStrict");
   });
 
   it("H) kendi 2FA route'ları (enroll/start, enroll/confirm, disable, recovery-codes) izin kontrolü İÇERMEZ", () => {

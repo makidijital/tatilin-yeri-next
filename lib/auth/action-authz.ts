@@ -128,6 +128,15 @@ export async function requirePermission(
   return caller;
 }
 
+/** Aktif adminin izin kümesi (DB, fail-closed — `loadPermissions` ile
+ *  AYNI kaynak). Yalnız "ilk erişilebilir bölüme yönlendir" gibi karar
+ *  DIŞI ihtiyaçlar için; yetki kararı için `requirePermission` /
+ *  `callerHasPermission` kullanılır. */
+export async function getCallerPermissions(adminId: string): Promise<string[]> {
+  if (!adminId) return [];
+  return loadPermissions(adminId);
+}
+
 /** Throw ETMEYEN varyant — `authorizeAdminSession()` guard'ı ZATEN olan
  *  ve `{ ok:false, error }` döndüren mevcut action'lar için; o
  *  action'ların dönüş şekli korunur. */

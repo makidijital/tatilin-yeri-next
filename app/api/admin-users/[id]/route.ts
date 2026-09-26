@@ -171,6 +171,16 @@ export async function DELETE(
     }
     const caller = auth.caller;
 
+    /* 🛡️ Admin yetki — başka admini silmek `users` izni ister (PATCH ile
+       aynı SEC-03 deseni). İzin yoksa 403; hedef admin okunmaz/silinmez. */
+    if (!(await callerHasPermission(caller.id, "users"))) {
+      console.error("[admin-users.delete] FORBIDDEN", { callerId: caller.id });
+      return NextResponse.json(
+        { ok: false, error: FORBIDDEN_MESSAGE },
+        { status: 403 }
+      );
+    }
+
     /* ---------- INPUT ---------- */
     const targetId = (id || "").toString().trim();
     if (!targetId) {

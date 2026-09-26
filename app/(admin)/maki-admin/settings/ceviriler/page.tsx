@@ -10,6 +10,7 @@ import { getSettingsTranslations } from "@/app/services/settings-translation.ser
 import type { SettingsTranslationsByLocale } from "@/lib/i18n/settings-translations.types";
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
 import AdminPageSessionRefresh from "@/app/components/admin/AdminPageSessionRefresh";
+import { adminPermissionGate } from "@/app/components/admin/AdminSectionGuard";
 
 /* ===============================================================
    🛡️ ADMIN > SETTINGS > ÇEVİRİLER — server wrapper
@@ -51,6 +52,11 @@ export default async function SettingsCevirilerPage() {
   /* 🛡️ SEC-01 — AUTH ÖNCE, VERİ SONRA (bkz. maki-admin/page.tsx). */
   const auth = await authorizeAdminSession();
   if (!auth.ok) return <AdminPageSessionRefresh />;
+
+  /* 🛡️ Yetki ("settings") — VERİDEN ÖNCE. Bölüm layout'u sayfanın
+     server render'ını durdurmadığı için kontrol burada da yapılır. */
+  const denied = await adminPermissionGate(auth.caller.id, "settings");
+  if (denied) return denied;
 
   const [settings, translationsResult] = await Promise.all([
     getPublicSettings().catch(() => null),

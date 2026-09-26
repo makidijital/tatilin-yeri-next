@@ -44,6 +44,19 @@ vi.mock("@/app/services/villa-admin.service", () => ({
   createVillaFull: (...args: unknown[]) => createVillaFullMock(...args),
 }));
 
+/* 🛡️ Admin yetki — route artık `callerHasPermission` (DB izin kümesi)
+   ister; bu dosya filtre davranışını test eder → çağıran admin'e villa
+   listesi okuma izni ("villas") verilir. İzin senaryoları:
+   tests/unit/admin-api-permission.test.ts. */
+vi.mock("@/lib/db/admin-user.repository.server", () => ({
+  adminUserServerRepository: {
+    findByIdForSession: async (id: string) => ({
+      data: { id, is_active: true, sidebar_permissions: ["villas"] },
+      error: null,
+    }),
+  },
+}));
+
 const ALL_VILLAS = [
   { id: "v1", title: "Villa Bir", slug: "villa-bir", is_active: true, deleted_at: null },
   { id: "v2", title: "Villa İki", slug: "villa-iki", is_active: true, deleted_at: null },

@@ -4,6 +4,7 @@ import { Plus, Home, Trash as TrashBin, ArrowDownUp } from "lucide-react";
 import VillaOperationsList from "./_components/VillaOperationsList";
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
 import AdminPageSessionRefresh from "@/app/components/admin/AdminPageSessionRefresh";
+import { adminPermissionGate } from "@/app/components/admin/AdminSectionGuard";
 
 /* 🛡️ FORCE-DYNAMIC — production statik cache problemi çözümü.
    `searchParams` dinamik API olduğu için Next.js 16'da bu sayfa
@@ -80,6 +81,11 @@ export default async function VillasPage({
   /* 🛡️ SEC-01 — AUTH ÖNCE, VERİ SONRA (bkz. maki-admin/page.tsx). */
   const auth = await authorizeAdminSession();
   if (!auth.ok) return <AdminPageSessionRefresh />;
+
+  /* 🛡️ Yetki ("villas") — VERİDEN ÖNCE. Bölüm layout'u sayfanın
+     server render'ını durdurmadığı için kontrol burada da yapılır. */
+  const denied = await adminPermissionGate(auth.caller.id, "villas");
+  if (denied) return denied;
 
   const sp = (await searchParams) || {};
   const page = parsePage(sp.page);

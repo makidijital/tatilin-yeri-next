@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { buildVoucherContent } from "@/app/lib/voucher/build";
 import { authorizeAdminCallerFlex } from "@/lib/admin-route-auth";
+import {
+  callerHasPermission,
+  FORBIDDEN_MESSAGE,
+} from "@/lib/auth/action-authz";
 
 /* ===============================================================
    🔥 GET /api/voucher/[id]
@@ -54,6 +58,19 @@ export async function GET(
         },
       }
     );
+  }
+
+  /* 🛡️ Admin yetki (reservations) — izin yoksa 403; hiçbir veri
+     okunmaz/değiştirilmez (lib/auth/admin-permission-map.ts). */
+  if (!(await callerHasPermission(auth.caller.id, "reservations"))) {
+    return new NextResponse(`Yetkisiz erişim: ${FORBIDDEN_MESSAGE}`, {
+      status: 403,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Referrer-Policy": "no-referrer",
+      },
+    });
   }
   console.info("[voucher.html.auth] ADMIN_VERIFIED", {
     callerId: auth.caller.id,

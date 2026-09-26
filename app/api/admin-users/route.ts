@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { adminUserPanelServerRepository } from "@/lib/db/admin-user-panel.repository.server";
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
+import {
+  callerHasPermission,
+  FORBIDDEN_MESSAGE,
+} from "@/lib/auth/action-authz";
 
 /* ===============================================================
    🔥 GET /api/admin-users  (Migration AU-P1 — panel LIST boundary)
@@ -35,6 +39,15 @@ export async function GET(req: Request): Promise<NextResponse> {
     return NextResponse.json(
       { ok: false, error: auth.error },
       { status: auth.status }
+    );
+  }
+
+  /* 🛡️ Admin yetki (users) — izin yoksa 403; hiçbir veri
+     okunmaz/değiştirilmez (lib/auth/admin-permission-map.ts). */
+  if (!(await callerHasPermission(auth.caller.id, "users"))) {
+    return NextResponse.json(
+      { ok: false, error: FORBIDDEN_MESSAGE },
+      { status: 403 }
     );
   }
 

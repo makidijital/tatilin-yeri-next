@@ -34,6 +34,24 @@ export async function GET(req: Request): Promise<NextResponse> {
       );
     }
 
+    /* 🛡️ Admin yetki — TAM ayar satırı (secret alanlar dahil: ör.
+       settings/entegrasyonlar `resend_api_key`'i okuyup PUT ile GERİ
+       yazar → kırpılamaz) YALNIZ `settings` izniyle döner.
+       Diğer tek tüketici rezervasyon ekranları (reservations/ekle ve
+       reservations/[id]) bu endpoint'ten YALNIZ `prepayment_rate` okur →
+       `reservations` izni olan admine yalnız bu alan döner (secret YOK).
+       İkisi de yoksa 403; settings satırı hiç okunmaz. */
+    const canReadFull = await callerHasPermission(auth.caller.id, "settings");
+    if (
+      !canReadFull &&
+      !(await callerHasPermission(auth.caller.id, "reservations"))
+    ) {
+      return NextResponse.json(
+        { ok: false, error: FORBIDDEN_MESSAGE },
+        { status: 403 }
+      );
+    }
+
     const { data, error } =
       await settingsServerRepository.findSingletonStrict();
 
@@ -43,6 +61,14 @@ export async function GET(req: Request): Promise<NextResponse> {
         { ok: false, error: error.message || "Settings alınamadı" },
         { status: 500 }
       );
+    }
+
+    if (!canReadFull) {
+      const row = (data || {}) as { prepayment_rate?: number | null };
+      return NextResponse.json({
+        ok: true,
+        settings: { prepayment_rate: row.prepayment_rate ?? null },
+      });
     }
 
     return NextResponse.json({ ok: true, settings: data });
@@ -84,8 +110,8 @@ export async function PUT(req: Request): Promise<NextResponse> {
     }
 
     /* 🛡️ SEC-03 (Faz 1) — ayar yazma `settings` izni ister. İzin yoksa
-       body okunmaz, settings satırı okunmaz/güncellenmez. (GET bu fazda
-       DEĞİŞMEDİ — SEC-04 kapsamında ele alınacak.) */
+       body okunmaz, settings satırı okunmaz/güncellenmez. (GET için
+       bkz. yukarıdaki izin/projeksiyon kuralı.) */
     if (!(await callerHasPermission(auth.caller.id, "settings"))) {
       return NextResponse.json(
         { ok: false, error: FORBIDDEN_MESSAGE },

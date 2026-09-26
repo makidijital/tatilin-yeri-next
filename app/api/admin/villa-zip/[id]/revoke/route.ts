@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { authorizeAdminCaller } from "@/lib/admin-route-auth";
+import {
+  callerHasPermission,
+  FORBIDDEN_MESSAGE,
+} from "@/lib/auth/action-authz";
 import { villaZipRepository } from "@/lib/db/villa-zip.repository.server";
 
 /* ===============================================================
@@ -22,6 +26,15 @@ export async function POST(
     return NextResponse.json(
       { ok: false, error: auth.error },
       { status: auth.status }
+    );
+  }
+
+  /* 🛡️ Admin yetki (villas) — izin yoksa 403; hiçbir veri
+     okunmaz/değiştirilmez (lib/auth/admin-permission-map.ts). */
+  if (!(await callerHasPermission(auth.caller.id, "villas"))) {
+    return NextResponse.json(
+      { ok: false, error: FORBIDDEN_MESSAGE },
+      { status: 403 }
     );
   }
 
