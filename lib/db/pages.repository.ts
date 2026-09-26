@@ -31,10 +31,18 @@ export const pagesRepository = {
 
   /** Slug detail — .single() resolver. */
   async findBySlug(slug: string) {
+    /* 🛡️ H-02 — PUBLIC detay yalnız AKTİF sayfayı döndürür.
+       Eski sağlayıcıda bu gizlemeyi satır-seviyesi politika yapıyordu;
+       native PostgreSQL'de o katman yok → filtre sorguda olmalı.
+       Pasif / olmayan slug → 0 satır → PGRST116 → service null →
+       TR mevcut 404 bloğu, EN/DE notFound(), metadata noindex.
+       Admin okumaları bu repository'yi KULLANMAZ
+       (pages.repository.server.ts, id ile). */
     return await db
       .from("pages")
       .select("*")
       .eq("slug", slug)
+      .eq("is_active", true)
       .single();
   },
 

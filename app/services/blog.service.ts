@@ -21,7 +21,7 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
   return (data as BlogPost[] | null) || [];
 }
 
-/** Slug ile tek blog yazısı (yayında değilse RLS gizler → null). */
+/** Slug ile tek blog yazısı (yayında değilse repository `is_active` filtresi → null). */
 export async function getBlogPostBySlug(
   slug: string
 ): Promise<BlogPost | null> {

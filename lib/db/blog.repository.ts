@@ -62,10 +62,17 @@ export const blogRepository = {
 
   /** Slug detail — .single() resolver (pages deseni). */
   async findBySlug(slug: string) {
+    /* 🛡️ H-02 — PUBLIC detay yalnız YAYINDAKİ yazıyı döndürür.
+       Eski sağlayıcıda bu gizlemeyi satır-seviyesi politika yapıyordu;
+       native PostgreSQL'de o katman yok → filtre sorguda olmalı.
+       Taslak / olmayan slug → 0 satır → PGRST116 → service null →
+       sayfa notFound(), metadata noindex. Admin okumaları bu
+       repository'yi KULLANMAZ (blog.repository.server.ts, id ile). */
     return await db
       .from("blog_posts")
       .select("*")
       .eq("slug", slug)
+      .eq("is_active", true)
       .single();
   },
 
