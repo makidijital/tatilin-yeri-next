@@ -76,7 +76,97 @@ export type PublicSitePopup = {
   dismiss: PopupDismissDuration;
   startsAt: string | null;
   endsAt: string | null;
+  /** EN/DE içerik (migration 096) — Türkçe fallback'i SERVER'da
+   *  uygulanmış hâli. Yalnız çevirisi olan diller bulunur; yoksa
+   *  o dilde yukarıdaki Türkçe alanlar gösterilir. */
+  translations: Partial<Record<PopupTranslationLocale, PopupContent>>;
 };
+
+/* ---------------- ÇOKLU DİL (migration 096) ----------------
+   TR canonical = site_popup satırı. EN/DE `site_popup_translations`
+   tablosunda; boş alan → aynı alanın Türkçe değeri (alan bazında
+   fallback — projedeki settings/villa çevirileriyle aynı kural). */
+
+export const POPUP_TRANSLATION_LOCALES = ["en", "de"] as const;
+export type PopupTranslationLocale = (typeof POPUP_TRANSLATION_LOCALES)[number];
+
+export function isPopupTranslationLocale(v: unknown): v is PopupTranslationLocale {
+  return typeof v === "string" && (POPUP_TRANSLATION_LOCALES as readonly string[]).includes(v);
+}
+
+/** DB satırı (migration 096). */
+export type SitePopupTranslationRow = {
+  popup_id: number;
+  locale: string;
+  title: string | null;
+  description: string | null;
+  highlight_text: string | null;
+  stats: unknown;
+  button_text: string | null;
+  button_url: string | null;
+};
+
+/** Popup'ın dile bağlı görünür içeriği. */
+export type PopupContent = Pick<
+  PublicSitePopup,
+  "title" | "description" | "highlight" | "stats" | "button"
+>;
+
+/** Dile bağlı ham (temizlenmiş) metin alanları. */
+export type PopupTextFields = {
+  title: string | null;
+  description: string | null;
+  highlight: string | null;
+  stats: string[];
+  buttonText: string | null;
+  buttonUrl: string | null;
+};
+
+/** Alan bazında fallback: çeviri alanı boşsa Türkçe (base) değer. */
+export function mergePopupText(
+  base: PopupTextFields,
+  t: Partial<PopupTextFields> | null | undefined
+): PopupTextFields {
+  if (!t) return base;
+  return {
+    title: t.title || base.title,
+    description: t.description || base.description,
+    highlight: t.highlight || base.highlight,
+    stats: t.stats && t.stats.length > 0 ? t.stats : base.stats,
+    buttonText: t.buttonText || base.buttonText,
+    buttonUrl: t.buttonUrl || base.buttonUrl,
+  };
+}
+
+/** Çeviride en az bir dolu alan var mı? */
+export function hasPopupText(t: Partial<PopupTextFields> | null | undefined): boolean {
+  return !!(
+    t &&
+    (t.title || t.description || t.highlight || (t.stats && t.stats.length) || t.buttonText || t.buttonUrl)
+  );
+}
+
+/** Buton projeksiyonu — gösterilmiyorsa, metin yoksa veya URL güvenli
+ *  değilse null. */
+export function popupButton(
+  text: string | null,
+  url: string | null,
+  show: boolean
+): PublicSitePopup["button"] {
+  const u = (url || "").trim();
+  return show && text && isSafePopupUrl(u)
+    ? { text, url: u, external: !u.startsWith("/") }
+    : null;
+}
+
+/** Ziyaretçinin diline göre içerik: EN/DE için çeviri (fallback'i
+ *  uygulanmış) varsa onu, yoksa Türkçe içeriği döner. Dil-bağımsız
+ *  alanlar (görsel, sürüm, kapsam, tarih, süre) AYNEN kalır. */
+export function localizeSitePopup(popup: PublicSitePopup, locale: string): PublicSitePopup {
+  if (!isPopupTranslationLocale(locale)) return popup;
+  const content = popup.translations?.[locale];
+  return content ? { ...popup, ...content } : popup;
+}
 
 /** Düz metin temizliği: HTML etiketleri + kontrol karakterleri atılır,
  *  baş/son boşluk kırpılır, uzunluk sınırlanır. Boş → null. */
@@ -203,7 +293,8 @@ export function normalizePopupStats(value: unknown): string[] {
 export function toPublicSitePopup(
   row: SitePopupRow | null | undefined,
   resolveImageUrl: (path: string, version: string) => string | null,
-  nowMs: number = Date.now()
+  nowMs: number = Date.now(),
+  translationRows: readonly SitePopupTranslationRow[] | null | undefined = null
 ): PublicSitePopup | null {
   if (!row || row.is_enabled !== true) return null;
   if (row.ends_at && Number.isFinite(Date.parse(row.ends_at)) && nowMs >= Date.parse(row.ends_at)) {
@@ -217,10 +308,8 @@ export function toPublicSitePopup(
   const stats = normalizePopupStats(row.stats);
   const buttonText = cleanPopupText(row.button_text, POPUP_LIMITS.buttonText);
   const buttonUrl = (row.button_url || "").trim();
-  const button =
-    row.show_button !== false && buttonText && isSafePopupUrl(buttonUrl)
-      ? { text: buttonText, url: buttonUrl, external: !buttonUrl.startsWith("/") }
-      : null;
+  const showButton = row.show_button !== false;
+  const button = popupButton(buttonText, buttonUrl, showButton);
 
   if (!imageUrl && !title && !description && !highlight && stats.length === 0 && !button) {
     return null;
@@ -238,5 +327,45 @@ export function toPublicSitePopup(
     dismiss: isPopupDismissDuration(row.dismiss_duration) ? row.dismiss_duration : "session",
     startsAt: row.starts_at,
     endsAt: row.ends_at,
+    translations: buildPopupTranslations(
+      { title, description, highlight, stats, buttonText, buttonUrl: buttonUrl || null },
+      showButton,
+      translationRows
+    ),
   };
+}
+
+/** Çeviri satırı → temizlenmiş metin alanları (güvensiz URL → null). */
+export function popupTranslationText(t: SitePopupTranslationRow): PopupTextFields {
+  const url = (t.button_url || "").trim();
+  return {
+    title: cleanPopupText(t.title, POPUP_LIMITS.title),
+    description: cleanPopupText(t.description, POPUP_LIMITS.description, { multiline: true }),
+    highlight: cleanPopupText(t.highlight_text, POPUP_LIMITS.highlight),
+    stats: normalizePopupStats(t.stats),
+    buttonText: cleanPopupText(t.button_text, POPUP_LIMITS.buttonText),
+    buttonUrl: isSafePopupUrl(url) ? url : null,
+  };
+}
+
+function buildPopupTranslations(
+  base: PopupTextFields,
+  showButton: boolean,
+  rows: readonly SitePopupTranslationRow[] | null | undefined
+): PublicSitePopup["translations"] {
+  const out: PublicSitePopup["translations"] = {};
+  for (const r of rows || []) {
+    if (!isPopupTranslationLocale(r.locale)) continue;
+    const t = popupTranslationText(r);
+    if (!hasPopupText(t)) continue;
+    const m = mergePopupText(base, t);
+    out[r.locale] = {
+      title: m.title,
+      description: m.description,
+      highlight: m.highlight,
+      stats: m.stats,
+      button: popupButton(m.buttonText, m.buttonUrl, showButton),
+    };
+  }
+  return out;
 }

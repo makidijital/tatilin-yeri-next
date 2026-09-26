@@ -1,11 +1,16 @@
 import "server-only";
 
-import { sitePopupRepository, type SitePopupWritable } from "@/lib/db/site-popup.repository.server";
+import {
+  sitePopupRepository,
+  type SitePopupTranslationWritable,
+  type SitePopupWritable,
+} from "@/lib/db/site-popup.repository.server";
 import { removeServer } from "@/lib/storage/server";
 import { SITE_ASSETS_BUCKET_NAME, resolveAssetUrlVersioned } from "@/lib/storage.helpers";
 import {
   POPUP_IMAGE_FOLDER,
   POPUP_LIMITS,
+  POPUP_TRANSLATION_LOCALES,
   cleanPopupText,
   isPopupDismissDuration,
   isPopupDisplayScope,
@@ -16,8 +21,10 @@ import {
   toPublicSitePopup,
   type PopupDismissDuration,
   type PopupDisplayScope,
+  type PopupTranslationLocale,
   type PublicSitePopup,
   type SitePopupRow,
+  type SitePopupTranslationRow,
 } from "@/lib/site-popup";
 
 /* ===============================================================
@@ -34,6 +41,16 @@ import {
      projeksiyonu döner (bkz. lib/site-popup.ts > toPublicSitePopup).
    =============================================================== */
 
+/** Tek dilin düzenlenebilir metinleri (admin formu). */
+export type SitePopupTextValues = {
+  title: string;
+  description: string;
+  highlight: string;
+  stats: string[];
+  buttonText: string;
+  buttonUrl: string;
+};
+
 export type SitePopupAdminValues = {
   isEnabled: boolean;
   imagePath: string | null;
@@ -49,11 +66,28 @@ export type SitePopupAdminValues = {
   startDate: string;
   endDate: string;
   updatedAt: string | null;
+  /** EN/DE (migration 096). Boş alan → public'te Türkçe değer. */
+  translations: Record<PopupTranslationLocale, SitePopupTextValues>;
 };
 
 export type SitePopupSaveResult =
   | { ok: true; values: SitePopupAdminValues }
   | { ok: false; error: string };
+
+const LOCALE_LABELS: Record<PopupTranslationLocale, string> = { en: "English", de: "Deutsch" };
+
+const EMPTY_TEXT: SitePopupTextValues = {
+  title: "",
+  description: "",
+  highlight: "",
+  stats: [],
+  buttonText: "",
+  buttonUrl: "",
+};
+
+function emptyTranslations(): Record<PopupTranslationLocale, SitePopupTextValues> {
+  return { en: { ...EMPTY_TEXT, stats: [] }, de: { ...EMPTY_TEXT, stats: [] } };
+}
 
 const IMAGE_PATH_RE = new RegExp(`^${POPUP_IMAGE_FOLDER}/[a-z0-9-]{1,64}\\.webp$`);
 
@@ -72,10 +106,32 @@ export const SITE_POPUP_DEFAULTS: SitePopupAdminValues = {
   startDate: "",
   endDate: "",
   updatedAt: null,
+  translations: emptyTranslations(),
 };
 
-function toAdminValues(row: SitePopupRow | null): SitePopupAdminValues {
-  if (!row) return { ...SITE_POPUP_DEFAULTS };
+function toAdminTranslations(
+  rows: readonly SitePopupTranslationRow[] | null | undefined
+): Record<PopupTranslationLocale, SitePopupTextValues> {
+  const out = emptyTranslations();
+  for (const r of rows || []) {
+    if (r.locale !== "en" && r.locale !== "de") continue;
+    out[r.locale] = {
+      title: r.title || "",
+      description: r.description || "",
+      highlight: r.highlight_text || "",
+      stats: normalizePopupStats(r.stats),
+      buttonText: r.button_text || "",
+      buttonUrl: r.button_url || "",
+    };
+  }
+  return out;
+}
+
+function toAdminValues(
+  row: SitePopupRow | null,
+  translationRows: readonly SitePopupTranslationRow[] | null = null
+): SitePopupAdminValues {
+  if (!row) return { ...SITE_POPUP_DEFAULTS, translations: emptyTranslations() };
   return {
     isEnabled: row.is_enabled === true,
     imagePath: row.image_path || null,
@@ -91,6 +147,7 @@ function toAdminValues(row: SitePopupRow | null): SitePopupAdminValues {
     startDate: popupIsoToDate(row.starts_at, "start"),
     endDate: popupIsoToDate(row.ends_at, "end"),
     updatedAt: row.updated_at || null,
+    translations: toAdminTranslations(translationRows),
   };
 }
 
@@ -100,7 +157,58 @@ export async function getSitePopupForAdmin(): Promise<SitePopupAdminValues | nul
     console.error("[site-popup.admin.read] FAILED", error.message);
     return null;
   }
-  return toAdminValues((data as SitePopupRow | null) ?? null);
+  const tr = await sitePopupRepository.findTranslations();
+  if (tr.error) {
+    /* Migration 096 uygulanmadıysa admin açıkça hata görür (çeviriler
+       sessizce boş görünüp üzerine yazılmasın). */
+    console.error("[site-popup.admin.read] TRANSLATIONS_FAILED", tr.error.message);
+    return null;
+  }
+  return toAdminValues(
+    (data as SitePopupRow | null) ?? null,
+    (tr.data as SitePopupTranslationRow[] | null) ?? []
+  );
+}
+
+/** EN/DE girişini doğrular; `translations` anahtarı hiç yoksa null
+ *  (→ çevirilere dokunulmaz; eski istemcilerle geriye uyumlu). */
+function parseTranslations(
+  raw: unknown,
+  showButton: boolean,
+  trButtonUrl: string
+):
+  | { ok: true; values: Record<PopupTranslationLocale, SitePopupTranslationWritable> | null }
+  | { ok: false; error: string } {
+  if (raw === undefined) return { ok: true, values: null };
+  const obj = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const values = {} as Record<PopupTranslationLocale, SitePopupTranslationWritable>;
+  for (const locale of POPUP_TRANSLATION_LOCALES) {
+    const t = (obj[locale] && typeof obj[locale] === "object" ? obj[locale] : {}) as Record<
+      string,
+      unknown
+    >;
+    const buttonText = cleanPopupText(t.buttonText, POPUP_LIMITS.buttonText);
+    const buttonUrl = typeof t.buttonUrl === "string" ? t.buttonUrl.trim() : "";
+    if (buttonUrl && !isSafePopupUrl(buttonUrl)) {
+      return {
+        ok: false,
+        error: `${LOCALE_LABELS[locale]}: buton URL'i '/' ile başlayan bir site adresi veya https:// ile başlayan bir bağlantı olmalı`,
+      };
+    }
+    /* Buton metni bu dilde yazıldıysa URL bu dilden ya da Türkçeden gelmeli. */
+    if (showButton && buttonText && !buttonUrl && !trButtonUrl) {
+      return { ok: false, error: `${LOCALE_LABELS[locale]}: buton URL'i zorunlu` };
+    }
+    values[locale] = {
+      title: cleanPopupText(t.title, POPUP_LIMITS.title),
+      description: cleanPopupText(t.description, POPUP_LIMITS.description, { multiline: true }),
+      highlight_text: cleanPopupText(t.highlight, POPUP_LIMITS.highlight),
+      stats: normalizePopupStats(t.stats),
+      button_text: buttonText,
+      button_url: buttonUrl || null,
+    };
+  }
+  return { ok: true, values };
 }
 
 export async function saveSitePopup(input: unknown): Promise<SitePopupSaveResult> {
@@ -150,6 +258,10 @@ export async function saveSitePopup(input: unknown): Promise<SitePopupSaveResult
     return { ok: false, error: "Popup'ı açmak için en az bir görsel veya başlık ekleyin" };
   }
 
+  const parsedTranslations = parseTranslations(v.translations, showButton, buttonUrlRaw);
+  if (!parsedTranslations.ok) return parsedTranslations;
+  const translations = parsedTranslations.values;
+
   /* Önceki görsel — kaldırıldıysa R2 nesnesi silinecek. */
   const prev = await sitePopupRepository.find();
   if (prev.error) {
@@ -175,6 +287,21 @@ export async function saveSitePopup(input: unknown): Promise<SitePopupSaveResult
     updated_at: new Date().toISOString(),
   };
 
+  /* EN/DE önce yazılır; ana satır (updated_at = içerik sürümü) en son
+     güncellenir → çeviri yazımı başarısızsa sürüm değişmez, hata döner. */
+  if (translations) {
+    for (const locale of POPUP_TRANSLATION_LOCALES) {
+      const res = await sitePopupRepository.upsertTranslation(locale, translations[locale]);
+      if (res.error) {
+        console.error("[site-popup.save] TRANSLATION_FAILED", {
+          locale,
+          error: res.error.message,
+        });
+        return { ok: false, error: "Çeviriler kaydedilemedi (migration 096 uygulanmış mı?)" };
+      }
+    }
+  }
+
   const { data, error } = await sitePopupRepository.update(payload);
   if (error || !data) {
     console.error("[site-popup.save] FAILED", error?.message || "row missing (migration 095?)");
@@ -193,7 +320,19 @@ export async function saveSitePopup(input: unknown): Promise<SitePopupSaveResult
     }
   }
 
-  return { ok: true, values: toAdminValues(data as SitePopupRow) };
+  let savedTranslations: SitePopupTranslationRow[] = [];
+  if (translations) {
+    savedTranslations = POPUP_TRANSLATION_LOCALES.map((locale) => ({
+      popup_id: 1,
+      locale,
+      ...translations[locale],
+    }));
+  } else {
+    const tr = await sitePopupRepository.findTranslations();
+    savedTranslations = (tr.data as SitePopupTranslationRow[] | null) ?? [];
+  }
+
+  return { ok: true, values: toAdminValues(data as SitePopupRow, savedTranslations) };
 }
 
 /** Public projeksiyon (cache'li sarmalayıcı: lib/site-popup.cache.ts). */
@@ -205,8 +344,18 @@ export async function getPublicSitePopup(): Promise<PublicSitePopup | null> {
     console.error("[site-popup.public.read] FAILED", error.message);
     return null;
   }
+  const row = (data as SitePopupRow | null) ?? null;
+  /* Kapalıysa çeviri sorgusu hiç atılmaz. */
+  if (!row || row.is_enabled !== true) return null;
+  const tr = await sitePopupRepository.findTranslations();
+  if (tr.error) {
+    /* Migration 096 yoksa / hata → popup Türkçe gösterilir; site etkilenmez. */
+    console.error("[site-popup.public.read] TRANSLATIONS_FAILED", tr.error.message);
+  }
   return toPublicSitePopup(
-    (data as SitePopupRow | null) ?? null,
-    (path, version) => resolveAssetUrlVersioned(path, version)
+    row,
+    (path, version) => resolveAssetUrlVersioned(path, version),
+    Date.now(),
+    tr.error ? [] : ((tr.data as SitePopupTranslationRow[] | null) ?? [])
   );
 }

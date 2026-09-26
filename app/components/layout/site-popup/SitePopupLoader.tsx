@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 
 import {
   isPopupHomePath,
   isWithinPopupWindow,
+  localizeSitePopup,
   popupDismissMs,
   type PublicSitePopup,
 } from "@/lib/site-popup";
@@ -82,6 +83,10 @@ export default function SitePopupLoader({ popup }: { popup: PublicSitePopup }) {
   const [closedHere, setClosedHere] = useState(false);
 
   const inScope = popup.scope === "all" || isPopupHomePath(pathname);
+  /* İçerik dili: URL prefix'i (/en, /de; diğerleri TR). Çeviri yoksa
+     veya alan boşsa Türkçe (server'da uygulanmış fallback). */
+  const locale = localeOf(pathname);
+  const content = useMemo(() => localizeSitePopup(popup, locale), [popup, locale]);
 
   useEffect(() => {
     if (closedHere || open || !inScope) return;
@@ -101,10 +106,10 @@ export default function SitePopupLoader({ popup }: { popup: PublicSitePopup }) {
 
   return (
     <SitePopupDialog
-      popup={popup}
+      popup={content}
       onClose={close}
       onCta={close}
-      closeLabel={CLOSE_LABELS[localeOf(pathname)]}
+      closeLabel={CLOSE_LABELS[locale]}
     />
   );
 }
