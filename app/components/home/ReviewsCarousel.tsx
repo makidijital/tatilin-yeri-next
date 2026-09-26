@@ -109,9 +109,13 @@ export default function ReviewsCarousel({
     <div>
       {/* VIEWPORT — tek aktif yorum, tam genişlik editorial kompozisyon */}
       <div className="overflow-hidden" ref={emblaRef}>
-        <div className="flex">
+        {/* Desktop (lg+) 2 yorum yan yana: slide basis 1/2 + Embla'nın
+            önerdiği gutter deseni (container negatif margin + slide
+            padding) — ilk kartın sol hizası değişmez. Mobil/tablet
+            tek yorum (basis-full) AYNEN. */}
+        <div className="flex lg:-ml-10">
           {reviews.map((r) => (
-            <div key={r.id} className="shrink-0 grow-0 basis-full">
+            <div key={r.id} className="shrink-0 grow-0 basis-full lg:basis-1/2 lg:pl-10">
               <ActiveTestimonial review={r} locale={locale} />
             </div>
           ))}
@@ -198,7 +202,7 @@ function ActiveTestimonial({
 
         <div className="min-w-0 pt-2 md:pt-4">
           <blockquote
-            className="font-display text-[19px] md:text-[27px] leading-[1.4] tracking-[-0.01em] text-[var(--color-stone-900)]"
+            className="font-display !font-light text-[18px] md:text-[24px] lg:text-[21px] leading-[1.5] tracking-[-0.01em] text-[var(--color-stone-900)]"
             style={
               expanded
                 ? undefined
