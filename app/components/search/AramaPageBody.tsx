@@ -948,8 +948,26 @@ export default async function AramaPageBody({
     ? await getBlockedVillaIds(start, end, candidateIds)
     : new Set<string>();
 
+  /* 🛡️ FİYAT KAPSAMI — tarihli aramada, seçilen aralığın TÜM
+     konaklama gecelerinde fiyatı olmayan villa (hiç fiyat yok, eksik
+     gece, 0/NULL fiyat) listelenmez; rezervasyon zaten reddederdi.
+     Ölçüt fiyat motorunun MEVCUT `priceAvailable`'ı (booking/price-verify
+     ile aynı). Kapsam `daily.original > 0` ile ölçülür → kur/indirimden
+     bağımsız; TRY + {TRY:1} yalnız zorunlu parametre. Tarihsiz arama ve
+     esnek havuz (`villas` + `blockedSet`) etkilenmez. */
   const visibleVillas: AramaVillaNormalized[] = hasDateRange
-    ? villas.filter((v) => !blockedSet.has(String(v.id)))
+    ? villas.filter(
+        (v) =>
+          !blockedSet.has(String(v.id)) &&
+          calculateGrandTotal({
+            start: start!,
+            end: end!,
+            prices: v.prices,
+            currency: "TRY",
+            rates: { TRY: 1 },
+            discounts: v.discounts,
+          }).priceAvailable
+      )
     : villas;
 
   const total = visibleVillas.length;

@@ -395,6 +395,17 @@ describe("D) diğer filtrelerle birlikte", () => {
       data: [{ villa_id: "v1", feature_id: F1 }],
       error: null,
     });
+    /* Tarihli aramada yalnız aralığı fiyatla kapsanan villalar listelenir
+       (arama fiyat-kapsamı filtresi) → fixture bu test için fiyatlı. */
+    findSearchResultsMock.mockResolvedValue({
+      data: ALL_VILLAS.map((v) => ({
+        ...v,
+        villa_prices: [
+          { price: 10000, currency: "TRY", start_date: "2026-10-01", end_date: "2026-10-31" },
+        ],
+      })),
+      error: null,
+    });
     await renderArama({
       start: "2026-10-08",
       end: "2026-10-15",
