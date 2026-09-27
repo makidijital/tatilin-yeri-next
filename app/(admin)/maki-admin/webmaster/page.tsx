@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Image as ImageIcon,
   UploadCloud,
@@ -59,6 +60,10 @@ const INITIAL_CARD_STATE = (): CardState => ({
 });
 
 export default function WebmasterPage() {
+  /* 🛡️ Upload sonrası server admin layout'u yeni R2 versiyonuyla yeniden
+     render olsun → sidebar logosu / favicon sayfa yenilemeden güncellenir
+     (client state korunur). */
+  const router = useRouter();
   const toast = useNotify();
   const [cards, setCards] = useState<Record<CardKey, CardState>>({
     "admin-logo": INITIAL_CARD_STATE(),
@@ -119,6 +124,7 @@ export default function WebmasterPage() {
           error: null,
         },
       }));
+      router.refresh();
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Yükleme başarısız";

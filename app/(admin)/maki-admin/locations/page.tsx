@@ -29,6 +29,7 @@ import {
   buildLocationCoverPath,
   SITE_ASSETS_BUCKET_NAME,
 } from "@/lib/storage.helpers";
+import { useSiteAssetVersions } from "@/lib/storage/use-site-asset-versions";
 import { convertImageToWebP } from "@/lib/image.helpers";
 /* 🛡️ PHASE 10I — BÖLGE ADLARI ÇEVRİLMEZ.
    Kalkan / Kaş / Fethiye / Çavdır gibi bölge adları ÖZEL İSİMDİR;
@@ -46,6 +47,11 @@ export default function LocationsPage() {
   const confirm = useConfirm();
   const [name, setName] = useState("");
   const [locations, setLocations] = useState<any[]>([]);
+  /* 🛡️ Kapak önizlemesi `?v=<R2 ETag>` — `location-covers/<slug>.webp`
+     overwrite edildiğinde liste yeni görseli göstersin. */
+  const assetVersions = useSiteAssetVersions(
+    locations.map((l) => l?.cover_image)
+  );
   const [loading, setLoading] = useState(false);
   /* 🛡️ Upload-in-progress map — kategori sayfasıyla birebir paralel
      (migration 011 cover_image upload). */
@@ -290,6 +296,7 @@ export default function LocationsPage() {
         return;
       }
       await fetchLocations();
+      await assetVersions.refresh(path);
       toast.success("Kapak görseli güncellendi", {
         id: `location-cover-${loc.id}`,
       });
@@ -389,7 +396,10 @@ export default function LocationsPage() {
       ) : (
         <div className="space-y-2.5">
           {locations.map((loc) => {
-            const coverUrl = getLocationCoverPublicUrl(loc?.cover_image);
+            const coverUrl = assetVersions.versioned(
+              getLocationCoverPublicUrl(loc?.cover_image),
+              loc?.cover_image
+            );
             const isUploading = uploadingId === loc.id;
             const hasSlug = !!String(loc?.slug || "").trim();
             return (

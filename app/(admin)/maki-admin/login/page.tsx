@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin-auth";
 
 import { getAdminLogoUrl } from "@/lib/admin-branding";
+import { useAdminBrandingVersions } from "@/app/components/admin/AdminBrandingVersion";
 import { adminFontVariables } from "../admin-fonts";
 
 /* ===============================================================
@@ -605,6 +606,8 @@ export default function AdminLoginPage() {
 ---------------------------------------------- */
 function LoginBrandMark() {
   const [imgFailed, setImgFailed] = useState<boolean>(false);
+  /* 🛡️ Admin logo R2 versiyonu (server layout) → değişince URL değişir. */
+  const { logo: logoVersion } = useAdminBrandingVersions();
 
   if (imgFailed) {
     return (
@@ -630,7 +633,7 @@ function LoginBrandMark() {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={getAdminLogoUrl()}
+        src={getAdminLogoUrl(logoVersion)}
         alt="Admin"
         onError={() => setImgFailed(true)}
         className="w-full h-full object-contain"
@@ -650,6 +653,8 @@ function LoginBrandMark() {
 ---------------------------------------------- */
 function DesktopBrandMark() {
   const [imgFailed, setImgFailed] = useState<boolean>(false);
+  /* 🛡️ Admin logo R2 versiyonu (server layout) → değişince URL değişir. */
+  const { logo: logoVersion } = useAdminBrandingVersions();
 
   if (imgFailed) {
     return (
@@ -680,7 +685,7 @@ function DesktopBrandMark() {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={getAdminLogoUrl()}
+        src={getAdminLogoUrl(logoVersion)}
         alt="Admin"
         onError={() => setImgFailed(true)}
         className="w-full h-full object-contain"

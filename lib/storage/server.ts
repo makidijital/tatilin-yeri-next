@@ -1,6 +1,7 @@
 import "server-only";
 
 import { s3StorageProvider } from "./s3-storage.provider";
+import { invalidateSiteAssetVersions } from "./site-asset-version.server";
 import type { StorageRemoveResult } from "./storage.types";
 
 /* ===============================================================
@@ -23,5 +24,9 @@ export async function removeServer(
   bucket: string,
   paths: string[]
 ): Promise<StorageRemoveResult> {
-  return s3StorageProvider.remove(bucket, paths);
+  const result = await s3StorageProvider.remove(bucket, paths);
+  /* 🛡️ Görsel URL versiyonu — silinen site-assets path'lerinin versiyon
+     cache'i geçersiz (sonuç/dönüş tipi DEĞİŞMEDİ). */
+  invalidateSiteAssetVersions(bucket, paths);
+  return result;
 }

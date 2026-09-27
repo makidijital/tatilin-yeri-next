@@ -176,6 +176,10 @@ export async function PATCH(
      Full Route Cache'i temizlenir (kart başlık/özet/kapak taze gelir).
      Detay force-dynamic → zaten taze. Cache mimarisi korunur. */
   revalidatePath("/blog");
+  /* 🛡️ EN/DE blog listeleri de ISR — yalnız TR tazeleniyordu; kapak
+     (ve `?v=` versiyonu) EN/DE listede de hemen güncel olsun. */
+  revalidatePath("/en/blog");
+  revalidatePath("/de/blog");
 
   return NextResponse.json({ ok: true });
 }
@@ -234,6 +238,10 @@ export async function DELETE(
      Route Cache'i temizlenir; silinen yazı listeden hemen kalkar.
      Cache mimarisi korunur. */
   revalidatePath("/blog");
+  /* 🛡️ EN/DE blog listeleri de ISR — yalnız TR tazeleniyordu; kapak
+     (ve `?v=` versiyonu) EN/DE listede de hemen güncel olsun. */
+  revalidatePath("/en/blog");
+  revalidatePath("/de/blog");
 
   return NextResponse.json({ ok: true });
 }

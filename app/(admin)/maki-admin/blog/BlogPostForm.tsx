@@ -10,6 +10,7 @@ import { useNotify } from "@/app/components/admin/notifications/NotificationProv
 import RichTextEditor from "@/app/components/admin/villa-form/RichTextEditor";
 import { convertImageToWebP } from "@/lib/image.helpers";
 import { resolveAssetUrl } from "@/lib/storage.helpers";
+import { useSiteAssetVersions } from "@/lib/storage/use-site-asset-versions";
 import { STORAGE_BUCKETS } from "@/lib/storage";
 
 /* ===============================================================
@@ -67,6 +68,9 @@ export default function BlogPostForm({
   const [coverPath, setCoverPath] = useState<string | null>(
     initial?.cover_image ?? null
   );
+  /* 🛡️ Önizleme `?v=<R2 ETag>` — `blog/<slug>.webp` overwrite sonrası
+     yeni kapak sayfa yenilemeden görünsün. */
+  const assetVersions = useSiteAssetVersions([coverPath]);
   const [category, setCategory] = useState(initial?.category ?? "");
   const [author, setAuthor] = useState(initial?.author ?? "");
   const [seoTitle, setSeoTitle] = useState(initial?.seo_title ?? "");
@@ -109,6 +113,7 @@ export default function BlogPostForm({
         return;
       }
       setCoverPath(path);
+      await assetVersions.refresh(path);
       toast.success("Kapak yüklendi", { id: "blog-cover" });
     } catch {
       toast.error("Kapak yüklenemedi", { id: "blog-cover" });
@@ -171,7 +176,9 @@ export default function BlogPostForm({
     }
   };
 
-  const coverUrl = coverPath ? resolveAssetUrl(coverPath) : null;
+  const coverUrl = coverPath
+    ? assetVersions.versioned(resolveAssetUrl(coverPath), coverPath)
+    : null;
   const labelCls =
     "text-[12px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block";
 

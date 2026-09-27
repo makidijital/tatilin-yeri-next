@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
-import { getAdminIconUrl } from "@/lib/admin-branding";
+import { ADMIN_BRANDING_PATHS, getAdminIconUrl } from "@/lib/admin-branding";
+import { getSiteAssetVersions } from "@/lib/storage/site-asset-version.server";
+import { AdminBrandingVersionProvider } from "@/app/components/admin/AdminBrandingVersion";
 
 /* ===============================================================
    🛡️ ADMIN-WIDE CACHE BYPASS — force-dynamic (server layout)
@@ -51,16 +53,39 @@ export const dynamic = "force-dynamic";
    PUBLIC ROUTE GROUP `(public)` root metadata'sını AYNEN kullanır —
    bu override route-group izole, public'e SIZMAZ.
 =============================================================== */
-export const metadata: Metadata = {
-  title: { absolute: "MAKİ Dijital — Yönetim Paneli" },
-  icons: { icon: getAdminIconUrl() },
-  robots: { index: false, follow: false },
-};
+/* 🛡️ Admin logo/icon `?ts=<R2 ETag>` — sabit path'e overwrite edilen
+   branding görselleri değişince URL de değişir (DB kaydı yok; versiyon
+   R2 nesnesinden okunur, 1 saat cache + upload'da anında invalidation).
+   Versiyon alınamazsa URL'ler BUGÜNKÜ gibi versiyonsuz. */
+async function getAdminBrandingVersions() {
+  const v = await getSiteAssetVersions([
+    ADMIN_BRANDING_PATHS["admin-logo"],
+    ADMIN_BRANDING_PATHS["admin-icon"],
+  ]);
+  return {
+    logo: v[ADMIN_BRANDING_PATHS["admin-logo"]],
+    icon: v[ADMIN_BRANDING_PATHS["admin-icon"]],
+  };
+}
 
-export default function AdminGroupLayout({
+export async function generateMetadata(): Promise<Metadata> {
+  const { icon } = await getAdminBrandingVersions();
+  return {
+    title: { absolute: "MAKİ Dijital — Yönetim Paneli" },
+    icons: { icon: getAdminIconUrl(icon) },
+    robots: { index: false, follow: false },
+  };
+}
+
+export default async function AdminGroupLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  const versions = await getAdminBrandingVersions();
+  return (
+    <AdminBrandingVersionProvider versions={versions}>
+      {children}
+    </AdminBrandingVersionProvider>
+  );
 }

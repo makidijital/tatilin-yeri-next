@@ -5,6 +5,7 @@ import { getPageBySlug } from "@/app/services/page.service";
 import { resolvePageContent } from "@/lib/i18n/get-page-translation.server";
 import CmsPageBody from "@/app/components/cms/CmsPageBody";
 import { buildCmsPageMetadata } from "@/app/components/cms/cms-page-metadata";
+import { getCmsPageAssetVersions } from "@/app/components/cms/cms-asset-versions.server";
 
 /* ===============================================================
    🛡️ /p/[slug] — PREMIUM EDITORIAL CMS PAGE (TR)
@@ -69,6 +70,8 @@ export default async function CmsPage({ params }: Props) {
   }
 
   const resolved = await resolvePageContent(page, "tr");
+  /* 🛡️ Görsel `?v=` versiyonları (R2 ETag; path aynı). */
+  const assetVersions = await getCmsPageAssetVersions(page, resolved.sections);
 
   return (
     <CmsPageBody
@@ -82,6 +85,7 @@ export default async function CmsPage({ params }: Props) {
          yoksa `resolveTranslatedSections` canonical TR bölümlerine
          düşer. EK SORGU YOK: aynı `resolvePageContent` çağrısı. */
       resolvedSections={resolved.sections}
+      assetVersions={assetVersions}
     />
   );
 }

@@ -10,7 +10,7 @@
 
 import type { Settings } from "@/app/services/settings.types";
 import { settingsServerRepository } from "@/lib/db/settings.repository.server";
-import { resolveAssetUrl } from "@/lib/storage.helpers";
+import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
 
 export type ResendPayload = {
   from: string;
@@ -114,7 +114,11 @@ export async function getMailConfig(): Promise<{
   /* 🔥 site_logo'yu Storage public URL'e resolve et (FULL URL veya
      relative path için tek code path; Header/Footer/PDF voucher
      ile AYNI helper). Yoksa null. */
-  const brandLogoUrl = resolveAssetUrl(settings?.site_logo) || null;
+  /* 🛡️ `?v=settings.updated_at` — Header/Footer ile AYNI versiyon;
+     logo sabit path'e overwrite edildiğinde mail istemcisi/proxy
+     cache'i eski logoyu göstermesin. */
+  const brandLogoUrl =
+    resolveAssetUrlVersioned(settings?.site_logo, settings?.updated_at) || null;
 
   return {
     apiKey,

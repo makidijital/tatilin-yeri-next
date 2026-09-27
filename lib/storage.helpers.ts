@@ -1,4 +1,5 @@
 import { storageProvider, STORAGE_BUCKETS } from "@/lib/storage";
+import { withVersionParam } from "@/lib/storage/site-asset-version";
 
 /* ===============================================================
    🛡️ STORAGE HELPERS — R2 storage public URL üretici
@@ -217,9 +218,9 @@ export function resolveAssetUrlVersioned(
   if (cacheKey === undefined || cacheKey === null || cacheKey === "") {
     return url;
   }
-  const sep = url.includes("?") ? "&" : "?";
-  return `${url}${sep}v=${encodeURIComponent(String(cacheKey))}`;
+  return withVersionParam(url, cacheKey);
 }
+
 
 /* ===============================================================
    🛡️ appendAssetVersion — hazır URL'e cache-bust `?v=` ekler.
@@ -249,8 +250,7 @@ export function appendAssetVersion(
   if (cacheKey === undefined || cacheKey === null || cacheKey === "") {
     return url;
   }
-  const sep = url.includes("?") ? "&" : "?";
-  return `${url}${sep}v=${encodeURIComponent(String(cacheKey))}`;
+  return withVersionParam(url, cacheKey);
 }
 
 /* ===============================================================

@@ -5,6 +5,8 @@ import { ImagePlus, Trash2 } from "lucide-react";
 
 import { storageProvider } from "@/lib/storage";
 import { convertImageToWebP } from "@/lib/image.helpers";
+import { useSiteAssetVersions } from "@/lib/storage/use-site-asset-versions";
+import { versionFor } from "@/lib/storage/site-asset-version";
 import {
   SITE_ASSETS_BUCKET_NAME,
   resolveAssetUrlVersioned,
@@ -312,6 +314,10 @@ export function UploadField({
      bu key güncellenir; preview src'sine ?ts=<key> eklenir. Public
      frontend / upload / storage / DB DEĞİŞMEZ. */
   const [bustTs, setBustTs] = useState<number | null>(null);
+  /* 🛡️ Önizleme `?v=` = R2 nesnesinin güncel ETag'i (görsel değişince
+     değişir; kayıt beklenmeden). Alınamazsa `version` prop'u (mevcut
+     settings.updated_at davranışı) kullanılır. */
+  const assetVersions = useSiteAssetVersions([currentUrl]);
 
   async function handleFile(file: File) {
     if (!slug || !slug.trim()) {
@@ -345,6 +351,8 @@ export function UploadField({
          AYNEN çalışmaya devam eder (resolveAssetUrl HTTP(S) pass-through).
          Storage provider değişiminde DB UPDATE gerekmez. */
       onChange(path);
+      /* Yeni R2 versiyonu (ETag) → önizleme `?v=` değişir. */
+      await assetVersions.refresh(path);
       /* Preview cache-bust — yeni baytları AYNI URL'de görebilmek için. */
       setBustTs(Date.now());
     } finally {
@@ -355,7 +363,10 @@ export function UploadField({
 
   /* Preview src — resolveAssetUrl çıktısına (varsa) ?ts=<bustTs> ekle.
      bustTs null iken (sayfa ilk açılış) davranış AYNEN eski (ts yok). */
-  const resolvedPreview = resolveAssetUrlVersioned(currentUrl, version);
+  const resolvedPreview = resolveAssetUrlVersioned(
+    currentUrl,
+    versionFor(assetVersions.versions, currentUrl) ?? version
+  );
   const previewSrc = resolvedPreview
     ? bustTs
       ? `${resolvedPreview}${resolvedPreview.includes("?") ? "&" : "?"}ts=${bustTs}`

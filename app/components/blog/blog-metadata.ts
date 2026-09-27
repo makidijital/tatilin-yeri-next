@@ -5,6 +5,8 @@ import type { Metadata } from "next";
 import { getBlogPostBySlug } from "@/app/services/blog.service";
 import { stripHtml } from "@/lib/html-sanitize";
 import { resolveAssetUrl } from "@/lib/storage.helpers";
+import { versionedAssetUrl } from "@/lib/storage/site-asset-version";
+import { getSiteAssetVersions } from "@/lib/storage/site-asset-version.server";
 import { getCachedSettings } from "@/lib/cache.helpers";
 import {
   DEFAULT_LOCALE,
@@ -83,7 +85,14 @@ export async function buildBlogDetailMetadata(
     resolved.seoDescription?.trim() ||
     (resolved.excerpt?.trim() ? resolved.excerpt.trim() : "") ||
     (resolved.body ? excerptFrom(stripHtml(resolved.body), 160) : "");
-  const cover = resolveAssetUrl(post.og_image || post.cover_image) || undefined;
+  /* 🛡️ OG/Twitter görseli `?v=<R2 ETag>` ile (path aynı). */
+  const ogPath = post.og_image || post.cover_image;
+  const cover =
+    versionedAssetUrl(
+      resolveAssetUrl(ogPath),
+      await getSiteAssetVersions([ogPath]),
+      ogPath
+    ) || undefined;
 
   const settings = await getCachedSettings().catch(() => null);
   const multilingualEnabled = isMultilingualEnabled(settings);

@@ -8,6 +8,7 @@ import {
 import { storagePermissionFor } from "@/lib/auth/admin-permission-map";
 import { s3StorageProvider } from "@/lib/storage/s3-storage.provider";
 import { STORAGE_BUCKETS } from "@/lib/storage/storage.constants";
+import { invalidateSiteAssetVersions } from "@/lib/storage/site-asset-version.server";
 
 /* ===============================================================
    🛡️ FAZ C / ADIM 1 — POST /api/admin/storage/remove (ALTYAPI)
@@ -100,6 +101,9 @@ export async function POST(req: Request): Promise<Response> {
 
   /* 4) S3 REMOVE (R2) */
   const result = await s3StorageProvider.remove(bucket, paths);
+  /* 🛡️ Görsel URL versiyonu — silinen path'lerin versiyon cache'i
+     geçersiz (aynı path'e yeniden yüklemede eski `?v=` kalmasın). */
+  invalidateSiteAssetVersions(bucket, paths);
   if (!result.ok) {
     console.warn("[api.admin.storage.remove] PARTIAL_FAIL", {
       bucket,

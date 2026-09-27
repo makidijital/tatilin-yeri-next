@@ -8,6 +8,7 @@ import {
   getAdminLogoUrl,
   getAdminIconUrl,
 } from "@/lib/admin-branding";
+import { useAdminBrandingVersions } from "@/app/components/admin/AdminBrandingVersion";
 import { adminFontVariables } from "./admin-fonts";
 import {
   LayoutDashboard,
@@ -585,6 +586,8 @@ export default function AdminLayout({
 ---------------------------------------------- */
 function AdminBrandMark() {
   const [imgFailed, setImgFailed] = useState(false);
+  /* 🛡️ R2 versiyonu (server layout'tan) → logo değişince URL değişir. */
+  const { logo: logoVersion } = useAdminBrandingVersions();
   if (imgFailed) {
     return <span className="admin-brand-mark">M</span>;
   }
@@ -599,7 +602,7 @@ function AdminBrandMark() {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={getAdminLogoUrl()}
+        src={getAdminLogoUrl(logoVersion)}
         alt="Admin"
         onError={() => setImgFailed(true)}
         style={{
@@ -635,9 +638,11 @@ function AdminBrandMark() {
    hydration mismatch yok.
 ---------------------------------------------- */
 function useAdminFavicon(): void {
+  /* 🛡️ R2 versiyonu (server layout'tan) → icon değişince URL değişir. */
+  const { icon: iconVersion } = useAdminBrandingVersions();
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const url = getAdminIconUrl();
+    const url = getAdminIconUrl(iconVersion);
     if (!url) return;
 
     type Saved = {
@@ -696,7 +701,7 @@ function useAdminFavicon(): void {
         }
       });
     };
-  }, []);
+  }, [iconVersion]);
 }
 
 function AdminShell({

@@ -8,6 +8,7 @@ import {
 import { storagePermissionFor } from "@/lib/auth/admin-permission-map";
 import { s3StorageProvider } from "@/lib/storage/s3-storage.provider";
 import { STORAGE_BUCKETS } from "@/lib/storage/storage.constants";
+import { invalidateSiteAssetVersions } from "@/lib/storage/site-asset-version.server";
 
 /* ===============================================================
    🛡️ FAZ C / ADIM 1 — POST /api/admin/storage/upload (ALTYAPI)
@@ -146,6 +147,11 @@ export async function POST(req: Request): Promise<Response> {
       { status: 502 }
     );
   }
+
+  /* 🛡️ Görsel URL versiyonu (`?v=`): aynı path'e overwrite edildi →
+     bu path'in versiyon cache'i geçersiz; sonraki render yeni ETag'i
+     okur. Yanıt formatı DEĞİŞMEDİ. */
+  invalidateSiteAssetVersions(bucket, [path]);
 
   return NextResponse.json({ ok: true });
 }

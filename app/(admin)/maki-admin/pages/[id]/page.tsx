@@ -17,6 +17,7 @@ import {
   buildPageCoverPath,
   SITE_ASSETS_BUCKET_NAME,
 } from "@/lib/storage.helpers";
+import { useSiteAssetVersions } from "@/lib/storage/use-site-asset-versions";
 import { convertImageToWebP } from "@/lib/image.helpers";
 /* 🛡️ PHASE 12C — SAYFA ÇEVİRİLERİ (CMS içeriği; admin ARAYÜZ dili
    DEĞİL). `types/page.tsx` (Phase 10D Batch 3) ile BİREBİR AYNI
@@ -128,6 +129,8 @@ export default function EditPagePage() {
   const [coverPath, setCoverPath] = useState<string | null>(null);
   const [coverUploading, setCoverUploading] = useState(false);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
+  /* 🛡️ Önizleme `?v=<R2 ETag>` — aynı path'e overwrite sonrası yeni görsel. */
+  const assetVersions = useSiteAssetVersions([coverPath]);
 
   /* Original slug — sadece "URL değişecek" uyarısı için. */
   const [originalSlug, setOriginalSlug] = useState("");
@@ -245,6 +248,7 @@ export default function EditPagePage() {
         return;
       }
       setCoverPath(path);
+      await assetVersions.refresh(path);
       toast.success(pagesDict.toast.coverUploaded, { id: "page-cover" });
     } finally {
       setCoverUploading(false);
@@ -358,7 +362,10 @@ export default function EditPagePage() {
   }
 
   const slugChanged = slug.trim() !== originalSlug && originalSlug.length > 0;
-  const coverUrl = getPageCoverPublicUrl(coverPath);
+  const coverUrl = assetVersions.versioned(
+    getPageCoverPublicUrl(coverPath),
+    coverPath
+  );
 
   return (
     <div className="space-y-6 w-full">

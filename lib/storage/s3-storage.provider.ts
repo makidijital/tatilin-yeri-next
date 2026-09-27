@@ -4,6 +4,7 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectsCommand,
+  HeadObjectCommand,
 } from "@aws-sdk/client-s3";
 
 import type { StorageProvider } from "./storage.provider";
@@ -210,3 +211,31 @@ export const s3StorageProvider: StorageProvider = {
     return resolveCdnPublicUrl(bucket, path);
   },
 };
+
+/* ===============================================================
+   🛡️ HEAD — nesnenin güncel ETag'i (salt okuma, server-only)
+   ===============================================================
+   Görsel URL versiyonlaması için (lib/storage/site-asset-version
+   .server.ts). Nesne İÇERİĞİ değişince ETag değişir, değişmezse
+   aynı kalır → `?v=` yalnız görsel değişince değişir.
+     - Nesne yok (404/NotFound) → null
+     - Diğer hatalar (ağ, env eksik) → THROW (çağıran cache'lemesin)
+   Upload/remove davranışına DOKUNMAZ.
+   =============================================================== */
+export async function headObjectEtag(
+  bucket: string,
+  key: string
+): Promise<string | null> {
+  try {
+    const res = await getClient().send(
+      new HeadObjectCommand({ Bucket: bucket, Key: key })
+    );
+    return res.ETag ?? null;
+  } catch (err) {
+    const e = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+    if (e?.name === "NotFound" || e?.$metadata?.httpStatusCode === 404) {
+      return null;
+    }
+    throw err;
+  }
+}

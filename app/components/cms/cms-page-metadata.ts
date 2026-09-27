@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 
 import { getPageBySlug } from "@/app/services/page.service";
 import { getPageCoverPublicUrl } from "@/lib/storage.helpers";
+import { versionedAssetUrl } from "@/lib/storage/site-asset-version";
+import { getSiteAssetVersions } from "@/lib/storage/site-asset-version.server";
 import { getCachedSettings } from "@/lib/cache.helpers";
 import {
   DEFAULT_LOCALE,
@@ -67,8 +69,13 @@ export async function buildCmsPageMetadata(
       ? resolved.excerpt
       : undefined);
 
-  const cover = getPageCoverPublicUrl(
-    (page as { cover_image?: string | null }).cover_image
+  /* 🛡️ OG/Twitter görseli de `?v=<R2 ETag>` ile (sosyal ağ
+     önizleme cache'i eski kapağı göstermesin); path aynı. */
+  const coverPath = (page as { cover_image?: string | null }).cover_image;
+  const cover = versionedAssetUrl(
+    getPageCoverPublicUrl(coverPath),
+    await getSiteAssetVersions([coverPath]),
+    coverPath
   );
   const robots = page.noindex
     ? { index: false, follow: false }

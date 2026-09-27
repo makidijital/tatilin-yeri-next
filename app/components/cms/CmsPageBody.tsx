@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { getPageCoverPublicUrl } from "@/lib/storage.helpers";
+import { versionedAssetUrl, versionFor } from "@/lib/storage/site-asset-version";
 import { parsePageSections } from "@/lib/page-sections";
 import PageSectionRenderer from "@/app/components/cms/PageSectionRenderer";
 import PageHero from "@/app/components/ui/PageHero";
@@ -142,6 +143,10 @@ type Props = {
    *  Verilmezse canonical `page.sections` kullanılır → bu prop'u
    *  geçmeyen mevcut çağıranların davranışı BİREBİR korunur. */
   resolvedSections?: unknown;
+  /** 🛡️ Görsel URL versiyonları (`{ [path]: R2 ETag }`) — kapak ve
+   *  bölüm görsellerine `?v=` eklenir; R2 path'i DEĞİŞMEZ. Verilmezse
+   *  URL'ler BUGÜNKÜ gibi versiyonsuz (geriye uyumlu). */
+  assetVersions?: Readonly<Record<string, string>>;
 };
 
 export default function CmsPageBody({
@@ -152,6 +157,7 @@ export default function CmsPageBody({
   resolvedExcerpt,
   body,
   resolvedSections,
+  assetVersions,
 }: Props) {
   /* 🛡️ PHASE 12E — statik arayüz metinleri. `locale` prop'u zaten
      mevcut (Phase 12D); yeni bir locale kaynağı EKLENMEDİ. */
@@ -162,8 +168,11 @@ export default function CmsPageBody({
      body/content drift fix'i o helper'ın içine TAŞINDI. */
   const excerpt = (resolvedExcerpt ?? "").trim();
 
-  const coverUrl = getPageCoverPublicUrl(
-    (page as { cover_image?: string | null }).cover_image
+  const coverPath = (page as { cover_image?: string | null }).cover_image;
+  const coverUrl = versionedAssetUrl(
+    getPageCoverPublicUrl(coverPath),
+    assetVersions,
+    coverPath
   );
 
   /* HERO KARARI:
@@ -314,7 +323,13 @@ export default function CmsPageBody({
           {/* Sections varsa render, yoksa body fallback */}
           {hasSections ? (
             sections.map((s, idx) => (
-              <PageSectionRenderer key={idx} section={s} />
+              <PageSectionRenderer
+                key={idx}
+                section={s}
+                version={
+                  s.type === "image" ? versionFor(assetVersions, s.path) : undefined
+                }
+              />
             ))
           ) : hasBody ? (
             <div className="space-y-5">

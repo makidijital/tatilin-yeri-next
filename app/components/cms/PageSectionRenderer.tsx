@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 
 import type { PageSection } from "@/lib/page-sections";
 import { getPageCoverPublicUrl } from "@/lib/storage.helpers";
+import { withVersionParam } from "@/lib/storage/site-asset-version";
 
 /* ===============================================================
    🛡️ PAGE SECTION RENDERER — type→component map
@@ -43,8 +44,18 @@ function RichTextSection({ content }: { content: string }) {
 }
 
 /* ---------- Image: full-width, rounded, lazy ---------- */
-function ImageSectionView({ path, alt }: { path: string; alt?: string }) {
-  const url = getPageCoverPublicUrl(path);
+function ImageSectionView({
+  path,
+  alt,
+  version,
+}: {
+  path: string;
+  alt?: string;
+  /** 🛡️ R2 ETag versiyonu → `?v=` (path aynı; yoksa URL aynen). */
+  version?: string;
+}) {
+  const base = getPageCoverPublicUrl(path);
+  const url = base && version ? withVersionParam(base, version) : base;
   if (!url) return null;
   return (
     <figure className="my-6 md:my-10">
@@ -95,8 +106,8 @@ const SECTION_RENDERERS = {
   richtext: (s: Extract<PageSection, { type: "richtext" }>) => (
     <RichTextSection content={s.content} />
   ),
-  image: (s: Extract<PageSection, { type: "image" }>) => (
-    <ImageSectionView path={s.path} alt={s.alt} />
+  image: (s: Extract<PageSection, { type: "image" }>, version?: string) => (
+    <ImageSectionView path={s.path} alt={s.alt} version={version} />
   ),
   quote: (s: Extract<PageSection, { type: "quote" }>) => (
     <QuoteSectionView text={s.text} author={s.author} />
@@ -105,15 +116,19 @@ const SECTION_RENDERERS = {
 
 export default function PageSectionRenderer({
   section,
+  version,
 }: {
   section: PageSection;
+  /** 🛡️ Görsel bölümü için R2 versiyonu (opsiyonel). */
+  version?: string;
 }) {
   /* Type assertion gerekiyor çünkü map lookup TS narrow yapmıyor;
      section.type discriminator union'a göre lookup zaten doğru
      renderer'ı seçer. Bilinmeyen type düşmüş zaten parsePageSections'da. */
   const renderer = SECTION_RENDERERS[section.type] as (
-    s: PageSection
+    s: PageSection,
+    version?: string
   ) => ReactElement;
   if (!renderer) return null;
-  return renderer(section);
+  return renderer(section, version);
 }

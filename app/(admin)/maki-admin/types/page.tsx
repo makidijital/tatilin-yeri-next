@@ -37,6 +37,7 @@ import {
   buildCategoryCoverPath,
   SITE_ASSETS_BUCKET_NAME,
 } from "@/lib/storage.helpers";
+import { useSiteAssetVersions } from "@/lib/storage/use-site-asset-versions";
 import { convertImageToWebP } from "@/lib/image.helpers";
 /* 🛡️ PHASE 10D — Batch 3 — multilingual_enabled kontrolü. Batch 2'de
    Features için kanıtlanan TopBar.tsx deseni (getPublicSettingsAction,
@@ -50,6 +51,9 @@ export default function TypesPage() {
   const toast = useNotify();
   const confirm = useConfirm();
   const [types, setTypes] = useState<any[]>([]);
+  /* 🛡️ Kapak önizlemesi `?v=<R2 ETag>` — `category-covers/<slug>.webp`
+     overwrite edildiğinde liste yeni görseli göstersin. */
+  const assetVersions = useSiteAssetVersions(types.map((t) => t?.cover_image));
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   /* 🛡️ Upload-in-progress map — aynı anda birden fazla kategori
@@ -220,6 +224,7 @@ export default function TypesPage() {
         return;
       }
       await load();
+      await assetVersions.refresh(path);
       toast.success("Kapak görseli güncellendi", {
         id: `type-cover-${t.id}`,
       });
@@ -306,7 +311,10 @@ export default function TypesPage() {
      BYTE-IDENTICAL kaldı; yalnız "Çeviriler" butonu (Kaydet/Sil ile aynı
      `!sortMode` bloğunda) ve altına koşullu panel eklendi. */
   const renderTypeRow = (t: any, dragHandleProps?: DragHandleProps) => {
-    const coverUrl = getCategoryCoverPublicUrl(t?.cover_image);
+    const coverUrl = assetVersions.versioned(
+      getCategoryCoverPublicUrl(t?.cover_image),
+      t?.cover_image
+    );
     const isUploading = uploadingId === t.id;
     const hasSlug = !!String(t?.slug || "").trim();
     return (

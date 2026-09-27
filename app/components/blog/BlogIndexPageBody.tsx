@@ -4,6 +4,8 @@ import { CalendarDays, ArrowUpRight } from "lucide-react";
 
 import { getBlogPosts } from "@/app/services/blog.service";
 import { resolveAssetUrl } from "@/lib/storage.helpers";
+import { versionedAssetUrl } from "@/lib/storage/site-asset-version";
+import { getSiteAssetVersions } from "@/lib/storage/site-asset-version.server";
 import PageHero from "@/app/components/ui/PageHero";
 
 /* 🛡️ PUBLIC ÇOKLU DİL — statik metinler MEVCUT public dictionary'den
@@ -52,6 +54,11 @@ export default async function BlogIndexPageBody({
 
   const posts = await getBlogPosts();
   const translated = await resolveBlogListContent(posts, locale);
+  /* 🛡️ Kapak `?v=<R2 ETag>` versiyonları — `blog/<slug>.webp` aynı
+     path'e overwrite edildiği için URL görsel değişince değişmeli. */
+  const coverVersions = await getSiteAssetVersions(
+    posts.map((p) => p.cover_image)
+  );
 
   return (
     <>
@@ -74,7 +81,11 @@ export default async function BlogIndexPageBody({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
             {posts.map((post) => {
-              const cover = resolveAssetUrl(post.cover_image);
+              const cover = versionedAssetUrl(
+                resolveAssetUrl(post.cover_image),
+                coverVersions,
+                post.cover_image
+              );
               const content = translated.get(post.id);
               const title = content?.title || post.title;
               const excerpt = content?.excerpt ?? post.excerpt;

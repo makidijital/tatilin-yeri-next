@@ -4,6 +4,8 @@ import Image from "next/image";
 import { getBlogPostBySlug } from "@/app/services/blog.service";
 import { sanitizeHtml, stripHtml } from "@/lib/html-sanitize";
 import { resolveAssetUrl } from "@/lib/storage.helpers";
+import { versionedAssetUrl } from "@/lib/storage/site-asset-version";
+import { getSiteAssetVersions } from "@/lib/storage/site-asset-version.server";
 import PageHero from "@/app/components/ui/PageHero";
 import {
   JsonLd,
@@ -49,7 +51,12 @@ export default async function BlogDetailPageBody({
   const excerpt = resolved.excerpt;
   const body = resolved.body;
 
-  const cover = resolveAssetUrl(post.cover_image);
+  /* 🛡️ Kapak `?v=<R2 ETag>` (path aynı; versiyon yoksa URL aynen). */
+  const cover = versionedAssetUrl(
+    resolveAssetUrl(post.cover_image),
+    await getSiteAssetVersions([post.cover_image]),
+    post.cover_image
+  );
 
   const articleLd = buildArticle({
     slug: post.slug,

@@ -3,7 +3,7 @@ import "server-only";
 import { voucherRepository } from "@/lib/db/voucher.repository.server";
 import { getMailConfig } from "@/app/lib/mail/client";
 import { getSettings } from "@/app/services/settings.service";
-import { resolveAssetUrl } from "@/lib/storage.helpers";
+import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
 
 /* 🛡️ PHASE 3 (migration 040): voucher reservation snapshot'ı tam PII
    içerir (name/phone/email/identity/address/price). 040 admin-only RLS
@@ -198,7 +198,10 @@ export async function buildVoucherData(
   let brandLogoUrl: string | null = null;
   try {
     const settings = await getSettings();
-    brandLogoUrl = resolveAssetUrl(settings?.site_logo) || null;
+    /* 🛡️ `?v=settings.updated_at` — Header/Footer ile AYNI versiyon. */
+    brandLogoUrl =
+      resolveAssetUrlVersioned(settings?.site_logo, settings?.updated_at) ||
+      null;
   } catch {
     brandLogoUrl = null;
   }

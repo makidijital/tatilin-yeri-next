@@ -26,6 +26,7 @@ import {
   buildPageCoverPath,
   SITE_ASSETS_BUCKET_NAME,
 } from "@/lib/storage.helpers";
+import { useSiteAssetVersions } from "@/lib/storage/use-site-asset-versions";
 import { convertImageToWebP } from "@/lib/image.helpers";
 import { slugifyTr } from "@/lib/slug";
 /* 🛡️ PHASE 12 — ADMIN I18N (Seçenek A: admin'de locale KAYNAĞI YOK).
@@ -73,6 +74,12 @@ export default function NewPagePage() {
   const [body, setBody] = useState("");
   const [coverPath, setCoverPath] = useState<string | null>(null);
   const [sections, setSections] = useState<PageSection[]>([]);
+  /* 🛡️ Önizleme `?v=<R2 ETag>` — kapak + bölüm görselleri aynı path'e
+     overwrite edildiğinde önizleme yeni görseli göstersin. */
+  const assetVersions = useSiteAssetVersions([
+    coverPath,
+    ...sections.map((s) => (s.type === "image" ? s.path : null)),
+  ]);
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
   const [noindex, setNoindex] = useState(false);
@@ -128,6 +135,7 @@ export default function NewPagePage() {
         return;
       }
       setCoverPath(path);
+      await assetVersions.refresh(path);
       toast.success(pagesDict.toast.coverUploaded, { id: "page-cover" });
     } finally {
       setCoverUploading(false);
@@ -203,6 +211,7 @@ export default function NewPagePage() {
         return;
       }
       updateSection(idx, { path } as Partial<PageSection>);
+      await assetVersions.refresh(path);
       toast.success(pagesDict.toast.imageAdded, {
         id: `page-section-img-${idx}`,
       });
@@ -416,7 +425,10 @@ export default function NewPagePage() {
     /* eslint-enable no-console */
   }
 
-  const coverUrl = getPageCoverPublicUrl(coverPath);
+  const coverUrl = assetVersions.versioned(
+    getPageCoverPublicUrl(coverPath),
+    coverPath
+  );
 
   return (
     <div className="space-y-8 w-full">
@@ -662,7 +674,10 @@ export default function NewPagePage() {
                             /* eslint-disable-next-line @next/next/no-img-element */
                             <img
                               src={
-                                getPageCoverPublicUrl(s.path) || undefined
+                                assetVersions.versioned(
+                                  getPageCoverPublicUrl(s.path),
+                                  s.path
+                                ) || undefined
                               }
                               alt=""
                               className="absolute inset-0 w-full h-full object-cover"
