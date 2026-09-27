@@ -506,6 +506,9 @@ function ModalContent({
     poolHeatingTotal,
     /* 🛡️ Migration 076 — sezonluk ay kısıtı (checkbox görünürlüğü). */
     poolHeatingActiveForRange,
+    /* 🛡️ Başlangıç aralığı müsaitlik doğrulaması (engine). */
+    availabilityPending,
+    initialRangeConflict,
   } = engine;
 
   /* Calendar always-visible (modal'da popup pattern yok).
@@ -707,16 +710,33 @@ function ModalContent({
           />
         )}
 
+        {/* 🛡️ Başlangıç aralığı dolu çıktı → seçim temizlendi; MEVCUT
+            `conflictError` mesajı (takvimdeki çakışma uyarısıyla aynı metin
+            ve görünüm). Diğer durumlarda hiçbir şey render edilmez. */}
+        {initialRangeConflict && (
+          <div
+            role="alert"
+            className="
+              rounded-xl border border-red-200 bg-red-50
+              px-3 py-2 text-[12.5px] text-red-700
+              flex items-center gap-2
+            "
+          >
+            <span aria-hidden>⚠️</span>
+            <span className="flex-1">{dict.booking.conflictError}</span>
+          </div>
+        )}
+
         <button
           onClick={handleReservation}
-          disabled={!minimumStayValid}
+          disabled={!minimumStayValid || availabilityPending || initialRangeConflict}
           /* 🛡️ DÜZ TURUNCU CTA (UI-only): `.btn-primary`nin turkuaz
              zemini + glow shadow'ları YALNIZ BU BUTONDA ezilir (global
              sınıfa DOKUNULMADI → diğer tüm butonlar aynı). Marka
              turuncusu #ED7926, beyaz metin; hover sade koyu ton,
              gradient/glass/translate efekti yok. */
           className={`btn-primary w-full !py-3.5 !text-sm !bg-[#ED7926] !bg-none !shadow-none !transform-none hover:!bg-[#d96d1f] hover:!shadow-none ${
-            !minimumStayValid ? "!opacity-50 !cursor-not-allowed" : ""
+            !minimumStayValid || availabilityPending || initialRangeConflict ? "!opacity-50 !cursor-not-allowed" : ""
           }`}
         >
           {dict.booking.bookNow}

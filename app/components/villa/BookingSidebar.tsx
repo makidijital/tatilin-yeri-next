@@ -219,6 +219,9 @@ export default function BookingSidebar({
     handleReservation,
     /* 🛡️ alert() yerine inline banner — null → gizli. */
     reservationError,
+    /* 🛡️ Başlangıç aralığının müsaitliği doğrulanana kadar CTA bekler. */
+    availabilityPending,
+    initialRangeConflict,
     /* 🛡️ HAVUZ ISITMA — 5. adım. YENİ bir hesaplama YOK; üçü de
        useBookingEngine'den (4. adım) geldiği gibi kullanılır. */
     poolHeatingSelected,
@@ -339,7 +342,15 @@ export default function BookingSidebar({
           onPointerEnter={ensureBookingCalendar}
           onPointerDown={ensureBookingCalendar}
           onClick={() => {
-            const targetMonth = endDate || startDate || new Date();
+            /* 🛡️ Başlangıç aralığı dolu çıkıp seçim temizlendiyse takvim
+               yine aranan ayda açılır (bugünün ayına düşmez). Seçim varsa
+               veya URL tarihi yoksa davranış AYNEN. */
+            const targetMonth =
+              endDate ||
+              startDate ||
+              (initialRangeConflict && initialStart
+                ? parseLocalDate(initialStart)
+                : new Date());
             setCurrentMonth(targetMonth);
             setOpenCalendar(true);
             ensureBookingCalendar();
@@ -542,13 +553,13 @@ export default function BookingSidebar({
         {!hideReservationCta && (
           <button
             onClick={handleReservation}
-            disabled={!minimumStayValid || priceUnavailable}
+            disabled={!minimumStayValid || priceUnavailable || availabilityPending || initialRangeConflict}
             className={`
               w-full rounded-full py-4
               text-[14px] font-semibold tracking-[0.01em] text-white
               transition-all duration-200 motion-reduce:transition-none
               ${
-                !minimumStayValid || priceUnavailable
+                !minimumStayValid || priceUnavailable || availabilityPending || initialRangeConflict
                   ? "bg-[var(--color-stone-300)] cursor-not-allowed"
                   : "bg-gradient-to-r from-[#ED7926] to-[#0973BA] shadow-[0_16px_32px_-12px_rgba(9,115,186,0.45)] hover:shadow-[0_20px_40px_-12px_rgba(9,115,186,0.55)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
               }

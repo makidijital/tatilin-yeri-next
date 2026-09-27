@@ -279,6 +279,16 @@ export type UseBookingEngineReturn = {
   /* 🛡️ Modern feedback layer — alert() yerine inline banner state.
      null → gizli; string → banner gösterilir; 3sn sonra auto-clear. */
   reservationError: string | null;
+
+  /* 🛡️ BAŞLANGIÇ ARALIĞI MÜSAİTLİK DOĞRULAMASI
+     availabilityPending: URL/prop'tan gelen aralık hâlâ seçili ve
+       müsaitlik henüz yüklenmedi → CTA beklemeli, fiyat yok.
+     initialRangeConflict: aralık dolu çıktı → seçim null verildi,
+       `reservationError` mevcut `conflictError` mesajını taşır.
+     Başlangıç aralığı yoksa / kullanıcı seçimi değiştirdiyse ikisi de
+     DAİMA false → mevcut davranış BİREBİR. */
+  availabilityPending: boolean;
+  initialRangeConflict: boolean;
 };
 
 /* ===============================================================
@@ -335,12 +345,30 @@ export function useBookingEngine(
   /* 🛡️ Lazy initializer — sadece ilk render'da hidrate; sonraki
      re-render'larda hesaplama yeniden yapılmaz. parseLocalDate
      LOCAL midnight üretir; UTC drift yok. */
-  const [startDate, setStartDate] = useState<Date | null>(() =>
+  /* 🛡️ HAM seçim state'i. Tüketicilere doğrudan DEĞİL, aşağıdaki
+     "BAŞLANGIÇ ARALIĞI MÜSAİTLİK DOĞRULAMASI" bloğundan geçen
+     `startDate`/`endDate` olarak verilir (dolu başlangıç aralığı
+     seçili gösterilmez). Setter'lar AYNEN expose edilir. */
+  const [selectedStart, setStartDate] = useState<Date | null>(() =>
     initialStart ? parseLocalDate(initialStart) : null
   );
-  const [endDate, setEndDate] = useState<Date | null>(() =>
+  const [selectedEnd, setEndDate] = useState<Date | null>(() =>
     initialEnd ? parseLocalDate(initialEnd) : null
   );
+
+  /* 🛡️ URL / prop ile gelen başlangıç aralığı (yalnız ikisi de varsa).
+     Yalnız ilk render'da yakalanır — kullanıcı seçimi bununla
+     karşılaştırılıp "hâlâ başlangıç seçimi mi?" sorusu cevaplanır. */
+  const [initialRange] = useState<{ start: Date; end: Date } | null>(() =>
+    initialStart && initialEnd
+      ? { start: parseLocalDate(initialStart), end: parseLocalDate(initialEnd) }
+      : null
+  );
+
+  /* 🛡️ Müsaitlik (blocked-ranges) fetch'i sonuçlandı mı? Başarı VEYA
+     hata → true. Hata durumunda MEVCUT fail-open davranış korunur
+     (takvim boş kabul edilir); asıl garanti server-side doğrulamadır. */
+  const [availabilityChecked, setAvailabilityChecked] = useState(false);
 
   const [blockedDates, setBlockedDates] = useState<Date[]>([]);
   const [checkinDates, setCheckinDates] = useState<Date[]>([]);
@@ -425,6 +453,64 @@ export function useBookingEngine(
     }
     return false;
   };
+
+  /* ===============================================================
+     🛡️ BAŞLANGIÇ ARALIĞI MÜSAİTLİK DOĞRULAMASI
+     ===============================================================
+     SORUN: URL'den (normal/esnek arama, paylaşılan link) veya
+     VillaCardBookingModal'dan gelen initialStart/initialEnd doğrudan
+     state'e alınıyordu; müsaitlik sonradan yüklenince dolu gün takvimde
+     kapalı olsa bile seçim temizlenmiyor → fiyat hesaplanıyor, CTA aktif,
+     /rezervasyon'a gidiliyordu (yalnız API reddediyordu).
+
+     KURAL (yalnız HÂLÂ başlangıç aralığı seçiliyken; kullanıcının
+     takvimden yaptığı seçimlere bu blok karışmaz):
+       - Müsaitlik henüz yüklenmedi → `initialRangePending`: fiyat
+         hesaplanmaz, rezervasyona geçilmez.
+       - Yüklendi ve aralıktaki bir gece dolu → `initialRangeConflict`:
+         seçim tüketicilere BOŞ (null) verilir (dolu gün seçili kalmaz,
+         fiyat/özet oluşmaz); mevcut `dict.booking.conflictError` mesajı
+         gösterilir. Kullanıcı takvimden yeni seçim yapınca normal akış.
+
+     "DOLU GECE" = MEVCUT merged availability (kaynak birleşimi DEĞİŞMEDİ):
+       - `hasConflict(start, end)` → takvim onSelect ile AYNI kontrol
+         (mergedBlockedDates: confirmed ara günleri + manuel + external)
+       - [start, end) içindeki bir gece mergedCheckinDates'te → başka bir
+         konaklamanın İLK gecesi (orphan-gap "occupied" kümesiyle aynı
+         tanım). Çıkış günü (end) gece sayılmaz.
+     Pending rezervasyonlar bu kümelere MEVCUT kodda da girmez → pending
+     davranışı DEĞİŞMEDİ. */
+  const rangeHasOccupiedNight = (start: Date, end: Date) => {
+    if (hasConflict(start, end)) return true;
+    const cursor = new Date(start);
+    while (cursor < end) {
+      const key = cursor.toDateString();
+      if (mergedCheckinDates.some((d) => d.toDateString() === key)) {
+        return true;
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return false;
+  };
+
+  const isInitialSelection =
+    !!initialRange &&
+    !!selectedStart &&
+    !!selectedEnd &&
+    selectedStart.toDateString() === initialRange.start.toDateString() &&
+    selectedEnd.toDateString() === initialRange.end.toDateString();
+
+  const initialRangePending = isInitialSelection && !availabilityChecked;
+
+  const initialRangeConflict =
+    isInitialSelection &&
+    availabilityChecked &&
+    rangeHasOccupiedNight(selectedStart!, selectedEnd!);
+
+  /* Tüketicilere ve aşağıdaki TÜM türetilmiş hesaplara giden seçim.
+     Çakışma yoksa ham state ile BİREBİR aynı referans. */
+  const startDate = initialRangeConflict ? null : selectedStart;
+  const endDate = initialRangeConflict ? null : selectedEnd;
 
   const formatDate = (date: Date) => {
     const y = date.getFullYear();
@@ -584,11 +670,15 @@ export function useBookingEngine(
             "❌ rezervasyon çekme:",
             new Error(`HTTP ${res.status}`)
           );
+          /* Mevcut fail-open davranış: müsaitlik alınamadı → bekleme
+             kaldırılır (server-side doğrulama yine geçerli). */
+          setAvailabilityChecked(true);
           return;
         }
         ranges = json.ranges || [];
       } catch (err) {
         console.error("❌ rezervasyon çekme:", err);
+        setAvailabilityChecked(true);
         return;
       }
       const data = ranges
@@ -695,6 +785,9 @@ export function useBookingEngine(
       setManualBlockedDates(unique(manualBlocked));
       setManualCheckinDates(unique(manualCI));
       setManualCheckoutDates(unique(manualCO));
+      /* Aynı async tick → React batch: dolu gün dizileri ile "kontrol
+         edildi" bayrağı AYNI render'da görünür. */
+      setAvailabilityChecked(true);
     };
 
     fetchReservations();
@@ -809,7 +902,13 @@ export function useBookingEngine(
   /* 🛡️ FAZ 26B — minimum stay invalid → result hesaplama atla.
      calculateGrandTotal eski davranış aynen. */
   const rawResult =
-    startDate && endDate && minimumStayValid && orphanGapValid
+    startDate &&
+    endDate &&
+    minimumStayValid &&
+    orphanGapValid &&
+    /* 🛡️ Başlangıç aralığının müsaitliği henüz doğrulanmadı → fiyat
+       kesinleşmiş gibi gösterilmez (bkz. BAŞLANGIÇ ARALIĞI bloğu). */
+    !initialRangePending
       ? calculateGrandTotal({
           start: formatDate(startDate),
           end: formatDate(endDate),
@@ -857,7 +956,11 @@ export function useBookingEngine(
      indirim FORMÜLÜ YAZILMADI; iki mevcut price.engine çıktısı
      birbirinden ÇIKARILARAK (display amaçlı) karşılaştırılıyor. */
   const undiscountedStay =
-    startDate && endDate && minimumStayValid && orphanGapValid
+    startDate &&
+    endDate &&
+    minimumStayValid &&
+    orphanGapValid &&
+    !initialRangePending
       ? calculateStayTotal(
           formatDate(startDate),
           formatDate(endDate),
@@ -980,6 +1083,18 @@ export function useBookingEngine(
       setTimeout(() => setReservationError(null), 5000);
       return;
     }
+    /* 🛡️ Başlangıç aralığının müsaitliği henüz doğrulanmadı → yönlendirme
+       YOK (fetch sonuçlanınca normal akış). Mevcut tarih/min-stay/orphan
+       mesajları yukarıda AYNEN önce çalışır. */
+    if (initialRangePending) return;
+    /* 🛡️ SON CLIENT-SIDE GÜVENLİK KONTROLÜ — seçili aralıkta dolu gece
+       varsa /rezervasyon'a gidilmez. Server-side doğrulama (API) AYNEN
+       geçerli; bu yalnız ek bir erken kapı. */
+    if (rangeHasOccupiedNight(startDate, endDate)) {
+      setReservationError(dict.booking.conflictError);
+      setTimeout(() => setReservationError(null), 3000);
+      return;
+    }
     setReservationError(null);
 
     const format = (date: Date) => {
@@ -1095,8 +1210,16 @@ export function useBookingEngine(
     handleReservation,
 
     /* 🛡️ Modern feedback layer — consumer'a expose. Banner display
-       BookingSidebar tarafında inline gösterilir; alert() kaldırıldı. */
-    reservationError,
+       BookingSidebar tarafında inline gösterilir; alert() kaldırıldı.
+       Başlangıç aralığı dolu çıktıysa (ve başka aktif hata yoksa) MEVCUT
+       `conflictError` mesajı aynı kanaldan gösterilir. */
+    reservationError:
+      reservationError ??
+      (initialRangeConflict ? dict.booking.conflictError : null),
+
+    /* 🛡️ Başlangıç aralığı müsaitlik doğrulaması (bkz. hook gövdesi). */
+    availabilityPending: initialRangePending,
+    initialRangeConflict,
   };
 }
 

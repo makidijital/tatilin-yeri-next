@@ -600,6 +600,9 @@ describe("useBookingEngine — Phase 10B handleReservation navigation URL '&loca
       })
     );
     await waitFor(() => expect(result.current.selectedNights).toBe(3));
+    /* Başlangıç aralığı müsaitliği doğrulanana kadar rezervasyona
+       geçilmez (useBookingEngine başlangıç aralığı doğrulaması). */
+    await waitFor(() => expect(result.current.availabilityPending).toBe(false));
 
     act(() => {
       result.current.handleReservation();
@@ -625,6 +628,9 @@ describe("useBookingEngine — Phase 10B handleReservation navigation URL '&loca
       })
     );
     await waitFor(() => expect(result.current.selectedNights).toBe(3));
+    /* Başlangıç aralığı müsaitliği doğrulanana kadar rezervasyona
+       geçilmez (useBookingEngine başlangıç aralığı doğrulaması). */
+    await waitFor(() => expect(result.current.availabilityPending).toBe(false));
 
     act(() => {
       result.current.handleReservation();
@@ -652,6 +658,9 @@ describe("useBookingEngine — Phase 10B handleReservation navigation URL '&loca
       })
     );
     await waitFor(() => expect(result.current.selectedNights).toBe(3));
+    /* Başlangıç aralığı müsaitliği doğrulanana kadar rezervasyona
+       geçilmez (useBookingEngine başlangıç aralığı doğrulaması). */
+    await waitFor(() => expect(result.current.availabilityPending).toBe(false));
 
     act(() => {
       result.current.handleReservation();

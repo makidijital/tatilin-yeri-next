@@ -66,6 +66,9 @@ describe("useBookingEngine — pool heating (4. adım)", () => {
     );
 
     await waitFor(() => expect(result.current.selectedNights).toBe(5));
+    /* URL/prop başlangıç aralığında fiyat, müsaitlik (blocked-ranges)
+       doğrulandıktan SONRA hesaplanır (başlangıç aralığı doğrulaması). */
+    await waitFor(() => expect(result.current.availabilityPending).toBe(false));
 
     expect(result.current.poolHeatingSelected).toBe(false);
     expect(result.current.poolHeatingTotal).toBe(0);

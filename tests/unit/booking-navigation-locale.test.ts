@@ -89,6 +89,9 @@ async function reserveWith(locale?: "tr" | "en" | "de") {
     })
   );
   await waitFor(() => expect(result.current.selectedNights).toBe(5));
+  /* Başlangıç aralığı müsaitliği doğrulanana kadar rezervasyona geçilmez
+     (useBookingEngine başlangıç aralığı doğrulaması). */
+  await waitFor(() => expect(result.current.availabilityPending).toBe(false));
   await act(async () => {
     result.current.handleReservation();
   });
