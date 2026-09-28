@@ -451,7 +451,7 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
   return (
     <article
       className={
-        "admin-card p-3 md:p-4 flex items-start gap-3 md:gap-4 group relative " +
+        "admin-card p-3 md:p-4 flex flex-col md:flex-row md:items-start gap-3 md:gap-4 group relative " +
         /* 🛡️ Pasif villa görsel vurgusu — yalnız is_active === false.
            Soft kırmızı arka plan + kırmızı border (admin-card bg/border'ı
            class ile geldiği için `!` ile override). Aktif villalar
@@ -483,7 +483,7 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
       {/* THUMBNAIL */}
       <div
         className="
-          shrink-0 w-24 h-20 md:w-28 md:h-24
+          shrink-0 w-full h-40 md:w-28 md:h-24
           rounded-xl overflow-hidden
           bg-[var(--admin-bg-soft)]
           border border-[var(--admin-border)]
@@ -539,8 +539,9 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
           </div>
         </div>
 
-        {/* ACTION TOOLBAR — 8 aksiyon AYNEN korundu. */}
-        <div className="relative z-[2] flex items-center gap-1.5 flex-wrap">
+        {/* ACTION TOOLBAR — aksiyonlar AYNEN korundu. Mobilde 2 kolon grid
+           (kart genişliği içinde kalır); md+ mevcut flex-wrap düzeni. */}
+        <div className="relative z-[2] grid grid-cols-2 gap-1.5 md:flex md:items-center md:flex-wrap">
           <Link
             href={`/maki-admin/villas/${villa.id}`}
             className="admin-btn-ghost"
@@ -583,7 +584,7 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
           <Link
             href={`/maki-admin/villas/${villa.id}`}
             className="
-              inline-flex items-center gap-1
+              hidden md:inline-flex items-center gap-1
               px-2.5 py-1.5 rounded-lg
               text-[12.5px] font-medium
               text-[var(--admin-muted)]
@@ -596,7 +597,7 @@ function OperationsVillaCard({ villa }: { villa: VillaItem }) {
             <ArrowUpRight size={12} />
           </Link>
 
-          <div className="flex items-center gap-1.5">
+          <div className="col-span-2 flex flex-wrap items-center gap-1.5 md:flex-nowrap">
             <VillaActions
               villaId={String(villa.id)}
               villaTitle={String(villa.title || "Mülk")}
