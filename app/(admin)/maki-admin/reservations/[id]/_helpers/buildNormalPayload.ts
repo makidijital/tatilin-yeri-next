@@ -3,6 +3,7 @@ import {
   normalizePaymentPreference,
 } from "@/lib/payment.helper";
 import { accommodationBase } from "@/lib/price.engine";
+import { resolveManualPrepayment } from "./manualPrepayment";
 
 import type {
   ReservationDetailData,
@@ -68,11 +69,15 @@ export function buildNormalPayload(input: {
 
   // Ön ödeme havuz ısıtmayı İÇERMEZ: accommodationBase 3. parametre ile
   // havuz ısıtmayı da toplamdan düşer (total - cleaning - poolHeating).
-  const rawPrepayment = Math.round(
-    (accommodationBase(totalTRY, cleaningTRY, poolHeatingTRY) *
-      prepaymentRate) /
-      100
-  );
+  // 🛡️ Admin "Şimdi Ödenecek Tutar" manuel değeri (geçerliyse) korunur;
+  // yoksa mevcut otomatik hesap AYNEN (bkz. ./manualPrepayment).
+  const rawPrepayment =
+    resolveManualPrepayment(data, totalTRY) ??
+    Math.round(
+      (accommodationBase(totalTRY, cleaningTRY, poolHeatingTRY) *
+        prepaymentRate) /
+        100
+    );
   const writePayment = getPaymentDisplayValues({
     total_price_try: totalTRY,
     prepayment_amount: rawPrepayment,

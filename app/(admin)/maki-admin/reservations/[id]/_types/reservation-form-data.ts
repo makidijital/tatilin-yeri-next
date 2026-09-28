@@ -92,6 +92,9 @@ export type ReservationPaymentMethodEmbed = {
 export type ReservationDetailData = ReservationRow & {
   villa: ReservationVillaEmbed;
   payment_method: ReservationPaymentMethodEmbed;
+  /** 🛡️ CLIENT-ONLY (DB'ye yazılmaz): Tahsilat kartındaki manuel
+   *  "Şimdi Ödenecek Tutar" kilidi — bkz. _helpers/manualPrepayment.ts */
+  prepayment_manual_amount?: number | null;
 };
 
 /* ---------------- PRICE DETAIL SNAPSHOT ----------------

@@ -113,6 +113,10 @@ import { detectConfirmTransition } from "./_helpers/detectConfirmTransition";
 import { buildReservationBeforeSnapshot } from "./_helpers/buildReservationBeforeSnapshot";
 import { buildCustomPricePayload } from "./_helpers/buildCustomPricePayload";
 import { buildNormalPayload } from "./_helpers/buildNormalPayload";
+import {
+  computeAutoPrepayment,
+  withLoadedPrepaymentLock,
+} from "./_helpers/manualPrepayment";
 import { buildReservationAfterSnapshot } from "./_helpers/buildReservationAfterSnapshot";
 import { logReservationUpdate } from "./_helpers/logReservationUpdate";
 
@@ -349,8 +353,10 @@ export default function AdminReservationDetailPage() {
       }
       /* Service `getReservationById` return shape route içinde aynen
          korunur; client-side `setData` aynı obje shape'i bekler. */
+      /* 🛡️ Manuel "Şimdi Ödenecek Tutar" kilidi (client-only; bkz.
+         _helpers/manualPrepayment.ts) — kayıtlı prepayment_amount korunur. */
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setData(json.reservation as any);
+      setData(withLoadedPrepaymentLock(json.reservation) as any);
     } catch (err) {
       console.error("Fetch error:", err);
       setData(null);
@@ -1354,7 +1360,15 @@ export default function AdminReservationDetailPage() {
         {/* PAYMENT (FAZ 2: PaymentCard'a extract)
             🛡️ DÜZELTME — adım numarası 5 → 4. */}
         {currentStep === 4 && (
-          <PaymentCard data={data} setData={setData} />
+          <PaymentCard
+            data={data}
+            setData={setData}
+            autoPrepayment={computeAutoPrepayment({
+              data,
+              priceDetail,
+              prepaymentRate,
+            })}
+          />
         )}
 
         {/* PAYMENT PREFERENCE (FAZ 2: PaymentPreferenceCard'a extract)

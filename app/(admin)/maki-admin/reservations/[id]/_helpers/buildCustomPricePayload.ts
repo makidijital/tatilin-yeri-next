@@ -2,6 +2,7 @@ import { getPaymentDisplayValues } from "@/lib/payment.helper";
 import { normalizePaymentPreference } from "@/lib/payment.helper";
 
 import type { ReservationDetailData } from "../_types/reservation-form-data";
+import { resolveManualPrepayment } from "./manualPrepayment";
 
 /* ===============================================================
    🛡️ TUR 3 — saveAll extraction helper (pure, zero behavior change)
@@ -78,9 +79,11 @@ export function buildCustomPricePayload(input: {
   //   full_payment  → prepayment_amount=total, remaining_payment=0
   //   prepayment    → prepayment_amount=raw,   remaining_payment=total−raw
   // paid_amount tamamen ayrı kolonda, accounting tarafı korunuyor.
-  const customRawPrepayment = Math.round(
-    (customTotal * prepaymentRate) / 100
-  );
+  // 🛡️ Admin "Şimdi Ödenecek Tutar" manuel değeri (geçerliyse) korunur;
+  // yoksa mevcut otomatik hesap AYNEN (bkz. ./manualPrepayment).
+  const customRawPrepayment =
+    resolveManualPrepayment(data, customTotal) ??
+    Math.round((customTotal * prepaymentRate) / 100);
   const customWritePayment = getPaymentDisplayValues({
     total_price_try: customTotal,
     prepayment_amount: customRawPrepayment,
