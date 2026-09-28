@@ -18,6 +18,8 @@ import { blogRepository } from "@/lib/db/blog.repository";
    bir cache sistemi YOK); Phase 7B'nin `buildLocaleAlternates`'i TEK
    URL kaynağı (elle string birleştirme YOK). */
 import { getCachedSettings } from "@/lib/cache.helpers";
+/* 🛡️ SEO landing — kategori + bölge GRUBU kökü giriş sayfaları. */
+import { getTaxonomyLandingSitemapPaths } from "@/lib/taxonomy-landing.server";
 import { isMultilingualEnabled } from "@/lib/i18n/config";
 import {
   resolvePublicHome,
@@ -251,6 +253,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     );
   }
 
+  /* ---------- DİNAMİK: SEO LANDING (/villa-turleri, /bolgeler) ----------
+     Yalnız slug'lı + en az 1 aktif villalı kategori ve bölge GRUP
+     KÖKLERİ (alt bölgeler ASLA). Kaynak: mevcut taxonomy/villa sayaç
+     cache'leri (tag "taxonomy"/"villas" → admin CRUD sonrası tazelenir);
+     sitemap'in kendi `revalidate` penceresi DEĞİŞMEDİ. Fail-soft: hata
+     olursa diğer entry'ler yine döner. */
+  let landingEntries: MetadataRoute.Sitemap = [];
+  try {
+    const { categories, regions } = await getTaxonomyLandingSitemapPaths();
+    landingEntries = [...categories, ...regions].map((path) => ({
+      url: url(path),
+      lastModified: now,
+      changeFrequency: "daily" as const,
+      priority: 0.8,
+      ...(multilingualEnabled
+        ? { alternates: { languages: languageAlternates(path) } }
+        : {}),
+    }));
+  } catch (err) {
+    console.error(
+      "[sitemap] taxonomy landing EXCEPTION:",
+      err instanceof Error ? err.message : err
+    );
+  }
+
   /* ---------- DİNAMİK: AKTİF CMS SAYFALARI (/p/[slug]) ---------- */
   let pageEntries: MetadataRoute.Sitemap = [];
   try {
@@ -338,6 +365,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...staticEntries,
+    ...landingEntries,
     ...villaEntries,
     ...pageEntries,
     ...blogIndexEntry,

@@ -20,6 +20,7 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 /* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
    (bkz. lib/i18n/locale-href.ts). */
 import { localeHref } from "@/lib/i18n/locale-href";
+import { categoryLinkHref } from "@/lib/taxonomy-landing";
 import { formatDictionaryString } from "@/lib/i18n/format-dictionary-string";
 import { getVillaTypeNamesByLocale } from "@/lib/i18n/get-villa-type-translations.server";
 import { resolveTaxonomyName } from "@/lib/i18n/taxonomy-name.helper";
@@ -216,13 +217,11 @@ function VillaTypeCard({
   /** 🛡️ NAVIGATION LOCALE PERSISTENCE — kart linkinin prefix'i. */
   locale: Locale;
 }) {
-  /* SEO-friendly URL: slug öncelikli, fallback UUID — CategoryCollection
-     ile birebir aynı canonical contract. */
-  const token = item.slug || item.id;
-  /* 🛡️ NAVIGATION LOCALE PERSISTENCE — villa tipi kartı linki aktif
-     locale'i taşır; `villa-turleri` token'ı ve query kontratı DEĞİŞMEZ. */
+  /* 🛡️ SEO landing — slug varsa `/villa-turleri/<slug>`; slug yoksa
+     ESKİ `/arama?villa-turleri=<uuid>` (lib/taxonomy-landing).
+     🛡️ NAVIGATION LOCALE PERSISTENCE — link aktif locale'i taşır. */
   const href = localeHref(
-    `/arama?villa-turleri=${encodeURIComponent(token)}`,
+    categoryLinkHref({ id: item.id, slug: item.slug }),
     locale
   );
   const initial = (item.name?.[0] || "·").toUpperCase();

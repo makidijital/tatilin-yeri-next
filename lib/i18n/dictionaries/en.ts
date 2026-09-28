@@ -855,6 +855,19 @@ export const en: Dictionary = {
     aboutParagraph3Trail: ".",
   },
 
+  taxonomyLanding: {
+    categoryMetaTitle: "{name} | {brand}",
+    categoryMetaDescription:
+      "Browse rental villas in the {name} category. Book securely with {brand} — photos, amenities and up-to-date prices.",
+    categoryHeroEyebrow: "Villa Category",
+    categoryHeroTitle: "{name}",
+    regionMetaTitle: "{name} Villas | {brand}",
+    regionMetaDescription:
+      "Discover rental villas in {name}. Book securely with {brand} — photos, amenities and up-to-date prices.",
+    regionHeroEyebrow: "Region",
+    regionHeroTitle: "{name} Villas",
+  },
+
   /* 🛡️ PHASE 12E — PUBLIC CMS statik UI metinleri. */
   cms: {
     breadcrumbHome: "Home",

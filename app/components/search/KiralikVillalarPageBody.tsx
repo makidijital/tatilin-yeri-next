@@ -149,10 +149,37 @@ export type ArchiveSearchParams = Promise<{
   sort?: string | string[];
 }>;
 
+/* ===============================================================
+   🛡️ SEO LANDING KAPSAMI (opsiyonel, ADDITIVE)
+   ===============================================================
+   /villa-turleri/[slug] ve /bolgeler/[slug] landing'leri AYNI arşiv
+   gövdesini kullanır; yeni bir listeleme sistemi YOK. `scope`:
+     • villaIds   → yalnız bu villalar listelenir (getCachedVillas
+                    public kümesiyle kesişim; sıra/sort/pagination aynı)
+     • trPath     → sayfalama/sort linklerinin ve JSON-LD'nin temeli
+                    (locale öneki `buildLocaleAlternates` ile)
+     • hero/JSON-LD metinleri + sidebar'ın ön-seçili kategori/bölgesi
+   `scope` VERİLMEZSE (/kiralik-villalar) hiçbir değer değişmez →
+   çıktı BİREBİR eskisi gibi. */
+export type ArchiveLandingScope = {
+  /** Landing'in TR (prefix'siz) path'i, ör. `/villa-turleri/x`. */
+  trPath: string;
+  villaIds: ReadonlySet<string>;
+  heroEyebrow: string;
+  heroTitle: string;
+  collectionName: string;
+  collectionDescription: string;
+  /** Sidebar ön-seçimi (redirect ile /arama'ya taşınır). */
+  sidebarCategories?: string[];
+  sidebarRegions?: string[];
+};
+
 type Props = {
   /** Opsiyonel — verilmezse "tr" → TR çıktısı BİREBİR eskisi gibi. */
   locale?: Locale;
   searchParams: ArchiveSearchParams;
+  /** Yalnız SEO landing route'ları verir; bkz. `ArchiveLandingScope`. */
+  scope?: ArchiveLandingScope;
 };
 
 /* ===============================================================
@@ -161,6 +188,7 @@ type Props = {
 export default async function KiralikVillalarPageBody({
   locale = DEFAULT_LOCALE,
   searchParams,
+  scope,
 }: Props) {
   const sp = await searchParams;
 
@@ -170,7 +198,9 @@ export default async function KiralikVillalarPageBody({
      PAYLAŞILIR (`search` namespace) — ikinci bir kopya üretilmedi. */
   const shared: SearchDictionary = dictionary.search;
 
-  const basePath = archivePath(locale);
+  const basePath = scope
+    ? buildLocaleAlternates(scope.trPath, locale).canonical
+    : archivePath(locale);
   const pageUrl = SITE_URL ? `${SITE_URL}${basePath}` : basePath;
   /* 🛡️ Sidebar mode="redirect" hedefi: ARAMA route'u (bu sayfa DEĞİL).
      Locale'e göre `/arama` | `/en/arama` | `/de/arama`. */
@@ -183,7 +213,7 @@ export default async function KiralikVillalarPageBody({
      - cookies(): currency cookie'sini oku (CurrencyContext dual-write)
      - getExchangeRatesMap(): server-side rates (DB'den; TCMB cron'la dolar) */
   const [
-    villas,
+    allVillas,
     regionOptions,
     categoryOptions,
     cookieStore,
@@ -199,6 +229,11 @@ export default async function KiralikVillalarPageBody({
        (sidebar bölümü boş metin gösterir; sayfa ETKİLENMEZ). */
     loadHeroFeatures(locale).catch(() => []),
   ]);
+
+  /* 🛡️ Landing kapsamı — yalnız scope varsa süzülür; yoksa AYNI dizi. */
+  const villas = scope
+    ? allVillas.filter((v) => scope.villaIds.has(String(v.id)))
+    : allVillas;
 
   const totalCount = villas.length;
 
@@ -249,8 +284,8 @@ export default async function KiralikVillalarPageBody({
      (archive page; URL query'siz). Kullanıcı seçim yapana kadar
      boş başlar; "Villa Bul" CTA'sı arama route'una push'lar. */
   const sidebarInitial = {
-    regions: [] as string[],
-    categories: [] as string[],
+    regions: (scope?.sidebarRegions ?? []) as string[],
+    categories: (scope?.sidebarCategories ?? []) as string[],
     start: null as string | null,
     end: null as string | null,
     guests: 0,
@@ -284,10 +319,16 @@ export default async function KiralikVillalarPageBody({
 
   /* ---------------- JSON-LD ---------------- */
   const breadcrumbLd = buildBreadcrumb(
-    [
-      { name: dict.breadcrumbHome, url: "/" },
-      { name: dict.breadcrumbCurrent },
-    ],
+    scope
+      ? [
+          { name: dict.breadcrumbHome, url: "/" },
+          { name: dict.breadcrumbCurrent, url: archivePath(locale) },
+          { name: scope.heroTitle },
+        ]
+      : [
+          { name: dict.breadcrumbHome, url: "/" },
+          { name: dict.breadcrumbCurrent },
+        ],
     /* TR'de `undefined` → JSON-LD çıktısı BYTE-IDENTICAL kalır
        (bkz. buildBreadcrumb, Phase 7D). */
     locale === DEFAULT_LOCALE ? undefined : locale
@@ -298,8 +339,10 @@ export default async function KiralikVillalarPageBody({
     "@type": "CollectionPage",
     "@id": pageUrl,
     url: pageUrl,
-    name: dict.collectionName,
-    description: dict.collectionDescription,
+    name: scope ? scope.collectionName : dict.collectionName,
+    description: scope
+      ? scope.collectionDescription
+      : dict.collectionDescription,
     isPartOf: SITE_URL ? { "@type": "WebSite", url: SITE_URL } : undefined,
     inLanguage: SCHEMA_IN_LANGUAGE[locale],
     mainEntity: {
@@ -332,12 +375,20 @@ export default async function KiralikVillalarPageBody({
             Breadcrumb / başlık / açıklama / SEO KORUNDU; sadece UI.
             ======================================================= */}
         <PageHero
-          breadcrumb={[
-            { name: dict.breadcrumbHome, href: localeHref("/", locale) },
-            { name: dict.breadcrumbCurrent },
-          ]}
-          eyebrow={dict.heroEyebrow}
-          title={dict.heroTitle}
+          breadcrumb={
+            scope
+              ? [
+                  { name: dict.breadcrumbHome, href: localeHref("/", locale) },
+                  { name: dict.breadcrumbCurrent, href: archivePath(locale) },
+                  { name: scope.heroTitle },
+                ]
+              : [
+                  { name: dict.breadcrumbHome, href: localeHref("/", locale) },
+                  { name: dict.breadcrumbCurrent },
+                ]
+          }
+          eyebrow={scope ? scope.heroEyebrow : dict.heroEyebrow}
+          title={scope ? scope.heroTitle : dict.heroTitle}
           stat={{ value: totalCount, label: dict.heroStatLabel }}
         />
 

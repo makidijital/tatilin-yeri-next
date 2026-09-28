@@ -151,7 +151,14 @@ export default function TypesPage() {
   }
 
   async function handleUpdate(id: string, newName: string) {
-    const ok = await updateVillaType(id, newName);
+    /* 🛡️ SEO URL KORUMASI — ad değişince mevcut slug KORUNUR (explicit
+       geçilir); `/villa-turleri/<slug>` landing URL'i ve menü/footer
+       linkleri kırılmaz. Slug'ı henüz olmayan (legacy NULL) kayıtta
+       `undefined` → servis ESKİSİ GİBİ addan üretir. */
+    const existingSlug = String(
+      types.find((t) => t.id === id)?.slug ?? ""
+    ).trim();
+    const ok = await updateVillaType(id, newName, existingSlug || undefined);
     if (!ok) {
       toast.error("Güncellenemedi", { id: `type-update-${id}` });
       return;

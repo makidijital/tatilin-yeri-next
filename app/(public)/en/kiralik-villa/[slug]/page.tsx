@@ -365,7 +365,8 @@ export default async function EnVillaDetailPage({
   const breadcrumbLd = buildBreadcrumb(
     [
       { name: dict.header.home, url: "/" },
-      { name: dict.header.villas, url: "/en/arama" },
+      /* 🛡️ SEO — robots-engelli /en/arama yerine indexlenebilir arşiv. */
+      { name: dict.header.villas, url: "/en/kiralik-villalar" },
       { name: title },
     ],
     "en"

@@ -35,6 +35,10 @@
 =============================================================== */
 export type { MenuSourceType } from "@/types/database";
 import type { MenuSourceType } from "@/types/database";
+/* 🛡️ SEO LANDING — kategori / bölge GRUBU kökü linkleri temiz URL'e
+   (`/villa-turleri/<slug>`, `/bolgeler/<slug>`); alt bölge ve slug'sız
+   kayıtlar ESKİ `/arama?...` URL'inde kalır (bkz. lib/taxonomy-landing). */
+import { categoryLinkHref, regionLinkHref } from "@/lib/taxonomy-landing";
 
 /** Resolver'ın beklediği minimum field set. */
 export type MenuRow = {
@@ -66,7 +70,16 @@ export type MenuSourceMaps = {
   types: Map<string, { name: string; slug: string | null }>;
   /** locations.slug: villa_locations.slug (migration 009). NULL ise
    *  region href UUID fallback'ine düşer. */
-  locations: Map<string, { name: string; slug: string | null }>;
+  locations: Map<
+    string,
+    {
+      name: string;
+      slug: string | null;
+      /** Migration 050 — grup kökü tespiti için (opsiyonel; yoksa
+       *  kayıt grup kökü sayılmaz → eski `/arama` linki). */
+      filter_group_name?: string | null;
+    }
+  >;
 };
 
 /**
@@ -133,14 +146,12 @@ export function resolveMenuRow(
       if (!row.source_id) return null;
       const t = maps.types.get(row.source_id);
       if (!t) return null;
-      /* 🛡️ SEO-friendly URL: slug varsa onu yaz, yoksa UUID fallback.
-         Canonical param: `villa-turleri` (TR). /arama page'i hem yeni
-         `villa-turleri` hem eski `categories` paramını accept eder. */
-      const token = (t.slug && t.slug.trim()) || row.source_id;
+      /* 🛡️ SEO landing: slug varsa `/villa-turleri/<slug>`; slug yoksa
+         ESKİ `/arama?villa-turleri=<uuid>` (bkz. categoryLinkHref). */
       return {
         id: row.id,
         name: t.name,
-        href: `/arama?villa-turleri=${encodeURIComponent(token)}`,
+        href: categoryLinkHref({ id: row.source_id, slug: t.slug }),
         order,
         parent_id,
         source_type: "category",
@@ -152,14 +163,18 @@ export function resolveMenuRow(
       if (!row.source_id) return null;
       const l = maps.locations.get(row.source_id);
       if (!l) return null;
-      /* 🛡️ SEO-friendly URL: slug varsa onu yaz, yoksa UUID fallback.
-         Canonical param: `bolgeler` (TR). /arama page'i hem yeni
-         `bolgeler` hem eski `regions` paramını accept eder. */
-      const token = (l.slug && l.slug.trim()) || row.source_id;
+      /* 🛡️ SEO landing: yalnız GRUP KÖKÜ + slug → `/bolgeler/<slug>`;
+         alt bölge / slug'sız → ESKİ `/arama?bolgeler=<slug|uuid>`
+         filtresi (bkz. regionLinkHref). */
       return {
         id: row.id,
         name: l.name,
-        href: `/arama?bolgeler=${encodeURIComponent(token)}`,
+        href: regionLinkHref({
+          id: row.source_id,
+          slug: l.slug,
+          name: l.name,
+          filter_group_name: l.filter_group_name,
+        }),
         order,
         parent_id,
         source_type: "region",

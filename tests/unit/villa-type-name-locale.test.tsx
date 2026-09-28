@@ -275,7 +275,9 @@ describe("Footer — villa tipi adı locale-aware", () => {
     render(<Footer {...FOOTER_BASE} villaTypes={[TYPE_ITEM]} />);
     expect(
       screen.getByRole("link", { name: "Luxury Villa" })
-    ).toHaveAttribute("href", "/en/arama?villa-turleri=luks-villa");
+    /* 🛡️ SEO landing — slug'lı kategori `/villa-turleri/<slug>`'e gider;
+       token (slug) ve '/en' prefix'i AYNEN. */
+    ).toHaveAttribute("href", "/en/villa-turleri/luks-villa");
   });
 });
 

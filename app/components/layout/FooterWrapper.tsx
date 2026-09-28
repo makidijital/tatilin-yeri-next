@@ -42,6 +42,10 @@ export type TaxonomyItem = {
    *  bölgeler (locations) bu fazın kapsamı DIŞINDA, undefined kalır →
    *  `resolveTaxonomyName` canonical TR adına düşer (eski davranış). */
   nameByLocale?: TaxonomyNameByLocale;
+  /** 🛡️ SEO landing — yalnız bölgelerde dolu (menuRepository
+   *  `findAllVillaLocations` SELECT'i ZATEN getiriyor); grup kökü
+   *  tespiti için okunur. Tip ekidir, veri akışı DEĞİŞMEDİ. */
+  filter_group_name?: string | null;
 };
 
 /* ---------------- KURUMSAL — CMS-DRIVEN ----------------

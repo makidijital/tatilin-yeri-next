@@ -879,6 +879,19 @@ export const tr: Dictionary = {
     aboutParagraph3Trail: "sonuçları görüntüleyebilirsiniz.",
   },
 
+  taxonomyLanding: {
+    categoryMetaTitle: "{name} | {brand}",
+    categoryMetaDescription:
+      "{name} kategorisindeki kiralık villaları inceleyin. Fotoğraflar, özellikler ve güncel fiyatlarla {brand} üzerinden güvenle rezervasyon yapın.",
+    categoryHeroEyebrow: "Villa Kategorisi",
+    categoryHeroTitle: "{name}",
+    regionMetaTitle: "{name} Villaları | {brand}",
+    regionMetaDescription:
+      "{name} bölgesindeki kiralık villaları keşfedin. Fotoğraflar, özellikler ve güncel fiyatlarla {brand} üzerinden güvenle rezervasyon yapın.",
+    regionHeroEyebrow: "Bölge",
+    regionHeroTitle: "{name} Villaları",
+  },
+
   /* 🛡️ PHASE 12E — PUBLIC CMS statik UI metinleri. TR değerleri
      `CmsPageBody.tsx`'teki ESKİ hardcoded metinlerin BİREBİR
      kopyasıdır; hiçbiri değiştirilmedi. */

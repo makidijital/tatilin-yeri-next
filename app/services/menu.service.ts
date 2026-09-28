@@ -95,12 +95,16 @@ export async function getMenu() {
     }
   }
 
-  const locsMap = new Map<string, { name: string; slug: string | null }>();
+  const locsMap: MenuSourceMaps["locations"] = new Map();
   for (const l of locsRes.data || []) {
     if (l?.id) {
       locsMap.set(l.id, {
         name: l.name,
         slug: (l as { slug?: string | null }).slug ?? null,
+        /* 🛡️ SEO landing — grup kökü tespiti (veri zaten SELECT'te). */
+        filter_group_name:
+          (l as { filter_group_name?: string | null }).filter_group_name ??
+          null,
       });
     }
   }

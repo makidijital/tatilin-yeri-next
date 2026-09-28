@@ -231,11 +231,14 @@ describe("Footer — href locale kilidi (iç linkler aktif locale'i taşır)", (
     usePathnameMock.mockReset();
   });
 
-  it("9) villa type taxonomy href'i '/arama?villa-turleri={slug}' yapısında — TR path'te", () => {
+  /* 🛡️ SEO LANDING — slug'lı villa tipi artık `/villa-turleri/<slug>`
+     landing'ine gider; bölge (grup kökü DEĞİLSE) ESKİ /arama URL'inde
+     kalır (bkz. lib/taxonomy-landing + taxonomy-landing.test.ts). */
+  it("9) villa type taxonomy href'i '/villa-turleri/{slug}' landing'i — TR path'te", () => {
     usePathnameMock.mockReturnValue("/");
     render(<Footer {...PROPS_WITH_TAXONOMY_AND_CMS} />);
     const link = screen.getByRole("link", { name: "Havuzlu Villa" });
-    expect(link).toHaveAttribute("href", "/arama?villa-turleri=havuzlu-villa");
+    expect(link).toHaveAttribute("href", "/villa-turleri/havuzlu-villa");
   });
 
   it("10) location taxonomy href'i '/arama?bolgeler={slug}' yapısında — TR path'te", () => {
@@ -257,7 +260,7 @@ describe("Footer — href locale kilidi (iç linkler aktif locale'i taşır)", (
     render(<Footer {...PROPS_WITH_TAXONOMY_AND_CMS} />);
     expect(screen.getByRole("link", { name: "Havuzlu Villa" })).toHaveAttribute(
       "href",
-      "/en/arama?villa-turleri=havuzlu-villa"
+      "/en/villa-turleri/havuzlu-villa"
     );
     expect(screen.getByRole("link", { name: "Kalkan" })).toHaveAttribute(
       "href",
@@ -279,7 +282,7 @@ describe("Footer — href locale kilidi (iç linkler aktif locale'i taşır)", (
     render(<Footer {...PROPS_WITH_TAXONOMY_AND_CMS} />);
     expect(screen.getByRole("link", { name: "Havuzlu Villa" })).toHaveAttribute(
       "href",
-      "/de/arama?villa-turleri=havuzlu-villa"
+      "/de/villa-turleri/havuzlu-villa"
     );
     expect(screen.getByRole("link", { name: "Kalkan" })).toHaveAttribute(
       "href",

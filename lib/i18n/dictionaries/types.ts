@@ -1153,6 +1153,26 @@ export type Dictionary = {
   };
 
   /* ===============================================================
+     🛡️ SEO LANDING — /villa-turleri/[slug] + /bolgeler/[slug]
+     ===============================================================
+     Kategori ve bölge GRUBU giriş sayfalarının metin şablonları.
+     Tüm şablonlar `formatDictionaryString` ile doldurulur:
+       {name}  → kategori adı (locale çevirisi) / bölge grubu adı
+       {brand} → settings.site_name
+     Liste/sidebar/pagination metinleri `villasArchive` + `search`
+     namespace'lerinden PAYLAŞILIR (ikinci kopya yok). */
+  taxonomyLanding: {
+    categoryMetaTitle: string;
+    categoryMetaDescription: string;
+    categoryHeroEyebrow: string;
+    categoryHeroTitle: string;
+    regionMetaTitle: string;
+    regionMetaDescription: string;
+    regionHeroEyebrow: string;
+    regionHeroTitle: string;
+  };
+
+  /* ===============================================================
      🛡️ PHASE 12E — PUBLIC CMS SAYFASI (/p/[slug]) STATİK UI METİNLERİ
      ===============================================================
      `app/components/cms/CmsPageBody.tsx` içindeki hardcoded TR

@@ -39,6 +39,7 @@ import { resolveSettingsText } from "@/lib/i18n/settings-translation.helper";
 /* 🛡️ PHASE 10H — villa tipi adı locale'e göre çözülür; çeviri yoksa
    canonical TR adı (saf helper, DB/server bağımlılığı YOK). */
 import { resolveTaxonomyName } from "@/lib/i18n/taxonomy-name.helper";
+import { categoryLinkHref, regionLinkHref } from "@/lib/taxonomy-landing";
 
 /* ---------------- INLINE SOCIAL ICONS (stroke=currentColor) ---------------- */
 
@@ -180,11 +181,11 @@ function FooterLink({
   );
 }
 
-/* Slug/id fallback — `/arama` resolver UUID + slug ikisini de
-   accept ediyor (LocationCollection.tsx pattern referansı). */
+/* 🛡️ SEO landing — kategori → `/villa-turleri/<slug>`; bölge GRUP
+   KÖKÜ → `/bolgeler/<slug>`. Alt bölge / slug'sız kayıt ESKİ
+   `/arama?<prefix>=<slug|id>` URL'inde kalır (lib/taxonomy-landing). */
 function taxonomyHref(prefix: string, item: TaxonomyItem): string {
-  const token = item.slug?.trim() || item.id;
-  return `/arama?${prefix}=${encodeURIComponent(token)}`;
+  return prefix === "bolgeler" ? regionLinkHref(item) : categoryLinkHref(item);
 }
 
 /* =================================================================

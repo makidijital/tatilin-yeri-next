@@ -338,7 +338,9 @@ export default async function VillaDetail({
   const breadcrumbLd = buildBreadcrumb(
     [
       { name: "Ana sayfa", url: "/" },
-      { name: "Villalar", url: "/arama" },
+      /* 🛡️ SEO — "Villalar" robots-engelli /arama yerine indexlenebilir
+         arşive (`/kiralik-villalar`) işaret eder. */
+      { name: "Villalar", url: "/kiralik-villalar" },
       { name: villa.title },
     ],
     /* 🛡️ PHASE 7D — yalnız inLanguage:"tr-TR" için. */

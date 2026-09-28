@@ -865,6 +865,19 @@ export const de: Dictionary = {
     aboutParagraph3Trail: ".",
   },
 
+  taxonomyLanding: {
+    categoryMetaTitle: "{name} | {brand}",
+    categoryMetaDescription:
+      "Entdecken Sie Mietvillen der Kategorie {name}. Sicher buchen mit {brand} — Fotos, Ausstattung und aktuelle Preise.",
+    categoryHeroEyebrow: "Villenkategorie",
+    categoryHeroTitle: "{name}",
+    regionMetaTitle: "Villen in {name} | {brand}",
+    regionMetaDescription:
+      "Entdecken Sie Mietvillen in {name}. Sicher buchen mit {brand} — Fotos, Ausstattung und aktuelle Preise.",
+    regionHeroEyebrow: "Region",
+    regionHeroTitle: "Villen in {name}",
+  },
+
   /* 🛡️ PHASE 12E — PUBLIC CMS statik UI metinleri. */
   cms: {
     breadcrumbHome: "Startseite",

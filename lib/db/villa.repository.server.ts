@@ -145,6 +145,23 @@ export const villaAdminRepository = {
   },
 
   /* ===============================================================
+     READ — bölge GRUBU landing'i için aktif villa id'leri (ADDITIVE)
+     ===============================================================
+     Yalnız `/bolgeler/[slug]` landing'i kullanır (lib/taxonomy-landing
+     .server.ts). Filtre `findActiveLocationIds` ile AYNI public küme
+     (is_active=true AND deleted_at IS NULL) + `.in("location_id")`
+     (/arama `findSearchResults` ile aynı bölge predicate'i). Başka
+     hiçbir caller'ı yok; mevcut sorgular DEĞİŞMEDİ. */
+  async findActiveVillaIdsByLocationIds(locationIds: string[]) {
+    return await dbAdmin
+      .from("villa")
+      .select("id")
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .in("location_id", locationIds);
+  },
+
+  /* ===============================================================
      READ — public availability config by id (NATIVE twin, Migration S3)
      ===============================================================
      Anon `villaRepository.findAvailabilityConfigById` (eski sağlayıcı) karşılığı.

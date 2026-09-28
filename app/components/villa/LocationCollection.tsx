@@ -19,6 +19,10 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 /* 🛡️ NAVIGATION LOCALE PERSISTENCE — iç link aktif locale'i taşır
    (bkz. lib/i18n/locale-href.ts). */
 import { localeHref } from "@/lib/i18n/locale-href";
+import {
+  REGION_LANDING_TR_PREFIX,
+  regionLinkHref,
+} from "@/lib/taxonomy-landing";
 
 /* ===============================================================
    🛡️ LOCATION SHOWCASE — homepage "circular avatar" carousel
@@ -84,6 +88,8 @@ type Item = {
   coverUrl: string | null;
   /** Grup üyelerinin slug|id token'ları, /arama?bolgeler= için virgülle birleşik. */
   token: string;
+  /** 🛡️ SEO landing — grup kökü slug'lıysa `/bolgeler/<slug>`, yoksa null. */
+  landingHref: string | null;
 };
 
 export default async function LocationCollection({
@@ -116,6 +122,9 @@ export default async function LocationCollection({
          expandedRegions kökü tüm alt bölgelere genişletir, sidebar yalnız
          "Tüm Kalkan"ı seçili gösterir. */
       rootToken: string | null;
+      /* 🛡️ SEO landing — grup kökü slug'lıysa `/bolgeler/<slug>`
+         (lib/taxonomy-landing kuralı); yoksa null → ESKİ /arama linki. */
+      landingHref: string | null;
     }
   >();
 
@@ -150,6 +159,7 @@ export default async function LocationCollection({
         coverUrl: null,
         tokens: [],
         rootToken: null,
+        landingHref: null,
       };
     g.count += counts[lid] ?? 0;
     if (!g.coverUrl && cover) g.coverUrl = cover; // cover_image olan ilk kayıt
@@ -157,6 +167,15 @@ export default async function LocationCollection({
     /* Grup-kökü tespiti: name === filter_group_name → token'ı kökün slug'ı. */
     if (!g.rootToken && groupTrim.length > 0 && name === groupTrim) {
       g.rootToken = token;
+    }
+    if (!g.landingHref) {
+      const lh = regionLinkHref({
+        id: lid,
+        slug: rawSlug,
+        name: l.name,
+        filter_group_name: rawGroup,
+      });
+      if (lh.startsWith(`${REGION_LANDING_TR_PREFIX}/`)) g.landingHref = lh;
     }
     groups.set(key, g);
   }
@@ -168,6 +187,7 @@ export default async function LocationCollection({
       coverUrl: g.coverUrl,
       /* Kök varsa TEK token (ör. "kalkan"); yoksa eski çoklu-token fallback. */
       token: g.rootToken ?? g.tokens.join(","),
+      landingHref: g.landingHref,
     }))
     .filter((item) => item.count > 0);
 
@@ -255,8 +275,10 @@ function LocationCard({ item, locale }: { item: Item; locale: Locale }) {
      `regionsRaw.split(",")` ile parse edip `.in("location_id", …)` uygular. */
   /* 🛡️ NAVIGATION LOCALE PERSISTENCE — bölge kartı linki aktif
      locale'i taşır; `bolgeler` token'ı ve query kontratı DEĞİŞMEZ. */
+  /* 🛡️ SEO landing — grup kökü slug'lıysa `/bolgeler/<slug>`; aksi
+     halde ESKİ `/arama?bolgeler=<token>` davranışı AYNEN. */
   const href = localeHref(
-    `/arama?bolgeler=${encodeURIComponent(item.token)}`,
+    item.landingHref ?? `/arama?bolgeler=${encodeURIComponent(item.token)}`,
     locale
   );
   const initial = (item.key?.[0] || "·").toUpperCase();

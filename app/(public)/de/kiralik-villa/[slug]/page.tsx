@@ -365,7 +365,8 @@ export default async function DeVillaDetailPage({
   const breadcrumbLd = buildBreadcrumb(
     [
       { name: dict.header.home, url: "/" },
-      { name: dict.header.villas, url: "/de/arama" },
+      /* 🛡️ SEO — robots-engelli /de/arama yerine indexlenebilir arşiv. */
+      { name: dict.header.villas, url: "/de/kiralik-villalar" },
       { name: title },
     ],
     "de"

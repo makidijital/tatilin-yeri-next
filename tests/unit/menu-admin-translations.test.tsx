@@ -497,7 +497,8 @@ describe("/maki-admin/menu — çeviri aksiyonu görünürlüğü", () => {
     await screen.findByText("Kiralık Villalar");
     expect(screen.getByText("/kiralik-villalar")).toBeInTheDocument();
     expect(
-      screen.getByText("/arama?villa-turleri=luks-villa")
+      /* 🛡️ SEO landing — kategori menü öğesi `/villa-turleri/<slug>`. */
+      screen.getByText("/villa-turleri/luks-villa")
     ).toBeInTheDocument();
     expect(screen.getByText("/arama?bolgeler=kalkan")).toBeInTheDocument();
     expect(screen.getByText("/p/hakkimizda")).toBeInTheDocument();
