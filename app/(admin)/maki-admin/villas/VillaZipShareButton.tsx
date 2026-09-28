@@ -20,9 +20,18 @@
      - adminFetch (Bearer) — admin auth. window.location.origin → absolute URL.
      - Mevcut admin class'ları (admin-btn-ghost/primary) reuse; yeni design YOK.
      - VillaTemporaryUrlButton pattern'iyle (toast/clipboard) tutarlı.
+     - Modal PORTAL ile en yakın `.admin-shell` köküne render edilir:
+       tetikleyici buton kart toolbar'ının (`relative z-[2]`) stacking
+       context'i içinde; inline render'da modalın z-[60]'ı o context'e
+       hapsoluyor ve sonraki kartların toolbar'ları (+ sticky topbar)
+       overlay'in ÜSTÜNDE boyanıyordu. `.admin-shell` (stacking context
+       değil) → admin CSS token'ları/fontları aynen miras kalır;
+       z-[60] kök stacking context'te topbar (z-30) / drawer (z-50)
+       üstünde. Görsel tasarım, içerik ve davranış DEĞİŞMEDİ.
    =============================================================== */
 
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Archive, Copy, X, Trash2, Loader2 } from "lucide-react";
 
 import { adminFetch } from "@/lib/admin-fetch";
@@ -81,6 +90,9 @@ export function VillaZipShareButton({
 }) {
   const toast = useNotify();
   const [open, setOpen] = useState(false);
+  /* Portal hedefi — açılışta tetikleyicinin `.admin-shell` kökü
+     (yoksa body). Render sırasında DOM/ref okunmaz. */
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const [duration, setDuration] = useState<number>(1);
   const [creating, setCreating] = useState(false);
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
@@ -238,7 +250,13 @@ export function VillaZipShareButton({
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={(e) => {
+          setPortalTarget(
+            e.currentTarget.closest<HTMLElement>(".admin-shell") ??
+              document.body
+          );
+          setOpen(true);
+        }}
         disabled={disabled}
         className="admin-btn-ghost disabled:opacity-50"
         aria-label={`${villaTitle} için ZIP paylaşım linki`}
@@ -248,7 +266,7 @@ export function VillaZipShareButton({
         ZIP Paylaş
       </button>
 
-      {open && (
+      {open && portalTarget && createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -413,7 +431,8 @@ export function VillaZipShareButton({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        portalTarget
       )}
     </>
   );
