@@ -143,6 +143,9 @@ export async function cloneVilla(
        into column search_title" reddi verir. Hariç tutulunca PostgreSQL
        clone sonrası yeniden üretir. */
     "search_title",
+    /* 🛡️ GENERATED ALWAYS kolon (mig 078) — DB `real_title`'dan otomatik
+       hesaplar; search_title ile aynı gerekçe. */
+    "real_title_search",
   ]);
   const corePayload: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(original)) {
