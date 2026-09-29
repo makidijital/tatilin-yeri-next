@@ -24,6 +24,7 @@
      - "/kiralik-villa/*"   → app/(public)/en|de/kiralik-villa/[slug]/page.tsx (Phase 10B, GERÇEK içerik)
      - "/rezervasyon/*"     → app/(public)/en|de/rezervasyon/[slug]/page.tsx (Phase 10B, GERÇEK içerik)
      - "/p/*"               → app/(public)/en|de/p/[slug]/page.tsx (Phase 12D, GERÇEK içerik)
+     - "/villa-turleri/*", "/bolgeler/*" → app/(public)/en|de/…/[slug]/page.tsx (SEO landing)
    Yeni bir `/en`/`/de` route eklendiğinde bu liste GÜNCELLENMELİ —
    aksi halde o route için dil değiştirici (bilinçli, güvenli tarafta
    kalarak) ana sayfaya fallback yapar; bu 404/broken-link ÜRETMEZ,
@@ -78,6 +79,14 @@ const PREFIXED_LOCALE_ROUTED_PATHS: readonly string[] = [
   "/blog/",
   "/liste/",
   "/v/",
+  /* 🛡️ SEO LANDING — app/(public)/en|de/villa-turleri/[slug] ve
+     app/(public)/en|de/bolgeler/[slug] GERÇEK route dosyaları var
+     (ortak `TaxonomyLandingPageBody`). Slug locale'den bağımsızdır:
+     sayfanın kendi hreflang'i de `buildLocaleAlternates(trPath)` ile
+     AYNI slug + locale prefix'i üretir. Bu satırlar eksikken dil
+     değiştirici bu sayfalarda ana sayfaya düşüyordu. */
+  "/villa-turleri/",
+  "/bolgeler/",
 ];
 
 /**

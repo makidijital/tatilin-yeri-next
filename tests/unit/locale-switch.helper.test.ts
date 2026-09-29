@@ -441,3 +441,70 @@ describe("getLocaleSwitchTargets — query string koruma", () => {
     expect(hasLocaleRoute("/arama?flexible=3")).toBe(false);
   });
 });
+
+/* ===============================================================
+   🛡️ SEO LANDING — Villa Tipleri / Bölgeler dil değiştirici
+   ===============================================================
+   `/en|de/villa-turleri/[slug]` ve `/en|de/bolgeler/[slug]` route
+   dosyaları var ama allowlist'te değildi → dil değiştirici ana
+   sayfaya düşüyordu. Slug locale'den bağımsız (hreflang ile aynı).
+   =============================================================== */
+describe("SEO landing sayfaları — aynı slug, yalnız locale prefix'i değişir", () => {
+  it.each([
+    ["/villa-turleri/balayi-villalari", "/villa-turleri/balayi-villalari"],
+    ["/en/villa-turleri/balayi-villalari", "/villa-turleri/balayi-villalari"],
+    ["/de/villa-turleri/balayi-villalari", "/villa-turleri/balayi-villalari"],
+    ["/bolgeler/kalkan", "/bolgeler/kalkan"],
+    ["/en/bolgeler/kalkan", "/bolgeler/kalkan"],
+    ["/de/bolgeler/kalkan", "/bolgeler/kalkan"],
+  ])("%s", (path, tr) => {
+    expect(getLocaleSwitchTargets(path)).toEqual({ tr, en: `/en${tr}`, de: `/de${tr}` });
+  });
+
+  it("sayfalama/sort query'si korunur", () => {
+    expect(getLocaleSwitchTargets("/en/bolgeler/kalkan", "page=2")).toEqual({
+      tr: "/bolgeler/kalkan?page=2",
+      en: "/en/bolgeler/kalkan?page=2",
+      de: "/de/bolgeler/kalkan?page=2",
+    });
+  });
+
+  it("slug'sız bare prefix eşleşmez (route yok → mevcut fallback)", () => {
+    expect(hasLocaleRoute("/villa-turleri")).toBe(false);
+    expect(hasLocaleRoute("/villa-turleri/")).toBe(false);
+    expect(hasLocaleRoute("/bolgeler")).toBe(false);
+    expect(getLocaleSwitchTargets("/en/bolgeler")).toEqual({ tr: "/", en: "/en", de: "/de" });
+  });
+
+  it("MOD B (varsayılan EN/DE): TR hedefi landing sayfasının kendisidir, /tr değil", () => {
+    expect(getLocaleSwitchTargets("/en/villa-turleri/x", "", "/tr").tr).toBe("/villa-turleri/x");
+  });
+});
+
+/* Gerçek `/en` ve `/de` route dosyalarının HEPSİ allowlist'te olmalı —
+   yeni bir locale route eklenip listeye yazılmazsa bu test yakalar. */
+describe("allowlist ↔ app/(public)/en|de route dosyaları", () => {
+  it("her EN/DE sayfası için hasLocaleRoute(true)", async () => {
+    const { readdirSync } = await import("node:fs");
+    const { join, relative, sep } = await import("node:path");
+    for (const locale of ["en", "de"]) {
+      const root = join(process.cwd(), "app/(public)", locale);
+      const paths: string[] = [];
+      const walk = (dir: string) => {
+        for (const e of readdirSync(dir, { withFileTypes: true })) {
+          const full = join(dir, e.name);
+          if (e.isDirectory()) walk(full);
+          else if (e.name === "page.tsx") {
+            const rel = relative(root, dir).split(sep).filter(Boolean);
+            paths.push("/" + rel.map((s) => (s.startsWith("[") ? "ornek" : s)).join("/"));
+          }
+        }
+      };
+      walk(root);
+      expect(paths.length).toBeGreaterThan(10);
+      for (const p of paths) {
+        expect({ locale, p, ok: hasLocaleRoute(p) }).toEqual({ locale, p, ok: true });
+      }
+    }
+  });
+});
