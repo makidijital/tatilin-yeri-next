@@ -39,7 +39,6 @@ import {
   Sparkles,
   Wallet,
   Share2,
-  ArrowDownUp,
   Tag,
 } from "lucide-react";
 
@@ -93,18 +92,6 @@ const menuGroups: MenuGroup[] = [
         name: "Mülkler",
         href: "/maki-admin/villas",
         icon: Home,
-        permissionKey: "villas",
-      },
-      {
-        /* 🛡️ Mülk Sırala — drag-drop sıralama ekranı.
-           `/maki-admin/villas/siralama` route'unda VillaSortPanel
-           render eder. Operasyon ekranından (Mülkler) ayrıştırıldı:
-           pagination'a hazırlık + drag-drop UX'in 1000+ villa
-           scale'inde uygulanabilir kalması için. `permissionKey:
-           "villas"` reuse — yeni permission / role / migration YOK. */
-        name: "Mülk Sırala",
-        href: "/maki-admin/villas/siralama",
-        icon: ArrowDownUp,
         permissionKey: "villas",
       },
       {
