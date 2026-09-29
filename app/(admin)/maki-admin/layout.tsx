@@ -41,8 +41,6 @@ import {
   Share2,
   ArrowDownUp,
   Tag,
-  FileCheck,
-  Trash2,
 } from "lucide-react";
 
 import {
@@ -92,7 +90,7 @@ const menuGroups: MenuGroup[] = [
     label: "Mülkler",
     items: [
       {
-        name: "Tüm Mülkler",
+        name: "Mülkler",
         href: "/maki-admin/villas",
         icon: Home,
         permissionKey: "villas",
@@ -104,23 +102,9 @@ const menuGroups: MenuGroup[] = [
            pagination'a hazırlık + drag-drop UX'in 1000+ villa
            scale'inde uygulanabilir kalması için. `permissionKey:
            "villas"` reuse — yeni permission / role / migration YOK. */
-        name: "Mülk Sıralama",
+        name: "Mülk Sırala",
         href: "/maki-admin/villas/siralama",
         icon: ArrowDownUp,
-        permissionKey: "villas",
-      },
-      {
-        /* 🛡️ Belge Kontrolü — KTB izin belgesi toplu kontrolü
-           (/maki-admin/villas/belge-kontrol). `villas` izni reuse. */
-        name: "Belge Kontrolü",
-        href: "/maki-admin/villas/belge-kontrol",
-        icon: FileCheck,
-        permissionKey: "villas",
-      },
-      {
-        name: "Çöp Kutusu",
-        href: "/maki-admin/villas/trash",
-        icon: Trash2,
         permissionKey: "villas",
       },
       {

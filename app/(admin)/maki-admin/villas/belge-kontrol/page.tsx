@@ -44,7 +44,7 @@ export default async function VillaBelgeKontrolPage() {
         <div className="admin-page-header__actions">
           <Link href="/maki-admin/villas" className="admin-btn-ghost">
             <ChevronLeft size={14} />
-            Tüm Mülkler
+            Mülkler
           </Link>
         </div>
       </header>

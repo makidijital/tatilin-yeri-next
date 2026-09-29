@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getVillasForAdminPage } from "@/app/services/villa.service";
-import { Plus, Home, Trash as TrashBin, ArrowDownUp } from "lucide-react";
+import { Plus, Home, Trash as TrashBin, ArrowDownUp, FileCheck } from "lucide-react";
 import VillaOperationsList from "./_components/VillaOperationsList";
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
 import AdminPageSessionRefresh from "@/app/components/admin/AdminPageSessionRefresh";
@@ -128,7 +128,9 @@ export default async function VillasPage({
             yönetimine geçebilirsin.
           </p>
         </div>
-        <div className="admin-page-header__actions">
+        {/* Dar ekranda iç navigasyon butonları taşmak yerine alt satıra
+           geçer; geniş ekranda (xl+) tek satırda kalır. */}
+        <div className="admin-page-header__actions flex-wrap xl:flex-nowrap xl:shrink-0">
           {/* 🛡️ Sıralama ayrı ekrana taşındı — drag-drop için
              /maki-admin/villas/siralama. */}
           <Link
@@ -137,6 +139,14 @@ export default async function VillasPage({
           >
             <ArrowDownUp size={14} />
             Sıralamayı Düzenle
+          </Link>
+          {/* 🛡️ KTB belge kontrolü — /maki-admin/villas/belge-kontrol. */}
+          <Link
+            href="/maki-admin/villas/belge-kontrol"
+            className="admin-btn-ghost"
+          >
+            <FileCheck size={14} />
+            Belge Kontrolü
           </Link>
           <Link
             href="/maki-admin/villas/trash"
