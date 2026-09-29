@@ -162,6 +162,32 @@ export const villaAdminRepository = {
   },
 
   /* ===============================================================
+     READ — KTB belge kontrolü adayları (ADDITIVE)
+     ===============================================================
+     Yalnız "Mülkler → Belge Kontrolü" (app/services/villa-license-
+     check.service.ts) kullanır. Aktif + silinmemiş villalar; belge
+     numarası BOŞ olanlar da döner ("Belge No Yok" sayımı için).
+     Minimal projection; mevcut sorgular DEĞİŞMEDİ. */
+  async findLicenseCheckCandidates() {
+    return await dbAdmin
+      .from("villa")
+      .select("id, title, tourism_document_number, is_active")
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("title", { ascending: true });
+  },
+
+  /** Tek villa (tek belge kontrolü) — silinmemiş olmalı. */
+  async findLicenseCheckCandidateById(id: string) {
+    return await dbAdmin
+      .from("villa")
+      .select("id, title, tourism_document_number, is_active")
+      .eq("id", id)
+      .is("deleted_at", null)
+      .maybeSingle();
+  },
+
+  /* ===============================================================
      READ — public availability config by id (NATIVE twin, Migration S3)
      ===============================================================
      Anon `villaRepository.findAvailabilityConfigById` (eski sağlayıcı) karşılığı.
