@@ -29,14 +29,34 @@ import { useAdmin } from "@/app/components/admin/AdminSessionGuard";
      • `admin` referansı her guard lookup'ında yenilenir; en fazla
        MAX_REFRESH kez yenileme istenir (sonsuz döngü koruması).
      • Hiçbir görsel çıktı üretmez.
+
+   🛡️ AYNI PATH'TE SÜRESİ DOLMUŞ ACCESS (beyaz ekran düzeltmesi):
+     Guard admin'i yalnız `pathname` değişince yeniden doğrular.
+     `/maki-admin/villas` → `?q=…` (arama) veya aynı path'e sidebar
+     tıklaması pathname'i DEĞİŞTİRMEZ → access cookie'nin süresi
+     dolmuşsa server bu bileşeni döndürür ama guard hiç lookup yapmaz,
+     `admin` referansı değişmez → sayfa manuel yenilemeye kadar boş
+     kalırdı. Bu yüzden mount'ta guard'ın MEVCUT `refresh()`'i bir kez
+     çağrılır (aynı /me → /api/auth/refresh → /me akışı); dönen yeni
+     `admin` referansı aşağıdaki mevcut efekti tetikler. Eşzamanlı
+     yenileme isteği `lib/admin-auth.ts`'te tek uçuşa (single-flight)
+     indirgenir → rotation yarışı oluşmaz.
    =============================================================== */
 
 const MAX_REFRESH = 2;
 
 export default function AdminPageSessionRefresh() {
   const router = useRouter();
-  const { admin } = useAdmin();
+  const { admin, refresh } = useAdmin();
   const refreshCount = useRef(0);
+  const revalidated = useRef(false);
+
+  /* Mount'ta bir kez: guard oturumu yeniden doğrulasın (bkz. üstyazı). */
+  useEffect(() => {
+    if (revalidated.current) return;
+    revalidated.current = true;
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     if (!admin) return;

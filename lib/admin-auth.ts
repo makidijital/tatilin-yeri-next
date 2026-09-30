@@ -105,16 +105,29 @@ async function fetchMeOnce(): Promise<AdminLookupResult> {
    (kesin durumlar; refresh zaten is_active'i doğrular). Additive: mevcut
    /me davranışı korunur, üzerine tek retry eklenir.
 ---------------------------------------------- */
-async function tryRefreshAccess(): Promise<boolean> {
-  try {
-    const r = await fetch("/api/auth/refresh", {
-      method: "POST",
-      credentials: "same-origin",
+/* 🛡️ SINGLE-FLIGHT — aynı sekmede eşzamanlı lookup'lar (ör. guard'ın
+   pathname efekti + AdminPageSessionRefresh) aynı eski refresh cookie
+   ile iki POST atarsa rotation ikincisini reddeder (→ yanlışlıkla
+   logout). Uçuştaki istek paylaşılır; bitince sıfırlanır. */
+let refreshInFlight: Promise<boolean> | null = null;
+
+function tryRefreshAccess(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        const r = await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: "same-origin",
+        });
+        return r.ok;
+      } catch {
+        return false;
+      }
+    })().finally(() => {
+      refreshInFlight = null;
     });
-    return r.ok;
-  } catch {
-    return false;
   }
+  return refreshInFlight;
 }
 
 async function lookupCurrentAdminNative(): Promise<AdminLookupResult> {

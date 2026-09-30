@@ -76,6 +76,7 @@ const h = vi.hoisted(() => {
       getSettingsTranslations: dataSpy("getSettingsTranslations", { ok: true, translations: {} }),
     },
     routerRefresh: vi.fn(),
+    guardRefresh: vi.fn(async () => {}),
     adminState: { admin: null as unknown },
     /* 🛡️ Sayfa yetki kapısı (AdminSectionGuard > callerHasPermission)
        izinleri mevcut repository'den okur → DB yerine bu durum. */
@@ -140,7 +141,7 @@ vi.mock("@/app/components/admin/AdminSessionGuard", () => ({
   useAdmin: () => ({
     admin: h.adminState.admin,
     loading: false,
-    refresh: async () => {},
+    refresh: h.guardRefresh,
     signOut: async () => {},
   }),
 }));
@@ -352,6 +353,20 @@ describe("SEC-01 — AdminPageSessionRefresh", () => {
     adminState.admin = { id: "a" };
     rerender(<AdminPageSessionRefresh />);
     expect(routerRefresh).toHaveBeenCalledTimes(2);
+  });
+
+  /* 🛡️ Beyaz ekran düzeltmesi — aynı path'te (ör. `?q=` araması veya
+     aynı URL'e sidebar tıklaması) pathname değişmediği için guard
+     lookup yapmaz; bileşen mount'ta guard'ın MEVCUT refresh()'ini
+     (/me → /api/auth/refresh → /me) bir kez tetikler. */
+  it("mount'ta guard oturumunu bir kez yeniden doğrular (rerender'da tekrar etmez)", () => {
+    adminState.admin = { id: "a" };
+    const { rerender } = render(<AdminPageSessionRefresh />);
+    expect(h.guardRefresh).toHaveBeenCalledTimes(1);
+    adminState.admin = { id: "a" };
+    rerender(<AdminPageSessionRefresh />);
+    rerender(<AdminPageSessionRefresh />);
+    expect(h.guardRefresh).toHaveBeenCalledTimes(1);
   });
 
   it("görsel çıktı üretmez", () => {
