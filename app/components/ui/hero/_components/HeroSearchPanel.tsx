@@ -146,6 +146,11 @@ export default function HeroSearchPanel({
 
   const catRef = useRef<HTMLDivElement>(null);
   const regRef = useRef<HTMLDivElement>(null);
+  /* Gelişmiş Arama sarmalayıcısı (buton + floating panel). Dış tıklama
+     kontrolü bu kapsayıcıya göre yapılır → panel İÇİ ve aç/kapat
+     butonunun kendisi "dış tıklama" sayılmaz (buton kendi toggle'ını
+     yapar, çift tetiklenme olmaz). */
+  const advRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -198,6 +203,19 @@ export default function HeroSearchPanel({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  /* Outside click for Gelişmiş Arama — yalnız panel AÇIKKEN dinlenir.
+     `pointerdown` → mouse + touch (mobil/masaüstü) tek yoldan. Hedef
+     advRef (buton + panel) içindeyse hiçbir şey yapılmaz. */
+  useEffect(() => {
+    if (!advOpen) return;
+    const handler = (e: PointerEvent) => {
+      if (advRef.current && !advRef.current.contains(e.target as Node))
+        setAdvOpen(false);
+    };
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [advOpen]);
 
   const toggleItem = (
     value: string,
@@ -587,7 +605,7 @@ export default function HeroSearchPanel({
           Checkbox yalnız `flexible` state'ini set eder; Villa Bul'a
           basınca `flexible=3` param'ı eklenir (ana tarih değişmez).
           ═══════════════════════════════════════════════════════ */}
-      <div className="relative mt-3 flex flex-col items-center">
+      <div ref={advRef} className="relative mt-3 flex flex-col items-center">
         <button
           type="button"
           onClick={() => setAdvOpen((o) => !o)}

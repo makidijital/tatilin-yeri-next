@@ -57,6 +57,11 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 type AdvantageTone = "orange" | "blue" | "duo";
 
+/* İKON KUTUSU — üç kartta da marka turuncusu (#ED7926) dolu zemin +
+   beyaz ikon (yüksek kontrast, görsel odak). 72px mobil / 80px md+.
+   Kart karakteri (topBar / glow / hover border) tone'a göre AYNEN
+   farklı kalır; yalnız ikon kutusu ortaklaştırıldı. */
+
 type Advantage = {
   key: string;
   icon: LucideIcon;
@@ -106,22 +111,22 @@ const TONE_STYLES: Record<
 > = {
   orange: {
     border: "group-hover:border-[#ED7926]/45",
-    iconBg: "bg-[#ED7926]/15",
-    iconText: "text-[#ED7926]",
+    iconBg: "bg-[#ED7926] shadow-[0_14px_30px_-14px_rgba(237,121,38,0.6)]",
+    iconText: "text-white",
     glow: "bg-[#ED7926]/30",
     topBar: "bg-gradient-to-r from-[#ED7926] to-[#ED7926]/10",
   },
   blue: {
     border: "group-hover:border-[#0973BA]/45",
-    iconBg: "bg-[#0973BA]/15",
-    iconText: "text-[#0973BA]",
+    iconBg: "bg-[#ED7926] shadow-[0_14px_30px_-14px_rgba(237,121,38,0.6)]",
+    iconText: "text-white",
     glow: "bg-[#0973BA]/30",
     topBar: "bg-gradient-to-r from-[#0973BA] to-[#0973BA]/10",
   },
   duo: {
     border: "group-hover:border-[#ED7926]/40",
-    iconBg: "bg-gradient-to-br from-[#ED7926]/20 to-[#0973BA]/20",
-    iconText: "text-[#ED7926]",
+    iconBg: "bg-[#ED7926] shadow-[0_14px_30px_-14px_rgba(237,121,38,0.6)]",
+    iconText: "text-white",
     glow: "bg-gradient-to-br from-[#ED7926]/30 to-[#0973BA]/30",
     topBar: "bg-gradient-to-r from-[#ED7926] to-[#0973BA]",
   },
@@ -217,7 +222,7 @@ export default function HeroAdvantageCards({
 
                   <span
                     className={
-                      "relative flex h-12 w-12 items-center justify-center rounded-2xl " +
+                      "relative flex h-[72px] w-[72px] md:h-20 md:w-20 items-center justify-center rounded-[22px] " +
                       tone.iconBg +
                       " " +
                       tone.iconText +
@@ -225,10 +230,10 @@ export default function HeroAdvantageCards({
                       "group-hover:scale-110 group-hover:-rotate-3"
                     }
                 >
-                    <Icon size={22} strokeWidth={1.8} aria-hidden="true" />
+                    <Icon className="h-9 w-9 md:h-10 md:w-10" strokeWidth={1.8} aria-hidden="true" />
                   </span>
 
-                  <h3 className="relative mt-5 font-display text-[19px] md:text-[20px] text-white tracking-[-0.01em]">
+                  <h3 className="relative mt-6 md:mt-7 font-display text-[19px] md:text-[20px] text-white tracking-[-0.01em]">
                     {item.title}
                   </h3>
                   <p className="relative mt-2.5 text-[13.5px] leading-[1.6] text-white/70">
