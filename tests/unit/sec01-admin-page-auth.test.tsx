@@ -71,6 +71,10 @@ const h = vi.hoisted(() => {
       findAllIdNameBySortOrder: dataSpy("findAllIdNameBySortOrder", { data: [], error: null }),
       findAllRelations: dataSpy("findAllRelations", { data: [], error: null }),
     },
+    villaFeatureRepository: {
+      findAllForPublicTaxonomy: dataSpy("findAllForPublicTaxonomy", { data: [], error: null }),
+      findAllRelations: dataSpy("findAllFeatureRelations", { data: [], error: null }),
+    },
     settingsService: { getPublicSettings: dataSpy("getPublicSettings", null) },
     settingsTranslationService: {
       getSettingsTranslations: dataSpy("getSettingsTranslations", { ok: true, translations: {} }),
@@ -116,6 +120,9 @@ vi.mock("@/lib/db/villa-location.repository", () => ({
 }));
 vi.mock("@/lib/db/villa-type.repository", () => ({
   villaTypeRepository: h.villaTypeRepository,
+}));
+vi.mock("@/lib/db/villa-feature.repository", () => ({
+  villaFeatureRepository: h.villaFeatureRepository,
 }));
 vi.mock("@/app/services/settings.service", () => h.settingsService);
 vi.mock("@/app/services/settings-translation.service", () => h.settingsTranslationService);
@@ -198,6 +205,8 @@ const PAGES: PageCaseWithNeed[] = [
       "findAllForFilter",
       "findAllIdNameBySortOrder",
       "findAllRelations",
+      "findAllForPublicTaxonomy",
+      "findAllFeatureRelations",
     ],
   },
   {

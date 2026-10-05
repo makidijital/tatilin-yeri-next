@@ -8,7 +8,7 @@ import { Sparkles, Users, MapPin, CalendarRange } from "lucide-react";
 import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import VillaCard from "@/app/components/villa/VillaCard";
-import { getStartingPrice } from "@/lib/price.engine";
+import { getStartingPrice, type DiscountRange } from "@/lib/price.engine";
 import { getSharedVillaListByToken } from "@/app/services/shared-villa-list.service";
 
 /* 🛡️ PUBLIC ÇOKLU DİL — statik metinler MEVCUT public dictionary'den
@@ -77,7 +77,46 @@ type RawVilla = {
         end_date: string;
       }[]
     | null;
+  /* 🛡️ İndirimler — admin villa listesi önizlemesi ve /arama ile AYNI
+     `calculateGrandTotal` `discounts` girdisi (findCardsByIds embed'i). */
+  villa_discounts?:
+    | {
+        start_date: string | null;
+        end_date: string | null;
+        discount_type: string | null;
+        discount_value: number | null;
+        currency: string | null;
+      }[]
+    | null;
 };
+
+/* `/arama` ve admin villa listesiyle AYNI normalizasyon: start/end zorunlu,
+   tip yalnız percent|fixed, discount_value Number()||0. Boş → "indirim yok"
+   (fiyat motoru boş diziyi null sayar → eski davranış birebir). */
+function toDiscountRanges(raw: RawVilla["villa_discounts"]): DiscountRange[] {
+  if (!Array.isArray(raw)) return [];
+  const out: DiscountRange[] = [];
+  for (const d of raw) {
+    if (
+      !d ||
+      typeof d.start_date !== "string" ||
+      d.start_date.length === 0 ||
+      typeof d.end_date !== "string" ||
+      d.end_date.length === 0 ||
+      (d.discount_type !== "percent" && d.discount_type !== "fixed")
+    ) {
+      continue;
+    }
+    out.push({
+      start_date: d.start_date,
+      end_date: d.end_date,
+      discount_type: d.discount_type,
+      discount_value: Number(d.discount_value) || 0,
+      currency: d.currency,
+    });
+  }
+  return out;
+}
 
 export default async function SharedListPageBody({
   params,
@@ -326,6 +365,9 @@ export default async function SharedListPageBody({
                   stayStart={hasDateRange ? sp!.start : undefined}
                   stayEnd={hasDateRange ? sp!.end : undefined}
                   prices={hasDateRange ? prices : undefined}
+                  stayDiscounts={
+                    hasDateRange ? toDiscountRanges(v.villa_discounts) : undefined
+                  }
                   cleaningFee={
                     hasDateRange ? Number(v.cleaning_fee || 0) : undefined
                   }

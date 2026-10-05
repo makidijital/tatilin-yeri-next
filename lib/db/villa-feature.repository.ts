@@ -87,6 +87,19 @@ export const villaFeatureRepository = {
   },
 
   /** Front — villaya ait feature'lar (villa_feature_relations embed). */
+  /* ===============================================================
+     GET — TÜM villa_id ↔ feature_id satırları (admin villa listesi)
+     ===============================================================
+     `/maki-admin/villa-listesi` filtrelemeyi client'ta yaptığı için
+     (tip ilişkileri `villaTypeRepository.findAllRelations` ile AYNI
+     desen) tüm junction'ı bir kez okur. Public `/arama` bunu KULLANMAZ
+     (orada seçime göre `findVillaFeatureRelationsByFeatureIds`). */
+  async findAllRelations() {
+    return await db
+      .from<{ villa_id: string; feature_id: string }>("villa_feature_relations")
+      .select("villa_id, feature_id");
+  },
+
   async findFeaturesByVilla(villaId: string) {
     return await db
       .from("villa_feature_relations")

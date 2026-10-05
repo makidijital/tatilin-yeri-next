@@ -4,6 +4,7 @@
 import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { villaLocationRepository } from "@/lib/db/villa-location.repository";
 import { villaTypeRepository } from "@/lib/db/villa-type.repository";
+import { villaFeatureRepository } from "@/lib/db/villa-feature.repository";
 import { resolveVillaImageUrl } from "@/lib/storage.helpers";
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
 import AdminPageSessionRefresh from "@/app/components/admin/AdminPageSessionRefresh";
@@ -13,7 +14,9 @@ import VillaListesiClient, {
   type VillaListesiRow,
   type LocationOption,
   type CategoryOption,
+  type FeatureOption,
 } from "./_components/VillaListesiClient";
+import type { DiscountRange } from "@/lib/price.engine";
 
 /* ===============================================================
    🏛️ ADMIN — VILLA LISTESİ (concierge curator)
@@ -82,6 +85,16 @@ type RawVilla = {
         end_date: string;
       }[]
     | null;
+  /* 🛡️ İndirimler — `/arama` ile aynı embed; kart + fiyat sıralaması. */
+  villa_discounts:
+    | {
+        start_date: string | null;
+        end_date: string | null;
+        discount_type: string | null;
+        discount_value: number | null;
+        currency: string | null;
+      }[]
+    | null;
 };
 
 export default async function VillaListesiPage() {
@@ -97,7 +110,14 @@ export default async function VillaListesiPage() {
   /* Active villas + locations + categories + type relations paralel
      fetch. SELECT pattern /arama ve villaRepository.listPublic ile
      birebir aynı (yıldız + embed). */
-  const [villasRes, locationsRes, typesRes, relationsRes] = await Promise.all([
+  const [
+    villasRes,
+    locationsRes,
+    typesRes,
+    relationsRes,
+    featuresRes,
+    featureRelationsRes,
+  ] = await Promise.all([
     villaAdminRepository.findActiveCuratorCards(),
     villaLocationRepository.findAllForFilter(),
     villaTypeRepository.findAllIdNameBySortOrder(),
@@ -107,6 +127,11 @@ export default async function VillaListesiPage() {
        in-memory filter uygular. Public /arama page'i URL-driven SSR
        round-trip yapıyor; admin client-side flow için bu yeterli. */
     villaTypeRepository.findAllRelations(),
+    /* 🛡️ Villa özellikleri — public Hero "Gelişmiş Arama" ile AYNI
+       kaynak tablo (`villa_features`) + tüm junction satırları (tip
+       ilişkileriyle aynı client-side desen; AND semantiği client'ta). */
+    villaFeatureRepository.findAllForPublicTaxonomy(),
+    villaFeatureRepository.findAllRelations(),
   ]);
 
   /* Silent failure → console'a yansıt (server log). UI tarafı boş
@@ -133,6 +158,19 @@ export default async function VillaListesiPage() {
     console.error(
       "[villa-listesi.fetch] type_relations FAILED",
       relationsRes.error.message
+    );
+  }
+
+  if (featuresRes.error) {
+    console.error(
+      "[villa-listesi.fetch] features FAILED",
+      featuresRes.error.message
+    );
+  }
+  if (featureRelationsRes.error) {
+    console.error(
+      "[villa-listesi.fetch] feature_relations FAILED",
+      featureRelationsRes.error.message
     );
   }
 
@@ -203,6 +241,7 @@ export default async function VillaListesiPage() {
       cleaning_currency: v.cleaning_currency || "TRY",
       cleaning_limit: Number(v.cleaning_limit || 0),
       prices,
+      discounts: normalizeDiscounts(v.villa_discounts),
     };
   });
 
@@ -220,6 +259,24 @@ export default async function VillaListesiPage() {
     id: string;
     name: string | null;
   }>).map((t) => ({ id: t.id, name: t.name || "" }));
+
+  /* Özellik seçenekleri — Hero ile aynı: görünen ada göre sıralı. */
+  const features: FeatureOption[] = ((featuresRes.data || []) as Array<{
+    id: string;
+    name: string | null;
+  }>)
+    .map((f) => ({ id: String(f.id), name: f.name || "" }))
+    .sort((a, b) => a.name.localeCompare(b.name, "tr"));
+
+  /* villa.id → featureIds[] map. */
+  const villaFeatureMap: Record<string, string[]> = {};
+  for (const r of (featureRelationsRes.data || []) as Array<{
+    villa_id: string;
+    feature_id: string;
+  }>) {
+    if (!r?.villa_id || !r?.feature_id) continue;
+    (villaFeatureMap[String(r.villa_id)] ??= []).push(String(r.feature_id));
+  }
 
   /* villa.id → categoryIds[] map. Client filter O(1) lookup. */
   const rawRelations = (relationsRes.data || []) as Array<{
@@ -251,7 +308,39 @@ export default async function VillaListesiPage() {
         locations={locations}
         categories={categories}
         villaCategoryMap={villaCategoryMap}
+        features={features}
+        villaFeatureMap={villaFeatureMap}
       />
     </div>
   );
+}
+
+/* İndirim satırlarını fiyat motorunun `DiscountRange` şekline daralt —
+   `/arama` (AramaPageBody) normalizasyonuyla AYNI kural: start/end zorunlu,
+   tip yalnız percent|fixed, discount_value Number()||0. */
+function normalizeDiscounts(
+  raw: RawVilla["villa_discounts"]
+): DiscountRange[] {
+  if (!Array.isArray(raw)) return [];
+  const out: DiscountRange[] = [];
+  for (const d of raw) {
+    if (
+      !d ||
+      typeof d.start_date !== "string" ||
+      d.start_date.length === 0 ||
+      typeof d.end_date !== "string" ||
+      d.end_date.length === 0 ||
+      (d.discount_type !== "percent" && d.discount_type !== "fixed")
+    ) {
+      continue;
+    }
+    out.push({
+      start_date: d.start_date,
+      end_date: d.end_date,
+      discount_type: d.discount_type,
+      discount_value: Number(d.discount_value) || 0,
+      currency: d.currency,
+    });
+  }
+  return out;
 }

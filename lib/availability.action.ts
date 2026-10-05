@@ -17,7 +17,13 @@ import { getBlockedVillaIds } from "@/lib/availability.helper";
 export async function getBlockedVillaIdsAction(
   ...args: Parameters<typeof getBlockedVillaIds>
 ): Promise<string[]> {
-  await requirePermission("villas");
+  /* 🛡️ YETKİ — tek tüketici `/maki-admin/villa-listesi` (bölüm izni
+     "villa_lists"). Önce yalnız "villas" isteniyordu → yalnız
+     "villa_lists" izni olan adminde action 403 atıyor, client fail-soft
+     catch'i bunu yutuyor ve MÜSAİTLİK FİLTRESİ SESSİZCE KAPANIYORDU
+     (dolu villalar listeleniyordu). Dizi = "herhangi biri yeterli"
+     (lib/auth/action-authz.ts `satisfies`); "villas" adminleri ETKİLENMEZ. */
+  await requirePermission(["villas", "villa_lists"]);
   const set = await getBlockedVillaIds(...args);
   return Array.from(set);
 }

@@ -253,7 +253,9 @@ describe("/arama indirim akışı — kaynak kilidi", () => {
   it("13) kapsam genişlemedi — diğer yüzeylere `stayDiscounts` sızmadı", () => {
     const others = [
       "app/components/short-gaps/ShortGapsPageBody.tsx",
-      "app/components/shared-list/SharedListPageBody.tsx",
+      /* SharedListPageBody (/liste/[token]) bilinçli olarak ÇIKARILDI:
+         admin villa listesi önizlemesiyle aynı indirimli toplamı göstermesi
+         ürün kararıyla istendi — kilidi tests/unit/shared-list-discount.test.tsx. */
       "app/components/private-villa/PrivateVillaPageBody.tsx",
       "app/components/villa/VillaCardBookingModal.tsx",
     ];

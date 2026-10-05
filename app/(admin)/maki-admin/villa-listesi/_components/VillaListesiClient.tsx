@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   Check,
   Square,
@@ -20,13 +20,13 @@ import AdminDateRangePicker from "@/app/components/admin/shared/AdminDateRangePi
    Reservations(pending/confirmed) + manual_reservations + external
    (is_active) half-open [start,end) overlap birleşimi. */
 import { getBlockedVillaIdsAction } from "@/lib/availability.action";
-import { normalizeSearchText } from "@/lib/search";
 
 import VillaCard from "@/app/components/villa/VillaCard";
 import {
   getStartingPrice,
   calculateGrandTotal,
   calculateNights,
+  type DiscountRange,
 } from "@/lib/price.engine";
 /* 🛡️ Public /arama sorting motoru — AYNEN reuse (duplicate logic yok). */
 import {
@@ -42,6 +42,20 @@ import {
   type ExpirationKey,
 } from "@/app/services/shared-villa-list.constants";
 import type { SharedSearchParams } from "@/app/services/shared-villa-list.service";
+/* 🏛️ Admin'e ait filtre kuralları — public `/arama` DAVRANIŞINI taklit
+   eder ama kod paylaşmaz (bkz. dosya başlığı). */
+import {
+  ADMIN_DEFAULT_GUESTS,
+  ADMIN_FLEX_DAYS,
+  adminRootLocations,
+  buildAdminFlexWindows,
+  expandAdminRegionSelection,
+  formatAdminYmd,
+  isAdminDateRange,
+  isVisibleForDateRange,
+  matchesBaseFilters,
+  type AdminVillaFilters,
+} from "../_lib/villa-listesi-filters";
 
 /* Pill select label table — frontend kullanır, server-side
    ALLOWED_EXPIRATIONS map ile zaten sınırlı (key allow-list). */
@@ -67,26 +81,29 @@ const RENDER_PAGE_SIZE = 24;
    🏛️ VillaListesiClient — admin curator orchestrator
    ===============================================================
    AKIŞ:
-     - Filter bar (start, end, guests, location)
+     - Filter bar (tarih, villa tipi, bölge, özellikler, kişi, esnek ±3)
      - VillaCard grid (selection checkbox overlay)
+     - Esnek sonuçlar (±3 gün) ayrı bölümde, altta — seçilebilir
      - Sticky alt bar: "X villa seçildi" + "Listeyi Paylaş" CTA
      - Modal: title/note + token üretimi + paylaşılabilir link
 
-   PRICING:
-     - Tarih girildiyse VillaCard `stayStart/stayEnd/prices/cleaning_*`
-       props alır → `calculateGrandTotal` ile total + gece + temizlik
-       dahil bilgisini render eder.
-     - Tarih yoksa `getStartingPrice` fallback (arama page ile aynı
-       pattern; VillaCard `price` prop'una starting price geçilir).
-     - Currency conversion `VillaCard` içinde `convertPrice` ile
-       kullanıcı currency'sine çevrilir (CurrencyContext).
+   ARAMA DAVRANIŞI (public Hero Search → /arama referans alınır):
+     - Bölge çoklu + grup kökü genişletme, villa tipi AND, özellik AND,
+       kişi ≥ (varsayılan 2), aktif & silinmemiş villalar.
+     - Tarih seçiliyse: o tarihte DOLU villa ve seçilen gecelerin
+       tamamında fiyatı OLMAYAN villa ana listeden çıkar.
+     - Esnek ±3: ana tarihte dolu ama kaydırılmış pencerede müsait
+       villalar ayrı bölümde (sayaç/sıralama/sayfalama dışı).
+     - Kurallar `../_lib/villa-listesi-filters.ts` içinde, ADMIN'E AİT.
 
-   ZERO-IMPACT:
-     - calculateGrandTotal, pricing engine, currency context,
-       reservation logic, booking sidebar — DOKUNULMAZ.
-     - Filter sadece guests + location_id client-side. Tarih
-       sadece pricing context (availability check YOK — admin
-       sadece müşterinin ne göreceğini önizler).
+   ADMIN'E ÖZEL (public'te yok): metin arama, seçim/paylaşım,
+   24'lük render sayfalaması, URL'siz local state.
+
+   PRICING:
+     - Tarih girildiyse VillaCard `stayStart/stayEnd/prices/stayDiscounts/
+       cleaning_*` props alır → `calculateGrandTotal` ile indirimli total.
+     - Tarih yoksa `getStartingPrice` fallback (arama page ile aynı).
+     - Currency conversion `VillaCard` içinde (CurrencyContext).
    =============================================================== */
 
 export type VillaListesiRow = {
@@ -111,6 +128,9 @@ export type VillaListesiRow = {
     start_date: string;
     end_date: string;
   }>;
+  /** Aktif/gelecek indirim aralıkları (villa_discounts) — `/arama` ile
+   *  aynı `calculateGrandTotal` `discounts` girdisi. Yoksa "indirim yok". */
+  discounts?: DiscountRange[];
 };
 
 export type LocationOption = {
@@ -127,51 +147,94 @@ export type CategoryOption = {
   name: string;
 };
 
+export type FeatureOption = {
+  id: string;
+  name: string;
+};
+
+const EMPTY_FEATURES: FeatureOption[] = [];
+const EMPTY_MAP: Record<string, string[]> = {};
+
+/** Açık dropdown dışına tıklanınca kapat (mevcut Kategori deseni). */
+function useCloseOnOutside(
+  open: boolean,
+  ref: RefObject<HTMLDivElement | null>,
+  close: () => void
+) {
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) close();
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open, ref, close]);
+}
+
+const toggleIn = (list: string[], id: string) =>
+  list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+
 export default function VillaListesiClient({
   villas,
   locations,
   categories,
   villaCategoryMap,
+  features = EMPTY_FEATURES,
+  villaFeatureMap = EMPTY_MAP,
 }: {
   villas: VillaListesiRow[];
   locations: LocationOption[];
   categories: CategoryOption[];
   /** villa.id → categoryId[] map. M:N junction precomputed server-side. */
   villaCategoryMap: Record<string, string[]>;
+  /** Villa özellikleri (public Hero "Gelişmiş Arama" ile aynı tablo). */
+  features?: FeatureOption[];
+  /** villa.id → featureId[] map. */
+  villaFeatureMap?: Record<string, string[]>;
 }) {
   /* ---------------- FILTER STATE ----------------
      dateRange: react-datepicker selectsRange ile [Date|null, Date|null].
      start/end string'leri derive edilir; VillaCard'a pricing context
      ve share payload için YYYY-MM-DD format'ında geçirilir.
-     guests: input string (boş "" → 0 anlamına gelir).
-     locationId / categoryId: single-select UUID (boş "" → tüm). */
+     guests: input string (boş "" → 0 = filtre yok). Varsayılan 2
+       (public Hero kişi alanı varsayılanı).
+     regionIds / categoryIds / featureIds: çoklu seçim (boş = tümü). */
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([
     null,
     null,
   ]);
   const [startDateObj, endDateObj] = dateRange;
-  const [guests, setGuests] = useState<string>("");
-  const [locationId, setLocationId] = useState<string>("");
-  /* 🛡️ Kategori filtresi MULTI-SELECT (OR). Boş array = tüm kategoriler.
-     Bölge (locationId) tek-seçim olarak KORUNDU. */
+  const [guests, setGuests] = useState<string>(String(ADMIN_DEFAULT_GUESTS));
+  /* 🛡️ Bölge — public Hero gibi ÇOKLU seçim (önce tekli idi). */
+  const [regionIds, setRegionIds] = useState<string[]>([]);
+  /* 🛡️ Villa tipi — çoklu, AND (public /arama ile aynı). */
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
-  /* Checkbox dropdown aç/kapa + outside-click ref. */
+  /* 🛡️ Villa özellikleri — çoklu, AND (public "Gelişmiş Arama"). */
+  const [featureIds, setFeatureIds] = useState<string[]>([]);
+  /* 🛡️ Esnek ±3 gün (public "Gelişmiş Arama" checkbox'ı). */
+  const [flexible, setFlexible] = useState(false);
+
+  /* Checkbox dropdown'lar aç/kapa + outside-click ref'leri. */
   const [catOpen, setCatOpen] = useState(false);
   const catRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!catOpen) return;
-    const onDown = (e: MouseEvent) => {
-      if (catRef.current && !catRef.current.contains(e.target as Node)) {
-        setCatOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [catOpen]);
+  const [regionOpen, setRegionOpen] = useState(false);
+  const regionRef = useRef<HTMLDivElement | null>(null);
+  const [featureOpen, setFeatureOpen] = useState(false);
+  const featureRef = useRef<HTMLDivElement | null>(null);
+  const closeCat = useMemo(() => () => setCatOpen(false), []);
+  const closeRegion = useMemo(() => () => setRegionOpen(false), []);
+  const closeFeature = useMemo(() => () => setFeatureOpen(false), []);
+  useCloseOnOutside(catOpen, catRef, closeCat);
+  useCloseOnOutside(regionOpen, regionRef, closeRegion);
+  useCloseOnOutside(featureOpen, featureRef, closeFeature);
+
   const toggleCategory = (id: string) =>
-    setCategoryIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setCategoryIds((prev) => toggleIn(prev, id));
+  const toggleRegion = (id: string) =>
+    setRegionIds((prev) => toggleIn(prev, id));
+  const toggleFeature = (id: string) =>
+    setFeatureIds((prev) => toggleIn(prev, id));
+
   /* 🛡️ SORT — public /arama allow-list (smart | price-asc/desc |
      capacity-asc/desc). Default "smart" = mevcut server sırası (sort_order
      ASC, created_at DESC) AYNEN. */
@@ -181,19 +244,17 @@ export default function VillaListesiClient({
      ziyaret fallback'iyle aynı. */
   const { currency, rates } = useCurrency();
 
-  /* 🛡️ Client-side UI search — rezervasyonlar ekranı paritesi.
-     Title / location adı / slug / id üzerinde lowercase includes;
-     mevcut dropdown filtreleriyle AND mantığıyla kombine. */
+  /* 🛡️ Client-side UI search — rezervasyonlar ekranı paritesi (ADMIN'E
+     ÖZEL). Title / location adı / slug / id; diğer filtrelerle AND. */
   const [search, setSearch] = useState<string>("");
 
-  /* Date → YYYY-MM-DD string (local, TZ-drift'siz). FilterSidebar
-     `formatDateForUrl` ile birebir aynı semantik. */
+  /* Date → YYYY-MM-DD string (local, TZ-drift'siz). */
   const start = useMemo(
-    () => (startDateObj ? formatLocalDate(startDateObj) : ""),
+    () => (startDateObj ? formatAdminYmd(startDateObj) : ""),
     [startDateObj]
   );
   const end = useMemo(
-    () => (endDateObj ? formatLocalDate(endDateObj) : ""),
+    () => (endDateObj ? formatAdminYmd(endDateObj) : ""),
     [endDateObj]
   );
 
@@ -216,109 +277,148 @@ export default function VillaListesiClient({
     const n = Number(guests);
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
   })();
-  const hasDateRange = !!start && !!end;
+  /* `/arama` ile aynı: iki tarih geçerli VE start < end. */
+  const hasDateRange = isAdminDateRange(start, end);
+  const rangeKey = hasDateRange ? `${start}|${end}` : "";
 
   /* ---------------- AVAILABILITY (public /arama paritesi) ----------------
      Tarih aralığı seçiliyse o aralıkta DOLU villa id'lerini getir
-     (getBlockedVillaIds → get_blocked_villa_ids RPC). hasDateRange false
-     ise boş Set → availability filtresi devre dışı (eski davranış).
-
-     - YARIŞ KOŞULU GUARD: her fetch'e bir `reqId` verilir; yalnız EN SON
-       isteğin yanıtı state'e yazılır (kullanıcı tarih değiştirirse eski
-       response yazılmaz). cancelled flag unmount'ta da yazımı durdurur.
-     - FAIL-SOFT: helper RPC hatasında zaten boş Set döner; ayrıca catch
-       ile boş Set'e düşülür → liste eski davranışa (tüm villalar) iner. */
-  const [blockedSet, setBlockedSet] = useState<Set<string>>(new Set());
+     (getBlockedVillaIds → get_blocked_villa_ids RPC).
+     - Sonuç hangi aralık için alındığıyla (`key`) birlikte saklanır;
+       yalnız GÜNCEL aralığa ait sonuç kullanılır → tarih değişince eski
+       yanıt yanlış aralığa uygulanmaz. `cancelled` unmount/yeniden
+       çalıştırmada eski yazımı durdurur.
+     - FAIL-SOFT: hata → boş Set (helper ile aynı tutum). */
+  const [blockedState, setBlockedState] = useState<{
+    key: string;
+    set: Set<string>;
+  }>({ key: "", set: new Set() });
 
   useEffect(() => {
+    if (!rangeKey) return;
     let cancelled = false;
-
-    /* getBlockedVillaIds geçersiz/eksik range'de RPC çağırmadan boş Set
-       döner → hasDateRange false iken availability filtresi otomatik
-       devre dışı (boş Set). Tek setState async callback içinde. */
     const candidateIds = villas.map((v) => v.id);
     (async () => {
+      let set: Set<string>;
       try {
-        const set = new Set(
-          await getBlockedVillaIdsAction(start, end, candidateIds)
-        );
-        if (!cancelled) setBlockedSet(set);
+        set = new Set(await getBlockedVillaIdsAction(start, end, candidateIds));
       } catch {
-        if (!cancelled) setBlockedSet(new Set()); // fail-soft
+        set = new Set(); // fail-soft
       }
+      if (!cancelled) setBlockedState({ key: rangeKey, set });
     })();
-
     return () => {
       cancelled = true;
     };
-  }, [start, end, villas]);
+  }, [rangeKey, start, end, villas]);
+
+  /* Seçili aralığın müsaitlik yanıtı henüz gelmedi → dolu villaların bir
+     anlığına "müsait" görünüp seçilebilmesini önlemek için ana liste
+     yanıt gelene kadar boş tutulur (public /arama SSR'da bu ara durum
+     zaten yok). Hata da yanıt sayılır (fail-soft boş Set). */
+  const availabilityPending = !!rangeKey && blockedState.key !== rangeKey;
+
+  const blockedSet = useMemo(
+    () =>
+      rangeKey && blockedState.key === rangeKey
+        ? blockedState.set
+        : new Set<string>(),
+    [rangeKey, blockedState]
+  );
+
+  /* ---------------- ESNEK ±3 GÜN (public /arama paritesi) ----------------
+     Havuz: ana tarihte DOLU villalar. Her kaydırılmış pencere (süre sabit)
+     için aynı availability action'ı; en az birinde müsait olan villa
+     "esnek" sayılır. Ana start/end HİÇBİR YERDE değişmez (kart, paylaşım). */
+  const flexKey = flexible && rangeKey ? `${rangeKey}|${ADMIN_FLEX_DAYS}` : "";
+  const [flexState, setFlexState] = useState<{
+    key: string;
+    available: Set<string>;
+  }>({ key: "", available: new Set() });
+
+  useEffect(() => {
+    if (!flexKey || blockedState.key !== rangeKey) return;
+    const poolIds = Array.from(blockedState.set);
+    let cancelled = false;
+    (async () => {
+      const available = new Set<string>();
+      if (poolIds.length > 0) {
+        const windows = buildAdminFlexWindows(start, end, ADMIN_FLEX_DAYS);
+        const results = await Promise.all(
+          windows.map((w) =>
+            getBlockedVillaIdsAction(w.start, w.end, poolIds)
+              .then((ids) => new Set(ids))
+              .catch(() => null)
+          )
+        );
+        for (const id of poolIds) {
+          if (results.some((bs) => bs !== null && !bs.has(id))) {
+            available.add(id);
+          }
+        }
+      }
+      if (!cancelled) setFlexState({ key: flexKey, available });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [flexKey, rangeKey, blockedState, start, end]);
 
   /* 🛡️ Migration 050 — dropdown yalnız grup kökleri (name === group). */
   const rootLocations = useMemo(
-    () =>
-      locations.filter((l) => {
-        const g = (l.filter_group_name ?? "").toString().trim();
-        return g.length > 0 && l.name === g;
-      }),
+    () => adminRootLocations(locations),
     [locations]
   );
 
-  /* Seçilen grup kökü → o gruba ait TÜM location_id'ler (kök dahil).
-     Kürasyonsuz/eşleşmeyen seçimde fallback: yalnız seçilen id. */
-  const expandedLocationIds = useMemo(() => {
-    if (!locationId) return null;
-    const selected = locations.find((l) => l.id === locationId);
-    const group = (selected?.filter_group_name ?? "").toString().trim();
-    if (!group) return new Set([locationId]);
-    const ids = locations
-      .filter((l) => (l.filter_group_name ?? "").toString().trim() === group)
-      .map((l) => l.id);
-    return new Set(ids.length > 0 ? ids : [locationId]);
-  }, [locationId, locations]);
+  /* Seçilen bölgeler → filtrelenecek location_id kümesi (grup genişletme). */
+  const expandedLocationIds = useMemo(
+    () => expandAdminRegionSelection(regionIds, locations),
+    [regionIds, locations]
+  );
 
-  const filtered = useMemo(() => {
-    /* 🔎 Türkçe-aware arama kanonu (ırmak/Irmak/İrmak → aynı). */
-    const q = normalizeSearchText(search);
-    return villas.filter((v) => {
-      /* 🛡️ AVAILABILITY — public /arama ile aynı: seçili tarihte dolu
-         villayı gizle. hasDateRange false iken blockedSet boş → no-op. */
-      if (blockedSet.has(v.id)) return false;
-      if (expandedLocationIds && !expandedLocationIds.has(v.location_id))
-        return false;
-      if (guestsNum > 0 && (v.guests ?? 0) < guestsNum) return false;
-      if (categoryIds.length > 0) {
-        /* 🛡️ AND — public /arama ile birebir: villa seçili TÜM
-           kategorilere sahip olmalı (arama page typeSet.size === required
-           semantiği). Tek kategori seçiminde AND === OR. */
-        const cats = villaCategoryMap[v.id];
-        if (!cats || !categoryIds.every((c) => cats.includes(c)))
-          return false;
-      }
-      /* 🛡️ Search — title / location adı / slug / id üzerinde lowercase
-         includes. Dropdown filtreleriyle AND mantığı (en sonda). */
-      if (q) {
-        const haystack = normalizeSearchText(
-          (v.title || "") +
-            " " +
-            (v.location || "") +
-            " " +
-            (v.slug || "") +
-            " " +
-            (v.id || "")
-        );
-        if (!haystack.includes(q)) return false;
-      }
-      return true;
-    });
+  /* Aşama 1 — tarihten bağımsız filtreler (public: DB sorgusu). */
+  const baseFiltered = useMemo(() => {
+    const f: AdminVillaFilters = {
+      locationIds: expandedLocationIds,
+      guests: guestsNum,
+      categoryIds,
+      villaCategoryMap,
+      featureIds,
+      villaFeatureMap,
+      search,
+    };
+    return villas.filter((v) => matchesBaseFilters(v, f));
   }, [
     villas,
     expandedLocationIds,
     guestsNum,
     categoryIds,
     villaCategoryMap,
+    featureIds,
+    villaFeatureMap,
     search,
-    blockedSet,
   ]);
+
+  /* Aşama 2 — tarih seçiliyse: dolu değil + fiyat kapsamı tam. */
+  const filtered = useMemo(
+    () =>
+      !hasDateRange
+        ? baseFiltered
+        : availabilityPending
+          ? []
+          : baseFiltered.filter((v) =>
+              isVisibleForDateRange(v, start, end, blockedSet)
+            ),
+    [baseFiltered, hasDateRange, availabilityPending, start, end, blockedSet]
+  );
+
+  /* Esnek sonuçlar — ana listeden AYRI (sayaç/sıralama/sayfalama dışı). */
+  const flexibleVillas = useMemo(() => {
+    if (!flexKey || flexState.key !== flexKey) return [];
+    return baseFiltered.filter(
+      (v) => blockedSet.has(v.id) && flexState.available.has(v.id)
+    );
+  }, [flexKey, flexState, baseFiltered, blockedSet]);
 
   /* ---------------- SORT STAGE (public /arama reuse) ----------------
      `filtered` (availability + tüm filtreler) SONRASI, render ÖNCESİ temiz
@@ -352,6 +452,9 @@ export default function VillaListesiClient({
           cleaning_fee: v.cleaning_fee,
           cleaning_currency: v.cleaning_currency,
           cleaning_limit: v.cleaning_limit,
+          /* `/arama` ile aynı: kart indirimli toplamı gösterdiği için
+             sıralama anahtarı da aynı indirimlerle hesaplanır. */
+          discounts: v.discounts ?? [],
         });
         sp =
           typeof r.total === "number" &&
@@ -400,11 +503,13 @@ export default function VillaListesiClient({
      değişim imzada zaten var. */
   const filterSignature = [
     search,
-    locationId,
+    regionIds.join(","),
     categoryIds.join(","),
+    featureIds.join(","),
     guests,
     start,
     end,
+    flexible ? "flex" : "",
     sort,
   ].join("|");
   const [prevFilterSignature, setPrevFilterSignature] =
@@ -464,7 +569,7 @@ export default function VillaListesiClient({
       searchParams.end = end;
     }
     if (guestsNum > 0) searchParams.guests = guestsNum;
-    if (locationId) searchParams.regions = [locationId];
+    if (regionIds.length) searchParams.regions = regionIds;
     if (categoryIds.length) searchParams.categories = categoryIds;
 
     const res = await createSharedVillaList({
@@ -504,6 +609,93 @@ export default function VillaListesiClient({
     setShareError(null);
   }
 
+  /* Tek kart render'ı — ana grid ve esnek bölüm AYNI seçim overlay'ini
+     kullanır. Esnek villada fiyat prop'ları bastırılır (public /arama ile
+     aynı); VillaCard "±3 gün içinde müsait" gösterir. */
+  function renderCuratorCard(v: VillaListesiRow, isFlex: boolean) {
+    const withPricing = hasDateRange && !isFlex;
+    const isSelected = selected.has(v.id);
+    /* Starting price fallback (arama page ile aynı pattern). */
+    const fallback = (() => {
+      const rawPrice = Number(v.price);
+      if (Number.isFinite(rawPrice) && rawPrice > 0) {
+        return { price: rawPrice, currency: v.currency || "TRY" };
+      }
+      const sp = getStartingPrice(v.prices);
+      return sp ? sp : null;
+    })();
+    return (
+      <div key={v.id} className="relative">
+        {/* Selection checkbox overlay — z-30, Link tıklamasından önce yakalar. */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleSelect(v.id);
+          }}
+          aria-pressed={isSelected}
+          aria-label={
+            isSelected ? "Seçimi kaldır" : "Listeye ekle"
+          }
+          className={
+            "absolute top-3 left-3 z-30 " +
+            "w-9 h-9 rounded-full flex items-center justify-center " +
+            "backdrop-blur-md ring-1 ring-inset " +
+            "transition-colors duration-200 " +
+            (isSelected
+              ? "bg-emerald-500 ring-emerald-500 text-white"
+              : "bg-white/70 ring-white/40 text-stone-700 hover:bg-white")
+          }
+        >
+          {isSelected ? (
+            <CheckSquare size={16} strokeWidth={2} />
+          ) : (
+            <Square size={16} strokeWidth={2} />
+          )}
+        </button>
+
+        {/* Seçim halkası — VillaCard'ı sarmalar.
+            rounded-[20px] curation variant outer radius ile uyumlu. */}
+        <div
+          className={
+            "rounded-[20px] transition-shadow duration-200 " +
+            (isSelected
+              ? "ring-4 ring-emerald-200/70 ring-offset-2 ring-offset-[var(--admin-bg,#fafafa)]"
+              : "")
+          }
+        >
+          <VillaCard
+            id={v.id}
+            slug={v.slug}
+            title={v.title}
+            location={v.location}
+            price={fallback?.price ?? undefined}
+            currency={fallback?.currency || "TRY"}
+            images={v.images}
+            badge={v.badge ?? undefined}
+            bedrooms={v.bedrooms || 1}
+            bathrooms={v.bathrooms || 1}
+            guests={v.guests || 2}
+            stayStart={hasDateRange ? start : undefined}
+            stayEnd={hasDateRange ? end : undefined}
+            prices={withPricing ? v.prices : undefined}
+            stayDiscounts={withPricing ? v.discounts : undefined}
+            cleaningFee={withPricing ? v.cleaning_fee : undefined}
+            cleaningCurrency={
+              withPricing ? v.cleaning_currency : undefined
+            }
+            cleaningLimit={
+              withPricing ? v.cleaning_limit : undefined
+            }
+            isFlexible={isFlex}
+            variant="curation"
+          />
+        </div>
+      </div>
+    );
+  }
+
   /* ---------------- RENDER ---------------- */
   return (
     <div className="space-y-6 pb-32">
@@ -540,7 +732,7 @@ export default function VillaListesiClient({
 
       {/* ════════ FILTER BAR ════════ */}
       <section className="admin-card-flat p-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
           {/* 📅 Tek calendar date-range — react-datepicker selectsRange.
               FilterSidebar / Hero ile aynı kütüphane + pattern. Kullanıcı
               önce girişe, sonra çıkışa tıklar; tek range oluşur. */}
@@ -557,77 +749,50 @@ export default function VillaListesiClient({
               ariaLabel="Konaklama tarihi aralığı"
             />
           </div>
-          {/* 🏷️ Kategori — MULTI-SELECT (OR). Compact checkbox dropdown.
-              Boş seçim = tüm kategoriler. Bölge filtresi single kalır. */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] uppercase tracking-wide text-[var(--admin-muted-2)] font-medium">
-              Kategori
-            </label>
-            <div className="relative z-40" ref={catRef}>
-              <button
-                type="button"
-                onClick={() => setCatOpen((o) => !o)}
-                aria-haspopup="listbox"
-                aria-expanded={catOpen}
-                className="input w-full flex items-center justify-between gap-2 text-left"
-              >
-                <span
-                  className={
-                    categoryIds.length === 0
-                      ? "text-[var(--admin-muted-2)]"
-                      : ""
-                  }
-                >
-                  {categoryIds.length === 0
-                    ? "Tüm kategoriler"
-                    : `${categoryIds.length} kategori seçili`}
-                </span>
-                <ChevronDown
-                  size={14}
-                  className="text-[var(--admin-muted-2)] shrink-0"
-                />
-              </button>
-              {catOpen && (
-                <ul
-                  role="listbox"
-                  className="absolute z-40 mt-1 left-0 right-0 max-h-64 overflow-auto rounded-lg border border-[var(--color-stone-200)] bg-white shadow-[0_12px_28px_-12px_rgb(27_26_23/0.22)] py-1"
-                >
-                  {categories.map((c) => {
-                    const checked = categoryIds.includes(c.id);
-                    return (
-                      <li key={c.id}>
-                        <label className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)] cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleCategory(c.id)}
-                          />
-                          <span className="truncate">{c.name}</span>
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] uppercase tracking-wide text-[var(--admin-muted-2)] font-medium">
-              Bölge
-            </label>
-            <select
-              value={locationId}
-              onChange={(e) => setLocationId(e.target.value)}
-              className="input"
-            >
-              <option value="">Tüm bölgeler</option>
-              {rootLocations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-          </div>
+
+          {/* 🏷️ Villa tipi — MULTI-SELECT (AND, public /arama ile aynı). */}
+          <MultiSelectDropdown
+            label="Kategori"
+            allLabel="Tüm kategoriler"
+            countLabel={(n) => `${n} kategori seçili`}
+            options={categories}
+            selectedIds={categoryIds}
+            onToggle={toggleCategory}
+            open={catOpen}
+            setOpen={setCatOpen}
+            containerRef={catRef}
+          />
+
+          {/* 📍 Bölge — MULTI-SELECT (public Hero gibi). Yalnız grup
+              kökleri listelenir; kök seçimi gruptaki tüm alt bölgeleri
+              kapsar (Migration 050). */}
+          <MultiSelectDropdown
+            label="Bölge"
+            allLabel="Tüm bölgeler"
+            countLabel={(n) => `${n} bölge seçili`}
+            options={rootLocations}
+            selectedIds={regionIds}
+            onToggle={toggleRegion}
+            open={regionOpen}
+            setOpen={setRegionOpen}
+            containerRef={regionRef}
+          />
+
+          {/* ✨ Villa özellikleri — MULTI-SELECT (AND, public "Gelişmiş
+              Arama" ile aynı). */}
+          <MultiSelectDropdown
+            label="Özellikler"
+            allLabel="Tüm özellikler"
+            countLabel={(n) => `${n} özellik seçili`}
+            options={features}
+            selectedIds={featureIds}
+            onToggle={toggleFeature}
+            open={featureOpen}
+            setOpen={setFeatureOpen}
+            containerRef={featureRef}
+            emptyLabel="Özellik bulunamadı"
+          />
+
           <div className="space-y-1.5">
             <label className="text-[11px] uppercase tracking-wide text-[var(--admin-muted-2)] font-medium">
               Kişi
@@ -642,10 +807,29 @@ export default function VillaListesiClient({
             />
           </div>
         </div>
+
+        {/* 🔁 Esnek tarih — public "Gelişmiş Arama" ile aynı ±3 gün. */}
+        <label className="mt-4 inline-flex items-start gap-2 text-[12.5px] text-[var(--admin-text)] cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={flexible}
+            onChange={(e) => setFlexible(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            Sonuçlarda {ADMIN_FLEX_DAYS} gün önceki ve sonraki villaları da göster
+            <span className="block text-[11.5px] text-[var(--admin-muted-2)]">
+              Yalnız tarih seçiliyken çalışır; bu villalar listenin altında
+              ayrı gösterilir.
+            </span>
+          </span>
+        </label>
+
         <p className="mt-3 text-[11.5px] text-[var(--admin-muted-2)]">
-          Tarih girmek opsiyonel — sadece müşterinin göreceği fiyat
-          önizlemesi (toplam / gece / temizlik dahil) için kullanılır.
-          Boş bırakırsanız &ldquo;gece başlangıç fiyatı&rdquo; gösterilir.
+          Tarih seçilirse o tarihte dolu olan ve seçilen gecelerin
+          tamamında fiyatı tanımlı olmayan villalar listelenmez; kartlarda
+          indirim dahil toplam fiyat gösterilir. Tarih boşsa &ldquo;gece
+          başlangıç fiyatı&rdquo; gösterilir.
         </p>
         <div className="mt-4 flex items-center justify-between text-[13px] text-[var(--admin-muted)]">
           <span>
@@ -709,14 +893,17 @@ export default function VillaListesiClient({
             mülk yönetiminden bir mülk ekleyin ve aktifleştirin.
           </p>
         </div>
+      ) : availabilityPending ? (
+        <div className="admin-card-flat p-12 text-center text-[var(--admin-muted-2)]">
+          <p className="text-[13px]">Müsaitlik kontrol ediliyor…</p>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="admin-card-flat p-12 text-center text-[var(--admin-muted-2)] space-y-2">
           <p className="font-medium text-[var(--admin-text)]">
             Filtreye uyan mülk yok.
           </p>
           <p className="text-[12.5px]">
-            Toplam {villas.length} aktif villa var. Bölge/kişi filtresini
-            gevşetin.
+            Toplam {villas.length} aktif villa var. Filtreleri gevşetin.
           </p>
         </div>
       ) : (
@@ -724,86 +911,7 @@ export default function VillaListesiClient({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-x-5 md:gap-x-6 gap-y-10">
           {/* 🚀 `pageItems` = sortedFiltered'ın yalnız görünen dilimi.
              Kart içeriği, prop'ları ve seçim overlay'i AYNEN. */}
-          {pageItems.map((v) => {
-            const isSelected = selected.has(v.id);
-            /* Starting price fallback (arama page ile aynı pattern). */
-            const fallback = (() => {
-              const rawPrice = Number(v.price);
-              if (Number.isFinite(rawPrice) && rawPrice > 0) {
-                return { price: rawPrice, currency: v.currency || "TRY" };
-              }
-              const sp = getStartingPrice(v.prices);
-              return sp ? sp : null;
-            })();
-            return (
-              <div key={v.id} className="relative">
-                {/* Selection checkbox overlay — z-30, Link tıklamasından önce yakalar. */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleSelect(v.id);
-                  }}
-                  aria-pressed={isSelected}
-                  aria-label={
-                    isSelected ? "Seçimi kaldır" : "Listeye ekle"
-                  }
-                  className={
-                    "absolute top-3 left-3 z-30 " +
-                    "w-9 h-9 rounded-full flex items-center justify-center " +
-                    "backdrop-blur-md ring-1 ring-inset " +
-                    "transition-colors duration-200 " +
-                    (isSelected
-                      ? "bg-emerald-500 ring-emerald-500 text-white"
-                      : "bg-white/70 ring-white/40 text-stone-700 hover:bg-white")
-                  }
-                >
-                  {isSelected ? (
-                    <CheckSquare size={16} strokeWidth={2} />
-                  ) : (
-                    <Square size={16} strokeWidth={2} />
-                  )}
-                </button>
-
-                {/* Seçim halkası — VillaCard'ı sarmalar.
-                    rounded-[20px] curation variant outer radius ile uyumlu. */}
-                <div
-                  className={
-                    "rounded-[20px] transition-shadow duration-200 " +
-                    (isSelected
-                      ? "ring-4 ring-emerald-200/70 ring-offset-2 ring-offset-[var(--admin-bg,#fafafa)]"
-                      : "")
-                  }
-                >
-                  <VillaCard
-                    id={v.id}
-                    slug={v.slug}
-                    title={v.title}
-                    location={v.location}
-                    price={fallback?.price ?? undefined}
-                    currency={fallback?.currency || "TRY"}
-                    images={v.images}
-                    badge={v.badge ?? undefined}
-                    bedrooms={v.bedrooms || 1}
-                    bathrooms={v.bathrooms || 1}
-                    guests={v.guests || 2}
-                    stayStart={hasDateRange ? start : undefined}
-                    stayEnd={hasDateRange ? end : undefined}
-                    prices={hasDateRange ? v.prices : undefined}
-                    cleaningFee={hasDateRange ? v.cleaning_fee : undefined}
-                    cleaningCurrency={
-                      hasDateRange ? v.cleaning_currency : undefined
-                    }
-                    cleaningLimit={
-                      hasDateRange ? v.cleaning_limit : undefined
-                    }
-                    variant="curation"
-                  />
-                </div>
-              </div>
-            );
-          })}
+          {pageItems.map((v) => renderCuratorCard(v, false))}
         </div>
         {totalPages > 1 && (
           <PaginationBar
@@ -813,6 +921,28 @@ export default function VillaListesiClient({
           />
         )}
         </>
+      )}
+
+      {/* ════════ ESNEK SONUÇLAR (±3 gün) ════════
+          Public /arama ile aynı: ana listeden AYRI, altta; sayaç, sıralama,
+          sayfalama ve "Tümünü seç" dışında. Kartlar seçilebilir; paylaşımda
+          ana tarih aynen kullanılır (bu villalar o tarihte DOLU). */}
+      {flexibleVillas.length > 0 && (
+        <section className="space-y-4">
+          <div className="admin-card-flat px-5 py-4">
+            <p className="text-[13.5px] font-medium text-[var(--admin-text)]">
+              ±{ADMIN_FLEX_DAYS} gün içinde müsait ({flexibleVillas.length})
+            </p>
+            <p className="text-[12px] text-[var(--admin-muted-2)] mt-0.5">
+              Seçilen tarihte dolu, ancak {ADMIN_FLEX_DAYS} gün önce veya
+              sonra aynı süre için müsait olan villalar. Listeye eklerseniz
+              müşteri bunları seçilen tarihle görür.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-x-5 md:gap-x-6 gap-y-10">
+            {flexibleVillas.map((v) => renderCuratorCard(v, true))}
+          </div>
+        </section>
       )}
 
       {/* ════════ STICKY ACTION BAR ════════ */}
@@ -1158,15 +1288,92 @@ function PaginationBar({
 }
 
 /* ===============================================================
-   HELPERS
-   =============================================================== */
-
-/* Date → YYYY-MM-DD (local TZ-safe). FilterSidebar `formatDateForUrl`
-   ile birebir aynı semantik — `toISOString()` UTC drift'ine düşmez,
-   getFullYear/Month/Date kullanır. */
-function formatLocalDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+   MultiSelectDropdown — kompakt checkbox dropdown
+   ===============================================================
+   Önceki "Kategori" dropdown'unun BİREBİR görünüm/davranışı (aynı
+   sınıflar, aynı outside-click kapanışı); Bölge ve Özellikler de aynı
+   bileşeni kullanır. Boş seçim = tümü.
+=============================================================== */
+function MultiSelectDropdown({
+  label,
+  allLabel,
+  countLabel,
+  options,
+  selectedIds,
+  onToggle,
+  open,
+  setOpen,
+  containerRef,
+  emptyLabel,
+}: {
+  label: string;
+  allLabel: string;
+  countLabel: (n: number) => string;
+  options: Array<{ id: string; name: string }>;
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+  open: boolean;
+  setOpen: (updater: (o: boolean) => boolean) => void;
+  containerRef: RefObject<HTMLDivElement | null>;
+  emptyLabel?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[11px] uppercase tracking-wide text-[var(--admin-muted-2)] font-medium">
+        {label}
+      </label>
+      <div className={"relative " + (open ? "z-50" : "z-40")} ref={containerRef}>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          className="input w-full flex items-center justify-between gap-2 text-left"
+        >
+          <span
+            className={
+              selectedIds.length === 0 ? "text-[var(--admin-muted-2)]" : ""
+            }
+          >
+            {selectedIds.length === 0
+              ? allLabel
+              : countLabel(selectedIds.length)}
+          </span>
+          <ChevronDown
+            size={14}
+            className="text-[var(--admin-muted-2)] shrink-0"
+          />
+        </button>
+        {open && (
+          <ul
+            role="listbox"
+            aria-label={label}
+            className="absolute z-40 mt-1 left-0 right-0 max-h-64 overflow-auto rounded-lg border border-[var(--color-stone-200)] bg-white shadow-[0_12px_28px_-12px_rgb(27_26_23/0.22)] py-1"
+          >
+            {options.length === 0 && emptyLabel ? (
+              <li className="px-3 py-1.5 text-[13px] text-[var(--admin-muted-2)]">
+                {emptyLabel}
+              </li>
+            ) : (
+              options.map((o) => {
+                const checked = selectedIds.includes(o.id);
+                return (
+                  <li key={o.id}>
+                    <label className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--color-stone-700)] hover:bg-[var(--color-sand-50)] cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => onToggle(o.id)}
+                      />
+                      <span className="truncate">{o.name}</span>
+                    </label>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
 }

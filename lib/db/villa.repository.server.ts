@@ -651,6 +651,9 @@ export const villaAdminRepository = {
         ile destructure). COVER-SLIM listPublic ile birebir (embedLimits +
         metadata orderBy). Filtre is_active+deleted_at → dbAdmin bypass inert.
   =============================================================== */
+  /* 🛡️ villa_discounts embed'i EKLENDİ — /liste/[token] kartı admin
+     önizlemesiyle AYNI indirimli toplamı göstersin diye. Tek tüketici:
+     SharedListPageBody. Filtre/sıra/kontrat DEĞİŞMEDİ. */
   async findCardsByIds(ids: string[]) {
     return await dbAdmin
       .from("villa")
@@ -659,7 +662,8 @@ export const villaAdminRepository = {
       *,
       location:villa_locations(name),
       villa_images (image_url, is_cover, sort_order),
-      villa_prices (price, currency, start_date, end_date)
+      villa_prices (price, currency, start_date, end_date),
+      villa_discounts (start_date, end_date, discount_type, discount_value, currency)
     `
       )
       .in("id", ids)
@@ -807,6 +811,10 @@ export const villaAdminRepository = {
         dahil (card). KONTRAT: `return await q` ham `{data,error}` (caller
         `villasRes.error`). Filtre → dbAdmin bypass inert.
   =============================================================== */
+  /* 🛡️ villa_discounts embed'i EKLENDİ — admin villa listesi kart
+     toplamı / fiyat sıralaması `/arama` ile AYNI indirimli motoru
+     (`calculateGrandTotal` `discounts`) kullansın diye. Tek tüketici:
+     /maki-admin/villa-listesi. `findSearchResults` ile aynı embed. */
   async findActiveCuratorCards() {
     return await dbAdmin
       .from("villa")
@@ -817,7 +825,8 @@ export const villaAdminRepository = {
         cleaning_fee, cleaning_currency, cleaning_limit,
         location:villa_locations(name),
         villa_images (image_url, is_cover, sort_order),
-        villa_prices (price, currency, start_date, end_date)
+        villa_prices (price, currency, start_date, end_date),
+        villa_discounts (start_date, end_date, discount_type, discount_value, currency)
       `
       )
       .eq("is_active", true)
