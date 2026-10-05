@@ -6,6 +6,11 @@ import {
   type ExpirationKey,
 } from "./shared-villa-list.constants";
 import { getVillasByIds, type VillaDTO } from "./villa.service";
+/* 🛡️ PASİF villa paylaşımı — MEVCUT özel link (/v/[token]) sistemi.
+   Yeni token sistemi YOK: token yoksa mevcut üretici (idempotent; varsa
+   aynı token'ı döner) kullanılır. */
+import { villaAdminRepository } from "@/lib/db/villa.repository.server";
+import { generatePrivateAccessToken } from "./villa-admin/private-token.service";
 
 /* ===============================================================
    🛡️ SHARED VILLA LISTS SERVICE — admin curator share
@@ -130,6 +135,9 @@ export type SharedVillaListData = {
   snapshot_count: number;
   /** Şu an görünür (active + not-deleted) villa DTO listesi. */
   villas: VillaDTO[];
+  /** Snapshot'taki TÜM villa id'leri (admin sırası). /liste sayfası pasif
+   *  villaları da (özel linkle) gösterebilsin diye; `villas` yalnız aktif. */
+  villa_ids: string[];
 };
 
 /* ===============================================================
@@ -182,6 +190,12 @@ export async function createSharedVillaList(
       error: `Liste en fazla ${MAX_VILLA_IDS} villa içerebilir.`,
     };
   }
+
+  /* 🛡️ PASİF villa → özel link token'ı garanti et (yoksa üret). Müşteri
+     /liste'de pasif villaya YALNIZ /v/[token] ile gider; token üretilemezse
+     liste OLUŞTURULMAZ (linksiz pasif villa paylaşılmasın). */
+  const tokenError = await ensurePrivateTokensForInactive(cleaned);
+  if (tokenError) return { ok: false, error: tokenError };
 
   /* Search params snapshot — boş object yerine NULL yaz (storage temizliği). */
   const sp: SharedSearchParams | null = (() => {
@@ -314,5 +328,43 @@ export async function getSharedVillaListByToken(
     searchParams,
     snapshot_count: villaIds.length,
     villas: sorted,
+    villa_ids: villaIds,
   };
+}
+
+/* ---------------------------------------------------------------
+   🔐 Pasif villalar için özel link token'ı (mevcut sistem)
+   ---------------------------------------------------------------
+   Tek toplu sorgu ile aktiflik/token durumu okunur; yalnız PASİF,
+   silinmemiş ve token'ı OLMAYAN villalar için mevcut
+   `generatePrivateAccessToken` çağrılır (sıralı — çakışma retry'ı
+   kendi içinde). Aktif villalara HİÇ dokunulmaz. Hata → mesaj döner. */
+async function ensurePrivateTokensForInactive(
+  villaIds: string[]
+): Promise<string | null> {
+  const { data, error } =
+    await villaAdminRepository.findPrivateTokenStatusByIds(villaIds);
+  if (error) {
+    console.error("[sharedVillaList.create] token status FAILED", error.message);
+    return "Liste oluşturulamadı. Lütfen tekrar deneyin.";
+  }
+  const rows = (data || []) as Array<{
+    id: string;
+    is_active: boolean | null;
+    deleted_at: string | null;
+    private_access_token: string | null;
+  }>;
+  for (const r of rows) {
+    if (r.is_active === true || r.deleted_at) continue;
+    const hasToken =
+      typeof r.private_access_token === "string" &&
+      r.private_access_token.trim().length > 0;
+    if (hasToken) continue;
+    const res = await generatePrivateAccessToken(String(r.id));
+    if (!res.ok) {
+      console.error("[sharedVillaList.create] private token FAILED", res.error);
+      return "Pasif villa için özel bağlantı oluşturulamadı. Lütfen tekrar deneyin.";
+    }
+  }
+  return null;
 }

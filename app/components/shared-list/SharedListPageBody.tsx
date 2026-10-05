@@ -51,6 +51,8 @@ type RawVilla = {
   slug: string | null;
   title: string | null;
   is_active: boolean | null;
+  /* Pasif villa özel linki (/v/[token]) — mevcut sistem. */
+  private_access_token?: string | null;
   deleted_at: string | null;
   badge: string | null;
   guests: number | null;
@@ -152,9 +154,15 @@ export default async function SharedListPageBody({
         SELECT pattern: `*` + embed — admin /villa-listesi ve /arama
         ile birebir. Açık column listesi + alias embed kombinasyonu
         DB client'de silent empty result yaratıyordu; FIX. */
-  const snapshotIds: string[] = Array.isArray(list.villas)
-    ? list.villas.map((v) => v.id).filter(Boolean)
-    : [];
+  /* 🛡️ PASİF VİLLA — snapshot'taki TÜM id'ler kullanılır (`list.villas`
+     yalnız aktifleri içerir). Görünürlük aşağıda: aktif → normal kart,
+     pasif → yalnız özel link token'ı varsa. Eski kayıtlarda `villa_ids`
+     yoksa eski kaynağa (aktif villalar) düşülür. */
+  const snapshotIds: string[] = Array.isArray(list.villa_ids)
+    ? list.villa_ids.filter(Boolean)
+    : Array.isArray(list.villas)
+      ? list.villas.map((v) => v.id).filter(Boolean)
+      : [];
 
   /* Boş snapshot — TÜM curated villalar pasif/silinmiş veya
      getVillasByIds visibility filter ile elendi. Listede gösterilecek
@@ -178,7 +186,12 @@ export default async function SharedListPageBody({
     console.error("[liste.fetch] villa rows FAILED", rawErr.message);
   }
 
-  const villaRows: RawVilla[] = (rawVillas || []) as RawVilla[];
+  /* Görünürlük: AKTİF villa (eski davranış) veya özel linki olan PASİF
+     villa. Linksiz pasif villa (ör. paylaşımdan sonra pasife alınmış)
+     eskisi gibi gösterilmez. */
+  const villaRows: RawVilla[] = ((rawVillas || []) as RawVilla[]).filter(
+    (v) => v.is_active === true || !!privateTokenOf(v)
+  );
 
   /* Snapshot order preserve — admin curate sırasına göre render. */
   const indexOf = new Map(snapshotIds.map((id, idx) => [id, idx]));
@@ -379,6 +392,14 @@ export default async function SharedListPageBody({
                   }
                   /* 🛡️ Kart metinleri + detay linki locale-aware. */
                   locale={locale}
+                  /* 🛡️ PASİF villa → YALNIZ özel link (/v/[token]);
+                     /kiralik-villa/[slug] kullanılmaz. Aktif → undefined
+                     (mevcut link davranışı birebir). */
+                  privateHref={
+                    v.is_active === true
+                      ? undefined
+                      : `${localePrefix}/v/${privateTokenOf(v)}`
+                  }
                 />
               );
             })}
@@ -420,4 +441,10 @@ export default async function SharedListPageBody({
       </div>
     </div>
   );
+}
+
+/* Pasif villanın özel link token'ı (boş/whitespace → null). */
+function privateTokenOf(v: RawVilla): string | null {
+  const t = v.private_access_token;
+  return typeof t === "string" && t.trim().length > 0 ? t.trim() : null;
 }

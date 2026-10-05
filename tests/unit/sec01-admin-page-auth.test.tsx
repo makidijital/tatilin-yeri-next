@@ -62,7 +62,7 @@ const h = vi.hoisted(() => {
     },
     villaAdminRepository: {
       findAllIdTitleSlug: dataSpy("findAllIdTitleSlug", { data: [], error: null }),
-      findActiveCuratorCards: dataSpy("findActiveCuratorCards", { data: [], error: null }),
+      findCuratorCards: dataSpy("findCuratorCards", { data: [], error: null }),
     },
     villaLocationRepository: {
       findAllForFilter: dataSpy("findAllForFilter", { data: [], error: null }),
@@ -201,7 +201,7 @@ const PAGES: PageCaseWithNeed[] = [
     need: "villa_lists",
     run: () => VillaListesiPage(),
     dataCalls: [
-      "findActiveCuratorCards",
+      "findCuratorCards",
       "findAllForFilter",
       "findAllIdNameBySortOrder",
       "findAllRelations",

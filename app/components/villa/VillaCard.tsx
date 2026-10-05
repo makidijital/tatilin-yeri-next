@@ -173,6 +173,13 @@ type Props = {
    *  href akışı DEĞİŞMEZ (yalnız bu kartın fiyat sunumu). Default false
    *  → mevcut kartlar birebir aynı. Yalnız default (public) variant. */
   isFlexible?: boolean;
+  /** 🛡️ ADDITIVE — PASİF villa özel linki (/v/[token], locale önekli).
+   *  Verilirse kart detay linki `/kiralik-villa/<slug>` YERİNE bu adres
+   *  olur (tarih varsa start/end aynen eklenir) ve müsaitlik butonu
+   *  rezervasyon modalını açmak yerine bu adrese gider (özel sayfa
+   *  rezervasyon akışı sunmaz). Verilmezse davranış BİREBİR eskisi gibi.
+   *  Tüketici: /liste/[token] (SharedListPageBody). */
+  privateHref?: string;
   /* 🛡️ AKTİF İNDİRİM (yalnız "discount" variant tüketir) — ham
      villa_discounts kaydı (lib/cache.helpers > getCachedDiscountCollectionVillas
      tarafından price.engine > getActiveDiscount ile ÖNCEDEN seçilmiş,
@@ -236,6 +243,7 @@ export default function VillaCard({
   variant = "default",
   reserveInfo,
   isFlexible = false,
+  privateHref,
   discount = null,
   discountAvailable,
   locale,
@@ -536,10 +544,10 @@ export default function VillaCard({
   /* 🛡️ PHASE 10G — locale prefix'i `buildLocaleAlternates` (Phase 7B,
      saf helper) üretir; "tr" için sonuç `/kiralik-villa/<slug>` —
      ESKİ DEĞERLE BİREBİR AYNI. Query-string mantığı DEĞİŞMEDİ. */
-  let detailHref = buildLocaleAlternates(
-    `/kiralik-villa/${slug}`,
-    effectiveLocale
-  ).canonical;
+  let detailHref = privateHref
+    ? privateHref
+    : buildLocaleAlternates(`/kiralik-villa/${slug}`, effectiveLocale)
+        .canonical;
   if (stayStart && stayEnd) {
     const qs = new URLSearchParams();
     qs.set("start", stayStart);
@@ -583,6 +591,8 @@ export default function VillaCard({
      Buton JSX'i, className, metin ve tasarımı DEĞİŞMEDİ. */
   const discountReserveHref: string | null = (() => {
     if (!isDiscountVariant) return null;
+    /* Pasif villa (özel link) → rezervasyon sayfasına yönlendirme YOK. */
+    if (privateHref) return null;
     /* 🛡️ TAM ARALIK MÜSAİTLİK KAPISI — indirim penceresinde TEK BİR
        GECE bile doluysa rezervasyon sayfasına YÖNLENDİRME YOK; CTA
        aşağıdaki mevcut `detailHref` fallback'ine düşer.
@@ -957,6 +967,11 @@ export default function VillaCard({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              /* Pasif villa → rezervasyon modalı yok; özel sayfaya git. */
+              if (privateHref) {
+                router.push(detailHref);
+                return;
+              }
               setIsBookingOpen(true);
               ensureBookingModal();
             }}
@@ -1615,6 +1630,11 @@ export default function VillaCard({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                /* Pasif villa → rezervasyon modalı yok; özel sayfaya git. */
+                if (privateHref) {
+                  router.push(detailHref);
+                  return;
+                }
                 setIsBookingOpen(true);
                 ensureBookingModal();
               }}

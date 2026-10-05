@@ -72,6 +72,45 @@ export type AdminVillaFilters = {
 };
 
 /* ---------------------------------------------------------------
+   KAPSAM — listeye hangi villalar girer? (admin'e özel kural)
+   ---------------------------------------------------------------
+   AKTİF villa → her zaman (belge numarasından bağımsız; eski davranış).
+   PASİF villa → yalnız "fiyatı girilmiş" ise: villa_prices'ta POZİTİF
+     fiyatlı VE bitişi bugün veya sonrası olan en az bir sezon kaydı.
+     Yalnız geçmişte bitmiş fiyatlar veya hiç fiyat yok → listeye girmez.
+     Belge numarası pasif villa için de filtre DEĞİLDİR.
+   Silinmiş villalar veri kaynağında zaten elenir (deleted_at IS NULL).
+   Tarih seçilince ek olarak seçilen gecelerin TAMAMINDA fiyat aranır
+   (`hasAdminPriceCoverage`) — bu kural aktif/pasif herkese aynı. */
+
+type ScopePrice = { price: number; end_date: string };
+
+/** Pozitif fiyatlı ve bitişi `todayYmd` veya sonrası olan sezon var mı?
+ *  (`end_date` kapalı aralık — o gün dahil; YYYY-MM-DD string kıyası.) */
+export function hasCurrentOrFuturePrice(
+  prices: ReadonlyArray<ScopePrice>,
+  todayYmd: string
+): boolean {
+  return prices.some(
+    (p) =>
+      Number.isFinite(Number(p.price)) &&
+      Number(p.price) > 0 &&
+      typeof p.end_date === "string" &&
+      p.end_date >= todayYmd
+  );
+}
+
+/** Villa listesi havuzu: AKTİF veya (PASİF + güncel/gelecek fiyatlı). */
+export function isInVillaListesiScope(
+  v: { is_active: boolean | null | undefined; prices: ReadonlyArray<ScopePrice> },
+  todayYmd: string
+): boolean {
+  /* Eski sorgu `is_active = true` idi → yalnız tam `true` aktif sayılır. */
+  if (v.is_active === true) return true;
+  return hasCurrentOrFuturePrice(v.prices, todayYmd);
+}
+
+/* ---------------------------------------------------------------
    TARİH
 --------------------------------------------------------------- */
 

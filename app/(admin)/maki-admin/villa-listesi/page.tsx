@@ -1,5 +1,5 @@
-/* 🛡️ Villa Migration S5F — findActiveCuratorCards native embed'e taşındı.
-   Bu sayfa server RSC + villaRepository'yi YALNIZ findActiveCuratorCards
+/* 🛡️ Villa Migration S5F — findCuratorCards native embed'e taşındı.
+   Bu sayfa server RSC + villaRepository'yi YALNIZ findCuratorCards
    için kullanıyor → server-only native repo import'u güvenli, tek call-site. */
 import { villaAdminRepository } from "@/lib/db/villa.repository.server";
 import { villaLocationRepository } from "@/lib/db/villa-location.repository";
@@ -17,6 +17,8 @@ import VillaListesiClient, {
   type FeatureOption,
 } from "./_components/VillaListesiClient";
 import type { DiscountRange } from "@/lib/price.engine";
+import { todayIstanbulYmd } from "@/lib/date-format";
+import { isInVillaListesiScope } from "./_lib/villa-listesi-filters";
 
 /* ===============================================================
    🏛️ ADMIN — VILLA LISTESİ (concierge curator)
@@ -55,6 +57,8 @@ type RawVilla = {
   id: string;
   slug: string | null;
   title: string | null;
+  /* Kapsam kuralı için (aktif / pasif). */
+  is_active: boolean | null;
   location_id: string | null;
   badge: string | null;
   guests: number | null;
@@ -118,7 +122,8 @@ export default async function VillaListesiPage() {
     featuresRes,
     featureRelationsRes,
   ] = await Promise.all([
-    villaAdminRepository.findActiveCuratorCards(),
+    /* Aktif + pasif (silinmemiş) villalar; kapsam kuralı aşağıda. */
+    villaAdminRepository.findCuratorCards(),
     villaLocationRepository.findAllForFilter(),
     villaTypeRepository.findAllIdNameBySortOrder(),
     /* villa_type_relations: M:N junction. Tüm satırları çekiyoruz —
@@ -177,6 +182,8 @@ export default async function VillaListesiPage() {
   const rawVillas: RawVilla[] = (villasRes.data || []) as RawVilla[];
 
   /* Normalize — VillaCard prop shape + curator selection için. */
+  const todayYmd = todayIstanbulYmd();
+
   const villas: VillaListesiRow[] = rawVillas.map((v) => {
     /* Image cover-first sort. */
     const imgs = Array.isArray(v.villa_images) ? v.villa_images : [];
@@ -242,8 +249,13 @@ export default async function VillaListesiPage() {
       cleaning_limit: Number(v.cleaning_limit || 0),
       prices,
       discounts: normalizeDiscounts(v.villa_discounts),
+      is_active: v.is_active === true,
     };
-  });
+  })
+    /* 🛡️ KAPSAM — AKTİF veya PASİF + güncel/gelecek fiyatlı (belge no
+       fark etmez). Fiyatsız / yalnız geçmiş fiyatlı pasif villa istemciye
+       HİÇ gönderilmez → filtre, seçim ve paylaşım bu havuzla çalışır. */
+    .filter((row) => isInVillaListesiScope(row, todayYmd));
 
   const locations: LocationOption[] = ((locationsRes.data || []) as Array<{
     id: string;

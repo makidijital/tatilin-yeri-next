@@ -653,7 +653,13 @@ export const villaAdminRepository = {
   =============================================================== */
   /* 🛡️ villa_discounts embed'i EKLENDİ — /liste/[token] kartı admin
      önizlemesiyle AYNI indirimli toplamı göstersin diye. Tek tüketici:
-     SharedListPageBody. Filtre/sıra/kontrat DEĞİŞMEDİ. */
+     SharedListPageBody.
+
+     🛡️ PASİF VİLLA: `is_active` filtresi KALDIRILDI (select `*` →
+     `is_active` + `private_access_token` zaten satırda). Görünürlük kuralı
+     caller'da: AKTİF → normal kart; PASİF → yalnız özel linki
+     (`private_access_token`) varsa, /v/[token] linkiyle. `deleted_at IS
+     NULL` AYNEN. */
   async findCardsByIds(ids: string[]) {
     return await dbAdmin
       .from("villa")
@@ -667,7 +673,6 @@ export const villaAdminRepository = {
     `
       )
       .in("id", ids)
-      .eq("is_active", true)
       .is("deleted_at", null)
       .order("is_cover", {
         referencedTable: "villa_images",
@@ -814,13 +819,19 @@ export const villaAdminRepository = {
   /* 🛡️ villa_discounts embed'i EKLENDİ — admin villa listesi kart
      toplamı / fiyat sıralaması `/arama` ile AYNI indirimli motoru
      (`calculateGrandTotal` `discounts`) kullansın diye. Tek tüketici:
-     /maki-admin/villa-listesi. `findSearchResults` ile aynı embed. */
-  async findActiveCuratorCards() {
+     /maki-admin/villa-listesi. `findSearchResults` ile aynı embed.
+
+     🛡️ KAPSAM (villa listesi): artık PASİF villalar da döner
+     (`is_active` filtresi KALDIRILDI, kolon seçime EKLENDİ). Havuz kuralı
+     — "AKTİF veya PASİF + güncel/gelecek fiyatlı" — caller'da
+     (`villa-listesi/_lib/villa-listesi-filters.ts` `isInVillaListesiScope`)
+     uygulanır. `deleted_at IS NULL` AYNEN: silinmiş villa ASLA gelmez. */
+  async findCuratorCards() {
     return await dbAdmin
       .from("villa")
       .select(
         `
-        id, slug, title, location_id, badge,
+        id, slug, title, location_id, badge, is_active,
         guests, bedrooms, bathrooms,
         cleaning_fee, cleaning_currency, cleaning_limit,
         location:villa_locations(name),
@@ -829,7 +840,6 @@ export const villaAdminRepository = {
         villa_discounts (start_date, end_date, discount_type, discount_value, currency)
       `
       )
-      .eq("is_active", true)
       .is("deleted_at", null)
       .order("is_cover", {
         referencedTable: "villa_images",
@@ -1095,6 +1105,16 @@ export const villaAdminRepository = {
       .select("id, private_access_token, is_active, deleted_at")
       .eq("id", id)
       .maybeSingle();
+  },
+
+  /* READ — paylaşım (villa listesi) için toplu aktiflik/token durumu.
+     `findForPrivateTokenLookup` ile AYNI kolonlar, `.in("id")` ile tek
+     sorgu (N+1 YOK). Tüketici: shared-villa-list.service (create). */
+  async findPrivateTokenStatusByIds(ids: string[]) {
+    return await dbAdmin
+      .from("villa")
+      .select("id, private_access_token, is_active, deleted_at")
+      .in("id", ids);
   },
 
   /* ===============================================================

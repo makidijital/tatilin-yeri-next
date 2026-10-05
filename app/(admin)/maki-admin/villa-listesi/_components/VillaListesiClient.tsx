@@ -131,6 +131,10 @@ export type VillaListesiRow = {
   /** Aktif/gelecek indirim aralıkları (villa_discounts) — `/arama` ile
    *  aynı `calculateGrandTotal` `discounts` girdisi. Yoksa "indirim yok". */
   discounts?: DiscountRange[];
+  /** false → PASİF villa (fiyatı güncel olduğu için listede). Müşteriye
+   *  paylaşılırsa /liste'de özel link (/v/[token]) ile açılır. Verilmezse
+   *  aktif kabul edilir (eski davranış). */
+  is_active?: boolean;
 };
 
 export type LocationOption = {
@@ -653,6 +657,16 @@ export default function VillaListesiClient({
     })();
     return (
       <div key={v.id} className="relative">
+        {/* PASİF villa işareti — admin bu villanın müşteriye özel
+            linkle (/v/[token]) gideceğini bilsin. */}
+        {v.is_active === false && (
+          <span
+            className="absolute top-4 left-14 z-30 rounded-full bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200 px-2.5 py-1 text-[11px] font-semibold"
+            title="Pasif villa — paylaşımda özel link ile açılır"
+          >
+            Pasif · özel link
+          </span>
+        )}
         {/* Selection checkbox overlay — z-30, Link tıklamasından önce yakalar. */}
         <button
           type="button"
