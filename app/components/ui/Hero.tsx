@@ -322,7 +322,7 @@ export default function Hero({
             <h1
               className="
                 font-display
-                text-[34px] sm:text-[42px] md:text-[54px] lg:text-[66px]
+                text-[34px] sm:text-[42px] md:text-[54px] lg:text-[54px]
                 leading-[0.98] tracking-[-0.03em]
                 text-white
                 mt-6 md:mt-7
