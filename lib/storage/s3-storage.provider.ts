@@ -6,6 +6,7 @@ import {
   DeleteObjectsCommand,
   HeadObjectCommand,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import type { StorageProvider } from "./storage.provider";
 import type {
@@ -231,6 +232,93 @@ export async function headObjectEtag(
       new HeadObjectCommand({ Bucket: bucket, Key: key })
     );
     return res.ETag ?? null;
+  } catch (err) {
+    const e = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+    if (e?.name === "NotFound" || e?.$metadata?.httpStatusCode === 404) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+/* ===============================================================
+   🛡️ DIRECT UPLOAD — presigned PUT URL (server-only)
+   ===============================================================
+   Browser → R2 doğrudan yükleme için kısa ömürlü imzalı PUT adresi.
+   Dosya byte'ları VPS'ten GEÇMEZ; VPS yalnız imzalar.
+
+   İMZAYA DAHİL:
+     - Content-Type   → farklı tiple gelen PUT R2'de reddedilir
+     - Content-Length → farklı boyutla gelen PUT reddedilir (boyut
+                        limiti caller'da bu değer üzerinden uygulanır)
+   SÜRE: `expiresIn` saniye (caller kısa tutar).
+
+   ⚠️ CHECKSUM: Yeni AWS SDK'ları varsayılan olarak "flexible checksum"
+     (CRC32) ekler; presign anında gövde olmadığından checksum BOŞ gövdeye
+     göre hesaplanır ve gerçek PUT reddedilirdi. Bu yüzden imzalama için
+     `requestChecksumCalculation: "WHEN_REQUIRED"` ile AYRI bir client
+     kullanılır. Mevcut upload/remove client'ına DOKUNULMAZ.
+   =============================================================== */
+let cachedPresignClient: S3Client | null = null;
+function getPresignClient(): S3Client {
+  if (cachedPresignClient) return cachedPresignClient;
+  const endpoint = process.env.S3_ENDPOINT;
+  const region = process.env.S3_REGION || "auto";
+  const accessKeyId = process.env.S3_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
+  if (!endpoint) {
+    throw new Error("S3_ENDPOINT env değişkeni tanımlı değil (server-only)");
+  }
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error(
+      "S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY env değişkenleri tanımlı değil (server-only)"
+    );
+  }
+  cachedPresignClient = new S3Client({
+    region,
+    endpoint,
+    forcePathStyle: true,
+    credentials: { accessKeyId, secretAccessKey },
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
+  });
+  return cachedPresignClient;
+}
+
+export async function presignPutObject(
+  bucket: string,
+  key: string,
+  opts: { contentType: string; contentLength: number; expiresIn: number }
+): Promise<string> {
+  return getSignedUrl(
+    getPresignClient(),
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: opts.contentType,
+      ContentLength: opts.contentLength,
+    }),
+    {
+      expiresIn: opts.expiresIn,
+      signableHeaders: new Set(["content-type", "content-length"]),
+    }
+  );
+}
+
+/* HEAD — yüklenen nesne gerçekten var mı, boyutu/tipi ne? (salt okuma)
+   Yok (404) → null. Diğer hatalar → THROW (caller "doğrulanamadı" sayar). */
+export async function headObjectInfo(
+  bucket: string,
+  key: string
+): Promise<{ contentLength: number; contentType: string | null } | null> {
+  try {
+    const res = await getClient().send(
+      new HeadObjectCommand({ Bucket: bucket, Key: key })
+    );
+    return {
+      contentLength: Number(res.ContentLength ?? 0),
+      contentType: res.ContentType ?? null,
+    };
   } catch (err) {
     const e = err as { name?: string; $metadata?: { httpStatusCode?: number } };
     if (e?.name === "NotFound" || e?.$metadata?.httpStatusCode === 404) {

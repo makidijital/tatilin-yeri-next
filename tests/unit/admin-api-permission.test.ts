@@ -361,9 +361,10 @@ describe("C) her admin API handler'ı izin kontrolü içerir", () => {
     "/admin/activity-logs/log/route.ts",
   ]);
 
-  /* +3: villa-license-checks (özet/tarama, tick, tek villa kontrolü). */
-  it("taranan dosya sayısı (58 admin API dosyası)", () => {
-    expect(files.length).toBe(58);
+  /* +3: villa-license-checks (özet/tarama, tick, tek villa kontrolü).
+     +1: villas/[id]/gallery/upload-url (galeri direct-to-R2 imzalı URL). */
+  it("taranan dosya sayısı (59 admin API dosyası)", () => {
+    expect(files.length).toBe(59);
   });
 
   for (const f of files) {

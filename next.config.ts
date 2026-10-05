@@ -124,6 +124,10 @@ export function buildCspReportOnly(
     )
   );
   const isPublic = kind === "public";
+  /* 🛡️ DIRECT-TO-R2 (admin galeri) — tarayıcı imzalı PUT'u doğrudan R2 S3
+     endpoint'ine yapar. YALNIZ admin policy'ye, YALNIZ bu hesabın endpoint
+     origin'i eklenir (S3_ENDPOINT; tanımsızsa hiçbir şey eklenmez). */
+  const r2UploadOrigin = isPublic ? null : originFromBase(env.S3_ENDPOINT);
   const directives: Array<[string, string[]]> = [
     ["default-src", ["'self'"]],
     [
@@ -150,7 +154,14 @@ export function buildCspReportOnly(
       ],
     ],
     ["font-src", ["'self'", "data:"]],
-    ["connect-src", ["'self'", ...(isPublic ? GTM_GA4_CONNECT : [])]],
+    [
+      "connect-src",
+      [
+        "'self'",
+        ...(isPublic ? GTM_GA4_CONNECT : []),
+        ...(r2UploadOrigin ? [r2UploadOrigin] : []),
+      ],
+    ],
     ["frame-src", [...(isPublic ? [] : ["'self'"]), ...FRAME_HOSTS]],
     ["media-src", ["'self'", "blob:"]],
     ["worker-src", ["'self'", "blob:"]],

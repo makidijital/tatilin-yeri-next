@@ -59,11 +59,9 @@ import {
   setGalleryCover,
 } from "./admin-gallery.action";
 import type { VillaImage } from "@/app/services/villa-image/villa-image.types";
-import {
-  VILLA_IMAGES_BUCKET,
-  buildVillaImagePath,
-  nextGallerySequenceFromUrls,
-} from "@/lib/villa-image.helpers";
+import { VILLA_IMAGES_BUCKET } from "@/lib/villa-image.helpers";
+/* 🛡️ DIRECT-TO-R2 — galeri yüklemesi VPS'i atlar (imzalı PUT). */
+import { uploadGalleryImageDirect } from "@/lib/storage/gallery-direct-upload.client";
 
 /* ===============================================================
    🛡️ ADMIN GALLERY — villa image upload + reorder + cover toggle
@@ -88,9 +86,9 @@ type Props = {
      Caller `getVillaImages` zaten bu tipi döndürüyordu. */
   images: VillaImage[];
   villaId: string;
-  /** 🛡️ Yeni: villa slug — readable storage folder için.
-   *  Opsiyonel (geriye dönük uyum); verilmezse "villa" generic slug
-   *  kullanılır, shortId yine villa.id'den deterministik. */
+  /** Villa slug — geriye dönük uyum için kabul edilir. Direct-to-R2 ile
+   *  storage klasör adı artık SUNUCUDA (DB'deki slug ile, aynı formatta)
+   *  üretiliyor; bu prop yalnız imza uyumu için duruyor. */
   villaSlug?: string | null;
   /** DB insert sonucu. `false` → AdminGallery storage rollback yapar.
    *  `void`/`undefined`/`true` → başarı varsayımı (mevcut davranış). */
@@ -109,7 +107,6 @@ type Props = {
 export default function AdminGallery({
   images,
   villaId,
-  villaSlug = null,
   onUploaded,
   onDelete,
   onDeleteAll,
@@ -295,43 +292,31 @@ export default function AdminGallery({
     setLoading(true);
 
     try {
-      /* 🛡️ NEW PATH STRATEGY (Faz 7):
+      /* 🛡️ PATH STRATEGY (Faz 7) — DEĞİŞMEDİ, artık SUNUCUDA üretiliyor:
          Path: villas/{slug}__{shortId}/gallery-NNNN-XXXX.webp
          - shortId: villa.id ilk 8 hex (deterministic, stable).
-         - Slug: readability; folder slug değişse bile RENAME edilmez.
          - NNNN: villa-içi monotonik seq; mevcut dosyaların max+1'i.
-         - XXXX: race koruması (concurrent upload).
+         - XXXX: race koruması.
 
-         Eski kayıtlar farklı path'te (uuid/uuid.webp) — DB'de full URL
-         tuttuğumuz için reads etkilenmez; bu döngü yalnız YENİ
-         uploadların pathini değiştirir. */
-      const existingUrls = images.map((i) => i?.image_url as string | null);
-      let seq = nextGallerySequenceFromUrls(existingUrls);
-
+         🛡️ DIRECT-TO-R2: Dosya byte'ları artık VPS'ten GEÇMEZ.
+           1) Sunucudan kısa ömürlü imzalı PUT adresi + SUNUCUNUN ürettiği
+              key alınır (yetki + villa kontrolü sunucuda).
+           2) WebP blob doğrudan R2'ye PUT edilir.
+           3) Kayıt (onUploaded → addGalleryImage) ESKİSİ GİBİ; sunucu
+              kayıttan önce key/villa eşleşmesini ve R2 varlığını doğrular.
+         Sıralı akış, hata/rollback ve galeri yenileme davranışı AYNEN. */
       for (const file of validFiles) {
         const blob = await convertToWebP(file);
 
-        const villaForPath = { id: villaId, slug: villaSlug };
-        const fileName = buildVillaImagePath(villaForPath, seq, "webp");
-
-        /* 🛡️ upsert: false — yeni path artık deterministik prefix +
-           rand4 suffix kullandığı için file collision riski 1/65536.
-           Çakışırsa bu yükleme atlanır; user retry → fresh rand4 ile
-           dener. Race koruması yeterli.
-           FAZ 38: storageProvider.upload delege. */
-        const upRes = await storageProvider.upload(
-          VILLA_IMAGES_BUCKET,
-          fileName,
-          blob,
-          { contentType: "image/webp", upsert: false }
-        );
+        const upRes = await uploadGalleryImageDirect(villaId, blob, "image/webp");
 
         if (!upRes.ok) {
           console.error("❌ Upload error:", upRes.error);
-          // Seq'i ilerletmeyelim; bir sonraki dosyada aynı seq tekrar
-          // denensin (filename'deki random suffix farklı olacak).
+          // Kayıt yapılmadığı için sıra ilerlemez; bir sonraki dosya aynı
+          // sırayı (farklı random ek ile) alır — eski davranış.
           continue;
         }
+        const fileName = upRes.key;
 
         /* 🛡️ Aşama B — DB'ye RELATIVE PATH yaz (örn.
            "villas/<slug>__<shortId>/gallery-NNNN-XXXX.webp").
@@ -357,9 +342,6 @@ export default function AdminGallery({
           }
           continue;
         }
-
-        // Başarılı → bir sonraki dosya için seq +1
-        seq++;
       }
     } catch (err) {
       console.error("🔥 Upload pipeline error:", err);

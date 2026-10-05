@@ -20,6 +20,11 @@ import { villaAdminRepository as villaRepository } from "@/lib/db/villa.reposito
    eski sağlayıcı session client injection IMG-P3R'de kaldırıldı. */
 import { authorizeAdminSession } from "@/lib/admin-route-auth";
 import { invalidateVillasCache } from "@/lib/villas-cache-invalidation.server";
+/* 🛡️ DIRECT-TO-R2 — kayıttan önce key/villa eşleşmesi + R2 varlık
+   doğrulaması; kayıt başarısızsa yeni nesnenin sunucu tarafı temizliği. */
+import { verifyUploadedGalleryObject } from "@/app/services/villa-image/villa-image.direct-upload";
+import { removeServer } from "@/lib/storage/server";
+import { VILLA_IMAGES_BUCKET } from "@/lib/villa-image.helpers";
 
 /* ===============================================================
    🛡️ GALERİ — READ ORCHESTRATION (SERVER ACTION)
@@ -55,7 +60,26 @@ export async function addGalleryImage(
     return false;
   }
 
+  /* 🛡️ Görsel artık tarayıcıdan DOĞRUDAN R2'ye yükleniyor → DB kaydından
+     önce: key bu villanın klasörüne mi ait ve nesne R2'de gerçekten var mı.
+     Doğrulanamazsa kayıt YAPILMAZ (false → AdminGallery mevcut rollback'i). */
+  const verified = await verifyUploadedGalleryObject(villaId, imageUrl);
+  if (!verified.ok) {
+    console.error("❌ addGalleryImage verify failed:", verified.reason, imageUrl);
+    return false;
+  }
+
   const ok = await addVillaImage(villaId, imageUrl);
+  if (!ok) {
+    /* Kayıt başarısız → yeni yüklenen nesneyi SUNUCUDA temizle (tarayıcı
+       kapansa bile orphan kalmasın). AdminGallery'nin mevcut istemci
+       rollback'i de çalışır; R2 silme idempotent. */
+    try {
+      await removeServer(VILLA_IMAGES_BUCKET, [imageUrl]);
+    } catch (err) {
+      console.error("❌ addGalleryImage server cleanup failed:", err);
+    }
+  }
   /* 🛡️ Başarılı ekleme → kart kapak görseli değişebilir. */
   if (ok) invalidateVillasCache("admin.gallery.add");
   return ok;
