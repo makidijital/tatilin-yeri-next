@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Save, Trash2, X, Loader2 } from "lucide-react";
 
 /* ===============================================================
@@ -21,7 +22,24 @@ import { Save, Trash2, X, Loader2 } from "lucide-react";
      - Currency select 4 option (TRY/USD/EUR/GBP) aynen
      - Delete button border-rose + hover bg-rose-50 aynen
      - Save button btn-primary + Loader2 animate-spin aynen
+
+   🛡️ HAFTALIK FİYAT — YALNIZ GİRİŞ YARDIMCISI
+     - Haftalık değer DB'ye GİTMEZ; yalnız drawer'ın YEREL state'i.
+     - Tek yön: haftalık > 0 → setDrawerPrice(Math.round(haftalık / 7)).
+       Seçili gece sayısına BÖLÜNMEZ; her zaman 7. Kur çevrimi YOK
+       (drawerCurrency aynen). Rounding, handleSavePrice'taki
+       Math.round(drawerPrice) ile AYNI.
+     - Boş / 0 / negatif / geçersiz → gecelik fiyata DOKUNULMAZ.
+     - Gecelik alan elle değişirse haftalık YENİDEN HESAPLANMAZ.
+     - Drawer `drawerOpen &&` ile mount edildiği için her açılışta boş.
+     - Kaydet / Sil / validation / gecelik input davranışı AYNEN.
 =============================================================== */
+
+/** Haftalık → gecelik. Geçersiz/≤0 ise null (gecelik fiyata dokunulmaz). */
+export function weeklyToNightly(weekly: number): number | null {
+  if (!Number.isFinite(weekly) || weekly <= 0) return null;
+  return Math.round(weekly / 7);
+}
 
 export default function PricingRangeDrawer({
   rangeLabel,
@@ -50,6 +68,15 @@ export default function PricingRangeDrawer({
   onDelete: () => void;
   onClose: () => void;
 }) {
+  /* Yerel, geçici yardımcı değer — parent'a / DB'ye taşınmaz. */
+  const [weeklyInput, setWeeklyInput] = useState<string>("");
+  const weeklyNightly = weeklyToNightly(Number(weeklyInput));
+  /* Bilgi satırı yalnız gecelik alan hâlâ haftalıktan gelen değeri
+     taşıyorsa gösterilir (gecelik elle değiştirildiyse yanıltmasın). */
+  const showWeeklyHint =
+    weeklyNightly !== null && weeklyNightly === drawerPrice;
+  const fmt = (n: number) => n.toLocaleString("tr-TR");
+
   return (
     <div
       role="dialog"
@@ -101,6 +128,56 @@ export default function PricingRangeDrawer({
                 {rangeNights} gece
               </p>
             )}
+          </div>
+
+          {/* Haftalık fiyat — opsiyonel giriş yardımcısı (DB'ye gitmez) */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor="pricing-weekly-helper"
+              className="text-[11px] tracking-[0.08em] uppercase font-semibold text-[var(--color-stone-500)] block"
+            >
+              Haftalık fiyat{" "}
+              <span className="normal-case tracking-normal font-normal text-[var(--color-stone-400)]">
+                (opsiyonel)
+              </span>
+            </label>
+            <div className="grid grid-cols-[1fr_104px] gap-2">
+              <input
+                id="pricing-weekly-helper"
+                type="number"
+                min={0}
+                step={1}
+                inputMode="numeric"
+                value={weeklyInput}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setWeeklyInput(raw);
+                  const nightly = weeklyToNightly(Number(raw));
+                  if (nightly === null) return;
+                  setDrawerPrice(nightly);
+                  if (drawerError) setDrawerError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void onSave();
+                  }
+                }}
+                className="input !py-2"
+                placeholder="Örn. 7000"
+              />
+              <div
+                aria-label="Haftalık fiyat kuru"
+                className="input !py-2 flex items-center text-[var(--color-stone-500)] bg-[var(--color-sand-50)]"
+              >
+                {drawerCurrency}
+              </div>
+            </div>
+            <p className="text-[11px] text-[var(--color-stone-500)] tabular-nums">
+              {showWeeklyHint && weeklyNightly !== null
+                ? `${fmt(Number(weeklyInput))} ${drawerCurrency} ÷ 7 = ${fmt(weeklyNightly)} ${drawerCurrency} gecelik`
+                : "Girilirse ÷ 7 yapılır ve gecelik fiyata aktarılır."}
+            </p>
           </div>
 
           {/* Gecelik fiyat + Kur — aynı row */}
