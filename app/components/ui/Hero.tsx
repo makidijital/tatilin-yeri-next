@@ -172,14 +172,43 @@ export default function Hero({
           0% { transform: scale(1); }
           100% { transform: scale(1.06); }
         }
-        @keyframes heroOrbFloat {
-          0%, 100% { transform: translateY(0) translateX(0); }
-          50% { transform: translateY(-16px) translateX(-6px); }
-        }
         .hero-kenburns { animation: heroKenBurns 28s ease-in-out infinite alternate; }
-        .hero-orb-float { animation: heroOrbFloat 10s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) {
-          .hero-kenburns, .hero-orb-float { animation: none; }
+          .hero-kenburns { animation: none; }
+        }
+        /* SPLIT VISUAL — sol lacivert gradient, sağ temiz fotoğraf.
+           Çok duraklı (ease benzeri) geçiş → keskin dikey çizgi yok.
+           Mobil: metin üstte + panel altta yığıldığı için gradient
+           dikey/geniş; md+: yatay soldan sağa sönümlenen gradient. */
+        .hero-split-overlay {
+          background:
+            linear-gradient(180deg,
+              rgba(11,31,58,0.90) 0%,
+              rgba(11,31,58,0.78) 30%,
+              rgba(11,31,58,0.55) 58%,
+              rgba(11,31,58,0.38) 82%,
+              rgba(11,31,58,0.30) 100%);
+        }
+        .hero-split-tint {
+          background: radial-gradient(120% 70% at 0% 0%, rgba(9,115,186,0.30), transparent 70%);
+        }
+        @media (min-width: 768px) {
+          .hero-split-overlay {
+            background:
+              linear-gradient(90deg,
+                rgba(11,31,58,0.93) 0%,
+                rgba(11,31,58,0.88) 14%,
+                rgba(11,31,58,0.76) 26%,
+                rgba(11,31,58,0.58) 36%,
+                rgba(11,31,58,0.40) 45%,
+                rgba(11,31,58,0.24) 53%,
+                rgba(11,31,58,0.12) 61%,
+                rgba(11,31,58,0.05) 69%,
+                rgba(11,31,58,0) 78%);
+          }
+          .hero-split-tint {
+            background: radial-gradient(70% 90% at 0% 45%, rgba(9,115,186,0.28), transparent 72%);
+          }
         }
       `}</style>
 
@@ -205,54 +234,33 @@ export default function Hero({
       )}
 
       {/* ═══════════════════════════════════════════════════════════
-          CİNEMATİC BASE OVERLAY — alttan yukarı siyah gradient.
-          Önceki versiyon beyaz overlay + koyu metin kullanıyordu;
-          bilinçli tersine çevirme: koyu overlay + beyaz metin, daha
-          "gece / golden hour luxury" his, rakip sitelerin klasik
-          "beyaz fade" kalıbından uzaklaşır. `hero.overlayOpacity`
-          (admin ayarı, 0..1) artık gerçekten uygulanıyor — önceki
-          revizyonda hesaplanıp hiç kullanılmıyordu.
+          SPLIT VISUAL OVERLAY — solda yoğun lacivert (#0b1f3a =
+          --color-stone-900), ~%35-45'te hâlâ hissedilir, ~%55-65'te
+          fotoğraf baskın, sağda fotoğraf temiz. Sağ tarafta renkli
+          glow / karartma YOK. `hero.overlayOpacity` (admin, 0..1)
+          gradient'i zayıflatabilir ama metin kontrastı için tabanı
+          0.7'nin altına düşmez.
           ═══════════════════════════════════════════════════════════ */}
       <div
         aria-hidden="true"
-        className="
-          absolute inset-0 pointer-events-none
-          bg-gradient-to-t from-black/92 via-black/45 to-black/5
-        "
+        className="hero-split-overlay absolute inset-0 pointer-events-none"
+        style={{ opacity: 0.7 + 0.3 * hero.overlayOpacity }}
+      />
+      {/* Marka mavisi ile çok hafif derinlik — yalnız sol tarafta. */}
+      <div
+        aria-hidden="true"
+        className="hero-split-tint absolute inset-0 pointer-events-none"
         style={{ opacity: hero.overlayOpacity }}
       />
-
-      {/* BRAND DUOTONE GLOW — köşelerde çok düşük opacity'li marka
-          renk radial glow'ları. Ana vurgu renkleri SADECE burada:
-          sağ-üst mavi (#0973BA), sol-alt turuncu (#ED7926). */}
+      {/* Alt kenar yumuşatma — arama panelini zemine oturtur; çok
+          hafif ve yalnız en alt şeritte (sağ fotoğrafı karartmaz). */}
       <div
         aria-hidden="true"
         className="
-          absolute inset-0 pointer-events-none
-          bg-[radial-gradient(58%_48%_at_100%_0%,rgba(9,115,186,0.35),transparent_62%)]
+          absolute inset-x-0 bottom-0 h-[38%] pointer-events-none
+          bg-gradient-to-t from-[#0b1f3a]/45 via-[#0b1f3a]/12 to-transparent
         "
         style={{ opacity: hero.overlayOpacity }}
-      />
-      <div
-        aria-hidden="true"
-        className="
-          absolute inset-0 pointer-events-none
-          bg-[radial-gradient(52%_42%_at_0%_100%,rgba(237,121,38,0.28),transparent_60%)]
-        "
-        style={{ opacity: hero.overlayOpacity }}
-      />
-
-      {/* Dekoratif floating glow orb — derinlik/hiyerarşi için, saf
-         dekoratif (yalnız masaüstünde, mobilde gizli). */}
-      <div
-        aria-hidden="true"
-        className="
-          hero-orb-float
-          hidden md:block
-          pointer-events-none absolute -top-16 right-[10%]
-          w-72 h-72 rounded-full blur-3xl
-          bg-gradient-to-br from-[#ED7926]/20 to-[#0973BA]/20
-        "
       />
       </div>
 
@@ -265,15 +273,17 @@ export default function Hero({
         className="
           relative
           max-w-[1480px] mx-auto
-          px-5 md:px-10 lg:px-16
+          px-5 md:px-10 lg:px-[clamp(4rem,7vw,7.5rem)]
           min-h-[60svh] lg:min-h-[78svh]
-          flex flex-col justify-end
-          pt-24 md:pt-24 lg:pt-28
+          flex flex-col
+          pt-24 md:pt-28 lg:pt-32
           pb-5 md:pb-12
         "
       >
-        {/* ─── COPY BLOCK — merkezi hizalı (text-center + mx-auto) ── */}
-        <div className="max-w-3xl lg:max-w-4xl mx-auto text-center">
+        {/* ─── COPY BLOCK — SOLA hizalı, gradient alanı üzerinde,
+            dikeyde kalan alanın ortasına yakın. ───────────────── */}
+        <div className="flex-1 flex items-center">
+        <div className="w-full max-w-[600px] text-left">
           {/* Eyebrow — floating glass badge, turuncu→mavi gradient dot.
              🛡️ Admin "Hero Rozet Metni" boşsa (`hero.badge === ""`)
              HİÇ render edilmez — hardcoded default'a düşülmez. */}
@@ -301,9 +311,10 @@ export default function Hero({
             </p>
           )}
 
-          {/* Editorial title — beyaz ilk satır, turuncu→mavi gradient
-             (bg-clip-text) ikinci satır — dramatic scale. Merkezi
-             hizalama ata `text-center`'dan miras alınır (inherit);
+          {/* Editorial title — beyaz ilk satır, turuncu→turkuaz gradient
+             (bg-clip-text; şeftali ara durak → ara tonlar grileşmez,
+             lacivert zeminde açık turkuaz bitiş kontrastı korur) ikinci
+             satır. SOLA hizalı (ata `text-left`);
              font-size/weight/line-height/letter-spacing DEĞİŞMEDİ.
              🛡️ Admin "Hero Başlığı" boşsa (`hero.title === ""`) H1
              HİÇ render edilmez — hardcoded default'a düşülmez. */}
@@ -315,6 +326,7 @@ export default function Hero({
                 leading-[0.98] tracking-[-0.03em]
                 text-white
                 mt-6 md:mt-7
+                [text-shadow:0_2px_24px_rgba(11,31,58,0.25)]
               "
             >
               {titleLines.map((line, i) => (
@@ -323,7 +335,7 @@ export default function Hero({
                   className={
                     i === 0
                       ? "block"
-                      : "block bg-gradient-to-r from-[#ED7926] to-[#0973BA] bg-clip-text text-transparent"
+                      : "block bg-gradient-to-r from-[#ED7926] via-[#F4A86A] via-45% to-[var(--color-champagne-200)] bg-clip-text text-transparent"
                   }
                 >
                   {line}
@@ -337,9 +349,9 @@ export default function Hero({
             <p
               className="
                 text-[15px] md:text-[16.5px] leading-[1.75]
-                text-white/80
-                mt-6 md:mt-8
-                max-w-xl w-full mx-auto text-center whitespace-pre-line
+                text-white/85
+                mt-5 md:mt-7
+                max-w-[520px] w-full text-left whitespace-pre-line
               "
             >
               {hero.subtitle}
@@ -359,7 +371,7 @@ export default function Hero({
              shimmer DEĞİL). Secondary: glass outline. `justify-center`
              → merkezi hizalama (yeni), buton stilleri/davranışı AYNEN. */}
           {(hero.primaryCta || hero.secondaryCta) && (
-            <div className="mt-8 md:mt-10 flex flex-wrap items-center justify-center gap-3">
+            <div className="mt-8 md:mt-10 flex flex-wrap items-center justify-start gap-3">
               {hero.primaryCta && (
                 <HeroCta
                   href={hero.primaryCta.href}
@@ -419,6 +431,7 @@ export default function Hero({
               )}
             </div>
           )}
+        </div>
         </div>
 
         {/* ─── FLOATING SEARCH PANEL — client island, AYNEN ───── */}
