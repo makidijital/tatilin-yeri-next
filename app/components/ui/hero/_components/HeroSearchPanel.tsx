@@ -309,7 +309,7 @@ export default function HeroSearchPanel({
             dateFormat="dd.MM.yyyy"
             minDate={new Date()}
             placeholderText={dict.datePlaceholder}
-            className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none w-full text-[14px] font-medium !text-[var(--color-stone-900)] placeholder-[var(--color-stone-400)] cursor-pointer"
+            className="!bg-transparent !border-0 !shadow-none !p-0 !rounded-none w-full text-[14px] font-medium !text-[var(--color-stone-900)] placeholder:!text-[var(--color-stone-900)] placeholder:!opacity-100 cursor-pointer"
             /* 🛡️ PHASE 11 — sentinel string karşılaştırması yerine
                DOĞRUDAN state kontrolü: `buildHeroDateLabel` sentinel'i
                TAM OLARAK `!startDate` iken döndürür → davranış birebir
@@ -580,12 +580,14 @@ export default function HeroSearchPanel({
 
       {/* ═══════════════════════════════════════════════════════
           🛡️ GELİŞMİŞ ARAMA — panel altında sade/premium expandable.
-          Inline açılır (floating değil) → DatePicker portal / dropdown
-          stacking'iyle ÇAKIŞMAZ. Filtre paneli tasarımına dokunmaz.
+          Floating (absolute) açılır → document flow'a girmez, hero
+          yüksekliği DEĞİŞMEZ; butonun hemen altında overlay olarak
+          görünür (z-40; Tip/Bölge dropdown'ları ve datepicker portal'ı
+          z-[60] ile her zaman üstte kalır). Filtre paneli tasarımına dokunmaz.
           Checkbox yalnız `flexible` state'ini set eder; Villa Bul'a
           basınca `flexible=3` param'ı eklenir (ana tarih değişmez).
           ═══════════════════════════════════════════════════════ */}
-      <div className="mt-3 flex flex-col items-center">
+      <div className="relative mt-3 flex flex-col items-center">
         <button
           type="button"
           onClick={() => setAdvOpen((o) => !o)}
@@ -604,7 +606,7 @@ export default function HeroSearchPanel({
         </button>
 
         {advOpen && (
-          <div className="mt-2 w-[min(92vw,420px)] rounded-2xl bg-white/95 backdrop-blur-md border border-[var(--color-stone-100)] shadow-[0_20px_44px_-20px_rgba(11,31,58,0.35)] px-4 py-3.5">
+          <div className="absolute left-1/2 top-full z-40 -translate-x-1/2 mt-2 w-[min(92vw,420px)] rounded-2xl bg-white/95 backdrop-blur-md border border-[var(--color-stone-100)] shadow-[0_20px_44px_-20px_rgba(11,31,58,0.35)] px-4 py-3.5">
             <label className="flex items-start gap-2.5 cursor-pointer select-none">
               <input
                 type="checkbox"
