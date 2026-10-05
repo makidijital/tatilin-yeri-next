@@ -211,8 +211,15 @@ export default function VillaListesiClient({
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   /* 🛡️ Villa özellikleri — çoklu, AND (public "Gelişmiş Arama"). */
   const [featureIds, setFeatureIds] = useState<string[]>([]);
-  /* 🛡️ Esnek ±3 gün (public "Gelişmiş Arama" checkbox'ı). */
+  /* 🛡️ Esnek ±3 gün (public "Gelişmiş Arama" checkbox'ı).
+     `flexible` = checkbox'ın (taslak) değeri; `appliedFlexible` = sonuçlara
+     UYGULANMIŞ değer. Checkbox değişince sonuçlar kendiliğinden değişmez;
+     "Sonuçları Yenile" ile uygulanır (bkz. `refreshResults`). */
   const [flexible, setFlexible] = useState(false);
+  const [appliedFlexible, setAppliedFlexible] = useState(false);
+  /* "Sonuçları Yenile" sayacı — artınca müsaitlik sorguları (ana tarih +
+     esnek pencereler) yeniden çalışır. */
+  const [refreshNonce, setRefreshNonce] = useState(0);
 
   /* Checkbox dropdown'lar aç/kapa + outside-click ref'leri. */
   const [catOpen, setCatOpen] = useState(false);
@@ -279,7 +286,22 @@ export default function VillaListesiClient({
   })();
   /* `/arama` ile aynı: iki tarih geçerli VE start < end. */
   const hasDateRange = isAdminDateRange(start, end);
-  const rangeKey = hasDateRange ? `${start}|${end}` : "";
+  /* Müsaitlik sonucunun anahtarı: tarih aralığı + yenileme sayacı. Tarih
+     değişince veya "Sonuçları Yenile"ye basılınca yeni sorgu atılır. */
+  const rangeKey = hasDateRange ? `${start}|${end}#${refreshNonce}` : "";
+
+  /* Checkbox, uygulanmış değerden farklıysa sonuçların yenilenmesi gerekir. */
+  const needsRefresh = flexible !== appliedFlexible;
+
+  /* 🔁 SONUÇLARI YENİLE — mevcut tüm filtreler (tarih, kişi, bölge, tip,
+     özellik, metin) zaten canlı uygulanır; burada yalnız esnek tercihi
+     uygulanır ve müsaitlik verisi (ana tarih + ±3 pencereler) TAZE
+     sorgulanır. Sorgu süresince mevcut "Müsaitlik kontrol ediliyor…"
+     durumu gösterilir. */
+  function refreshResults() {
+    setAppliedFlexible(flexible);
+    setRefreshNonce((n) => n + 1);
+  }
 
   /* ---------------- AVAILABILITY (public /arama paritesi) ----------------
      Tarih aralığı seçiliyse o aralıkta DOLU villa id'lerini getir
@@ -330,7 +352,8 @@ export default function VillaListesiClient({
      Havuz: ana tarihte DOLU villalar. Her kaydırılmış pencere (süre sabit)
      için aynı availability action'ı; en az birinde müsait olan villa
      "esnek" sayılır. Ana start/end HİÇBİR YERDE değişmez (kart, paylaşım). */
-  const flexKey = flexible && rangeKey ? `${rangeKey}|${ADMIN_FLEX_DAYS}` : "";
+  const flexKey =
+    appliedFlexible && rangeKey ? `${rangeKey}|${ADMIN_FLEX_DAYS}` : "";
   const [flexState, setFlexState] = useState<{
     key: string;
     available: Set<string>;
@@ -411,6 +434,10 @@ export default function VillaListesiClient({
             ),
     [baseFiltered, hasDateRange, availabilityPending, start, end, blockedSet]
   );
+
+  /* Esnek pencereler henüz sorgulanıyor (ana tarih yanıtı geldikten sonra). */
+  const flexPending =
+    !!flexKey && !availabilityPending && flexState.key !== flexKey;
 
   /* Esnek sonuçlar — ana listeden AYRI (sayaç/sıralama/sayfalama dışı). */
   const flexibleVillas = useMemo(() => {
@@ -509,7 +536,7 @@ export default function VillaListesiClient({
     guests,
     start,
     end,
-    flexible ? "flex" : "",
+    appliedFlexible ? "flex" : "",
     sort,
   ].join("|");
   const [prevFilterSignature, setPrevFilterSignature] =
@@ -825,6 +852,29 @@ export default function VillaListesiClient({
           </span>
         </label>
 
+        {/* Esnek tercih değişti ama henüz uygulanmadı → belirgin yenileme
+            butonu. Basınca uygulanır ve buton kaybolur. */}
+        {needsRefresh && (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={refreshResults}
+              className="
+                inline-flex items-center gap-2
+                rounded-lg bg-[var(--admin-text)] hover:bg-black
+                text-white text-[13px] font-semibold
+                px-4 py-2 transition-colors
+              "
+            >
+              Sonuçları Yenile
+            </button>
+            <span className="text-[12px] text-[var(--admin-muted-2)]">
+              Esnek tarih tercihi değişti; mevcut filtrelerle sonuçları
+              yeniden hesaplamak için yenileyin.
+            </span>
+          </div>
+        )}
+
         <p className="mt-3 text-[11.5px] text-[var(--admin-muted-2)]">
           Tarih seçilirse o tarihte dolu olan ve seçilen gecelerin
           tamamında fiyatı tanımlı olmayan villalar listelenmez; kartlarda
@@ -841,6 +891,19 @@ export default function VillaListesiClient({
             <span className="text-[var(--admin-muted-2)]">
               toplam {villas.length}
             </span>
+            {flexibleVillas.length > 0 ? (
+              <>
+                {" "}
+                ·{" "}
+                <a
+                  href="#esnek-sonuclar"
+                  className="text-[var(--admin-text)] underline underline-offset-2"
+                >
+                  +{flexibleVillas.length} villa ±{ADMIN_FLEX_DAYS} gün içinde
+                  müsait
+                </a>
+              </>
+            ) : null}
             {selected.size > 0 ? (
               <>
                 {" "}
@@ -927,8 +990,13 @@ export default function VillaListesiClient({
           Public /arama ile aynı: ana listeden AYRI, altta; sayaç, sıralama,
           sayfalama ve "Tümünü seç" dışında. Kartlar seçilebilir; paylaşımda
           ana tarih aynen kullanılır (bu villalar o tarihte DOLU). */}
+      {flexPending && (
+        <div className="admin-card-flat p-6 text-center text-[var(--admin-muted-2)]">
+          <p className="text-[13px]">Müsaitlik kontrol ediliyor…</p>
+        </div>
+      )}
       {flexibleVillas.length > 0 && (
-        <section className="space-y-4">
+        <section id="esnek-sonuclar" className="space-y-4 scroll-mt-6">
           <div className="admin-card-flat px-5 py-4">
             <p className="text-[13.5px] font-medium text-[var(--admin-text)]">
               ±{ADMIN_FLEX_DAYS} gün içinde müsait ({flexibleVillas.length})

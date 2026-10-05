@@ -345,6 +345,10 @@ describe("B) VillaListesiClient — public arama paritesi", () => {
 
     fireEvent.click(screen.getByLabelText(/3 gün önceki ve sonraki/));
     await flush();
+    /* Checkbox tek başına sonuçları değiştirmez; yenileme butonu çıkar. */
+    expect(flexIds()).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "Sonuçları Yenile" }));
+    await flush();
 
     expect(ids()).toEqual(["normal"]);
     expect(flexIds()).toEqual(["flex"]);
@@ -384,6 +388,127 @@ describe("B) VillaListesiClient — public arama paritesi", () => {
       regions: ["kalkan"],
     });
     expect(screen.getByDisplayValue(/\/liste\/tok123$/)).toBeTruthy();
+  });
+});
+
+/* ===============================================================
+   B2) ESNEK ±3 — "Sonuçları Yenile" akışı
+   =============================================================== */
+describe("B2) esnek tarih + Sonuçları Yenile", () => {
+  /* Ana pencere (10→15): flex, flex-kas, hep-dolu dolu. +2 pencere
+     (12→17): yalnız hep-dolu dolu → flex ve flex-kas esnek sonuçtur. */
+  const windows = (s: string) => {
+    if (s === "2026-11-12") return ["hep-dolu"];
+    return ["flex", "flex-kas", "hep-dolu"];
+  };
+  const mainCalls = () =>
+    availabilityCalls.filter(([s, e]) => s === "2026-11-10" && e === "2026-11-15").length;
+
+  function setup(extra: Partial<Parameters<typeof VillaListesiClient>[0]> = {}) {
+    blockedByWindow = windows;
+    render(
+      <VillaListesiClient
+        villas={[
+          villa("normal", { location_id: "kalkan" }),
+          villa("flex", { location_id: "kalkan" }),
+          villa("flex-kas", { location_id: "kas", location: "Kaş" }),
+          villa("hep-dolu"),
+        ]}
+        locations={LOCATIONS}
+        categories={[{ id: "t1", name: "Balayı" }]}
+        villaCategoryMap={{ normal: ["t1"], flex: ["t1"], "flex-kas": ["t1"] }}
+        features={[{ id: "f1", name: "Jakuzi" }]}
+        villaFeatureMap={{ normal: ["f1"], flex: ["f1"], "flex-kas": ["f1"] }}
+        {...extra}
+      />
+    );
+  }
+  const refreshBtn = () => screen.queryByRole("button", { name: "Sonuçları Yenile" });
+  const flexBox = () => screen.getByLabelText(/3 gün önceki ve sonraki/);
+
+  it("buton yalnız tercih değişince görünür; basınca kaybolur, tüm müsaitlik yeniden sorgulanır", async () => {
+    setup();
+    expect(refreshBtn()).toBeNull();
+
+    /* A) Tarih seç → normal sonuçlar. */
+    fireEvent.click(screen.getByTestId("pick-dates"));
+    await flush();
+    expect(ids()).toEqual(["normal"]);
+    expect(mainCalls()).toBe(1);
+
+    /* B) ±3 aç → sonuçlar DEĞİŞMEZ, buton çıkar. */
+    fireEvent.click(flexBox());
+    await flush();
+    expect(refreshBtn()).not.toBeNull();
+    expect(flexIds()).toEqual([]);
+    expect(mainCalls()).toBe(1);
+
+    /* Yenile → yükleniyor durumu, ardından esnek sonuçlar. */
+    fireEvent.click(refreshBtn()!);
+    expect(screen.getByText("Müsaitlik kontrol ediliyor…")).toBeTruthy();
+    expect(refreshBtn()).toBeNull();
+    await flush();
+    /* C) 3 gün önce/sonra müsait villalar geldi; ana tarih sorgusu tazelendi. */
+    expect(ids()).toEqual(["normal"]);
+    expect(flexIds()).toEqual(["flex", "flex-kas"]);
+    expect(mainCalls()).toBe(2);
+    expect(screen.getByText(/\+2 villa ±3 gün içinde/)).toBeTruthy();
+
+    /* D) ±3 kapat → yine değişmez, Yenile → normal sonuçlara dönülür. */
+    fireEvent.click(flexBox());
+    expect(flexIds()).toEqual(["flex", "flex-kas"]);
+    fireEvent.click(refreshBtn()!);
+    await flush();
+    expect(flexIds()).toEqual([]);
+    expect(ids()).toEqual(["normal"]);
+    expect(refreshBtn()).toBeNull();
+  });
+
+  it("E) kişi/bölge/tip/özellik filtreleri esnek sonuçlara da uygulanır", async () => {
+    setup();
+    fireEvent.click(screen.getByTestId("pick-dates"));
+    await flush();
+    fireEvent.click(flexBox());
+    fireEvent.click(refreshBtn()!);
+    await flush();
+    expect(flexIds()).toEqual(["flex", "flex-kas"]);
+
+    /* Bölge: yalnız Kalkan → Kaş'taki esnek villa düşer. */
+    openDropdownAndCheck("Bölge", "Kalkan");
+    expect(flexIds()).toEqual(["flex"]);
+    expect(ids()).toEqual(["normal"]);
+
+    /* Tip + özellik (ikisi de sahip) → değişmez. */
+    openDropdownAndCheck("Kategori", "Balayı");
+    openDropdownAndCheck("Özellikler", "Jakuzi");
+    expect(flexIds()).toEqual(["flex"]);
+
+    /* Kişi 5 → kapasite 4 olan herkes düşer (ana + esnek). */
+    fireEvent.change(screen.getByPlaceholderText("örn. 4"), { target: { value: "5" } });
+    expect(ids()).toEqual([]);
+    expect(flexIds()).toEqual([]);
+  });
+
+  it("F) seçim + paylaşım yenilemeden sonra da çalışır; seçim korunur", async () => {
+    setup();
+    fireEvent.click(screen.getByTestId("pick-dates"));
+    await flush();
+    const card = (id: string) =>
+      screen.getAllByTestId("villa-card").find((c) => c.getAttribute("data-villa-id") === id)!;
+    fireEvent.click(within(card("normal").parentElement!.parentElement!).getByRole("button", { name: "Listeye ekle" }));
+
+    fireEvent.click(flexBox());
+    fireEvent.click(refreshBtn()!);
+    await flush();
+    fireEvent.click(within(card("flex").parentElement!.parentElement!).getByRole("button", { name: "Listeye ekle" }));
+
+    expect(screen.getByText("villa seçildi", { exact: false })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Listeyi Paylaş/ }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Bağlantı oluştur" }));
+    });
+    const payload = (createShared.mock.calls[0] as unknown[])[0] as { villaIds: string[] };
+    expect(payload.villaIds.sort()).toEqual(["flex", "normal"]);
   });
 });
 
