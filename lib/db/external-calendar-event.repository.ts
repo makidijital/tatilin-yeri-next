@@ -66,6 +66,8 @@ export const externalCalendarEventRepository = {
     from?: string | null;
     to?: string | null;
     search?: string | null;
+    /** 🛡️ Geçmiş gizleme — verilirse `end_date >= minEndDate`. */
+    minEndDate?: string | null;
   }) {
     let q = db
       .from("external_calendar_events")
@@ -86,6 +88,7 @@ export const externalCalendarEventRepository = {
     if (typeof opts.is_active === "boolean") {
       q = q.eq("is_active", opts.is_active);
     }
+    if (opts.minEndDate) q = q.gte("end_date", opts.minEndDate);
     if (opts.from) q = q.gt("end_date", opts.from);
     if (opts.to) q = q.lt("start_date", opts.to);
     if (opts.search && opts.search.trim()) {
@@ -96,11 +99,14 @@ export const externalCalendarEventRepository = {
   },
 
   /** Count — aktif event'ler (head:true, count exact). KPI. */
-  async countActive() {
-    return await db
+  async countActive(minEndDate?: string | null) {
+    let q = db
       .from("external_calendar_events")
       .select("id", { count: "exact", head: true })
       .eq("is_active", true);
+    /* 🛡️ Geçmiş (end_date < bugün) event'ler KPI'a girmez. */
+    if (minEndDate) q = q.gte("end_date", minEndDate);
+    return await q;
   },
 
   /** Count — source bazlı pasif event'ler (head:true, count exact).

@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { authorizeCronRequest } from "@/lib/cron-auth";
 import { externalCalendarSourceServerRepository } from "@/lib/db/external-calendar-source.repository.server";
 import { syncExternalCalendarSource } from "@/app/services/external-calendar.service";
+import { externalCalendarEventServerRepository } from "@/lib/db/external-calendar-event.repository.server";
+import { getExternalCalendarToday } from "@/lib/external-calendar-past";
 
 /* ===============================================================
    🛡️ CRON — EXTERNAL CALENDAR SYNC (thin wrapper)
@@ -83,6 +85,8 @@ export async function GET(req: Request) {
     deactivated?: number;
     skipped?: number;
     totalSeen?: number;
+    skippedPast?: number;
+    deletedPast?: number;
     error?: string;
     stage?: string;
   }> = [];
@@ -97,6 +101,8 @@ export async function GET(req: Request) {
         deactivated: r.deactivated,
         skipped: r.skipped,
         totalSeen: r.totalSeen,
+        skippedPast: r.skippedPast,
+        deletedPast: r.deletedPast,
       });
     } else {
       console.error(
@@ -114,6 +120,30 @@ export async function GET(req: Request) {
     }
   }
 
+  /* 🛡️ GEÇMİŞ CLEANUP (tüm kaynaklar) — sync yalnız aktif kaynakların
+     geçmiş satırlarını siler; pasif kaynakların `end_date < bugün`
+     (Europe/Istanbul) satırları burada temizlenir. Kriter YALNIZ bu;
+     bugünle kesişen / gelecek event'lere dokunulmaz. Fail-soft. */
+  let pastCleanupDeleted: number | null = null;
+  const today = getExternalCalendarToday();
+  try {
+    const { data: pastData, error: pastErr } =
+      await externalCalendarEventServerRepository.deletePastAll(today);
+    if (pastErr) {
+      console.error(
+        "[cron.external-calendar-sync] PAST_CLEANUP_FAILED",
+        pastErr.message
+      );
+    } else {
+      pastCleanupDeleted = Array.isArray(pastData) ? pastData.length : 0;
+    }
+  } catch (err) {
+    console.error(
+      "[cron.external-calendar-sync] PAST_CLEANUP_FAILED",
+      err instanceof Error ? err.message : "unknown"
+    );
+  }
+
   const successCount = results.filter((r) => r.ok).length;
   const failCount = results.length - successCount;
 
@@ -121,7 +151,9 @@ export async function GET(req: Request) {
     "[cron.external-calendar-sync] DONE",
     `total=${results.length}`,
     `success=${successCount}`,
-    `fail=${failCount}`
+    `fail=${failCount}`,
+    `pastDeleted=${pastCleanupDeleted ?? "ERR"}`,
+    `today=${today}`
   );
 
   /* HTTP 200 — zamanlayıcı başarı kabul eder; partial failure
@@ -132,6 +164,7 @@ export async function GET(req: Request) {
     total: results.length,
     success: successCount,
     fail: failCount,
+    past_cleanup: { date: today, deleted: pastCleanupDeleted },
     results,
   });
 }

@@ -112,12 +112,16 @@ export async function POST(req: Request) {
         deactivated: result.deactivated,
         skipped: result.skipped,
         total_seen: result.totalSeen,
+        skipped_past: result.skippedPast,
+        deleted_past: result.deletedPast,
       },
       diff_summary: [
         `imported: ${result.imported}`,
         `deactivated: ${result.deactivated}`,
         `skipped: ${result.skipped}`,
         `total seen: ${result.totalSeen}`,
+        `skipped past: ${result.skippedPast}`,
+        `deleted past: ${result.deletedPast}`,
       ],
     });
     return NextResponse.json({
@@ -129,6 +133,9 @@ export async function POST(req: Request) {
       deactivated: result.deactivated,
       skipped: result.skipped,
       total_seen: result.totalSeen,
+      /* 🛡️ Ek alanlar (mevcut alanlar DEĞİŞMEDİ). */
+      skipped_past: result.skippedPast,
+      deleted_past: result.deletedPast,
     });
   }
 

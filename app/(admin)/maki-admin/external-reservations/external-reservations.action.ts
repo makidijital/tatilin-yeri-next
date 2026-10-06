@@ -3,6 +3,7 @@
 import { requirePermission } from "@/lib/auth/action-authz";
 import { externalCalendarEventRepository } from "@/lib/db/external-calendar-event.repository";
 import { externalCalendarSourceRepository } from "@/lib/db/external-calendar-source.repository";
+import { getExternalCalendarToday } from "@/lib/external-calendar-past";
 import type {
   ExternalEventListItem,
   ExternalEventListFilters,
@@ -44,6 +45,10 @@ export async function listExternalCalendarEventsAction(
     from: filters.from,
     to: filters.to,
     search: filters.search,
+    /* 🛡️ Bugünden önce bitmiş iCal event'leri listede GÖRÜNMEZ (sync
+       cleanup'ı onları DB'den de siler; bu filtre arada kalan süre için
+       garanti). Europe/Istanbul günü. */
+    minEndDate: getExternalCalendarToday(),
   });
   if (error) {
     console.error("[external-calendar-events.list] FAILED", error.message);
@@ -60,7 +65,7 @@ export async function getExternalCalendarKpiAction(): Promise<ExternalCalendarKp
   /* Tek round-trip yerine 4 paralel head-count query — minimal payload. */
   const [eventsRes, activeSourcesRes, errorSourcesRes, latestSourceRes] =
     await Promise.all([
-      externalCalendarEventRepository.countActive(),
+      externalCalendarEventRepository.countActive(getExternalCalendarToday()),
       externalCalendarSourceRepository.countActive(),
       externalCalendarSourceRepository.countWithError(),
       externalCalendarSourceRepository.findLatestSuccessAt(),

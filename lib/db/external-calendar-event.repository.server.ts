@@ -121,6 +121,30 @@ export const externalCalendarEventServerRepository = {
       .eq("is_active", true);
   },
 
+  /** 🛡️ Geçmiş cleanup (source bazlı) — `end_date < today` satırları
+   *  HARD DELETE; silinen id'leri döner. YALNIZ bu kriter: bugünle
+   *  kesişen / gelecek event'lere (aktif, pasif veya manuel-pasif)
+   *  DOKUNULMAZ. `today` = Europe/Istanbul günü (caller). */
+  async deletePastBySource(sourceId: string, today: string) {
+    return await dbAdmin
+      .from("external_calendar_events")
+      .delete()
+      .eq("source_id", sourceId)
+      .lt("end_date", today)
+      .select("id");
+  },
+
+  /** 🛡️ Geçmiş cleanup (TÜM kaynaklar; cron) — pasif kaynaklar sync
+   *  edilmediği için onların geçmiş event'leri de temizlenir. Kriter
+   *  YALNIZ `end_date < today`. */
+  async deletePastAll(today: string) {
+    return await dbAdmin
+      .from("external_calendar_events")
+      .delete()
+      .lt("end_date", today)
+      .select("id");
+  },
+
   /** Sync — stale deactivate: bu sync'te GÖRÜLMEYEN aktif event'leri
    *  pasifleştir. ⚠️ seenUids doluysa `.not("external_uid","in",(...))`
    *  ile hariç tut — PostgREST IN quoting BİREBİR (çift-tırnak sarma +

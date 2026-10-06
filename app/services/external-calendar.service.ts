@@ -4,6 +4,10 @@ import { externalCalendarSourceServerRepository } from "@/lib/db/external-calend
 import { externalCalendarEventServerRepository } from "@/lib/db/external-calendar-event.repository.server";
 import { parseICS, type ParsedEvent } from "@/lib/ical.parser";
 import { validateExternalUrl } from "@/lib/security/ssrf.server";
+import {
+  getExternalCalendarToday,
+  isPastExternalEvent,
+} from "@/lib/external-calendar-past";
 
 /* ===============================================================
    🛡️ FAZ 56B — EXTERNAL CALENDAR SYNC SERVICE
@@ -25,7 +29,11 @@ import { validateExternalUrl } from "@/lib/security/ssrf.server";
      • Parser hatası → graceful fail
      • UPSERT (villa_id, external_uid) — duplicate protection
      • Soft delete: bu sync'te görülmeyen önceki event'ler is_active=false
-     • Hard delete YOK (audit korunur)
+     • Hard delete YOK (audit korunur) — TEK İSTİSNA: bugünden önce
+       bitmiş (end_date < bugün, Europe/Istanbul) event'ler. Bunlar
+       upsert'e HİÇ girmez (imported/last_seen_at etkilenmez) ve
+       kaynağın DB'deki geçmiş satırları sync sırasında silinir
+       (lib/external-calendar-past.ts).
      • Service-role only; admin client'tan direct çağrılamaz
        (RLS INSERT/UPDATE policy yok bu tablo için)
 =============================================================== */
@@ -40,10 +48,12 @@ export type SyncSourceResult =
       sourceId: string;
       sourceName: string;
       villaId: string;
-      imported: number;     // upsert edilen (yeni + güncellenen)
+      imported: number;     // upsert edilen (yeni + güncellenen) — geçmiş HARİÇ
       deactivated: number;  // bu sync'te yok → is_active=false
       skipped: number;      // parser skip (local-marker, invalid)
       totalSeen: number;    // ham VEVENT sayısı
+      skippedPast: number;  // feed'de olup bugünden önce bitmiş → import edilmedi
+      deletedPast: number;  // kaynağın DB'deki geçmiş satırları → silindi
     }
   | {
       ok: false;
@@ -240,8 +250,18 @@ export async function syncExternalCalendarSource(
     };
   }
 
+  /* 3b) GEÇMİŞ FİLTRESİ — bugünden önce bitmiş (end_date < bugün,
+        Europe/Istanbul; end_date exclusive) event'ler DB'ye YAZILMAZ:
+        upsert'e girmez, imported'a sayılmaz, last_seen_at'leri
+        güncellenmez. Parser'a DOKUNULMADI. */
+  const today = getExternalCalendarToday(new Date(now));
+  const currentEvents = parsed.events.filter(
+    (e) => !isPastExternalEvent(e.end_date, today)
+  );
+  const skippedPast = parsed.events.length - currentEvents.length;
+
   /* 4) UPSERT rows */
-  const upsertRows = buildUpsertRows(source, parsed.events, now);
+  const upsertRows = buildUpsertRows(source, currentEvents, now);
   let imported = 0;
   if (upsertRows.length > 0) {
     const { data, error } =
@@ -292,10 +312,41 @@ export async function syncExternalCalendarSource(
     );
   }
 
-  /* 5) Soft deactivate — bu sync'te yok olan eski event'ler */
+  /* 4c) GEÇMİŞ CLEANUP — bu kaynağın DB'deki `end_date < bugün`
+        satırları HARD DELETE. Kriter YALNIZ bu; bugünle kesişen /
+        gelecek satırlara (manuel-pasif dahil) dokunmaz. Stale adımından
+        ÖNCE çalışır → geçmiş satırlar "deactivated" sayısına karışmaz.
+        Fail-soft: hata sync'i bozmaz, bir sonraki sync yine dener. */
+  let deletedPast = 0;
+  try {
+    const { data: pastData, error: pastErr } =
+      await externalCalendarEventServerRepository.deletePastBySource(
+        source.id,
+        today
+      );
+    if (pastErr) {
+      console.warn(
+        "[external-calendar.sync] past cleanup WARN",
+        { sourceId: source.id, error: pastErr.message }
+      );
+    } else {
+      deletedPast = Array.isArray(pastData) ? pastData.length : 0;
+    }
+  } catch (err) {
+    console.warn(
+      "[external-calendar.sync] past cleanup EXCEPTION",
+      {
+        sourceId: source.id,
+        error: err instanceof Error ? err.message : "unknown",
+      }
+    );
+  }
+
+  /* 5) Soft deactivate — bu sync'te yok olan eski event'ler.
+        "Görülen" = DB'ye yazılan (geçmiş olmayan) event'ler. */
   let deactivated = 0;
   try {
-    const seenUids = parsed.events.map((e) => e.uid);
+    const seenUids = currentEvents.map((e) => e.uid);
     /* Mevcut kaynağın stale event'leri:
          source_id = source.id AND is_active = true
          AND external_uid NOT IN (seenUids)
@@ -314,7 +365,7 @@ export async function syncExternalCalendarSource(
         last_synced_at: now,
         last_success_at: now,
         last_error: `deactivate: ${deactErr.message}`,
-        last_event_count: parsed.events.length,
+        last_event_count: currentEvents.length,
       });
       return {
         ok: false,
@@ -332,7 +383,7 @@ export async function syncExternalCalendarSource(
       last_synced_at: now,
       last_success_at: now,
       last_error: `deactivate: ${msg}`,
-      last_event_count: parsed.events.length,
+      last_event_count: currentEvents.length,
     });
     return {
       ok: false,
@@ -349,7 +400,7 @@ export async function syncExternalCalendarSource(
     last_synced_at: now,
     last_success_at: now,
     last_error: null,
-    last_event_count: parsed.events.length,
+    last_event_count: currentEvents.length,
   });
 
   return {
@@ -361,6 +412,8 @@ export async function syncExternalCalendarSource(
     deactivated,
     skipped: parsed.skipped,
     totalSeen: parsed.totalSeen,
+    skippedPast,
+    deletedPast,
   };
 }
 
