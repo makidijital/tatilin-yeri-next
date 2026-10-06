@@ -41,7 +41,7 @@ const VILLA = {
   map_embed: null,
   latitude: null,
   longitude: null,
-  tourism_document_number: null,
+  tourism_document_number: null as string | null,
   youtube_videos: [],
   bedroom_layout: [],
   bathroom_layout: [],
@@ -131,6 +131,7 @@ vi.mock("@/app/context/CurrencyContext", () => ({
 import PrivateVillaPageBody from "@/app/components/private-villa/PrivateVillaPageBody";
 import BottomNav from "@/app/components/layout/BottomNav";
 import NormalVillaDetail from "@/app/(public)/kiralik-villa/[slug]/page";
+import VillaInfoBar from "@/app/components/villa/VillaInfoBar";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 const dict = getDictionary("tr");
@@ -238,6 +239,90 @@ describe("DOM paritesi — /v/[token] == /kiralik-villa/[slug] (JSON-LD hariç)"
       }
     }
   );
+});
+
+describe("Turizm belge numarası görünürlüğü", () => {
+  const CERT = "07-1234";
+  const certText = () => screen.queryByText(dict.villa.tourismCertificate);
+  const infoGrid = (c: HTMLElement) =>
+    c.querySelector("div.flex-1.min-w-0.grid") as HTMLElement | null;
+
+  it("normal detay + belge VAR → belge görünür, grid 4 kolon (eskisiyle aynı)", async () => {
+    state.villa = { ...VILLA, tourism_document_number: CERT } as typeof VILLA;
+    const el = await NormalVillaDetail({
+      params: Promise.resolve({ slug: VILLA.slug }),
+      searchParams: Promise.resolve({}),
+    });
+    const { container } = render(el as React.ReactElement);
+    expect(certText()).not.toBeNull();
+    expect(screen.getByText(new RegExp(CERT))).toBeTruthy();
+    expect(infoGrid(container)!.className).toContain("grid-cols-2 md:grid-cols-4");
+  });
+
+  it("normal detay + belge YOK → belge yok, boş kolon yok (3 kutu → 3 kolon)", async () => {
+    const el = await NormalVillaDetail({
+      params: Promise.resolve({ slug: VILLA.slug }),
+      searchParams: Promise.resolve({}),
+    });
+    const { container } = render(el as React.ReactElement);
+    expect(certText()).toBeNull();
+    const grid = infoGrid(container)!;
+    expect(grid.children).toHaveLength(3);
+    expect(grid.className).toContain("grid-cols-3 md:grid-cols-3");
+    expect(grid.className).not.toContain("md:grid-cols-4");
+  });
+
+  it.each([CERT, null, "   "])(
+    "/v/[token] + belge=%s → belge HİÇ gösterilmez, boş kolon yok",
+    async (doc) => {
+      state.villa = { ...VILLA, tourism_document_number: doc } as typeof VILLA;
+      const { container } = await renderPrivate();
+      expect(certText()).toBeNull();
+      expect(container.innerHTML).not.toContain(CERT);
+      expect(container.innerHTML).not.toContain("turizm-bakanligi.svg");
+      const grid = infoGrid(container)!;
+      expect(grid.children).toHaveLength(3);
+      expect(grid.className).toContain("grid-cols-3 md:grid-cols-3");
+    }
+  );
+
+  it("belge VAR iken /v/[token] DOM'u = belgesiz normal detay DOM'u", async () => {
+    const strip = (c: HTMLElement) => {
+      c.querySelectorAll('script[type="application/ld+json"]').forEach((n) => n.remove());
+      return c.innerHTML;
+    };
+    const normalEl = await NormalVillaDetail({
+      params: Promise.resolve({ slug: VILLA.slug }),
+      searchParams: Promise.resolve({}),
+    });
+    const n = render(normalEl as React.ReactElement);
+    const normalHtml = strip(n.container);
+    n.unmount();
+    state.villa = { ...VILLA, tourism_document_number: CERT } as typeof VILLA;
+    const p = await renderPrivate();
+    expect(strip(p.container)).toBe(normalHtml);
+  });
+
+  it.each([
+    [{ guests: 6, bedrooms: 3, bathrooms: 2, doc: CERT }, 4, "grid-cols-2 md:grid-cols-4"],
+    [{ guests: 6, bedrooms: 3, bathrooms: 2, doc: null }, 3, "grid-cols-3 md:grid-cols-3"],
+    [{ guests: 6, bedrooms: 0, bathrooms: 2, doc: null }, 2, "grid-cols-2 md:grid-cols-2"],
+    [{ guests: 6, bedrooms: 0, bathrooms: 0, doc: null }, 1, "grid-cols-1 md:grid-cols-1"],
+  ])("VillaInfoBar kolon sayısı görünen kutu sayısına eşit (%o)", (v, count, cls) => {
+    const { container } = render(
+      <VillaInfoBar
+        villaTitle="Villa Lorien"
+        location="Kalkan"
+        guests={v.guests}
+        bedrooms={v.bedrooms}
+        bathrooms={v.bathrooms}
+        tourismDocumentNumber={v.doc}
+      />
+    );
+    const grid = infoGrid(container)!;
+    expect(grid.children).toHaveLength(count);
+    expect(grid.className).toContain(cls);
+  });
 });
 
 describe("BottomNav — villa detayında tek alt bar", () => {

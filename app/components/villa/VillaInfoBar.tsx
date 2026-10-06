@@ -92,6 +92,23 @@ export default function VillaInfoBar({
   const hasCertificate = certificateNo.length > 0;
   const hasAnyInfoItem =
     guests > 0 || bedrooms > 0 || bathrooms > 0 || hasCertificate;
+  /* 🛡️ Görünen kutu sayısına göre kolon sayısı — belge (veya başka bir
+     kutu) yoksa boş grid hücresi / dikey boşluk KALMAZ. 4 kutuda sınıf
+     BİREBİR eskisi gibi ("grid-cols-2 md:grid-cols-4"). Tailwind'in
+     statik taraması için sınıflar tam string olarak yazıldı. */
+  const infoItemCount =
+    (guests > 0 ? 1 : 0) +
+    (bedrooms > 0 ? 1 : 0) +
+    (bathrooms > 0 ? 1 : 0) +
+    (hasCertificate ? 1 : 0);
+  const infoGridCols =
+    infoItemCount >= 4
+      ? "grid-cols-2 md:grid-cols-4"
+      : infoItemCount === 3
+        ? "grid-cols-3 md:grid-cols-3"
+        : infoItemCount === 2
+          ? "grid-cols-2 md:grid-cols-2"
+          : "grid-cols-1 md:grid-cols-1";
 
   return (
       <div
@@ -183,7 +200,7 @@ export default function VillaInfoBar({
             )}
 
             {hasAnyInfoItem && (
-              <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3">
+              <div className={`flex-1 min-w-0 grid ${infoGridCols} gap-2.5 md:gap-3`}>
                 {guests > 0 && (
                   <InfoItem
                     icon={<Users size={15} strokeWidth={1.8} />}
