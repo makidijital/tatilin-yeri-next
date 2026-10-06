@@ -86,7 +86,10 @@ export default function BottomNav({
   const navDict = dict.layout.bottomNav;
 
   // Villa detay → tek alt bar (MobileBookingCta) kalsın; nav gizle.
-  if (basePath.startsWith("/kiralik-villa/")) return null;
+  /* 🛡️ Gizli villa linki (/v/[token], /en|de/v/[token]) da AYNI
+     VillaDetailBody'yi (MobileBookingCta dahil) render eder. */
+  if (basePath.startsWith("/kiralik-villa/") || basePath.startsWith("/v/"))
+    return null;
 
   /* `/tr` (MOD B'deki TR ana sayfa) da "ana sayfa" sayılır —
      `stripLocalePrefix` yalnız /en,/de soyduğu için basePath "/tr"

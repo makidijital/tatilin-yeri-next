@@ -118,9 +118,18 @@ export type VillaDetailBodyProps = {
   /** Sayfa başına EŞSİZ olmalı (MobileBookingCta `targetId` ile eşleşir). */
   bookingSidebarId: string;
 
-  /** JSON-LD — locale'e özel, çağıran tarafta üretilir. */
-  vacationRentalLd: Record<string, unknown>;
-  breadcrumbLd: Record<string, unknown>;
+  /** JSON-LD — locale'e özel, çağıran tarafta üretilir.
+   *  🛡️ Opsiyonel YALNIZ gizli link (/v/[token]) için: off-market kayıt
+   *  SEO yüzeyine girmesin diye o gövde JSON-LD VERMEZ. Normal TR/EN/DE
+   *  detay sayfaları her zaman verir → çıktıları BİREBİR aynı. */
+  vacationRentalLd?: Record<string, unknown>;
+  breadcrumbLd?: Record<string, unknown>;
+
+  /** 🛡️ Gizli link + PASİF villa: rezervasyon sayfası pasif villayı
+   *  açmadığı için "Rezervasyon Yap" gizlenir (BookingSidebar'ın MEVCUT
+   *  prop'u). Verilmezse BookingSidebar varsayılanı (false) → normal
+   *  sayfalar BİREBİR aynı. */
+  hideReservationCta?: boolean;
 };
 
 export default function VillaDetailBody({
@@ -149,6 +158,7 @@ export default function VillaDetailBody({
   bookingSidebarId,
   vacationRentalLd,
   breadcrumbLd,
+  hideReservationCta,
 }: VillaDetailBodyProps) {
   const dict = getDictionary(locale);
 
@@ -168,8 +178,8 @@ export default function VillaDetailBody({
       <div className="px-5 md:px-10 lg:px-16 pt-8 md:pt-12 pb-24 md:pb-32">
         <div className="max-w-[1280px] mx-auto">
           {/* SEO — JSON-LD structured data */}
-          <JsonLd data={vacationRentalLd} />
-          <JsonLd data={breadcrumbLd} />
+          {vacationRentalLd && <JsonLd data={vacationRentalLd} />}
+          {breadcrumbLd && <JsonLd data={breadcrumbLd} />}
 
           {/* ═══ VILLA INFO HEADER — full-width, Gallery + Booking
               grid'inin ÜSTÜNDE. */}
@@ -337,6 +347,7 @@ export default function VillaDetailBody({
                 initialStart={initialStart}
                 initialEnd={initialEnd}
                 locale={locale}
+                hideReservationCta={hideReservationCta}
               />
 
               {/* 🕓 GİRİŞ & ÇIKIŞ SAATLERİ */}

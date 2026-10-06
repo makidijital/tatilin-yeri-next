@@ -72,16 +72,33 @@ describe("BookingSidebar — hideReservationCta", () => {
   });
 });
 
-describe("prop yalnız gizli link gövdesinde", () => {
+describe("prop yalnız gizli link (pasif villa) için", () => {
   const read = (rel: string) => readFileSync(join(process.cwd(), rel), "utf-8");
+  const code = (rel: string) =>
+    read(rel).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
 
-  it("PrivateVillaPageBody (TR/EN/DE /v/[token]) CTA'yı gizler", () => {
-    expect(read("app/components/private-villa/PrivateVillaPageBody.tsx")).toMatch(
-      /<BookingSidebar[\s\S]*?hideReservationCta[\s\S]*?\/>/
+  it("PrivateVillaPageBody normal detay gövdesini (VillaDetailBody) kullanır; CTA yalnız PASİF villada gizli", () => {
+    const src = code("app/components/private-villa/PrivateVillaPageBody.tsx");
+    expect(src).toMatch(
+      /<VillaDetailBody[\s\S]*?hideReservationCta=\{villa\.is_active === false\}[\s\S]*?\/>/
+    );
+    /* Kopya UI yok: BookingSidebar doğrudan render edilmez. */
+    expect(src).not.toMatch(/<BookingSidebar/);
+    /* Off-market SEO: JSON-LD verilmez. */
+    expect(src).not.toMatch(/vacationRentalLd|breadcrumbLd|JsonLd/);
+  });
+
+  it("VillaDetailBody prop'u yalnız BookingSidebar'a iletir", () => {
+    expect(code("app/components/villa/VillaDetailBody.tsx")).toMatch(
+      /<BookingSidebar[\s\S]*?hideReservationCta=\{hideReservationCta\}[\s\S]*?\/>/
     );
   });
 
-  it("normal villa detay gövdesi prop'u VERMEZ", () => {
-    expect(read("app/components/villa/VillaDetailBody.tsx")).not.toContain("hideReservationCta");
+  it.each([
+    "app/(public)/kiralik-villa/[slug]/page.tsx",
+    "app/(public)/en/kiralik-villa/[slug]/page.tsx",
+    "app/(public)/de/kiralik-villa/[slug]/page.tsx",
+  ])("normal villa detay sayfası prop'u VERMEZ: %s", (rel) => {
+    expect(read(rel)).not.toContain("hideReservationCta");
   });
 });

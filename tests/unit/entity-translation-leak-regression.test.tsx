@@ -24,7 +24,7 @@
    =============================================================== */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 
 /* ---------------------------------------------------------------
    Ortak: en alttaki çeviri DB primitive'i (tek mock noktası)
@@ -109,6 +109,24 @@ vi.mock("@/app/services/price-include-item.service", () => ({
 vi.mock("@/app/services/settings.service", () => ({
   getPublicSettings: () => Promise.resolve(null),
 }));
+/* 🛡️ /v/[token] artık normal detayın gövdesini (VillaDetailBody) render
+   ediyor → normal detayla AYNI ek okumalar (indirim / iCal / yorumlar /
+   benzer villalar) gerçek DB'ye gitmesin diye mock'lanır. */
+vi.mock("@/app/services/villa-discount.service", () => ({
+  getVillaDiscounts: () => Promise.resolve([]),
+}));
+vi.mock("@/lib/external-calendar.public.helper", () => ({
+  fetchExternalCalendarStringsForVilla: () =>
+    Promise.resolve({ checkin: [], checkout: [], middle: [] }),
+  EMPTY_EXTERNAL_STRING_ARRAYS: Object.freeze({
+    checkin: [],
+    checkout: [],
+    middle: [],
+  }),
+}));
+vi.mock("@/app/components/villa/SimilarVillasSection", () => ({
+  default: () => <div data-testid="similar-villas-section" />,
+}));
 
 /* ---------------------------------------------------------------
    B#2 — ShortGapsPageBody veri servisleri
@@ -130,6 +148,8 @@ const LOCATIONS = [
 vi.mock("@/lib/cache.helpers", () => ({
   getCachedVillaTypes: () => Promise.resolve(VILLA_TYPES),
   getCachedVillaLocations: () => Promise.resolve(LOCATIONS),
+  getCachedVillaReviews: () => Promise.resolve([]),
+  getCachedVillaReviewStats: () => Promise.resolve({ count: 0, average: 0 }),
 }));
 vi.mock("@/lib/db/short-gaps.repository", () => ({
   shortGapsRepository: {
@@ -253,6 +273,13 @@ async function renderPrivateVilla(locale?: "tr" | "en" | "de") {
   return render(el as React.ReactElement);
 }
 
+/* 🛡️ VillaDetailBody parity — özellikler ve mesafeler normal detaydaki
+   gibi SEKME içinde (yalnız aktif sekme DOM'da). */
+function openTab(locale: "tr" | "en" | "de" | undefined, tab: "features" | "location") {
+  const label = getDictionary(locale ?? "tr").villaTabs[tab];
+  fireEvent.click(screen.getByRole("button", { name: label }));
+}
+
 async function renderShortGaps(locale?: "tr" | "en" | "de") {
   const el = await ShortGapsPageBody({
     params: Promise.resolve({ ay: "haziran", gece: "3" }),
@@ -269,9 +296,11 @@ describe("PrivateVillaPageBody — DB entity alanları locale-aware", () => {
   it("TR: canonical TR değerleri AYNEN gösterilir", async () => {
     withTranslations();
     await renderPrivateVilla("tr");
-    expect(screen.getByText("Ozel Havuz")).toBeInTheDocument();
     expect(screen.getByText("Evcil hayvan kabul edilmez")).toBeInTheDocument();
     expect(screen.getByText("Havlu ve nevresim")).toBeInTheDocument();
+    openTab("tr", "features");
+    expect(screen.getByText("Ozel Havuz")).toBeInTheDocument();
+    openTab("tr", "location");
     expect(screen.getByText("Plaj")).toBeInTheDocument();
     expect(
       screen.getByText(/canonical TR aciklama/)
@@ -289,23 +318,26 @@ describe("PrivateVillaPageBody — DB entity alanları locale-aware", () => {
     withTranslations();
     await renderPrivateVilla(undefined);
     expect(findManyForLocaleMock).not.toHaveBeenCalled();
+    openTab(undefined, "features");
     expect(screen.getByText("Ozel Havuz")).toBeInTheDocument();
   });
 
   it("EN: feature / rule / price-include / mesafe / açıklama EN gösterilir", async () => {
     withTranslations();
     await renderPrivateVilla("en");
-    expect(screen.getByText("Private Pool")).toBeInTheDocument();
     expect(screen.getByText("No pets allowed")).toBeInTheDocument();
     expect(screen.getByText("Towels and linen")).toBeInTheDocument();
+    expect(screen.getByText(/EN description/)).toBeInTheDocument();
+    openTab("en", "features");
+    expect(screen.getByText("Private Pool")).toBeInTheDocument();
+    expect(screen.queryByText("Ozel Havuz")).not.toBeInTheDocument();
+    openTab("en", "location");
     /* Mesafe başlığı statik dictionary'den (DB'den DEĞİL). */
     expect(
       screen.getByText(getDictionary("en").distanceLabels["Plaj"])
     ).toBeInTheDocument();
-    expect(screen.getByText(/EN description/)).toBeInTheDocument();
 
     /* Canonical TR karşılıkları DOM'da OLMAMALI. */
-    expect(screen.queryByText("Ozel Havuz")).not.toBeInTheDocument();
     expect(
       screen.queryByText("Evcil hayvan kabul edilmez")
     ).not.toBeInTheDocument();
@@ -316,14 +348,16 @@ describe("PrivateVillaPageBody — DB entity alanları locale-aware", () => {
   it("DE: feature / rule / price-include / mesafe / açıklama DE gösterilir", async () => {
     withTranslations();
     await renderPrivateVilla("de");
-    expect(screen.getByText("Privatpool")).toBeInTheDocument();
     expect(screen.getByText("Keine Haustiere")).toBeInTheDocument();
     expect(screen.getByText("Handtucher und Bettwasche")).toBeInTheDocument();
+    expect(screen.getByText(/DE Beschreibung/)).toBeInTheDocument();
+    openTab("de", "features");
+    expect(screen.getByText("Privatpool")).toBeInTheDocument();
+    expect(screen.queryByText("Ozel Havuz")).not.toBeInTheDocument();
+    openTab("de", "location");
     expect(
       screen.getByText(getDictionary("de").distanceLabels["Plaj"])
     ).toBeInTheDocument();
-    expect(screen.getByText(/DE Beschreibung/)).toBeInTheDocument();
-    expect(screen.queryByText("Ozel Havuz")).not.toBeInTheDocument();
   });
 
   it.each(["en", "de"] as const)(
@@ -331,10 +365,11 @@ describe("PrivateVillaPageBody — DB entity alanları locale-aware", () => {
     async (locale) => {
       withoutTranslations();
       await renderPrivateVilla(locale);
-      expect(screen.getByText("Ozel Havuz")).toBeInTheDocument();
       expect(
         screen.getByText("Evcil hayvan kabul edilmez")
       ).toBeInTheDocument();
+      openTab(locale, "features");
+      expect(screen.getByText("Ozel Havuz")).toBeInTheDocument();
       expect(screen.getByText("Havlu ve nevresim")).toBeInTheDocument();
       expect(screen.getByText(/canonical TR aciklama/)).toBeInTheDocument();
     }
