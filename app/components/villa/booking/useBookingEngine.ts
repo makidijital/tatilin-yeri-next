@@ -109,6 +109,7 @@ import { evaluateOrphanGap } from "@/lib/stay-rules.helper";
    semantiğinin aynısı; bkz. lib/price-coverage.ts). */
 import {
   isDayClosedForPrice,
+  isValidCheckoutDay,
   rangeHasUnpricedNight as rangeHasUnpricedNightFor,
 } from "@/lib/price-coverage";
 
@@ -272,8 +273,9 @@ export type UseBookingEngineReturn = {
   formatDate: (d: Date) => string;
   isIntersection: (date: Date) => boolean;
   hasConflict: (start: Date, end: Date) => boolean;
-  /** 🛡️ FİYAT KAPSAMI — gün tamamen kapalı mı (kendi gecesi VE önceki
-   *  gecesi fiyatsız)? Takvim `disabled` matcher'ı. */
+  /** 🛡️ FİYAT KAPSAMI — takvim `disabled` matcher'ı: günün KENDİ gecesi
+   *  fiyatsızsa kapalı; YALNIZ check-in seçili ve checkout henüz yokken,
+   *  [check-in, gün) tamamen fiyatlıysa gün checkout için açılır. */
   isPriceClosedDay: (date: Date) => boolean;
   /** 🛡️ FİYAT KAPSAMI — [start, end) içinde fiyatsız gece var mı? */
   rangeHasUnpricedNight: (start: Date, end: Date) => boolean;
@@ -958,8 +960,14 @@ export function useBookingEngine(
      gelmesi ve min-stay vb. sebeplerle `rawResult`'ın hiç
      hesaplanmaması durumunu da kapsar. Tam kapsanan aralıkta false →
      mevcut davranış aynı. */
-  const isPriceClosedDay = (date: Date) =>
-    isDayClosedForPrice(date, normalizedPrices);
+  const isPriceClosedDay = (date: Date) => {
+    if (!isDayClosedForPrice(date, normalizedPrices)) return false;
+    /* Checkout istisnası — yalnız check-in seçilmiş, checkout bekleniyorken. */
+    if (startDate && !endDate) {
+      return !isValidCheckoutDay(startDate, date, normalizedPrices);
+    }
+    return true;
+  };
   const rangeHasUnpricedNight = (start: Date, end: Date) =>
     rangeHasUnpricedNightFor(start, end, normalizedPrices);
   const selectionHasUnpricedNight =

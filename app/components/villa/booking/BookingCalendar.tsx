@@ -216,9 +216,10 @@ export default function BookingCalendar({
           { before: today },
           ...mergedBlockedDates,
           isIntersection,
-          /* 🛡️ FİYAT KAPSAMI — yalnız kendi gecesi VE önceki gecesi
-             fiyatsız gün kapanır (sezon sonrası ilk gün ÇIKIŞ olarak
-             seçilebilir kalır). Mevcut kapalı günler AYNEN. */
+          /* 🛡️ FİYAT KAPSAMI — KENDİ gecesi fiyatsız gün kapalı (check-in
+             yapılamaz). Yalnız check-in seçiliyken [check-in, gün) tamamen
+             fiyatlıysa o gün CHECKOUT için açılır (engine). Mevcut kapalı
+             günler AYNEN. */
           isPriceClosedDay,
         ]}
         modifiers={{

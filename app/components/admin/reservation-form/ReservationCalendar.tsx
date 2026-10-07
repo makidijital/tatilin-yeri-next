@@ -18,6 +18,7 @@ import { formatLocalDate } from "@/lib/date-format";
 /* 🛡️ FİYAT KAPSAMI — public rezervasyon takvimiyle AYNI ortak kural. */
 import {
   isNightPriced,
+  isValidCheckoutDay,
   rangeHasUnpricedNight,
 } from "@/lib/price-coverage";
 import type { ExternalEventDetail } from "@/lib/external-calendar.admin.types";
@@ -226,7 +227,8 @@ export type ReservationCalendarProps = {
      ekranları `true` geçer. Varsayılan `false` → manuel blok formu ve
      diğer kullanımlar BİREBİR eskisi gibi. Açıkken (ve `prices`
      verilmişse) public takvimle AYNI kural:
-       • kendi gecesi VE önceki gecesi fiyatsız gün → seçilemez
+       • KENDİ gecesi fiyatsız gün → seçilemez; yalnız seçim sürerken
+         [check-in, gün) tamamen fiyatlıysa CHECKOUT olarak açılır
        • [giriş, çıkış) içinde fiyatsız gece → aralık REDDEDİLİR
          (onSelectRange çağrılmaz; sessiz kısaltma YOK)
      `excludeDisabledDates` (düzenlemede rezervasyonun KENDİ geceleri)
@@ -272,11 +274,16 @@ export default function ReservationCalendar({
     excludeDisabledDates.some((e) => sameDay(e, night));
   const nightPriceOk = (night: Date) =>
     isPriceExemptNight(night) || isNightPriced(night, prices);
-  const isPriceClosedDay = (date: Date) => {
+  /* Gün kapalı mı? → KENDİ gecesi fiyatsızsa (public ile aynı kural).
+     Checkout istisnası: seçim sürerken (drag / tap anchor = `anchor`)
+     [anchor, gün) gecelerinin tamamı fiyatlıysa gün checkout için açılır. */
+  const isPriceClosedDay = (date: Date, anchor: Date | null) => {
     if (!priceRuleActive) return false;
     if (nightPriceOk(date)) return false;
-    const prev = new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1);
-    return !nightPriceOk(prev);
+    if (anchor) {
+      return !isValidCheckoutDay(anchor, date, prices, isPriceExemptNight);
+    }
+    return true;
   };
   const [priceError, setPriceError] = useState<string | null>(null);
   /* true → aralık geçerli; false → reddedildi (uyarı gösterilir). */
@@ -723,7 +730,7 @@ export default function ReservationCalendar({
                   const disabled =
                     fullyBlockedDates.some((d) => sameDay(d, date)) ||
                     /* 🛡️ FİYAT KAPSAMI (opt-in) — kapalıysa false. */
-                    isPriceClosedDay(date);
+                    isPriceClosedDay(date, dragFrom);
 
                   /* 📱 Bekleyen tap anchor'ı (1. dokunuş, 2. dokunuş beklenirken)
                      de drag ile AYNI görsel state'i kullanır → ilk seçilen gün
