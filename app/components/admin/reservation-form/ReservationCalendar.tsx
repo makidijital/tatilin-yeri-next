@@ -15,6 +15,11 @@ import {
 } from "lucide-react";
 import { getDayStyle } from "@/lib/calendar.engine";
 import { formatLocalDate } from "@/lib/date-format";
+/* 🛡️ FİYAT KAPSAMI — public rezervasyon takvimiyle AYNI ortak kural. */
+import {
+  isNightPriced,
+  rangeHasUnpricedNight,
+} from "@/lib/price-coverage";
 import type { ExternalEventDetail } from "@/lib/external-calendar.admin.types";
 /* 🛡️ FAZ 28 — calculateNights reuse (lib/price.engine).
    BookingSidebar, PricingCalendarCanvas (Faz 27), VillaCard,
@@ -216,6 +221,17 @@ export type ReservationCalendarProps = {
   discounts?: DiscountRange[] | null;
   rates?: Record<string, number>;
   priceCurrency?: string;
+
+  /* 🛡️ FİYAT KAPSAMI (OPT-IN) — YALNIZ admin rezervasyon oluştur/düzenle
+     ekranları `true` geçer. Varsayılan `false` → manuel blok formu ve
+     diğer kullanımlar BİREBİR eskisi gibi. Açıkken (ve `prices`
+     verilmişse) public takvimle AYNI kural:
+       • kendi gecesi VE önceki gecesi fiyatsız gün → seçilemez
+       • [giriş, çıkış) içinde fiyatsız gece → aralık REDDEDİLİR
+         (onSelectRange çağrılmaz; sessiz kısaltma YOK)
+     `excludeDisabledDates` (düzenlemede rezervasyonun KENDİ geceleri)
+     fiyat kuralından da muaf tutulur. */
+  enforcePriceCoverage?: boolean;
 };
 
 export default function ReservationCalendar({
@@ -245,7 +261,35 @@ export default function ReservationCalendar({
   discounts = null,
   rates = { TRY: 1 },
   priceCurrency = "TRY",
+  enforcePriceCoverage = false,
 }: ReservationCalendarProps) {
+  /* ---------------------------------------------
+     🛡️ FİYAT KAPSAMI — opt-in; `prices` null ise (henüz verilmedi)
+     kural devreye girmez. Muafiyet: excludeDisabledDates.
+  ---------------------------------------------- */
+  const priceRuleActive = enforcePriceCoverage && Array.isArray(prices);
+  const isPriceExemptNight = (night: Date) =>
+    excludeDisabledDates.some((e) => sameDay(e, night));
+  const nightPriceOk = (night: Date) =>
+    isPriceExemptNight(night) || isNightPriced(night, prices);
+  const isPriceClosedDay = (date: Date) => {
+    if (!priceRuleActive) return false;
+    if (nightPriceOk(date)) return false;
+    const prev = new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1);
+    return !nightPriceOk(prev);
+  };
+  const [priceError, setPriceError] = useState<string | null>(null);
+  /* true → aralık geçerli; false → reddedildi (uyarı gösterilir). */
+  const passesPriceRule = (from: Date, to: Date) => {
+    if (!priceRuleActive) return true;
+    if (!rangeHasUnpricedNight(from, to, prices, isPriceExemptNight)) {
+      return true;
+    }
+    setPriceError("Seçilen aralıkta fiyatı tanımlı olmayan gece var.");
+    setTimeout(() => setPriceError(null), 4000);
+    return false;
+  };
+
   /* ---------------------------------------------
      🔥 DRAG STATE — PricingCanvas patternine birebir.
      dragFrom / dragTo: drag boyunca uçlar
@@ -363,7 +407,9 @@ export default function ReservationCalendar({
         const a = dragFrom.getTime() <= dragTo.getTime();
         const from = a ? dragFrom : dragTo;
         const to = a ? dragTo : dragFrom;
-        onSelectRange(from, to, fullyBlockedDates);
+        if (passesPriceRule(from, to)) {
+          onSelectRange(from, to, fullyBlockedDates);
+        }
       }
       setDragFrom(null);
       setDragTo(null);
@@ -424,7 +470,9 @@ export default function ReservationCalendar({
       tapAnchorRef.current = null;
       setDragFrom(null);
       setDragTo(null);
-      onSelectRange(from, to, fullyBlockedDates);
+      if (passesPriceRule(from, to)) {
+        onSelectRange(from, to, fullyBlockedDates);
+      }
     }
   };
 
@@ -548,6 +596,16 @@ export default function ReservationCalendar({
         </div>
       </div>
 
+      {/* 🛡️ FİYAT KAPSAMI — reddedilen aralık uyarısı (opt-in). */}
+      {priceError && (
+        <div
+          role="alert"
+          className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800"
+        >
+          {priceError}
+        </div>
+      )}
+
       {/* Hint */}
       <p className="text-[11px] text-[var(--color-stone-500)] mb-2">
         <Sparkles
@@ -662,9 +720,10 @@ export default function ReservationCalendar({
                       }`
                     : undefined;
 
-                  const disabled = fullyBlockedDates.some((d) =>
-                    sameDay(d, date)
-                  );
+                  const disabled =
+                    fullyBlockedDates.some((d) => sameDay(d, date)) ||
+                    /* 🛡️ FİYAT KAPSAMI (opt-in) — kapalıysa false. */
+                    isPriceClosedDay(date);
 
                   /* 📱 Bekleyen tap anchor'ı (1. dokunuş, 2. dokunuş beklenirken)
                      de drag ile AYNI görsel state'i kullanır → ilk seçilen gün

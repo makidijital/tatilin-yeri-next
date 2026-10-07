@@ -492,6 +492,8 @@ function ModalContent({
     minimumStayValid,
     isGapOverride,
     result,
+    /* 🛡️ FİYAT KAPSAMI — BookingSidebar ile AYNI engine bayrağı. */
+    priceUnavailable,
     /* 🛡️ Engine'in ZATEN ürettiği indirim karşılaştırması (originalStay /
        discountedStay). BookingSidebar ile AYNI değer; burada YENİDEN
        hesaplanmaz, yalnız paylaşılan BookingSummary'ye aktarılır. */
@@ -727,16 +729,27 @@ function ModalContent({
           </div>
         )}
 
+        {/* 🛡️ FİYAT KAPSAMI — BookingSidebar ile AYNI uyarı (metin +
+            görünüm); fiyatsız gece içeren aralıkta buton kapalı. */}
+        {priceUnavailable && (
+          <p
+            role="status"
+            className="text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2"
+          >
+            {dict.booking.priceUnavailableNotice}
+          </p>
+        )}
+
         <button
           onClick={handleReservation}
-          disabled={!minimumStayValid || availabilityPending || initialRangeConflict}
+          disabled={!minimumStayValid || priceUnavailable || availabilityPending || initialRangeConflict}
           /* 🛡️ DÜZ TURUNCU CTA (UI-only): `.btn-primary`nin turkuaz
              zemini + glow shadow'ları YALNIZ BU BUTONDA ezilir (global
              sınıfa DOKUNULMADI → diğer tüm butonlar aynı). Marka
              turuncusu #ED7926, beyaz metin; hover sade koyu ton,
              gradient/glass/translate efekti yok. */
           className={`btn-primary w-full !py-3.5 !text-sm !bg-[#ED7926] !bg-none !shadow-none !transform-none hover:!bg-[#d96d1f] hover:!shadow-none ${
-            !minimumStayValid || availabilityPending || initialRangeConflict ? "!opacity-50 !cursor-not-allowed" : ""
+            !minimumStayValid || priceUnavailable || availabilityPending || initialRangeConflict ? "!opacity-50 !cursor-not-allowed" : ""
           }`}
         >
           {dict.booking.bookNow}

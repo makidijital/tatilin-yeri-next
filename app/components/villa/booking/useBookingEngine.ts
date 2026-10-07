@@ -105,6 +105,12 @@ import {
    gece kümesi + minStay + today verilir, karar döner). Mevcut min-stay/
    gap-fill mantığını BOZMAZ; yalnız orphan bırakan seçimi ek olarak eler. */
 import { evaluateOrphanGap } from "@/lib/stay-rules.helper";
+/* 🛡️ FİYAT KAPSAMI — rezervasyon takvimlerinin ORTAK kuralı (motor
+   semantiğinin aynısı; bkz. lib/price-coverage.ts). */
+import {
+  isDayClosedForPrice,
+  rangeHasUnpricedNight as rangeHasUnpricedNightFor,
+} from "@/lib/price-coverage";
 
 /* 🛡️ PHASE 10B — YALNIZ 3 reservationError string'i + handleReservation
    navigation URL'ine (EN/DE için) `&locale=` query param'ı eklemek için.
@@ -266,6 +272,11 @@ export type UseBookingEngineReturn = {
   formatDate: (d: Date) => string;
   isIntersection: (date: Date) => boolean;
   hasConflict: (start: Date, end: Date) => boolean;
+  /** 🛡️ FİYAT KAPSAMI — gün tamamen kapalı mı (kendi gecesi VE önceki
+   *  gecesi fiyatsız)? Takvim `disabled` matcher'ı. */
+  isPriceClosedDay: (date: Date) => boolean;
+  /** 🛡️ FİYAT KAPSAMI — [start, end) içinde fiyatsız gece var mı? */
+  rangeHasUnpricedNight: (start: Date, end: Date) => boolean;
   getPriceForDate: (date: Date) => number | null;
   /** Günlük İNDİRİMLİ fiyat (yalnız gerçek indirim varsa); aksi halde
    *  null → tüketici mevcut tek-fiyat görünümünü korur. */
@@ -942,7 +953,22 @@ export function useBookingEngine(
      Tam kapsanan aralıklarda `priceAvailable === true` olduğu için
      `result` ESKİSİYLE BİREBİR aynı nesnedir. */
   const result = rawResult && rawResult.priceAvailable ? rawResult : null;
-  const priceUnavailable = !!rawResult && !rawResult.priceAvailable;
+  /* 🛡️ FİYAT KAPSAMI — takvim fiyatsız geceli aralığı zaten reddeder;
+     bu ek koşul aralığın BAŞKA yoldan (URL / modal / paylaşılan link)
+     gelmesi ve min-stay vb. sebeplerle `rawResult`'ın hiç
+     hesaplanmaması durumunu da kapsar. Tam kapsanan aralıkta false →
+     mevcut davranış aynı. */
+  const isPriceClosedDay = (date: Date) =>
+    isDayClosedForPrice(date, normalizedPrices);
+  const rangeHasUnpricedNight = (start: Date, end: Date) =>
+    rangeHasUnpricedNightFor(start, end, normalizedPrices);
+  const selectionHasUnpricedNight =
+    !!startDate &&
+    !!endDate &&
+    !initialRangePending &&
+    rangeHasUnpricedNight(startDate, endDate);
+  const priceUnavailable =
+    (!!rawResult && !rawResult.priceAvailable) || selectionHasUnpricedNight;
 
   /* ===============================================================
      🛡️ VILLA_DISCOUNTS — GÖRSEL GÖSTERİM (Adım 3, UI-only)
@@ -1095,6 +1121,13 @@ export function useBookingEngine(
       setTimeout(() => setReservationError(null), 3000);
       return;
     }
+    /* 🛡️ FİYAT KAPSAMI — son güvenlik kapısı: aralıkta fiyatsız gece
+       varsa /rezervasyon'a gidilmez (sunucu da ayrıca 400 döner). */
+    if (priceUnavailable || rangeHasUnpricedNight(startDate, endDate)) {
+      setReservationError(dict.booking.priceUnavailableNotice);
+      setTimeout(() => setReservationError(null), 4000);
+      return;
+    }
     setReservationError(null);
 
     const format = (date: Date) => {
@@ -1203,6 +1236,8 @@ export function useBookingEngine(
     formatDate,
     isIntersection,
     hasConflict,
+    isPriceClosedDay,
+    rangeHasUnpricedNight,
     getPriceForDate,
     getDiscountedPriceForDate,
 

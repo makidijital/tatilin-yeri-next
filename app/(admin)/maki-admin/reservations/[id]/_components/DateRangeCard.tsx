@@ -139,6 +139,8 @@ export default function DateRangeCard({
               setEndDate(safeEnd);
             }}
             showRangeChip={false}
+            /* 🛡️ FİYAT KAPSAMI — public ile AYNI kural (yalnız rezervasyon ekranları). */
+            enforcePriceCoverage
           />
         </div>
 

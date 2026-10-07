@@ -1077,6 +1077,8 @@ export default function AdminReservationDetailPage() {
                     setEndDate(safeEnd);
                   }}
                   showRangeChip={false}
+                  /* 🛡️ FİYAT KAPSAMI — public ile AYNI kural (yalnız rezervasyon ekranları). */
+                  enforcePriceCoverage
                 />
 
                 {(errors.start_date || errors.end_date) && (
