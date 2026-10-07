@@ -35,9 +35,15 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
      - Kart yüzeyi: koyu glass — dış wrapper transparent olduğu için
        metin okunabilirliği kartın KENDİ koyu arka planından gelir
        (sayfanın altındaki arka plandan bağımsız, her koşulda okunur).
-     - Kart içeriği (ikon/başlık/açıklama) yatay VE dikey olarak
-       ortalanmış (`flex flex-col items-center text-center`); üç
-       kartta da aynı spacing/hizalama şablonu kullanılır.
+     - KOMPAKT YATAY KART: ikon kutusu SOLDA (dikey ortalı), başlık +
+       açıklama SAĞDA (sola hizalı). Dikey yükseklik azaltıldı; renk,
+       ikon, metin, font ve sıralama DEĞİŞMEDİ.
+       Breakpoint'ler:
+         • <md  (tek sütun, tam genişlik) → yatay
+         • md–lg (768–1279, 3 dar sütun ~210–280px) → başlıklar iki
+           satıra kırılmasın diye önceki DİKEY/ortalı düzen korunur
+           (yalnız ikon kutusu biraz küçüldü)
+         • xl+  (≥1280, 3 sütun yeterince geniş) → yatay
      - Yavaş ambient glow nabzı + çok ince diagonal shimmer geçişi
        (bu dosyaya scoped <style>, globals.css'e DOKUNULMADI).
        `prefers-reduced-motion: reduce` → sürekli animasyonlar
@@ -58,7 +64,8 @@ import { getDictionary } from "@/lib/i18n/get-dictionary";
 type AdvantageTone = "orange" | "blue" | "duo";
 
 /* İKON KUTUSU — üç kartta da marka turuncusu (#ED7926) dolu zemin +
-   beyaz ikon (yüksek kontrast, görsel odak). 72px mobil / 80px md+.
+   beyaz ikon (yüksek kontrast, görsel odak). Kompakt yatay kart için
+   56px mobil / 64px md+ (renk, gölge, köşe dili AYNEN).
    Kart karakteri (topBar / glow / hover border) tone'a göre AYNEN
    farklı kalır; yalnız ikon kutusu ortaklaştırıldı. */
 
@@ -185,11 +192,13 @@ export default function HeroAdvantageCards({
                   key={item.key}
                   className={
                     "hac-card group relative overflow-hidden rounded-3xl " +
-                    "flex flex-col items-center text-center " +
+                    "flex flex-row items-center text-left gap-4 " +
+                    "md:flex-col md:text-center md:gap-0 " +
+                    "xl:flex-row xl:text-left xl:gap-5 " +
                     "border border-white/10 " +
                     tone.border +
                     " bg-[var(--color-stone-900)]/85 backdrop-blur-xl " +
-                    "px-6 py-7 md:px-7 md:py-8 " +
+                    "px-5 py-5 md:px-6 md:py-7 xl:py-5 " +
                     "shadow-[0_20px_50px_-24px_rgba(0,0,0,0.55)] " +
                     "transition-[transform,box-shadow,border-color] duration-300 " +
                     "motion-reduce:transition-none " +
@@ -222,7 +231,7 @@ export default function HeroAdvantageCards({
 
                   <span
                     className={
-                      "relative flex h-[72px] w-[72px] md:h-20 md:w-20 items-center justify-center rounded-[22px] " +
+                      "relative flex shrink-0 h-14 w-14 md:h-16 md:w-16 items-center justify-center rounded-[18px] " +
                       tone.iconBg +
                       " " +
                       tone.iconText +
@@ -230,15 +239,18 @@ export default function HeroAdvantageCards({
                       "group-hover:scale-110 group-hover:-rotate-3"
                     }
                 >
-                    <Icon className="h-9 w-9 md:h-10 md:w-10" strokeWidth={1.8} aria-hidden="true" />
+                    <Icon className="h-7 w-7 md:h-8 md:w-8" strokeWidth={1.8} aria-hidden="true" />
                   </span>
 
-                  <h3 className="relative mt-6 md:mt-7 font-display text-[19px] md:text-[20px] text-white tracking-[-0.01em]">
-                    {item.title}
-                  </h3>
-                  <p className="relative mt-2.5 text-[13.5px] leading-[1.6] text-white/70">
-                    {item.description}
-                  </p>
+                  {/* Metin bloğu — ikonun SAĞINDA (md–lg arası ikonun altında). */}
+                  <div className="relative min-w-0 md:mt-5 xl:mt-0">
+                    <h3 className="font-display text-[19px] md:text-[20px] text-white tracking-[-0.01em] leading-snug">
+                      {item.title}
+                    </h3>
+                    <p className="mt-1 md:mt-2 xl:mt-1 text-[13.5px] leading-[1.55] text-white/70">
+                      {item.description}
+                    </p>
+                  </div>
                 </li>
               );
             })}
