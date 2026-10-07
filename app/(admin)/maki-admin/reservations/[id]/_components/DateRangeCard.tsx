@@ -46,6 +46,7 @@ export default function DateRangeCard({
   prices,
   discounts,
   rates,
+  customPriceDateChanged = false,
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>;
@@ -85,6 +86,8 @@ export default function DateRangeCard({
     isFullPayment: boolean;
   };
   paymentDisplayPayNowLabel: string;
+  /** 🛡️ Özel fiyat aktifken tarih değişti → Anlık Özet'te yalnız uyarı. */
+  customPriceDateChanged?: boolean;
 }) {
   return (
     <Section
@@ -161,6 +164,7 @@ export default function DateRangeCard({
           payNowLabel={paymentDisplayPayNowLabel}
           isFullPayment={!!paymentDisplay.isFullPayment}
           isCustomPrice={!!data?.custom_price}
+          customPriceDateChanged={customPriceDateChanged}
           hasForeignCurrency={Boolean(
             (data?.original_currency && data.original_currency !== "TRY") ||
               (data?.original_cleaning_currency &&

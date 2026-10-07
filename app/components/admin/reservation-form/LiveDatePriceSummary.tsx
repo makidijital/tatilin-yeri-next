@@ -30,6 +30,7 @@ export default function LiveDatePriceSummary({
   isFullPayment,
   isCustomPrice,
   hasForeignCurrency,
+  customPriceDateChanged = false,
 }: {
   startDate: Date | null;
   endDate: Date | null;
@@ -47,6 +48,9 @@ export default function LiveDatePriceSummary({
   isFullPayment: boolean;
   isCustomPrice: boolean;
   hasForeignCurrency: boolean;
+  /** 🛡️ Opsiyonel (default false) — edit ekranında özel fiyat aktifken
+   *  tarih değiştiyse uyarı gösterilir. Hesap/değer DEĞİŞMEZ. */
+  customPriceDateChanged?: boolean;
 }) {
   const hasRange = !!startDate && !!endDate;
 
@@ -71,6 +75,15 @@ export default function LiveDatePriceSummary({
           </span>
         )}
       </div>
+
+      {isCustomPrice && customPriceDateChanged && (
+        <p
+          role="status"
+          className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11.5px] font-medium leading-snug text-amber-800"
+        >
+          Özel fiyat aktif — fiyat yeni tarihlere göre otomatik hesaplanmıyor.
+        </p>
+      )}
 
       {/* Range header */}
       <div className="flex items-baseline justify-between gap-2 mb-4">

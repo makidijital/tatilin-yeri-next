@@ -83,6 +83,7 @@ export function computeReservationPriceRecalc(
     originalVillaId,
     selectedVilla,
     prepaymentRate,
+    originalSnapshot,
   } = input;
 
   if (!startDate || !endDate || prices.length === 0) {
@@ -159,6 +160,20 @@ export function computeReservationPriceRecalc(
      🟢 CASE 1 — TARİH + VILLA AYNI
   ---------------------------------------------- */
   if (!shouldRecalc) {
+    /* 🛡️ ORİJİNAL KAYITLI FİYATA DÖNÜŞ — tarih/villa orijinale geri
+       döndü ama `data` hâlâ ÖNCEKİ recalc'ın yazdığı değerleri taşıyor
+       (data tarihleri seçimle eşleşmiyor) → fiyatlar `data`'dan DEĞİL,
+       sayfa yüklenirken alınan DEĞİŞMEYEN orijinal snapshot'tan okunur
+       ve `data` o kayıtlı değerlere geri yüklenir. Orijinal kayıt özel
+       fiyatlıysa (custom_price) bu yol devreye girmez (eski davranış).
+       Tarih hiç değişmediyse `data` zaten orijinal → eski davranış
+       BİREBİR (dataPatch YOK). paid_amount DOKUNULMAZ. */
+    const restoreFromOriginal =
+      !!originalSnapshot &&
+      !originalSnapshot.custom_price &&
+      (data?.start_date !== startISO || data?.end_date !== endISO);
+    const src = restoreFromOriginal ? originalSnapshot : data;
+
     const snapshotResult = {
       nights: Math.ceil(
         (new Date(endISO).getTime() - new Date(startISO).getTime()) /
@@ -166,34 +181,59 @@ export function computeReservationPriceRecalc(
       ),
 
       stay:
-        Number(data?.total_price_try || 0) -
-        Number(data?.cleaning_fee_try || 0) -
-        Number(data?.pool_heating_total_try || 0),
+        Number(src?.total_price_try || 0) -
+        Number(src?.cleaning_fee_try || 0) -
+        Number(src?.pool_heating_total_try || 0),
 
-      cleaning: Number(data?.cleaning_fee_try || 0),
+      cleaning: Number(src?.cleaning_fee_try || 0),
 
       // 🔥 HAVUZ ISITMA — 8. adım. Tarih/villa DEĞİŞMEDİĞİ için mevcut
       // reservation snapshot'ı aynen okunur (recalc YOK — CASE 1).
-      poolHeating: Number(data?.pool_heating_total_try || 0),
+      poolHeating: Number(src?.pool_heating_total_try || 0),
 
-      total: Number(data?.total_price_try || 0),
+      total: Number(src?.total_price_try || 0),
 
-      original_stay: Number(data?.original_price || 0),
+      original_stay: Number(src?.original_price || 0),
 
-      original_currency: data?.original_currency || "TRY",
+      original_currency: src?.original_currency || "TRY",
 
-      original_cleaning: Number(data?.original_cleaning_fee || 0),
+      original_cleaning: Number(src?.original_cleaning_fee || 0),
 
       original_cleaning_currency:
-        data?.original_cleaning_currency || "TRY",
+        src?.original_cleaning_currency || "TRY",
 
-      original_pool_heating: Number(data?.original_pool_heating_total || 0),
+      original_pool_heating: Number(src?.original_pool_heating_total || 0),
 
       original_pool_heating_currency:
-        data?.original_pool_heating_currency || "TRY",
+        src?.original_pool_heating_currency || "TRY",
 
       currency: "TRY",
     };
+
+    if (restoreFromOriginal && originalSnapshot) {
+      const o = originalSnapshot;
+      return {
+        kind: "snapshot",
+        priceDetail: snapshotResult,
+        dataPatch: {
+          start_date: startISO,
+          end_date: endISO,
+          total_price: o.total_price,
+          total_price_try: o.total_price_try,
+          original_price: o.original_price,
+          original_currency: o.original_currency,
+          original_cleaning_fee: o.original_cleaning_fee,
+          original_cleaning_currency: o.original_cleaning_currency,
+          cleaning_fee_try: o.cleaning_fee_try,
+          exchange_rate: o.exchange_rate,
+          pool_heating_total_try: o.pool_heating_total_try,
+          original_pool_heating_total: o.original_pool_heating_total,
+          original_pool_heating_currency: o.original_pool_heating_currency,
+          prepayment_amount: o.prepayment_amount,
+          remaining_payment: o.remaining_payment,
+        },
+      };
+    }
 
     return {
       kind: "snapshot",

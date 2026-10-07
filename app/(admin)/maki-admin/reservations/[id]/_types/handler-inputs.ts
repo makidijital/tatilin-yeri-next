@@ -100,6 +100,12 @@ export type PriceRecalcInput = {
   originalVillaId: string | null;
   selectedVilla: SelectedVilla;
   prepaymentRate: number;
+  /** 🛡️ ORİJİNAL KAYIT SNAPSHOT'I — OPSİYONEL. Sayfa ilk yüklendiğinde
+   *  DB'den gelen rezervasyonun DEĞİŞMEYEN kopyası. Tarih/villa orijinale
+   *  geri döndüğünde "kayıtlı fiyat" yolu fiyatları buradan okur
+   *  (recalc'ın `data`'ya yazdığı ara değerlerden DEĞİL). Verilmezse
+   *  davranış eskisiyle BİREBİR aynı. */
+  originalSnapshot?: ReservationDetailData | null;
 };
 
 /* Discriminated union — 3 path: */
@@ -115,10 +121,14 @@ export type PriceRecalcResult =
       /** Date sync gerekiyorsa Partial; aksi `null` (data dokunulmaz). */
       dataPatch: Partial<ReservationDetailData> | null;
     }
-  /* no_recalc branch — yalnız priceDetail snapshot, data dokunulmaz. */
+  /* no_recalc branch — priceDetail snapshot. `dataPatch` YALNIZ tarih/
+     villa orijinale geri dönüp `data` önceki recalc değerlerini taşırken
+     dolar (orijinal kayıtlı değerlere geri yükleme); aksi halde YOK →
+     data dokunulmaz (eski davranış). */
   | {
       kind: "snapshot";
       priceDetail: PriceDetailSnapshot;
+      dataPatch?: Partial<ReservationDetailData>;
     }
   /* recalc branch — priceDetail + data financial snapshot update. */
   | {

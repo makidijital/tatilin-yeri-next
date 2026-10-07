@@ -302,6 +302,17 @@ export default function AdminReservationDetailPage() {
   const [originalEndDate, setOriginalEndDate] = useState<string | null>(null);
 
   /* ---------------------------------------------
+     🛡️ ORİJİNAL KAYIT SNAPSHOT'I — DEĞİŞMEZ
+     DB'den yüklenen rezervasyonun kopyası (fiyat/tarih alanları dahil).
+     Tarih/villa orijinale geri döndüğünde "kayıtlı fiyat" bundan okunur;
+     recalc'ın `data`'ya yazdığı ara değerler kullanılmaz. Başarılı
+     kayıttan sonra sayfa yeniden yüklendiği için (window.location.reload)
+     yeni kayıtlı değerlerle baştan kurulur.
+  ---------------------------------------------- */
+  const [originalSnapshot, setOriginalSnapshot] =
+    useState<ReservationDetailData | null>(null);
+
+  /* ---------------------------------------------
      🔥 ORIGINAL STATUS — DB'deki orijinal status
      Mail trigger'ı için karşılaştırmada kullanılır.
      Bir kez ilk yüklemede set edilir, save sonrası reload
@@ -356,7 +367,9 @@ export default function AdminReservationDetailPage() {
       /* 🛡️ Manuel "Şimdi Ödenecek Tutar" kilidi (client-only; bkz.
          _helpers/manualPrepayment.ts) — kayıtlı prepayment_amount korunur. */
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setData(withLoadedPrepaymentLock(json.reservation) as any);
+      const loaded = withLoadedPrepaymentLock(json.reservation) as any;
+      setData(loaded);
+      setOriginalSnapshot((prev) => prev ?? loaded);
     } catch (err) {
       console.error("Fetch error:", err);
       setData(null);
@@ -572,10 +585,16 @@ export default function AdminReservationDetailPage() {
   const mergedCheckinDates = [...checkinDates, ...manualCheckinDates];
   const mergedCheckoutDates = [...checkoutDates, ...manualCheckoutDates];
 
+  /* 🛡️ Rezervasyonun KENDİ (kayıtlı) tarihleri — orijinal tarihlerden
+     türetilir; recalc `data.start_date/end_date`'i yeni seçime çekse de
+     muafiyet (blocked + fiyat kapsamı) kayıtlı aralıkta kalır. Orijinal
+     henüz kilitlenmediyse (ilk render) eski kaynak (data) kullanılır. */
+  const ownStartISO = originalStartDate ?? data?.start_date;
+  const ownEndISO = originalEndDate ?? data?.end_date;
   const currentReservationDates: Date[] = [];
-  if (data?.start_date && data?.end_date) {
-    const current = parseLocalDate(data.start_date);
-    const end = parseLocalDate(data.end_date);
+  if (ownStartISO && ownEndISO) {
+    const current = parseLocalDate(ownStartISO);
+    const end = parseLocalDate(ownEndISO);
     while (current <= end) {
       currentReservationDates.push(new Date(current));
       current.setDate(current.getDate() + 1);
@@ -602,6 +621,7 @@ export default function AdminReservationDetailPage() {
       originalVillaId,
       selectedVilla,
       prepaymentRate,
+      originalSnapshot,
     });
 
     if (r.kind === "clear") {
@@ -621,7 +641,14 @@ export default function AdminReservationDetailPage() {
     if (r.kind === "recalc") {
       setData((prev) => (prev ? { ...prev, ...r.dataPatch } : prev));
     }
+
+    /* 🛡️ Orijinal tarih/villaya dönüş → kayıtlı değerlere geri yükleme. */
+    if (r.kind === "snapshot" && r.dataPatch) {
+      const patch = r.dataPatch;
+      setData((prev) => (prev ? { ...prev, ...patch } : prev));
+    }
   }, [
+    originalSnapshot,
     startDate,
     endDate,
     /* 🛡️ İndirimler yüklendiğinde recalc tetiklensin. */
@@ -1243,6 +1270,17 @@ export default function AdminReservationDetailPage() {
     paid_amount: data?.paid_amount,
     payment_preference: data?.payment_preference,
   });
+  /* 🛡️ ÖZEL FİYAT + TARİH DEĞİŞİKLİĞİ — yalnız uyarı. Özel fiyat
+     korunur (motor çalışmaz, değer değişmez, otomatik kapanmaz). */
+  const customPriceDateChanged =
+    !!data?.custom_price &&
+    !!startDate &&
+    !!endDate &&
+    originalStartDate !== null &&
+    originalEndDate !== null &&
+    (formatLocalDate(startDate) !== originalStartDate ||
+      formatLocalDate(endDate) !== originalEndDate);
+
   const paymentDisplayPayNowLabel = paymentDisplay.isFullPayment
     ? "Şimdi ödenecek (Tüm tutar)"
     : `Ön ödeme (%${prepaymentRate})`;
@@ -1331,6 +1369,7 @@ export default function AdminReservationDetailPage() {
             priceDetail={priceDetail}
             paymentDisplay={paymentDisplay}
             paymentDisplayPayNowLabel={paymentDisplayPayNowLabel}
+            customPriceDateChanged={customPriceDateChanged}
           />
         )}
 
