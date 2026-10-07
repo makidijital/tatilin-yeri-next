@@ -90,7 +90,7 @@ export default function BookingCalendar({
     hasConflict,
     /* 🛡️ FİYAT KAPSAMI — ortak kural (lib/price-coverage.ts). */
     isPriceClosedDay,
-    rangeHasUnpricedNight,
+    rangeHasUnpricedDay,
     getPriceForDate,
     /* İndirimli günlük fiyat — engine'in salt-gösterim helper'ı
        (indirim yoksa null → mevcut tek-fiyat görünümü). */
@@ -189,10 +189,10 @@ export default function BookingCalendar({
             setTimeout(() => setConflictError(null), 3000);
             return;
           }
-          /* 🛡️ FİYAT KAPSAMI — [from, to) içinde fiyatsız gece varsa
-             seçim REDDEDİLİR (sessiz kısaltma YOK). Doluluk kontrolü
-             yukarıda AYNEN önce çalışır. */
-          if (rangeHasUnpricedNight(from, to)) {
+          /* 🛡️ FİYAT KAPSAMI — [from, to] içinde (checkout günü dahil)
+             fiyatsız gün varsa seçim REDDEDİLİR (sessiz kısaltma YOK).
+             Doluluk kontrolü yukarıda AYNEN önce çalışır. */
+          if (rangeHasUnpricedDay(from, to)) {
             setConflictError(dict.booking.priceUnavailableNotice);
             setTimeout(() => setConflictError(null), 4000);
             return;
@@ -216,10 +216,9 @@ export default function BookingCalendar({
           { before: today },
           ...mergedBlockedDates,
           isIntersection,
-          /* 🛡️ FİYAT KAPSAMI — KENDİ gecesi fiyatsız gün kapalı (check-in
-             yapılamaz). Yalnız check-in seçiliyken [check-in, gün) tamamen
-             fiyatlıysa o gün CHECKOUT için açılır (engine). Mevcut kapalı
-             günler AYNEN. */
+          /* 🛡️ FİYAT KAPSAMI — KENDİ gecesi fiyatsız gün HER DURUMDA
+             kapalı (check-in ve checkout olarak). Mevcut kapalı günler
+             AYNEN. */
           isPriceClosedDay,
         ]}
         modifiers={{

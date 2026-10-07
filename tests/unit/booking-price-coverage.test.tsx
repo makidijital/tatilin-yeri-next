@@ -2,10 +2,11 @@
    🛡️ FİYAT KAPSAMI — REZERVASYON TAKVİMLERİ (public + admin)
    ===============================================================
    Ortak kural (lib/price-coverage.ts, motor semantiği):
-     • günün KENDİ gecesi fiyatsızsa gün takvimde KAPALI (check-in yok)
-     • YALNIZ check-in seçiliyken, [check-in, gün) tamamen fiyatlıysa
-       o kapalı gün CHECKOUT olarak seçilebilir
-     • [giriş, çıkış) içinde fiyatsız gece → aralık reddedilir
+     • günün KENDİ gecesi fiyatsızsa gün HER DURUMDA kapalı (check-in,
+       checkout, check-in seçildikten sonra — istisna YOK)
+     • seçimde [giriş, çıkış] içinde (checkout günü dahil) fiyatsız gün
+       → aralık reddedilir
+     • fiyat HESABI motorda aynen [giriş, çıkış)
    Kapsam: BookingSidebar (villa detay + /v/[token]), /arama modalı,
    admin rezervasyon oluştur/düzenle (ReservationCalendar opt-in).
    Manuel blok (opt-in YOK) ve mevcut doluluk kuralları DEĞİŞMEZ.
@@ -157,30 +158,25 @@ describe("useBookingEngine — ortak fiyat kuralı", () => {
     expect(closed(15)).toBe(false);
   });
 
-  it("7/14) check-in 10 seçiliyken 11 CHECKOUT için açılır; 12 kapalı kalır", async () => {
+  it("3) check-in seçildikten sonra fiyatsız gün HÂLÂ kapalı", async () => {
     const { result } = engine();
     await waitFor(() => expect(result.current.availabilityPending).toBe(false));
     act(() => result.current.setStartDate(dt(10)));
     const closed = (n: number) => result.current.isPriceClosedDay(dt(n));
-    expect(closed(11)).toBe(false);
+    expect(closed(11)).toBe(true);
     expect(closed(12)).toBe(true);
-    expect(closed(9)).toBe(false); // fiyatlı gün her zaman açık
-    /* check-in 9 → 11 de checkout olabilir (9, 10 geceleri fiyatlı) */
-    act(() => result.current.setStartDate(dt(9)));
-    expect(result.current.isPriceClosedDay(dt(11))).toBe(false);
-    /* aralık tamamlanınca istisna biter → 11 yine kapalı */
-    act(() => result.current.setEndDate(dt(11)));
-    expect(result.current.isPriceClosedDay(dt(11))).toBe(true);
+    expect(closed(9)).toBe(false);
+    expect(closed(15)).toBe(false);
   });
 
-  it("3/4/9) aralık kontrolü [giriş, çıkış)", () => {
+  it("4/8/9) seçim kontrolü [giriş, çıkış] — checkout günü de fiyatlı olmalı", () => {
     const { result } = engine();
     const bad = (a: number, b: number) =>
-      result.current.rangeHasUnpricedNight(dt(a), dt(b));
+      result.current.rangeHasUnpricedDay(dt(a), dt(b));
     expect(bad(5, 10)).toBe(false);
-    expect(bad(9, 11)).toBe(false); // çıkış 11 → geçerli
-    expect(bad(11, 12)).toBe(true); // 11 gecesi fiyatsız
-    expect(bad(9, 17)).toBe(true); // arada fiyatsız geceler
+    expect(bad(9, 11)).toBe(true); // checkout 11 fiyatsız → GEÇERSİZ
+    expect(bad(11, 12)).toBe(true);
+    expect(bad(9, 17)).toBe(true); // arada fiyatsız günler
     expect(bad(15, 20)).toBe(false);
   });
 
@@ -251,35 +247,38 @@ describe("referans örnek (30 Kas / 1 Ara / 2 Ara) — useBookingEngine", () => 
     expect(result.current.isPriceClosedDay(dec2)).toBe(false);
   });
 
-  it("3/7) 30 Kas check-in seçiliyken 1 Ara checkout için açılır; 2 Ara açık ama 30→2 geçersiz", async () => {
+  it("3) 30 Kas check-in seçildikten sonra 1 Ara HÂLÂ kapalı; 2 Ara açık", async () => {
     const { result } = eng();
     await waitFor(() => expect(result.current.availabilityPending).toBe(false));
     act(() => result.current.setStartDate(nov30));
-    expect(result.current.isPriceClosedDay(dec1)).toBe(false);
-    expect(result.current.rangeHasUnpricedNight(nov30, dec1)).toBe(false);
-    expect(result.current.rangeHasUnpricedNight(nov30, dec2)).toBe(true);
-  });
-
-  it("3/6/8) 30 Kas → 1 Ara geçerli; toplam YALNIZ 30 Kas gecesi", async () => {
-    const { result } = eng(k(11, 30), k(12, 1));
-    await waitFor(() => expect(result.current.result).not.toBeNull());
-    expect(result.current.priceUnavailable).toBe(false);
-    expect(result.current.selectedNights).toBe(1);
-    expect(result.current.result!.stay).toBe(7000);
-    result.current.handleReservation();
-    expect(hrefSet).toHaveBeenCalledTimes(1);
+    expect(result.current.isPriceClosedDay(dec1)).toBe(true);
+    expect(result.current.isPriceClosedDay(dec2)).toBe(false);
+    expect(result.current.rangeHasUnpricedDay(nov30, dec1)).toBe(true);
+    expect(result.current.rangeHasUnpricedDay(nov30, dec2)).toBe(true);
   });
 
   it.each([
-    ["4) 1 Ara → 2 Ara", 12, 1, 12, 2],
-    ["5) 1 Ara → 3 Ara", 12, 1, 12, 3],
-  ])("%s geçersiz: uyarı + yönlendirme yok", async (_l, m1, d1, m2, d2) => {
+    ["5) 30 Kas → 1 Ara", 11, 30, 12, 1],
+    ["6) 1 Ara → 2 Ara", 12, 1, 12, 2],
+    ["7) 30 Kas → 2 Ara", 11, 30, 12, 2],
+    ["1 Ara → 3 Ara", 12, 1, 12, 3],
+  ])("%s reddedilir (URL'den gelse bile): uyarı + özet yok + yönlendirme yok", async (_l, m1, d1, m2, d2) => {
     const { result } = eng(k(m1, d1), k(m2, d2));
     await waitFor(() => expect(result.current.availabilityPending).toBe(false));
     expect(result.current.priceUnavailable).toBe(true);
     expect(result.current.result).toBeNull();
     result.current.handleReservation();
     expect(hrefSet).not.toHaveBeenCalled();
+  });
+
+  it("9/10/11) tamamen fiyatlı 28 → 30 Kas geçerli; toplam motorla AYNI (2 gece, checkout hariç)", async () => {
+    const { result } = eng(k(11, 28), k(11, 30));
+    await waitFor(() => expect(result.current.result).not.toBeNull());
+    expect(result.current.priceUnavailable).toBe(false);
+    expect(result.current.selectedNights).toBe(2);
+    expect(result.current.result!.stay).toBe(14000);
+    result.current.handleReservation();
+    expect(hrefSet).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -322,19 +321,19 @@ describe("BookingSidebar — fiyat kuralı + mevcut doluluk kuralları", () => {
     expect(isDisabled(await dayCell(15))).toBe(false);
   });
 
-  it("8) 9 → 11 (çıkış sezon sonrası) geçerli: özet + yönlendirme", async () => {
+  it("3/4) check-in 9 seçildikten sonra 11 HÂLÂ kapalı; 9 → 10 normal akış", async () => {
     await openCalendar();
     expect(isDisabled(await dayCell(11))).toBe(true);
     fireEvent.click(await dayCell(9));
-    /* check-in seçilince 11 checkout için açılır; 12 kapalı kalır */
-    await waitFor(async () => expect(isDisabled(await dayCell(11))).toBe(false));
+    await waitFor(async () => expect((await dayCell(9)).className).toMatch(/rdp-day_selected/));
+    expect(isDisabled(await dayCell(11))).toBe(true);
     expect(isDisabled(await dayCell(12))).toBe(true);
-    fireEvent.click(await dayCell(11));
+    fireEvent.click(await dayCell(10));
     await screen.findByText(/Toplam Tutar/);
     const cta = screen.getByRole("button", { name: "Rezervasyon Yap" }) as HTMLButtonElement;
     expect(cta.disabled).toBe(false);
     fireEvent.click(cta);
-    expect(hrefSet.mock.calls[0][0]).toContain(`start=${ymd(9)}&end=${ymd(11)}`);
+    expect(hrefSet.mock.calls[0][0]).toContain(`start=${ymd(9)}&end=${ymd(10)}`);
   });
 
   it("3/9) 9 → 16 (arada fiyatsız geceler) reddedilir: uyarı, seçim/özet yok, kısaltma yok", async () => {
@@ -381,7 +380,8 @@ describe("BookingSidebar — fiyat kuralı + mevcut doluluk kuralları", () => {
     expect(isDisabled(await dayCell(12))).toBe(true);
     expect(isDisabled(await dayCell(11))).toBe(true);
     fireEvent.click(await dayCell(10));
-    await waitFor(async () => expect(isDisabled(await dayCell(11))).toBe(false));
+    await waitFor(async () => expect((await dayCell(10)).className).toMatch(/rdp-day_selected/));
+    expect(isDisabled(await dayCell(11))).toBe(true);
   });
 });
 
@@ -412,12 +412,13 @@ describe("16) VillaCardBookingModal — fiyat kuralı", () => {
     expect(hrefSet).not.toHaveBeenCalled();
   });
 
-  it("16) sezon sonu çıkışı (9 → 11): sidebar ile AYNI — geçerli, 2 gece, uyarı yok", async () => {
+  it("16) fiyatsız CHECKOUT (9 → 11): sidebar ile AYNI — reddedilir, uyarı, CTA kapalı", async () => {
     renderModal(ymd(9), ymd(11));
-    await screen.findByText("Konaklama Tutarı (2 Gece)");
-    expect(screen.queryByText(TR_PRICE_NOTICE)).toBeNull();
+    await screen.findByText(TR_PRICE_NOTICE);
+    expect(screen.queryByText(/Konaklama Tutarı/)).toBeNull();
     const cta = screen.getByRole("button", { name: "Rezervasyon Yap" }) as HTMLButtonElement;
-    expect(cta.disabled).toBe(false);
+    expect(cta.disabled).toBe(true);
+    expect(isDisabled(await dayCell(11))).toBe(true);
   });
 
   it("fiyatlı aralık: mevcut akış (özet + yönlendirme); fiyatsız gün kapalı", async () => {
@@ -470,9 +471,9 @@ describe("Admin ReservationCalendar", () => {
     const { closed, cell } = renderAdmin({ enforcePriceCoverage: true });
     expect(closed(9)).toBe(false);
     expect(closed(11)).toBe(true);
-    /* seçim sürerken (check-in 10) 11 checkout için açılır */
+    /* seçim sürerken (check-in 10) 11 HÂLÂ kapalı */
     fireEvent.mouseDown(cell(10));
-    expect(closed(11)).toBe(false);
+    expect(closed(11)).toBe(true);
     expect(closed(12)).toBe(true);
     fireEvent.mouseUp(window);
     expect(closed(12)).toBe(true);
@@ -482,13 +483,17 @@ describe("Admin ReservationCalendar", () => {
 
   it("17) geçerli aralık onSelectRange'e gider; fiyatsız geceli aralık reddedilir", () => {
     const a = renderAdmin({ enforcePriceCoverage: true });
+    a.drag(8, 10);
+    expect(a.onSelectRange).toHaveBeenCalledTimes(1);
+    expect(a.onSelectRange.mock.calls[0][0].getDate()).toBe(8);
+    expect(a.onSelectRange.mock.calls[0][1].getDate()).toBe(10);
+    /* fiyatsız 11'e sürüklenemez (kapalı hücre) → dragTo 9'da kalır */
     a.drag(9, 11);
-    expect(a.onSelectRange).toHaveBeenCalledTimes(1);
-    expect(a.onSelectRange.mock.calls[0][0].getDate()).toBe(9);
-    expect(a.onSelectRange.mock.calls[0][1].getDate()).toBe(11);
+    expect(a.onSelectRange.mock.calls[1][1].getDate()).toBe(9);
+    /* arada fiyatsız günler → reddedilir */
     a.drag(9, 16);
-    expect(a.onSelectRange).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("alert").textContent).toMatch(/fiyatı tanımlı olmayan gece/);
+    expect(a.onSelectRange).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("alert").textContent).toMatch(/fiyatı tanımlı olmayan tarih/);
   });
 
   it("18) rezervasyon düzenle: kendi geceleri (excludeDisabledDates) fiyat kuralından muaf", () => {
@@ -497,7 +502,7 @@ describe("Admin ReservationCalendar", () => {
       excludeDisabledDates: [dt(11), dt(12), dt(13), dt(14)],
     });
     expect(a.closed(12)).toBe(false);
-    a.drag(10, 15);
+    a.drag(10, 14);
     expect(a.onSelectRange).toHaveBeenCalledTimes(1);
     /* muaf olmayan fiyatsız gece hâlâ reddedilir */
     const b = renderAdmin({

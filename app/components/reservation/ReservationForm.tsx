@@ -70,6 +70,10 @@ import Link from "next/link";
 import { localeHref } from "@/lib/i18n/locale-href";
 /* 🛡️ Uluslararası telefon — mevcut helper; yeni kütüphane YOK. */
 import { DIAL_CODES, joinPhone } from "@/lib/phone.helper";
+/* 🛡️ FİYAT KAPSAMI — rezervasyon takvimleriyle AYNI seçim uygunluğu kuralı
+   (fiyat HESABI değişmez). */
+import { rangeHasUnpricedDay } from "@/lib/price-coverage";
+import { parseLocalDate } from "@/lib/date-format";
 
 /* 🛡️ Aşama 7A — lazy `country-state-city` yükleyici.
    Modül seviyesinde tek promise (aynı sayfada tekrar tekrar indirilmez).
@@ -491,7 +495,13 @@ export default function ReservationForm({
   /* 🛡️ EKSİK SEZON FİYATI — seçilen aralıkta fiyatı tanımlı olmayan
      gece varsa toplam hesaplanamaz. Tam kapsanan aralıklarda DAİMA
      false → mevcut davranış BİREBİR aynı. */
-  const priceUnavailable = !!result && !result.priceAvailable;
+  const priceUnavailable =
+    (!!result && !result.priceAvailable) ||
+    /* 🛡️ FİYAT KAPSAMI — URL'den gelen aralıkta (checkout günü dahil)
+       fiyatsız gün varsa gönderim engellenir; takvimlerle AYNI kural. */
+    (!!start &&
+      !!end &&
+      rangeHasUnpricedDay(parseLocalDate(start), parseLocalDate(end), prices));
 
   const isFormValid =
     form.name &&

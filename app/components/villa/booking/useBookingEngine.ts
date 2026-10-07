@@ -109,8 +109,7 @@ import { evaluateOrphanGap } from "@/lib/stay-rules.helper";
    semantiğinin aynısı; bkz. lib/price-coverage.ts). */
 import {
   isDayClosedForPrice,
-  isValidCheckoutDay,
-  rangeHasUnpricedNight as rangeHasUnpricedNightFor,
+  rangeHasUnpricedDay as rangeHasUnpricedDayFor,
 } from "@/lib/price-coverage";
 
 /* 🛡️ PHASE 10B — YALNIZ 3 reservationError string'i + handleReservation
@@ -274,11 +273,11 @@ export type UseBookingEngineReturn = {
   isIntersection: (date: Date) => boolean;
   hasConflict: (start: Date, end: Date) => boolean;
   /** 🛡️ FİYAT KAPSAMI — takvim `disabled` matcher'ı: günün KENDİ gecesi
-   *  fiyatsızsa kapalı; YALNIZ check-in seçili ve checkout henüz yokken,
-   *  [check-in, gün) tamamen fiyatlıysa gün checkout için açılır. */
+   *  fiyatsızsa HER DURUMDA kapalı (check-in / checkout / seçim sürerken). */
   isPriceClosedDay: (date: Date) => boolean;
-  /** 🛡️ FİYAT KAPSAMI — [start, end) içinde fiyatsız gece var mı? */
-  rangeHasUnpricedNight: (start: Date, end: Date) => boolean;
+  /** 🛡️ FİYAT KAPSAMI — seçim uygunluğu: [start, end] içinde (checkout
+   *  günü DAHİL) fiyatsız gün var mı? Fiyat hesabını etkilemez. */
+  rangeHasUnpricedDay: (start: Date, end: Date) => boolean;
   getPriceForDate: (date: Date) => number | null;
   /** Günlük İNDİRİMLİ fiyat (yalnız gerçek indirim varsa); aksi halde
    *  null → tüketici mevcut tek-fiyat görünümünü korur. */
@@ -954,29 +953,28 @@ export function useBookingEngine(
      kendiliğinden gizlenir — yeni bir gizleme mekanizması YOK.
      Tam kapsanan aralıklarda `priceAvailable === true` olduğu için
      `result` ESKİSİYLE BİREBİR aynı nesnedir. */
-  const result = rawResult && rawResult.priceAvailable ? rawResult : null;
-  /* 🛡️ FİYAT KAPSAMI — takvim fiyatsız geceli aralığı zaten reddeder;
-     bu ek koşul aralığın BAŞKA yoldan (URL / modal / paylaşılan link)
-     gelmesi ve min-stay vb. sebeplerle `rawResult`'ın hiç
-     hesaplanmaması durumunu da kapsar. Tam kapsanan aralıkta false →
-     mevcut davranış aynı. */
-  const isPriceClosedDay = (date: Date) => {
-    if (!isDayClosedForPrice(date, normalizedPrices)) return false;
-    /* Checkout istisnası — yalnız check-in seçilmiş, checkout bekleniyorken. */
-    if (startDate && !endDate) {
-      return !isValidCheckoutDay(startDate, date, normalizedPrices);
-    }
-    return true;
-  };
-  const rangeHasUnpricedNight = (start: Date, end: Date) =>
-    rangeHasUnpricedNightFor(start, end, normalizedPrices);
-  const selectionHasUnpricedNight =
+  /* 🛡️ FİYAT KAPSAMI — YALNIZ seçim uygunluğu (fiyat HESABI aynen
+     calculateGrandTotal → [giriş, çıkış)):
+       • fiyatsız gün takvimde HER ZAMAN kapalı (istisna yok)
+       • seçimde [giriş, çıkış] TÜM günler fiyatlı olmalı (checkout günü
+         dahil). URL / modal / paylaşılan linkten gelen aralık da kapsanır.
+     Uygun olmayan seçimde `result` tüketicilere verilmez (özet gizli);
+     hesap nesnesinin KENDİSİ değişmez. */
+  const isPriceClosedDay = (date: Date) =>
+    isDayClosedForPrice(date, normalizedPrices);
+  const rangeHasUnpricedDay = (start: Date, end: Date) =>
+    rangeHasUnpricedDayFor(start, end, normalizedPrices);
+  const selectionHasUnpricedDay =
     !!startDate &&
     !!endDate &&
     !initialRangePending &&
-    rangeHasUnpricedNight(startDate, endDate);
+    rangeHasUnpricedDay(startDate, endDate);
+  const result =
+    rawResult && rawResult.priceAvailable && !selectionHasUnpricedDay
+      ? rawResult
+      : null;
   const priceUnavailable =
-    (!!rawResult && !rawResult.priceAvailable) || selectionHasUnpricedNight;
+    (!!rawResult && !rawResult.priceAvailable) || selectionHasUnpricedDay;
 
   /* ===============================================================
      🛡️ VILLA_DISCOUNTS — GÖRSEL GÖSTERİM (Adım 3, UI-only)
@@ -1131,7 +1129,7 @@ export function useBookingEngine(
     }
     /* 🛡️ FİYAT KAPSAMI — son güvenlik kapısı: aralıkta fiyatsız gece
        varsa /rezervasyon'a gidilmez (sunucu da ayrıca 400 döner). */
-    if (priceUnavailable || rangeHasUnpricedNight(startDate, endDate)) {
+    if (priceUnavailable || rangeHasUnpricedDay(startDate, endDate)) {
       setReservationError(dict.booking.priceUnavailableNotice);
       setTimeout(() => setReservationError(null), 4000);
       return;
@@ -1245,7 +1243,7 @@ export function useBookingEngine(
     isIntersection,
     hasConflict,
     isPriceClosedDay,
-    rangeHasUnpricedNight,
+    rangeHasUnpricedDay,
     getPriceForDate,
     getDiscountedPriceForDate,
 

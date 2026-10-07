@@ -18,8 +18,7 @@ import { formatLocalDate } from "@/lib/date-format";
 /* 🛡️ FİYAT KAPSAMI — public rezervasyon takvimiyle AYNI ortak kural. */
 import {
   isNightPriced,
-  isValidCheckoutDay,
-  rangeHasUnpricedNight,
+  rangeHasUnpricedDay,
 } from "@/lib/price-coverage";
 import type { ExternalEventDetail } from "@/lib/external-calendar.admin.types";
 /* 🛡️ FAZ 28 — calculateNights reuse (lib/price.engine).
@@ -227,9 +226,10 @@ export type ReservationCalendarProps = {
      ekranları `true` geçer. Varsayılan `false` → manuel blok formu ve
      diğer kullanımlar BİREBİR eskisi gibi. Açıkken (ve `prices`
      verilmişse) public takvimle AYNI kural:
-       • KENDİ gecesi fiyatsız gün → seçilemez; yalnız seçim sürerken
-         [check-in, gün) tamamen fiyatlıysa CHECKOUT olarak açılır
-       • [giriş, çıkış) içinde fiyatsız gece → aralık REDDEDİLİR
+       • KENDİ gecesi fiyatsız gün → HER DURUMDA seçilemez (check-in ve
+         checkout olarak; istisna yok)
+       • [giriş, çıkış] içinde (checkout günü dahil) fiyatsız gün →
+         aralık REDDEDİLİR
          (onSelectRange çağrılmaz; sessiz kısaltma YOK)
      `excludeDisabledDates` (düzenlemede rezervasyonun KENDİ geceleri)
      fiyat kuralından da muaf tutulur. */
@@ -274,25 +274,18 @@ export default function ReservationCalendar({
     excludeDisabledDates.some((e) => sameDay(e, night));
   const nightPriceOk = (night: Date) =>
     isPriceExemptNight(night) || isNightPriced(night, prices);
-  /* Gün kapalı mı? → KENDİ gecesi fiyatsızsa (public ile aynı kural).
-     Checkout istisnası: seçim sürerken (drag / tap anchor = `anchor`)
-     [anchor, gün) gecelerinin tamamı fiyatlıysa gün checkout için açılır. */
-  const isPriceClosedDay = (date: Date, anchor: Date | null) => {
-    if (!priceRuleActive) return false;
-    if (nightPriceOk(date)) return false;
-    if (anchor) {
-      return !isValidCheckoutDay(anchor, date, prices, isPriceExemptNight);
-    }
-    return true;
-  };
+  /* Gün kapalı mı? → KENDİ gecesi fiyatsızsa HER DURUMDA (public ile
+     aynı kural; checkout istisnası YOK). */
+  const isPriceClosedDay = (date: Date) =>
+    priceRuleActive && !nightPriceOk(date);
   const [priceError, setPriceError] = useState<string | null>(null);
   /* true → aralık geçerli; false → reddedildi (uyarı gösterilir). */
   const passesPriceRule = (from: Date, to: Date) => {
     if (!priceRuleActive) return true;
-    if (!rangeHasUnpricedNight(from, to, prices, isPriceExemptNight)) {
+    if (!rangeHasUnpricedDay(from, to, prices, isPriceExemptNight)) {
       return true;
     }
-    setPriceError("Seçilen aralıkta fiyatı tanımlı olmayan gece var.");
+    setPriceError("Seçilen aralıkta fiyatı tanımlı olmayan tarih var.");
     setTimeout(() => setPriceError(null), 4000);
     return false;
   };
@@ -730,7 +723,7 @@ export default function ReservationCalendar({
                   const disabled =
                     fullyBlockedDates.some((d) => sameDay(d, date)) ||
                     /* 🛡️ FİYAT KAPSAMI (opt-in) — kapalıysa false. */
-                    isPriceClosedDay(date, dragFrom);
+                    isPriceClosedDay(date);
 
                   /* 📱 Bekleyen tap anchor'ı (1. dokunuş, 2. dokunuş beklenirken)
                      de drag ile AYNI görsel state'i kullanır → ilk seçilen gün

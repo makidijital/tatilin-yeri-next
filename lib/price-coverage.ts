@@ -18,17 +18,15 @@
    Parite `tests/unit/price-coverage.test.ts` içinde motorun
    `calculateStayTotal(...).uncoveredNights` çıktısıyla kilitlidir.
 
-   TAKVİM KURALI — İKİ AYRI SORU (birbirine KARIŞTIRILMAZ):
-     1) "Gün takvimde açık mı?" → `isDayClosedForPrice`: günün KENDİ
-        gecesi fiyatsızsa gün KAPALIDIR (check-in yapılamaz). Önceki
-        gecenin fiyatlı olması günü AÇMAZ.
-     2) "Seçili check-in için bu gün checkout olabilir mi?" →
-        `isValidCheckoutDay`: [check-in, gün) içindeki TÜM geceler
-        fiyatlıysa evet. Checkout günü fiyat GEREKTİRMEZ.
-     Takvimler kapalı fiyatsız günü YALNIZ check-in seçiliyken ve 2)
-     doğruysa checkout için seçilebilir kılar (örn. 30 Kas fiyatlı,
-     1 Ara fiyatsız → 30 Kas seçiliyken 1 Ara checkout olabilir; 1 Ara
-     check-in olarak her zaman kapalı).
+   TAKVİM / SEÇİM KURALI (yalnız rezervasyon uygunluğu — fiyat HESABI
+   değişmez):
+     • `isDayClosedForPrice`: günün KENDİ gecesi fiyatsızsa gün HER
+       ZAMAN kapalıdır — check-in, checkout, seçim sürerken; istisna YOK.
+     • `rangeHasUnpricedDay`: seçilen aralıkta [giriş, çıkış] TÜM
+       günler fiyatlı olmalı (konaklama geceleri + checkout gününün
+       kendisi). Fiyatsız güne hiçbir şekilde geçilemez.
+     • Toplam fiyat hesabı motorda AYNEN [giriş, çıkış) — checkout günü
+       ücretlendirilmez; bu modül fiyat HESAPLAMAZ.
    =============================================================== */
 
 import { parseLocalDate } from "@/lib/date-format";
@@ -59,7 +57,7 @@ export function isNightPriced(
   return Number(found.price || 0) > 0;
 }
 
-/** Takvimde gün (check-in olarak) kapalı mı? → kendi GECESİ fiyatsızsa. */
+/** Takvimde gün kapalı mı? → kendi GECESİ fiyatsızsa (her durumda). */
 export function isDayClosedForPrice(
   date: Date,
   prices: ReadonlyArray<PriceCoverageRange> | null | undefined
@@ -87,15 +85,18 @@ export function rangeHasUnpricedNight(
   return false;
 }
 
-/** Seçili `checkIn` için `date` checkout olabilir mi? `date` check-in'den
- *  SONRA olmalı ve [checkIn, date) gecelerinin TAMAMI fiyatlı olmalı.
- *  Checkout gününün kendi gecesine BAKILMAZ (fiyatlandırılmaz). */
-export function isValidCheckoutDay(
-  checkIn: Date,
-  date: Date,
+/** Rezervasyon SEÇİMİ uygun mu? → [start, end] aralığındaki herhangi bir
+ *  gün (konaklama geceleri + checkout günü) fiyatsızsa true. Yalnız
+ *  tarih seçilebilirliği içindir; fiyat hesabını ETKİLEMEZ. `isExempt`
+ *  günleri kontrol dışıdır. 0 gecelik aralık → false. */
+export function rangeHasUnpricedDay(
+  start: Date,
+  end: Date,
   prices: ReadonlyArray<PriceCoverageRange> | null | undefined,
-  isExempt?: (night: Date) => boolean
+  isExempt?: (day: Date) => boolean
 ): boolean {
-  if (localDay(date) <= localDay(checkIn)) return false;
-  return !rangeHasUnpricedNight(checkIn, date, prices, isExempt);
+  if (localDay(end) <= localDay(start)) return false;
+  if (rangeHasUnpricedNight(start, end, prices, isExempt)) return true;
+  const last = localDay(end);
+  return !(isExempt && isExempt(last)) && !isNightPriced(last, prices);
 }

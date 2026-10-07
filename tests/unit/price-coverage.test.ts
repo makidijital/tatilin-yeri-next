@@ -9,7 +9,7 @@ import { describe, it, expect } from "vitest";
 import {
   isNightPriced,
   isDayClosedForPrice,
-  isValidCheckoutDay,
+  rangeHasUnpricedDay,
   rangeHasUnpricedNight,
 } from "@/lib/price-coverage";
 import { calculateStayTotal } from "@/lib/price.engine";
@@ -50,8 +50,8 @@ describe("isNightPriced — motor semantiği", () => {
   });
 });
 
-describe("takvim: check-in kapalılığı ≠ checkout uygunluğu", () => {
-  it("2/13) gün KENDİ gecesi fiyatsızsa kapalı — önceki gecenin fiyatı AÇMAZ", () => {
+describe("takvim: fiyatsız gün HER DURUMDA kapalı (checkout istisnası YOK)", () => {
+  it("1/2) fiyatlı gün açık; fiyatsız gün kapalı — önceki gecenin fiyatı AÇMAZ", () => {
     expect(isDayClosedForPrice(d("2030-10-10"), PRICES)).toBe(false);
     expect(isDayClosedForPrice(d("2030-10-11"), PRICES)).toBe(true); // sezon sonrası ilk gün
     expect(isDayClosedForPrice(d("2030-10-12"), PRICES)).toBe(true); // 0
@@ -59,16 +59,20 @@ describe("takvim: check-in kapalılığı ≠ checkout uygunluğu", () => {
     expect(isDayClosedForPrice(d("2030-10-15"), PRICES)).toBe(false);
     expect(isDayClosedForPrice(d("2030-10-21"), PRICES)).toBe(true);
   });
-  it("7/14) sezonun son gecesinden sonraki gün CHECKOUT olarak geçerli", () => {
-    expect(isValidCheckoutDay(d("2030-10-10"), d("2030-10-11"), PRICES)).toBe(true);
-    expect(isValidCheckoutDay(d("2030-10-05"), d("2030-10-11"), PRICES)).toBe(true);
-    expect(isValidCheckoutDay(d("2030-10-20"), d("2030-10-21"), PRICES)).toBe(true);
+  it("4) fiyatsız gün CHECKOUT olarak da geçersiz (sezon sonrası ilk gün dahil)", () => {
+    expect(rangeHasUnpricedDay(d("2030-10-10"), d("2030-10-11"), PRICES)).toBe(true);
+    expect(rangeHasUnpricedDay(d("2030-10-05"), d("2030-10-11"), PRICES)).toBe(true);
+    expect(rangeHasUnpricedDay(d("2030-10-20"), d("2030-10-21"), PRICES)).toBe(true);
   });
-  it("arada fiyatsız gece varsa checkout geçersiz; check-in'den önce/aynı gün geçersiz", () => {
-    expect(isValidCheckoutDay(d("2030-10-10"), d("2030-10-12"), PRICES)).toBe(false);
-    expect(isValidCheckoutDay(d("2030-10-11"), d("2030-10-12"), PRICES)).toBe(false);
-    expect(isValidCheckoutDay(d("2030-10-10"), d("2030-10-10"), PRICES)).toBe(false);
-    expect(isValidCheckoutDay(d("2030-10-10"), d("2030-10-09"), PRICES)).toBe(false);
+  it("8) arada fiyatsız gün → geçersiz; 9) tamamen fiyatlı → geçerli", () => {
+    expect(rangeHasUnpricedDay(d("2030-10-09"), d("2030-10-17"), PRICES)).toBe(true);
+    expect(rangeHasUnpricedDay(d("2030-10-05"), d("2030-10-10"), PRICES)).toBe(false);
+    expect(rangeHasUnpricedDay(d("2030-10-15"), d("2030-10-20"), PRICES)).toBe(false);
+    expect(rangeHasUnpricedDay(d("2030-10-10"), d("2030-10-10"), PRICES)).toBe(false); // 0 gece
+  });
+  it("muaf günler (admin düzenleme — kendi tarihleri) kontrol dışı", () => {
+    const exempt = (n: Date) => n.getDate() === 11 || n.getDate() === 12;
+    expect(rangeHasUnpricedDay(d("2030-10-10"), d("2030-10-12"), PRICES, exempt)).toBe(false);
   });
 });
 
@@ -78,27 +82,32 @@ describe("referans örnek — 30 Kas / 1 Ara / 2 Ara", () => {
     { start_date: "2030-11-01", end_date: "2030-11-30", price: 7000, currency: "TRY" },
     { start_date: "2030-12-02", end_date: "2030-12-31", price: 9000, currency: "TRY" },
   ];
-  it("1/6) 30 Kas ve 2 Ara check-in açık; 1 Ara kapalı", () => {
+  it("1/2) 30 Kas ve 2 Ara açık; 1 Ara kapalı", () => {
     expect(isDayClosedForPrice(d("2030-11-30"), P)).toBe(false);
     expect(isDayClosedForPrice(d("2030-12-01"), P)).toBe(true);
     expect(isDayClosedForPrice(d("2030-12-02"), P)).toBe(false);
   });
-  it("3) 30 Kas → 1 Ara geçerli; 4/5) 1 Ara → 2 Ara ve 1 Ara → 3 Ara geçersiz", () => {
-    expect(rangeHasUnpricedNight(d("2030-11-30"), d("2030-12-01"), P)).toBe(false);
-    expect(isValidCheckoutDay(d("2030-11-30"), d("2030-12-01"), P)).toBe(true);
-    expect(rangeHasUnpricedNight(d("2030-12-01"), d("2030-12-02"), P)).toBe(true);
-    expect(rangeHasUnpricedNight(d("2030-12-01"), d("2030-12-03"), P)).toBe(true);
-    /* 30 Kas → 2 Ara: 1 Ara gecesi arada → geçersiz */
-    expect(isValidCheckoutDay(d("2030-11-30"), d("2030-12-02"), P)).toBe(false);
+  it("5/6/7) 30 Kas → 1 Ara, 1 Ara → 2 Ara, 30 Kas → 2 Ara HEPSİ reddedilir", () => {
+    expect(rangeHasUnpricedDay(d("2030-11-30"), d("2030-12-01"), P)).toBe(true);
+    expect(rangeHasUnpricedDay(d("2030-12-01"), d("2030-12-02"), P)).toBe(true);
+    expect(rangeHasUnpricedDay(d("2030-11-30"), d("2030-12-02"), P)).toBe(true);
+    expect(rangeHasUnpricedDay(d("2030-12-01"), d("2030-12-03"), P)).toBe(true);
+    /* tamamen fiyatlı aralık geçerli */
+    expect(rangeHasUnpricedDay(d("2030-11-28"), d("2030-11-30"), P)).toBe(false);
+    expect(rangeHasUnpricedDay(d("2030-12-02"), d("2030-12-05"), P)).toBe(false);
   });
-  it("6/8) 30 Kas → 1 Ara toplamı YALNIZ 30 Kas gecesi (checkout günü fiyatlanmaz)", () => {
+  it("10/11) FİYAT HESABI DEĞİŞMEDİ: motor 30 Kas → 1 Ara'yı hâlâ 1 gece / 7000 hesaplar (checkout fiyatlanmaz)", () => {
     const r = calculateStayTotal("2030-11-30", "2030-12-01", P as never, "TRY", { TRY: 1 });
     expect(r.uncoveredNights).toBe(0);
     expect(r.stay).toBe(7000);
+    const r2 = calculateStayTotal("2030-11-28", "2030-11-30", P as never, "TRY", { TRY: 1 });
+    expect(r2.stay).toBe(14000); // 28, 29 geceleri; 30 (checkout) hariç
   });
 });
 
-describe("rangeHasUnpricedNight — [giriş, çıkış)", () => {
+/* `rangeHasUnpricedNight` = motorun [giriş, çıkış) gece kapsamı (değişmedi;
+   `rangeHasUnpricedDay` bunun üzerine checkout gününü ekler). */
+describe("rangeHasUnpricedNight — [giriş, çıkış) (motor kapsamı)", () => {
   it("4) tamamı fiyatlı aralık → geçerli; çıkış günü fiyatsız olabilir (8)", () => {
     expect(rangeHasUnpricedNight(d("2030-10-05"), d("2030-10-10"), PRICES)).toBe(false);
     expect(rangeHasUnpricedNight(d("2030-10-09"), d("2030-10-11"), PRICES)).toBe(false);
