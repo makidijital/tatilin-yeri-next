@@ -33,6 +33,9 @@ import { computeAuthoritativePoolHeatingSnapshot } from "./pool-heating-verify";
    (bkz. villa-discount.service.ts doc-comment'i) — recompute bu durumda
    "indirim yok" ile AYNI davranır, booking'i ASLA bloklamaz. */
 import { getVillaDiscounts } from "@/app/services/villa-discount.service";
+/* 🛡️ FİYAT KAPSAMI — rezervasyon UYGUNLUĞU kuralı (takvim / form ile
+   BİREBİR aynı helper). Fiyat HESABINA dokunmaz. */
+import { rangeHasUnpricedDay } from "@/lib/price-coverage";
 
 /* ===============================================================
    🛡️ PUBLIC RESERVATION — SERVER-SIDE PRICE VERIFY
@@ -112,6 +115,11 @@ export type ServerPriceResult = {
      AŞAĞIDAKİ TÜM tutarlar 0'dır ve KULLANILMAMALIDIR.
      `calculateGrandTotal().priceAvailable` değerinden aynen taşınır. */
   priceAvailable: boolean;
+  /* 🛡️ FİYAT KAPSAMI — rezervasyon uygunluğu (fiyat hesabından AYRI):
+     [giriş, çıkış] içinde (checkout günü DAHİL) fiyatsız gün var mı?
+     UI takvim/form kuralıyla aynı `rangeHasUnpricedDay`. true → route
+     rezervasyonu reddeder. Tutarlar bundan ETKİLENMEZ. */
+  hasUnpricedDay: boolean;
   totalPrice: number;
   originalPrice: number;
   originalCurrency: string;
@@ -465,6 +473,12 @@ export async function recomputePublicReservationPrice(input: {
     damageDeposit: Number(villaRow?.deposit) || 0,
     /* 🛡️ Motorun kapsama kararı AYNEN taşınır (yeni hesap YOK). */
     priceAvailable: snapshot.priceAvailable,
+    /* 🛡️ FİYAT KAPSAMI — aynı `prices` ile, ayrı uygunluk kontrolü. */
+    hasUnpricedDay: rangeHasUnpricedDay(
+      parseLocalDate(start_date),
+      parseLocalDate(end_date),
+      prices
+    ),
     totalPriceTry,
     cleaningFeeTry,
     prepaymentAmount,
@@ -648,7 +662,9 @@ export async function verifyPublicReservationPrice(
        `null` dönülseydi aşağıdaki fail-open dalına düşer ve client'ın
        gönderdiği tutar kaydedilirdi. Tam kapsanan hesaplarda bu dal
        HİÇ çalışmaz (priceAvailable daima true). */
-    if (server && !server.priceAvailable) {
+    /* 🛡️ FİYAT KAPSAMI — checkout günü dahil fiyatsız gün → AYNI red
+       sinyali (route'un mevcut hata zarfı / mesajı / 400). */
+    if (server && (!server.priceAvailable || server.hasUnpricedDay)) {
       return {
         comparison: null,
         poolHeating: null,
