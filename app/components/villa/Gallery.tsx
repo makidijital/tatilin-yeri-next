@@ -436,14 +436,15 @@ export default function Gallery({
                 çözünürlüğünden BAĞIMSIZ (yüklenmeden önce de aynı) →
                 fotoğraf değişince galeri büyüyüp küçülmez; butonlar,
                 filigran ve küçük resim şeridi yerinde kalır.
-                  • Mobil: kare çerçeve, genişlik min(92vw, 70svh)
-                    (svh → iOS adres çubuğu görünürken de sığar).
+                  • Mobil: 4:3 çerçeve, genişlik ~92vw, yükseklik genişliğe
+                    göre otomatik (en fazla 70svh → iOS adres çubuğu
+                    görünürken / yatay telefonda da sığar).
                   • md+: 3:2 çerçeve, genişlik min(90vw, 78vh × 1.5)
                     (eski 90vw / 78vh üst sınırlarıyla aynı alan).
                 Fotoğraf `object-cover` + merkez odak ile çerçeveyi
                 doldurur (gerekirse kenarlardan kırpılır). Filigran
                 çerçeveye bağlı → her karede aynı yerde. */}
-            <div className="relative w-[min(92vw,70svh)] aspect-square md:w-[min(90vw,calc(78vh*1.5))] md:aspect-[3/2] overflow-hidden rounded-xl bg-white/5">
+            <div className="relative w-[min(92vw,calc(70svh*4/3))] aspect-[4/3] md:w-[min(90vw,calc(78vh*1.5))] md:aspect-[3/2] overflow-hidden rounded-xl bg-white/5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={images[activeIndex]}
