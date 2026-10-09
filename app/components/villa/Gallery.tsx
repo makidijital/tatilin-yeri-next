@@ -411,10 +411,14 @@ export default function Gallery({
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            {/* kapatma */}
+            {/* kapatma
+                🛡️ z-10 (kapatma / önceki / sonraki): DOM'da çerçeveden ÖNCE
+                geldikleri için konumlu fotoğraf çerçevesi üstlerini
+                örtüyordu (✕ ve ‹ görünmüyor/tıklanamıyordu). Konum ve
+                davranış AYNI; yalnız çerçevenin üstünde çizilirler. */}
             <button
               onClick={() => setActiveIndex(null)}
-              className="absolute top-5 right-5 text-white text-2xl"
+              className="absolute top-5 right-5 z-10 text-white text-2xl"
             >
               ✕
             </button>
@@ -422,18 +426,29 @@ export default function Gallery({
             {/* önceki */}
             <button
               onClick={prev}
-              className="absolute left-5 top-1/2 -translate-y-1/2 text-white text-3xl"
+              className="absolute left-5 top-1/2 -translate-y-1/2 z-10 text-white text-3xl"
             >
               ‹
             </button>
 
-            {/* görsel + watermark wrapper */}
-            <div className="relative">
+            {/* görsel + watermark wrapper
+                🛡️ SABİT ÇERÇEVE — çerçeve ölçüsü fotoğrafın oranından/
+                çözünürlüğünden BAĞIMSIZ (yüklenmeden önce de aynı) →
+                fotoğraf değişince galeri büyüyüp küçülmez; butonlar,
+                filigran ve küçük resim şeridi yerinde kalır.
+                  • Mobil: kare çerçeve, genişlik min(92vw, 70svh)
+                    (svh → iOS adres çubuğu görünürken de sığar).
+                  • md+: 3:2 çerçeve, genişlik min(90vw, 78vh × 1.5)
+                    (eski 90vw / 78vh üst sınırlarıyla aynı alan).
+                Fotoğraf `object-cover` + merkez odak ile çerçeveyi
+                doldurur (gerekirse kenarlardan kırpılır). Filigran
+                çerçeveye bağlı → her karede aynı yerde. */}
+            <div className="relative w-[min(92vw,70svh)] aspect-square md:w-[min(90vw,calc(78vh*1.5))] md:aspect-[3/2] overflow-hidden rounded-xl bg-white/5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={images[activeIndex]}
                 alt={buildImageAlt(villaTitle, activeIndex, images.length, dict)}
-                className="max-h-[78vh] max-w-[90vw] object-contain rounded-xl"
+                className="absolute inset-0 h-full w-full object-cover object-center"
               />
               <WatermarkOverlay {...watermark} />
             </div>
@@ -441,7 +456,7 @@ export default function Gallery({
             {/* sonraki */}
             <button
               onClick={next}
-              className="absolute right-5 top-1/2 -translate-y-1/2 text-white text-3xl"
+              className="absolute right-5 top-1/2 -translate-y-1/2 z-10 text-white text-3xl"
             >
               ›
             </button>
