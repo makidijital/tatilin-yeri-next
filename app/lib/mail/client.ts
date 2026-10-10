@@ -10,7 +10,7 @@
 
 import type { Settings } from "@/app/services/settings.types";
 import { settingsServerRepository } from "@/lib/db/settings.repository.server";
-import { resolveAssetUrlVersioned } from "@/lib/storage.helpers";
+import { resolveEmailLogoUrl } from "@/lib/email-logo.server";
 
 export type ResendPayload = {
   from: string;
@@ -117,8 +117,13 @@ export async function getMailConfig(): Promise<{
   /* 🛡️ `?v=settings.updated_at` — Header/Footer ile AYNI versiyon;
      logo sabit path'e overwrite edildiğinde mail istemcisi/proxy
      cache'i eski logoyu göstermesin. */
-  const brandLogoUrl =
-    resolveAssetUrlVersioned(settings?.site_logo, settings?.updated_at) || null;
+  /* 📧 E-postalara WebP yerine beyaz zeminli 2x PNG (`/api/public/
+     email-logo`) — Gmail proxy'si şeffaf WebP'yi siyah zeminle
+     bozuyordu, Outlook WebP göstermiyor. Üretilemezse eski URL. */
+  const brandLogoUrl = await resolveEmailLogoUrl(
+    settings?.site_logo,
+    settings?.updated_at
+  );
 
   return {
     apiKey,

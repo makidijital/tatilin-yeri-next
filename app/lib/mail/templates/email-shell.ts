@@ -5,6 +5,8 @@
    - Maki Dijital branding: cyan/blue/green gradient + slate dark
    - "React Email" pattern: küçük helper fonksiyonlar component gibi
    =============================================================== */
+import { emailLogoImg } from "./email-logo";
+
 
 export type LayoutProps = {
   brandName?: string;
@@ -43,8 +45,18 @@ export function emailLayout({
        - `alt={brand}` → görsel yüklenmediğinde firma adı görünür
      brandLogoUrl yoksa BLOK YOK (kullanıcı kuralı: placeholder
      KULLANMA; sadece firma adı göster). */
+  /* 📧 Ortak helper: e-posta PNG logosunda açık width/height basar;
+     başka URL'de (geri dönüş) aşağıdaki eski stil AYNEN kullanılır. */
   const logoBlock = brandLogoUrl
-    ? `<img src="${escapeHtml(brandLogoUrl)}" alt="${safeBrand}" style="display:block;border:0;outline:none;text-decoration:none;max-height:60px;height:auto;width:auto;max-width:240px;margin:0 0 12px;" />`
+    ? emailLogoImg({
+        src: brandLogoUrl,
+        alt: brandName,
+        maxWidth: 240,
+        maxHeight: 60,
+        style: "margin:0 0 12px;",
+        fallbackStyle:
+          "display:block;border:0;outline:none;text-decoration:none;max-height:60px;height:auto;width:auto;max-width:240px;margin:0 0 12px;",
+      })
     : "";
 
   return `<!doctype html>

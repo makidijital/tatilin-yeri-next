@@ -1,5 +1,6 @@
 import type { VoucherProps } from "./data";
 import { getCountryLabel } from "@/lib/country.helper";
+import { emailLogoImg } from "@/app/lib/mail/templates/email-logo";
 
 /* ===============================================================
    🔥 VOUCHER DOCUMENT TEMPLATE — premium, print-friendly
@@ -486,14 +487,19 @@ export function renderVoucherEmail(
   /* Belgeyle aynı konu satırı. */
   const subject = `${props.brandName} · Rezervasyon Belgesi — ${props.villaTitle}`;
 
-  const logoBlock = props.brandLogoUrl
-    ? /* max-width:100% (sarmalayıcı 200px) → dar ekranlarda (320px)
-         logo başlık sütununu taşırmaz; belgedeki 44px / 200px sınırı aynı. */
-      `<div style="max-width:200px;margin:0 0 8px;"><img src="${escapeHtml(
-        props.brandLogoUrl
-      )}" alt="${escapeHtml(
-        props.brandName
-      )}" style="display:block;border:0;outline:none;text-decoration:none;max-height:44px;max-width:100%;width:auto;height:auto;" /></div>`
+  /* 📧 Diğer e-postalarla ORTAK logo kaynağı + <img> helper'ı
+     (beyaz zeminli PNG, açık width/height). Kutu belgeyle aynı:
+     en fazla 200×44. max-width:100% → 320px ekranda taşmaz. */
+  const emailLogoSrc = props.emailLogoUrl || props.brandLogoUrl;
+  const logoBlock = emailLogoSrc
+    ? `<div style="max-width:200px;margin:0 0 8px;">${emailLogoImg({
+        src: emailLogoSrc,
+        alt: props.brandName,
+        maxWidth: 200,
+        maxHeight: 44,
+        fallbackStyle:
+          "display:block;border:0;outline:none;text-decoration:none;max-height:44px;max-width:100%;width:auto;height:auto;",
+      })}</div>`
     : "";
 
   const html = `<!doctype html>

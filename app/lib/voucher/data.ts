@@ -48,6 +48,10 @@ export type VoucherProps = {
      Yoksa null → template logo bloğunu HİÇ render etmez (placeholder
      avatar KULLANILMAZ; M markası kaldırıldı). */
   brandLogoUrl: string | null;
+  /** 📧 Voucher E-POSTASI için logo — diğer e-postalarla ortak kaynak
+   *  (`getMailConfig().brandLogoUrl`: beyaz zeminli PNG, geri dönüşte
+   *  orijinal logo). Belge (yazdırma/PDF) `brandLogoUrl`'i kullanır. */
+  emailLogoUrl?: string | null;
 
   voucherNo: string;
   createdAtDisplay: string;
@@ -224,6 +228,7 @@ export async function buildVoucherData(
   const props: VoucherProps = {
     brandName: brand,
     brandLogoUrl,
+    emailLogoUrl: cfg.brandLogoUrl,
 
     voucherNo: buildVoucherNo(r.reservation_no, r.id),
     createdAtDisplay: formatDateTimeTr(r.created_at),
