@@ -193,7 +193,7 @@ export async function buildVoucherData(
   const r = rRaw as unknown as VoucherReservationRow;
 
   const cfg = await getMailConfig();
-  const brand = cfg.fromName || "Maki Dijital";
+  const brand = cfg.fromName || "KalkanDigital";
 
   /* 🔥 Firma logosu — settings.site_logo (Header/Footer ile AYNI
      kaynak). resolveAssetUrl HEM FULL URL (legacy) HEM relative path

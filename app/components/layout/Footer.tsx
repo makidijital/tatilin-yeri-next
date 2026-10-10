@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
@@ -202,6 +203,9 @@ type FooterProps = {
   year: number;
   siteName: string;
   phoneDigits: string;
+  /** Geliştirici kredisi logosu (Admin Logo, versiyonlu URL). Yoksa
+   *  "KalkanDigital" metni gösterilir. */
+  developerCreditLogoUrl?: string | null;
 };
 
 export default function Footer({
@@ -212,7 +216,11 @@ export default function Footer({
   year,
   siteName,
   phoneDigits,
+  developerCreditLogoUrl = null,
 }: FooterProps) {
+  /* Logo yüklenemezse (silinmiş/erişilemiyor) metne düş. */
+  const [creditLogoFailed, setCreditLogoFailed] = useState(false);
+  const showCreditLogo = !!developerCreditLogoUrl && !creditLogoFailed;
   /* 🛡️ PHASE 9B — locale, Header.tsx (Phase 9A) ile BİREBİR AYNI şekilde
      `usePathname()` + `localeFromPathname()` ile saf/senkron türetilir;
      middleware/headers() gerektirmez. TR path'lerinde `dictionary`
@@ -471,7 +479,7 @@ export default function Footer({
 
         {/* ═════════════ SECTION 4 — MİNİMAL ALT BAR ═════════════
             Sıra: copyright + kurumsal linkler → trust/ödeme rozetleri →
-            (ince separator) → Maki Dijital, ayrı ve tam ortalanmış, en son
+            (ince separator) → KalkanDigital, ayrı ve tam ortalanmış, en son
             satır. `corporatePages` veri kaynağı BİREBİR aynı, yalnızca
             konum/sıra ve renkler değişti. */}
         <div className="mt-14 md:mt-16 pt-8 border-t border-[var(--color-stone-200)]">
@@ -534,14 +542,15 @@ export default function Footer({
             />
           </div>
 
-          {/* 🛡️ Maki Dijital — ajans imzası (logo asset, href AYNEN).
+          {/* 🛡️ KalkanDigital — ajans imzası. Logo: Admin → Webmaster →
+              "Admin Logo" (FooterWrapper'dan versiyonlu URL); yoksa metin.
               Ayrı ve tam ortalanmış, footer'ın SON içeriği. */}
           <div className="mt-8 pt-6 border-t border-[var(--color-stone-200)] text-center">
             <a
-              href="https://makidijital.com"
+              href="https://kalkandigital.com"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`${dictionary.footer.webDevelopment}: Maki Dijital`}
+              aria-label={`${dictionary.footer.webDevelopment}: KalkanDigital`}
               className="
                 group inline-flex items-center justify-center gap-2
                 text-[11.5px] tracking-[0.04em]
@@ -555,13 +564,23 @@ export default function Footer({
               <span aria-hidden="true" className="text-[var(--color-stone-300)]">
                 :
               </span>
-              <Image
-                src="/brand/logos/Developer-Credit.png"
-                alt="Maki Dijital"
-                width={1254}
-                height={1254}
-                className="h-9 md:h-10 w-auto object-contain opacity-75 group-hover:opacity-100 transition-opacity duration-300 motion-reduce:transition-none"
-              />
+              {showCreditLogo ? (
+                /* Düz <img>: Admin Logo SVG de olabilir (next/image SVG'yi
+                   varsayılan olarak işlemez); boyut/opaklık AYNEN. */
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={developerCreditLogoUrl!}
+                  alt="KalkanDigital"
+                  loading="lazy"
+                  decoding="async"
+                  onError={() => setCreditLogoFailed(true)}
+                  className="h-9 md:h-10 w-auto max-w-[160px] object-contain opacity-75 group-hover:opacity-100 transition-opacity duration-300 motion-reduce:transition-none"
+                />
+              ) : (
+                <span className="font-semibold tracking-[0.02em] text-[var(--color-stone-600)] group-hover:text-[#ED7926] transition-colors duration-300 motion-reduce:transition-none">
+                  KalkanDigital
+                </span>
+              )}
             </a>
           </div>
         </div>

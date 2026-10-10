@@ -418,7 +418,7 @@ export const tr: Dictionary = {
     villaUnit: "villa",
     guestsLabel: "{n} kişi",
     footerNote:
-      "Maki Dijital — tüm villaları görmek için ana arşivimizi ziyaret edin.",
+      "KalkanDigital — tüm villaları görmek için ana arşivimizi ziyaret edin.",
     footerCta: "Tüm villaları keşfet",
     staleNotice: "Listedeki {n} villa şu anda görüntülenemiyor.",
   },

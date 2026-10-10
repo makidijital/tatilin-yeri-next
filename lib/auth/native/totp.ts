@@ -68,7 +68,7 @@ export function buildTotpUri(params: {
   accountEmail: string;
   issuer?: string;
 }): string {
-  const issuer = (params.issuer || "Maki Admin").trim();
+  const issuer = (params.issuer || "KalkanDigital").trim();
   return totp.generateURI({
     issuer,
     label: params.accountEmail,

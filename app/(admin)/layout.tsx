@@ -71,7 +71,7 @@ async function getAdminBrandingVersions() {
 export async function generateMetadata(): Promise<Metadata> {
   const { icon } = await getAdminBrandingVersions();
   return {
-    title: { absolute: "MAKİ Dijital — Yönetim Paneli" },
+    title: { absolute: "KalkanDigital — Yönetim Paneli" },
     icons: { icon: getAdminIconUrl(icon) },
     robots: { index: false, follow: false },
   };

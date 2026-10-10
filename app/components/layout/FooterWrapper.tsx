@@ -14,6 +14,8 @@ import Footer from "./Footer";
    `.slice(0, 7)` ile kırpılıyor → swap footer'da GÖRÜNEN 7 bölge/tipi
    değiştirirdi. Davranış korunuyor. */
 import { getCachedSettings } from "@/lib/cache.helpers";
+import { ADMIN_BRANDING_PATHS, getAdminLogoUrl } from "@/lib/admin-branding";
+import { getSiteAssetVersion } from "@/lib/storage/site-asset-version.server";
 import type { Settings } from "@/app/services/settings.types";
 import { menuRepository } from "@/lib/db/menu.repository";
 import { pagesRepository } from "@/lib/db/pages.repository";
@@ -185,6 +187,19 @@ export default async function FooterWrapper() {
   const siteName = settings?.site_name || "Villa Kiralama";
   const phoneDigits = settings?.phone?.replace(/[^\d]/g, "") || "";
 
+  /* 🛡️ Geliştirici kredisi logosu = Admin → Webmaster → "Admin Logo"
+     (site-assets/branding/admin-logo.webp; admin sidebar/giriş ile AYNI
+     dosya, yeni ayar/upload YOK). Versiyon R2 ETag'i: logo yeniden
+     yüklenince upload route'u etiketi geçersiz kılar → yeni `?ts=`
+     URL'i, eski logo cache'ten gelmez. Dosya yok / R2'ye ulaşılamıyor
+     → null → footer "KalkanDigital" metnini gösterir. */
+  const developerCreditVersion = await getSiteAssetVersion(
+    ADMIN_BRANDING_PATHS["admin-logo"]
+  ).catch(() => null);
+  const developerCreditLogoUrl = developerCreditVersion
+    ? getAdminLogoUrl(developerCreditVersion) || null
+    : null;
+
   return (
     <Footer
       settings={settings}
@@ -194,6 +209,7 @@ export default async function FooterWrapper() {
       year={year}
       siteName={siteName}
       phoneDigits={phoneDigits}
+      developerCreditLogoUrl={developerCreditLogoUrl}
     />
   );
 }

@@ -93,7 +93,10 @@ export async function getMailConfig(): Promise<{
 
   const dbName = (settings?.mail_from_name || "").trim();
   const envName = (process.env.RESEND_FROM_NAME || "").trim();
-  const fromName = envName || dbName || "Maki Dijital";
+  /* Marka adı: env → DB mail_from_name → site adı → "KalkanDigital".
+     Müşteri e-postasında ajans adı yerine önce sitenin kendi adı. */
+  const siteName = (settings?.site_name || "").trim();
+  const fromName = envName || dbName || siteName || "KalkanDigital";
   const fromNameSource: "db" | "env" | "default" = envName
     ? "env"
     : dbName
