@@ -288,16 +288,32 @@ export function renderVoucherDocument(
         line-height: 1.6;
       }
       @media print {
-        body { background: #ffffff; }
+        /* 🛡️ TEK A4 — yalnız yazdırma/PDF. Ekran görünümü DEĞİŞMEZ.
+           İçerik/renk/font/tasarım aynı; yalnız dikey boşluklar
+           (sayfa kenarı, bölüm aralığı, satır padding'i) sıkılaştırıldı.
+           Hiçbir şey gizlenmez/kesilmez. */
+        @page { size: A4; margin: 10mm 12mm; }
+        /* html de beyaz: aksi halde "arka plan grafikleri" açıkken
+           içeriğin altında gri (#f6f7f9) blok basılıyordu. */
+        html, body { background: #ffffff; }
         .doc {
           margin: 0;
-          padding: 0 6mm;
+          padding: 0 4mm;
           border: none;
           border-radius: 0;
           box-shadow: none;
           max-width: none;
         }
-        .section { page-break-inside: avoid; }
+        .header { margin-bottom: 12px; }
+        .header td { padding-bottom: 10px; }
+        .brand-logo { margin-bottom: 6px; }
+        .title { margin: 3px 0 2px; }
+        .lede { margin-bottom: 12px; line-height: 1.45; }
+        .section { margin-bottom: 10px; page-break-inside: avoid; }
+        .section-title { padding-bottom: 5px; margin-bottom: 2px; }
+        .rows .row td { padding: 3px 0; }
+        .row-label, .row-value { line-height: 1.3; }
+        .footer { margin-top: 14px; padding-top: 8px; line-height: 1.45; }
         .rows .row { page-break-inside: avoid; }
       }
     </style>
