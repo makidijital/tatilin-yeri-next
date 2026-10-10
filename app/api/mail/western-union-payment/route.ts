@@ -157,7 +157,7 @@ export async function POST(req: Request) {
     }
 
     const cfg = await getMailConfig();
-    const brand = cfg.fromName || "Maki Dijital";
+    const brand = cfg.fromName || "KalkanDigital";
 
     const payment = getPaymentDisplayValues({
       total_price_try: r.total_price_try,

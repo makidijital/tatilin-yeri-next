@@ -28,7 +28,7 @@ export function escapeHtml(text: string): string {
 }
 
 export function emailLayout({
-  brandName = "Maki Dijital",
+  brandName = "KalkanDigital",
   brandLogoUrl = null,
   preheader = "",
   body,

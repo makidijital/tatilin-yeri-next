@@ -75,7 +75,7 @@ function detailCard(title: string, rows: string[]): string {
 export function renderBankTransferPaymentEmail(
   props: BankTransferPaymentEmailProps
 ): { subject: string; html: string } {
-  const brand = props.brandName || "Maki Dijital";
+  const brand = props.brandName || "KalkanDigital";
 
   const introText = props.isFullPayment
     ? "Rezervasyonunuz için toplam ödeme talep edilmektedir. Aşağıdaki banka hesabına havale/EFT yapabilirsiniz."

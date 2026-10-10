@@ -107,7 +107,7 @@ export async function POST(req: Request) {
     }
 
     const cfg = await getMailConfig();
-    const brand = cfg.fromName || "Maki Dijital";
+    const brand = cfg.fromName || "KalkanDigital";
 
     const originalCurrency = (r.original_currency || "TRY") as string;
     const totalTRY = Number(r.total_price_try) || Number(r.total_price) || 0;

@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     }
 
     const cfg = await getMailConfig();
-    const brand = cfg.fromName || "Maki Dijital";
+    const brand = cfg.fromName || "KalkanDigital";
 
     /* ===== SNAPSHOT FORMAT ===== */
     const originalCurrency = (r.original_currency || "TRY") as string;

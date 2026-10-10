@@ -126,7 +126,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const brand = cfg.fromName || "Maki Dijital";
+    const brand = cfg.fromName || "KalkanDigital";
     const { subject, html } = renderTestEmail({
       recipient: to,
       brandName: brand,

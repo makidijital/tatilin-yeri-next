@@ -160,7 +160,7 @@ export async function POST(req: Request) {
     }
 
     const cfg = await getMailConfig();
-    const brand = cfg.fromName || "Maki Dijital";
+    const brand = cfg.fromName || "KalkanDigital";
 
     // 🔥 Helper'dan beslenen değerler — tek source-of-truth
     const payment = getPaymentDisplayValues({

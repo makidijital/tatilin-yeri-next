@@ -68,7 +68,7 @@ function detailCard(title: string, rows: string[]): string {
 export function renderWesternUnionPaymentEmail(
   props: WesternUnionPaymentEmailProps
 ): { subject: string; html: string } {
-  const brand = props.brandName || "Maki Dijital";
+  const brand = props.brandName || "KalkanDigital";
 
   const introText = props.isFullPayment
     ? "Rezervasyonunuz için toplam ödeme talep edilmektedir. Western Union ile ödeme için aşağıdaki bilgileri kullanabilirsiniz."

@@ -965,7 +965,7 @@ function AdminShell({
           <Link href="/maki-admin" className="admin-brand">
             <AdminBrandMark />
             <span className="admin-brand-text">
-              <span className="admin-brand-name block">Maki Dijital</span>
+              <span className="admin-brand-name block">KalkanDigital</span>
               <span className="admin-brand-sub block">Admin · CRM</span>
             </span>
           </Link>

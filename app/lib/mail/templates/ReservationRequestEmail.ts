@@ -94,7 +94,7 @@ function detailCard(title: string, rows: string[]): string {
 export function renderReservationRequestEmail(
   props: ReservationRequestProps
 ): { subject: string; html: string } {
-  const brand = props.brandName || "Maki Dijital";
+  const brand = props.brandName || "KalkanDigital";
 
   const otherGuestsBlock =
     props.otherGuestNames && props.otherGuestNames.length

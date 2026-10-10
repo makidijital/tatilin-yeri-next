@@ -254,7 +254,7 @@ export default function AdminLoginPage() {
           <div>
             <DesktopBrandMark />
             <p className="text-[10px] tracking-[0.32em] uppercase text-white/40 mt-7 font-semibold">
-              Maki Dijital · Admin · CRM
+              KalkanDigital · Admin · CRM
             </p>
           </div>
 
@@ -277,7 +277,7 @@ export default function AdminLoginPage() {
 
           {/* Bottom: footer */}
           <div className="flex items-center justify-between text-[11px] text-white/30 tracking-wide font-medium">
-            <span>© {new Date().getFullYear()} Maki Dijital</span>
+            <span>© {new Date().getFullYear()} KalkanDigital</span>
             <span className="font-mono uppercase">All rights reserved</span>
           </div>
         </div>
@@ -302,7 +302,7 @@ export default function AdminLoginPage() {
             <LoginBrandMark />
             <div className="text-center">
               <p className="text-[15px] font-bold text-[var(--color-stone-900)] leading-tight">
-                Maki Dijital
+                KalkanDigital
               </p>
               <p className="text-[10px] tracking-[0.22em] uppercase text-[var(--color-stone-500)] mt-0.5">
                 Admin · CRM
@@ -377,7 +377,7 @@ export default function AdminLoginPage() {
                         }}
                         disabled={submitting}
                         className="input !h-12 !pl-11"
-                        placeholder="ornek@maki.com"
+                        placeholder="ornek@eposta.com"
                       />
                     </div>
                   </div>
@@ -587,7 +587,7 @@ export default function AdminLoginPage() {
 
           {/* Mobile footer */}
           <p className="text-[11px] text-[var(--color-stone-400)] text-center mt-7 lg:hidden">
-            © {new Date().getFullYear()} Maki Dijital
+            © {new Date().getFullYear()} KalkanDigital
           </p>
         </div>
       </main>
