@@ -1,5 +1,5 @@
 import { buildVoucherData } from "./data";
-import { renderVoucherDocument } from "./template";
+import { renderVoucherDocument, renderVoucherEmail } from "./template";
 
 /* ===============================================================
    🔥 VOUCHER BUILD — facade
@@ -17,7 +17,11 @@ export type VoucherBuildResult =
   | {
       ok: true;
       subject: string;
+      /** Belge (yazdırma/PDF) HTML'i — `/api/voucher/[id]`. */
       html: string;
+      /** E-posta gövdesi (inline-style, istemci uyumlu) — `/api/mail/voucher`.
+       *  İçerik belgeyle ortak; yalnız işaretleme farklı. */
+      emailHtml: string;
       recipient: string | null;
       villaTitle: string;
     }
@@ -32,10 +36,12 @@ export async function buildVoucherContent(
   }
 
   const { subject, html } = renderVoucherDocument(dataResult.props);
+  const { html: emailHtml } = renderVoucherEmail(dataResult.props);
   return {
     ok: true,
     subject,
     html,
+    emailHtml,
     recipient: dataResult.recipient,
     villaTitle: dataResult.villaTitle,
   };

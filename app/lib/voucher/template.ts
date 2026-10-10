@@ -50,9 +50,20 @@ function sectionHtml(title: string, rows: string[]): string {
   </section>`;
 }
 
-export function renderVoucherDocument(
-  props: VoucherProps
-): { subject: string; html: string } {
+/* ===============================================================
+   🔥 ORTAK İÇERİK — belge (PDF/yazdırma) ve e-posta AYNI satırları
+   basar. Satır/bölüm HTML'i renderer'a göre değişir (belge: class
+   tabanlı; e-posta: inline style). Böylece hiçbir alan iki yerde
+   ayrı ayrı tanımlanmaz → PDF ile e-posta içerik olarak birebir.
+   =============================================================== */
+type RowRenderer = (label: string, value: string, strong?: boolean) => string;
+type SectionRenderer = (title: string, rows: string[]) => string;
+
+function buildVoucherSections(
+  props: VoucherProps,
+  rowHtml: RowRenderer,
+  sectionHtml: SectionRenderer
+): { stay: string; payment: string; deposit: string; customer: string } {
   const stayRows = [
     rowHtml("Villa", props.villaTitle, true),
     rowHtml(
@@ -101,6 +112,40 @@ export function renderVoucherDocument(
       ? rowHtml("Ödeme Yöntemi", props.paymentMethodName)
       : "",
   ];
+
+  return {
+    stay: sectionHtml("Konaklama", stayRows),
+    payment: sectionHtml("Ödeme Özeti", paymentRows),
+    deposit: props.damageDepositDisplay
+      ? sectionHtml("Hasar Depozitosu", [
+          rowHtml("Tutar", props.damageDepositDisplay, true),
+          rowHtml(
+            "Açıklama",
+            "Hasar olmadığı takdirde iade edilir"
+          ),
+        ])
+      : "",
+    customer: sectionHtml("Misafir Bilgileri", customerRows),
+  };
+}
+
+const LEDE_TAIL =
+  ", konaklamanız onaylanmıştır. Bu belge, rezervasyonunuzun resmi teyididir; check-in sırasında yanınızda bulundurmanız önerilir.";
+
+function footerText(brandName: string): string {
+  return `Bu belge ${escapeHtml(
+    brandName
+  )} tarafından oluşturulmuştur. Sorularınız için bu maile yanıtlamanız yeterli.`;
+}
+
+export function renderVoucherDocument(
+  props: VoucherProps
+): { subject: string; html: string } {
+  const { stay, payment, deposit, customer } = buildVoucherSections(
+    props,
+    rowHtml,
+    sectionHtml
+  );
 
   const subject = `${props.brandName} · Rezervasyon Belgesi — ${props.villaTitle}`;
   const subjectEscaped = escapeHtml(subject);
@@ -340,30 +385,138 @@ export function renderVoucherDocument(
       <p class="lede">
         Sayın <strong>${escapeHtml(
           props.guestName
-        )}</strong>, konaklamanız onaylanmıştır. Bu belge, rezervasyonunuzun resmi teyididir; check-in sırasında yanınızda bulundurmanız önerilir.
+        )}</strong>${LEDE_TAIL}
       </p>
 
-      ${sectionHtml("Konaklama", stayRows)}
-      ${sectionHtml("Ödeme Özeti", paymentRows)}
-      ${
-        props.damageDepositDisplay
-          ? sectionHtml("Hasar Depozitosu", [
-              rowHtml("Tutar", props.damageDepositDisplay, true),
-              rowHtml(
-                "Açıklama",
-                "Hasar olmadığı takdirde iade edilir"
-              ),
-            ])
-          : ""
-      }
-      ${sectionHtml("Misafir Bilgileri", customerRows)}
+      ${stay}
+      ${payment}
+      ${deposit}
+      ${customer}
 
       <footer class="footer">
-        Bu belge ${escapeHtml(
-          props.brandName
-        )} tarafından oluşturulmuştur. Sorularınız için bu maile yanıtlamanız yeterli.
+        ${footerText(props.brandName)}
       </footer>
     </article>
+  </body>
+</html>`;
+
+  return { subject, html };
+}
+
+/* ===============================================================
+   📧 VOUCHER E-POSTA GÖVDESİ — renderVoucherEmail
+   ===============================================================
+   `/api/mail/voucher` müşteriye bu HTML'i gönderir. İçerik (satırlar,
+   bölümler, metinler) belge ile ORTAK (`buildVoucherSections`,
+   `LEDE_TAIL`, `footerText`); yalnız işaretleme e-posta istemcilerine
+   uygundur:
+     • Tüm stiller INLINE — <style>/class'a güvenilmez (Gmail bazı
+       hesaplarda <style> bloğunu siler; Outlook sınırlı destekler).
+     • @page / @media print YOK — e-posta istemcisinde çalışmaz.
+     • Düzen tamamen <table> (Outlook/Word motoru flex/max-width
+       desteklemez); renkler hex (Outlook rgba desteklemez — belge
+       renklerinin beyaz zemin üzerindeki birebir karşılıkları).
+     • Belgeyle aynı logo, renk, font, başlık ve bölüm sırası; dikey
+       boşluklar belgeye göre sıkılaştırılmıştır. Hiçbir alan
+       gizlenmez/kesilmez.
+   =============================================================== */
+const E_FONT =
+  "-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,Helvetica,Arial,sans-serif";
+const E_LINE = "#ecedee"; // rgba(15,23,42,0.08) / beyaz
+const E_DASH = "#f1f1f2"; // rgba(15,23,42,0.06) / beyaz
+
+function emailRowHtml(label: string, value: string, strong = false): string {
+  return `<tr>
+    <td width="38%" valign="top" style="width:38%;padding:6px 16px 6px 0;border-top:1px dashed ${E_DASH};font-family:${E_FONT};font-size:11.5px;font-weight:500;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;line-height:1.4;word-break:break-word;">${escapeHtml(label)}</td>
+    <td valign="top" align="right" style="padding:6px 0;border-top:1px dashed ${E_DASH};font-family:${E_FONT};font-size:${strong ? "15px" : "14px"};font-weight:${strong ? "800" : "600"};color:#0f172a;text-align:right;line-height:1.4;word-break:break-word;overflow-wrap:anywhere;">${escapeHtml(value)}</td>
+  </tr>`;
+}
+
+function emailSectionHtml(title: string, rows: string[]): string {
+  const filtered = rows.filter((r) => r && r.length > 0);
+  if (filtered.length === 0) return "";
+  /* İlk satırın üst kesikli çizgisi YOK (belgedeki `tr:first-child`). */
+  filtered[0] = filtered[0].replace(
+    /border-top:1px dashed [^;]+;/g,
+    "border-top:0;"
+  );
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 16px;">
+    <tr><td style="padding:0 0 6px;border-bottom:1px solid ${E_LINE};font-family:${E_FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;font-weight:700;color:#475569;">${escapeHtml(title)}</td></tr>
+    <tr><td style="padding:2px 0 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed;">${filtered.join("")}</table>
+    </td></tr>
+  </table>`;
+}
+
+export function renderVoucherEmail(
+  props: VoucherProps
+): { subject: string; html: string } {
+  const { stay, payment, deposit, customer } = buildVoucherSections(
+    props,
+    emailRowHtml,
+    emailSectionHtml
+  );
+
+  /* Belgeyle aynı konu satırı. */
+  const subject = `${props.brandName} · Rezervasyon Belgesi — ${props.villaTitle}`;
+
+  const logoBlock = props.brandLogoUrl
+    ? /* max-width:100% (sarmalayıcı 200px) → dar ekranlarda (320px)
+         logo başlık sütununu taşırmaz; belgedeki 44px / 200px sınırı aynı. */
+      `<div style="max-width:200px;margin:0 0 8px;"><img src="${escapeHtml(
+        props.brandLogoUrl
+      )}" alt="${escapeHtml(
+        props.brandName
+      )}" style="display:block;border:0;outline:none;text-decoration:none;max-height:44px;max-width:100%;width:auto;height:auto;" /></div>`
+    : "";
+
+  const html = `<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="supported-color-schemes" content="light" />
+    <title>${escapeHtml(subject)}</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f6f7f9;color:#0f172a;font-family:${E_FONT};-webkit-font-smoothing:antialiased;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f6f7f9" style="width:100%;background:#f6f7f9;">
+      <tr>
+        <td align="center" style="padding:16px 8px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:680px;background:#ffffff;border:1px solid ${E_LINE};border-radius:18px;">
+            <tr>
+              <td style="padding:24px 24px 20px;font-family:${E_FONT};">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 14px;">
+                  <tr>
+                    <td valign="top" style="padding:0 0 12px;border-bottom:1px solid ${E_LINE};text-align:left;">
+                      ${logoBlock}
+                      <div style="font-family:${E_FONT};font-size:16px;font-weight:700;letter-spacing:-0.01em;color:#0f172a;line-height:1.2;">${escapeHtml(props.brandName)}</div>
+                      <div style="font-family:${E_FONT};font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#94a3b8;margin-top:4px;">Rezervasyon Belgesi</div>
+                    </td>
+                    <td valign="top" width="42%" style="width:42%;padding:0 0 12px;border-bottom:1px solid ${E_LINE};text-align:right;">
+                      <div style="font-family:${E_FONT};font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#94a3b8;">Rezervasyon Kodu</div>
+                      <div style="font-family:${E_FONT};font-size:13px;font-weight:700;color:#0f172a;margin-top:4px;word-break:break-all;">${escapeHtml(props.voucherNo)}</div>
+                      <div style="font-family:${E_FONT};font-size:11px;color:#94a3b8;margin-top:6px;">Oluşturma: ${escapeHtml(props.createdAtDisplay)}</div>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin:0;font-family:${E_FONT};font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#06b6d4;font-weight:700;">Onaylanmış Rezervasyon</p>
+                <h1 style="margin:4px 0 4px;font-family:${E_FONT};font-size:28px;font-weight:800;letter-spacing:-0.02em;color:#0f172a;line-height:1.15;word-break:break-word;overflow-wrap:anywhere;">${escapeHtml(props.villaTitle)}</h1>
+                <p style="margin:0 0 16px;font-family:${E_FONT};font-size:14px;color:#475569;line-height:1.55;">Sayın <strong>${escapeHtml(props.guestName)}</strong>${LEDE_TAIL}</p>
+
+                ${stay}
+                ${payment}
+                ${deposit}
+                ${customer}
+
+                <p style="margin:18px 0 0;padding:10px 0 0;border-top:1px solid ${E_LINE};font-family:${E_FONT};font-size:11.5px;color:#94a3b8;line-height:1.55;">${footerText(props.brandName)}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>`;
 

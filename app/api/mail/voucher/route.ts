@@ -99,7 +99,9 @@ export async function POST(req: Request) {
     const result = await sendMail({
       to: built.recipient,
       subject: built.subject,
-      html: built.html,
+      /* 📧 E-posta istemcisine uygun (inline-style) gövde; içerik
+         `/api/voucher` belgesiyle ortak. */
+      html: built.emailHtml,
       mailType: "voucher",
       reservationId,
     });
