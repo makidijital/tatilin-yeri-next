@@ -298,6 +298,14 @@ export function renderVoucherDocument(
         border-top: 1px dashed rgba(15,23,42,0.06);
       }
       .rows tr:first-child td { border-top: 0; }
+      /* 🦓 ZEBRA — her bölümde 1. satır beyaz, 2. satır #F7F9FC, sırayla.
+         Yazı konumu/boşluklar DEĞİŞMEZ: gri bant metne değmesin diye
+         8px dışarı box-shadow ile uzatılır (padding eklenmez → yükseklik
+         ve tek A4 düzeni aynı). Ekran + yazdırma (color-adjust exact). */
+      .rows .row td { background: #ffffff; }
+      .rows .row:nth-child(even) td { background: #f7f9fc; }
+      .rows .row:nth-child(even) .row-label { box-shadow: -8px 0 0 #f7f9fc; }
+      .rows .row:nth-child(even) .row-value { box-shadow: 8px 0 0 #f7f9fc; }
       .row-label {
         width: 38%;
         padding-right: 16px !important;
@@ -424,6 +432,7 @@ const E_FONT =
   "-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,Helvetica,Arial,sans-serif";
 const E_LINE = "#ecedee"; // rgba(15,23,42,0.08) / beyaz
 const E_DASH = "#f1f1f2"; // rgba(15,23,42,0.06) / beyaz
+const E_ZEBRA = "#f7f9fc"; // zebra çift satır
 
 function emailRowHtml(label: string, value: string, strong = false): string {
   return `<tr>
@@ -440,10 +449,27 @@ function emailSectionHtml(title: string, rows: string[]): string {
     /border-top:1px dashed [^;]+;/g,
     "border-top:0;"
   );
+  /* 🦓 ZEBRA (inline) — belgeyle aynı: tek sıralar beyaz, çift sıralar
+     #F7F9FC. bgcolor + background (Outlook/Gmail); gri bant metne
+     değmesin diye 8px box-shadow (desteklemeyen istemcide bant hücre
+     kenarında biter — içerik/boşluk aynı kalır). */
+  const zebra = filtered.map((row, i) => {
+    const even = i % 2 === 1;
+    const bg = even ? E_ZEBRA : "#ffffff";
+    let cell = 0;
+    /* Satırdaki 2 <td>: 1. etiket (sol), 2. değer (sağ). */
+    return row.replace(/ style="/g, () => {
+      const shadow = even
+        ? `box-shadow:${cell === 0 ? "-8px" : "8px"} 0 0 ${E_ZEBRA};`
+        : "";
+      cell++;
+      return ` bgcolor="${bg}" style="background:${bg};${shadow}`;
+    });
+  });
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 16px;">
     <tr><td style="padding:0 0 6px;border-bottom:1px solid ${E_LINE};font-family:${E_FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;font-weight:700;color:#475569;">${escapeHtml(title)}</td></tr>
     <tr><td style="padding:2px 0 0;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed;">${filtered.join("")}</table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed;">${zebra.join("")}</table>
     </td></tr>
   </table>`;
 }
